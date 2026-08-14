@@ -9,7 +9,6 @@
 #include "ErrorList.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/CheckedInt.h"
-#include "mozilla/DebugOnly.h"
 #include "mozilla/EndianUtils.h"
 #include "mozilla/Span.h"
 #include "mozilla/ipc/RandomAccessStreamParams.h"
@@ -240,6 +239,12 @@ NS_IMETHODIMP EncryptedRandomAccessStreamBase::WriteSegments(
   // Fill any gap left by a seek past the end once, before the write loop, so
   // the loop below only ever loads/switches blocks and never deals with gaps.
   if (mLogicalPosition > mLogicalSize) {
+    if (mBlockDirty) {
+      const auto rv = SaveCurrentBlock();
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+    }
     const auto rv = ZeroExtendTo(mLogicalPosition);
     if (NS_FAILED(rv)) {
       return rv;
@@ -390,7 +395,7 @@ EncryptedRandomAccessStreamBase::BuildAad(
 
 /**
  * Note the followings:
- * - At the end, the last block is loaded but not saved.
+ * - Loads the last block at the end.
  * - Doesn't change |mLogicalPosition|, but changes |mLogicalSize|.
  */
 nsresult EncryptedRandomAccessStreamBase::ZeroExtendTo(
@@ -399,14 +404,13 @@ nsresult EncryptedRandomAccessStreamBase::ZeroExtendTo(
     return NS_OK;
   }
 
-  if (mLogicalSize == 0) {
-    MOZ_ASSERT(!mBlockDirty);  // A dirty block implies mLogicalSize > 0.
+  if (mTotalBlockCount == 0) {
     const auto rv = LoadNewBlockAtEnd();
     if (NS_FAILED(rv)) {
       return rv;
     }
   } else {
-    const BlockIndexType lastBlockIndex = (mLogicalSize - 1) / sMaxTextLength;
+    BlockIndexType lastBlockIndex = mTotalBlockCount - 1;
     if (lastBlockIndex != mCurrentBlockIndex || !mBlockLoaded) {
       if (mBlockDirty) {
         const auto rv = SaveCurrentBlock();
@@ -458,9 +462,6 @@ nsresult EncryptedRandomAccessStreamBase::ZeroExtendTo(
     }
   }
 
-  // The last block is not saved. The caller decides when to save it.
-  MOZ_ASSERT(mBlockDirty);
-
   return NS_OK;
 }
 
@@ -504,114 +505,25 @@ nsresult EncryptedRandomAccessStreamBase::PadPlainBuffer() {
   return NS_OK;
 }
 
+//////////////////////////////////////////
+// TODO: The below is NOT implemented yet.
+//////////////////////////////////////////
+
 NS_IMETHODIMP EncryptedRandomAccessStreamBase::SetEOF() {
-  if (mClosed) {
-    return NS_BASE_STREAM_CLOSED;
-  }
-
-  if (mLogicalPosition == mLogicalSize) {
-    return NS_OK;
-  }
-
-  if (mLogicalPosition == 0) {
-    mLogicalSize = 0;
-    mTotalBlockCount = 0;
-    mCurrentBlockIndex = 0;
-    mCurrentBlockTextLength = 0;
-    mBlockLoaded = false;
-    mBlockDirty = false;
-
-    auto rv = mBaseStream->Seek(NS_SEEK_SET, 0);
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-    rv = mBaseStream->SetEOF();
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-    return NS_OK;
-  }
-
-  // 1. Keeping the current data, truncate the stream to |mLogicalPosition|.
-  const BlockIndexType targetBlockIndex =
-      (mLogicalPosition - 1) / sMaxTextLength;
-  const auto targetBlockNewOffset =
-      static_cast<TextLengthType>(mLogicalPosition % sMaxTextLength == 0
-                                      ? sMaxTextLength
-                                      : mLogicalPosition % sMaxTextLength);
-
-  DebugOnly<bool> grow;
-  if (mLogicalPosition > mLogicalSize) {
-    grow = true;
-
-    auto rv = ZeroExtendTo(mLogicalPosition);
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-
-    // Note that |ZeroExtendTo| doesn't yet save the last block (i.e. the
-    // target block) here.
-    MOZ_ASSERT(mCurrentBlockIndex == targetBlockIndex);
-    MOZ_ASSERT(mLogicalSize == mLogicalPosition);
-    MOZ_ASSERT(mCurrentBlockTextLength == targetBlockNewOffset);
-  } else {
-    grow = false;
-
-    if (targetBlockIndex != mCurrentBlockIndex || !mBlockLoaded) {
-      // If the current block is past the target block, the current
-      // block will be truncated by this SetEOF operation and so we
-      // don't have to save it.
-      if (mBlockDirty && mCurrentBlockIndex < targetBlockIndex) {
-        const auto rv = SaveCurrentBlock();
-        if (NS_FAILED(rv)) {
-          return rv;
-        }
-      }
-      const auto rv = LoadBlock(targetBlockIndex);
-      if (NS_FAILED(rv)) {
-        return rv;
-      }
-    }
-
-    MOZ_ASSERT(mCurrentBlockIndex == targetBlockIndex);
-    mLogicalSize = mLogicalPosition;
-    mCurrentBlockTextLength = targetBlockNewOffset;
-
-    // Shrinking the text length leaves truncated plaintext in the block.
-    // PadPlainBuffer overwrites it with random bytes, which invalidates the
-    // AEAD tag, so the whole block must be re-encrypted.
-    mBlockDirty = true;
-  }
-
-  // 2. Persist the target block. For a grown stream this is the appended final
-  //    block, so |SaveCurrentBlock| also bumps |mTotalBlockCount| to count it.
-  auto rv = SaveCurrentBlock();
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-  MOZ_ASSERT_IF(grow, mTotalBlockCount == targetBlockIndex + 1);
-  mTotalBlockCount = targetBlockIndex + 1;  // Necessary for the shrink case.
-
-  // 3. Truncate the base stream.
-  const auto newPhysicalSize = CheckedInt64(mTotalBlockCount) * sBlockSize;
-  if (!newPhysicalSize.isValid()) {
-    return NS_ERROR_FILE_TOO_BIG;
-  }
-  rv = mBaseStream->Seek(NS_SEEK_SET, newPhysicalSize.value());
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-  rv = mBaseStream->SetEOF();
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  return NS_OK;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+// TODO: NOT IMPLEMENTED
+
+mozilla::ipc::RandomAccessStreamParams
+EncryptedRandomAccessStreamBase::Serialize(nsIInterfaceRequestor*) {
+  return {};
+}
+
+// TODO: NOT IMPLEMENTED
 
 bool EncryptedRandomAccessStreamBase::Deserialize(
     mozilla::ipc::RandomAccessStreamParams&) {
-  MOZ_ASSERT_UNREACHABLE("Use |CreateFromParams| for deserialization.");
   return false;
 }
 
