@@ -23,6 +23,7 @@ import {
   WIDGET_REGISTRY,
   isWidgetEnabled,
 } from "resource://newtab/common/WidgetsRegistry.mjs";
+import { resolvePageLayoutVariant } from "resource://newtab/common/PageLayoutVariants.mjs";
 import { Prefs } from "resource://newtab/lib/ActivityStreamPrefs.sys.mjs";
 import { classifySite } from "resource://newtab/lib/SiteClassifier.sys.mjs";
 
@@ -1637,6 +1638,7 @@ export class TelemetryFeed {
         this.initializeGleanSession();
         this.recordEnabledWidgets();
         this.initializeMac();
+        this.recordPageLayoutVariant();
         break;
     }
   }
@@ -1781,6 +1783,16 @@ export class TelemetryFeed {
         isWidgetEnabled(w, prefs, widgetsEnabled)
       ).map(w => w.telemetryName)
     );
+  }
+
+  // Read from the store rather than NEWTAB_PING_PREFS, since the variant can
+  // also come from a train-hop config, which is not a pref.
+  recordPageLayoutVariant() {
+    const prefs = this.store?.getState()?.Prefs.values;
+    if (!prefs) {
+      return;
+    }
+    Glean.newtab.pageLayoutVariant.set(resolvePageLayoutVariant(prefs));
   }
 
   handleWidgetsHideAll(action) {
