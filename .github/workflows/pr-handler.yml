@@ -83,7 +83,7 @@ jobs:
         if: (steps.team.outputs.is_member == 'true' && steps.paths.outputs.only_allowed == 'true') && github.event.action == 'opened' && github.base_ref == 'main'
         run: |
           gh pr comment "${PR}" --body "> [!WARNING]
-          The base branch is currently set to \`main\`. Please Edit this PR and set the base to \`autoland\`."
+          The base branch is currently set to \`main\`. Please [Edit this PR](https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/changing-the-base-branch-of-a-pull-request) and set the base to \`autoland\`."
 
       - name: Add Lando link
         if: (steps.team.outputs.is_member == 'true' && steps.paths.outputs.only_allowed == 'true') && github.event.action == 'opened'
