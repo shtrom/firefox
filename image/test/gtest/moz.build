@@ -30,6 +30,8 @@ UNIFIED_SOURCES = [
 
 TEST_HARNESS_FILES.gtest += [
     "animated-with-extra-image-sub-blocks.gif",
+    "avif_420_film_grain.avif",
+    "avif_444_film_grain.avif",
     "blend.avif",
     "blend.gif",
     "blend.jxl",
