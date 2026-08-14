@@ -162,7 +162,7 @@ fun EditTabGroup(
 
         Surface(
             shape = formFieldShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = MaterialTheme.colorScheme.surfaceBright,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = FirefoxTheme.layout.space.dynamic200),
@@ -196,7 +196,7 @@ private fun TabGroupColorPicker(theme: TabGroupTheme, onTabGroupThemeChange: (Ta
 
     Surface(
         shape = formFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = MaterialTheme.colorScheme.surfaceBright,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = FirefoxTheme.layout.space.dynamic200),
@@ -278,7 +278,7 @@ private fun TabGroupColorPickerItem(
                     )
                     .border(
                         innerBorderWidth,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        color = MaterialTheme.colorScheme.surfaceBright,
                         shape = CircleShape,
                     ),
                 predicate = { selected },
