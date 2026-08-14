@@ -714,7 +714,7 @@ describe("<Widgets> maximize toggle size sync", () => {
   });
 });
 
-describe("<Widgets> add-widget control", () => {
+describe("<Widgets> header controls", () => {
   // Everything isSideBySideActive gates on beyond the widget prefs
   // makeNovaWidgetState already sets.
   const SIDE_BY_SIDE = {
@@ -750,5 +750,20 @@ describe("<Widgets> add-widget control", () => {
 
     expect(container.querySelector("#add-widgets-button")).toBeInTheDocument();
     expect(container.querySelector(".widgets-add-button")).toBeNull();
+  });
+
+  // Bug 2063604: the row toggle and the per-widget submenu are separate gates.
+  it("keeps per-widget size options while hiding the row toggle in side-by-side", () => {
+    const { container } = renderWidgets(
+      makeNovaWidgetState([["lists", "medium"]], {
+        ...SIDE_BY_SIDE,
+        "widgets.system.maximized": true,
+      })
+    );
+
+    expect(container.querySelector("#toggle-widgets-size-button")).toBeNull();
+    expect(
+      container.querySelector('[data-l10n-id="newtab-widget-menu-change-size"]')
+    ).toBeInTheDocument();
   });
 });

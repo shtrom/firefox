@@ -143,13 +143,13 @@ function Widgets() {
     prefs[PREF_WIDGETS_HIDE_ALL_TOAST_ENABLED];
   const feedbackUrl =
     prefs.trainhopConfig?.widgets?.feedbackUrl ?? WIDGETS_FEEDBACK_URL;
-  // Maximizing makes no sense in a single-widget-wide column, so that slot gets
-  // an add button instead.
   const sideBySideActive = isSideBySideActive(prefs);
-  const showWidgetsSizeToggle =
-    !sideBySideActive &&
-    (nimbusMaximizedTrainhopEnabled || prefs[PREF_WIDGETS_SYSTEM_MAXIMIZED]);
-  const widgetsMayBeMaximized = showWidgetsSizeToggle;
+  const widgetsMayBeMaximized =
+    nimbusMaximizedTrainhopEnabled || prefs[PREF_WIDGETS_SYSTEM_MAXIMIZED];
+  // The row toggle resizes every widget at once, which a one-card-wide column has
+  // no room for; that slot gets an add button instead. Per-widget "Change size"
+  // still applies -- size is a row span, so medium and large are both one card wide.
+  const showWidgetsSizeToggle = !sideBySideActive && widgetsMayBeMaximized;
 
   const widgetsEnabled = prefs[PREF_WIDGETS_ENABLED];
 
