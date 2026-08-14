@@ -21,7 +21,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 /**
  * @import {URIFixupPrimitives} from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  * @import {UrlbarChild} from "../../../actors/UrlbarChild.sys.mjs"
- * @import {UrlbarInput} from "chrome://browser/content/urlbar/UrlbarInputBase.mjs"
+ * @import {UrlbarInput} from "chrome://browser/content/urlbar/UrlbarInput.mjs"
  * @import {UrlbarParentController} from "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs"
  * @import {UrlbarView} from "chrome://browser/content/urlbar/UrlbarView.mjs"
  * @import {SmartbarInput} from "moz-src:///browser/components/urlbar/content/SmartbarInput.mjs"

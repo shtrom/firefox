@@ -97,7 +97,7 @@ let px = number => number.toFixed(2) + "px";
 /**
  * Implements the text input part of the address bar UI.
  */
-export class UrlbarInput extends HTMLElement {
+export class UrlbarInputBase extends HTMLElement {
   static get #markup() {
     return `
       <html:div class="urlbar-background"/>
@@ -172,13 +172,13 @@ ${
 
   /** @type {DocumentFragment} */
   static get fragment() {
-    if (!UrlbarInput.#fragment) {
-      UrlbarInput.#fragment = window.MozXULElement.parseXULToFragment(
-        UrlbarInput.#markup
+    if (!UrlbarInputBase.#fragment) {
+      UrlbarInputBase.#fragment = window.MozXULElement.parseXULToFragment(
+        UrlbarInputBase.#markup
       );
     }
     // @ts-ignore
-    return document.importNode(UrlbarInput.#fragment, true);
+    return document.importNode(UrlbarInputBase.#fragment, true);
   }
 
   static get observedAttributes() {
@@ -323,7 +323,7 @@ ${
       this.#onContextMenuRebuilt.bind(this)
     );
 
-    this.appendChild(UrlbarInput.fragment);
+    this.appendChild(UrlbarInputBase.fragment);
 
     // Make sure all children have been parsed before calling #populateSlots.
     if (document.readyState === "loading") {
@@ -478,7 +478,7 @@ ${
 
     this._initCopyCutController();
 
-    for (let event of UrlbarInput.#inputFieldEvents) {
+    for (let event of UrlbarInputBase.#inputFieldEvents) {
       this.inputField.addEventListener(event, this);
     }
 
@@ -572,7 +572,7 @@ ${
       delete this._copyCutController;
     }
 
-    for (let event of UrlbarInput.#inputFieldEvents) {
+    for (let event of UrlbarInputBase.#inputFieldEvents) {
       this.inputField.removeEventListener(event, this);
     }
 
@@ -6392,8 +6392,8 @@ function losslessDecodeURI(aURI) {
  */
 class CopyCutController {
   /**
-   * @param {UrlbarInput} urlbar
-   *   The UrlbarInput instance to use this controller for.
+   * @param {UrlbarInputBase} urlbar
+   *   The UrlbarInputBase instance to use this controller for.
    */
   constructor(urlbar) {
     this.urlbar = urlbar;
@@ -6479,7 +6479,7 @@ class AddSearchEngineHelper {
   shortcutButtons;
 
   /**
-   * @param {UrlbarInput} input The parent UrlbarInput.
+   * @param {UrlbarInputBase} input The parent UrlbarInputBase.
    */
   constructor(input) {
     this.input = input;
@@ -6617,5 +6617,3 @@ class AddSearchEngineHelper {
     }
   }
 }
-
-customElements.define("moz-urlbar", UrlbarInput);

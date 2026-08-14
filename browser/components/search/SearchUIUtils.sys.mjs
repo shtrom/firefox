@@ -8,7 +8,7 @@
 
 /**
  * @import { SearchUtils } from "moz-src:///toolkit/components/search/SearchUtils.sys.mjs"
- * @import { UrlbarInput } from "chrome://browser/content/urlbar/UrlbarInputBase.mjs"
+ * @import { UrlbarInput } from "chrome://browser/content/urlbar/UrlbarInput.mjs"
  * @import { SearchEngine } from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  */
 

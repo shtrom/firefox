@@ -4,7 +4,7 @@
 
 /**
  * @import { SearchEngine } from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs";
- * @import { UrlbarInput } from "moz-src:///browser/components/urlbar/content/UrlbarInputBase.mjs";
+ * @import { UrlbarInput } from "moz-src:///browser/components/urlbar/content/UrlbarInput.mjs";
  */
 
 const lazy = {};
