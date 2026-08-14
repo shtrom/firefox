@@ -24,9 +24,26 @@ containers-icon-label2 =
 containers-color-label2 =
     .label = Color
 
-containers-dialog =
-    .buttonlabelaccept = Done
-    .buttonaccesskeyaccept = D
+containers-dialog2 =
+    .buttonlabelaccept = Save
+    .buttonaccesskeyaccept = S
+
+## Dialog that binds a website to a container.
+
+containers-site-window =
+    .title = Add Website
+    .style = min-width: 32em
+
+containers-site-label =
+    .label = Website
+    .placeholder = example.com
+
+containers-site-container-label =
+    .label = Container
+
+containers-site-dialog =
+    .buttonlabelaccept = Save
+    .buttonaccesskeyaccept = S
 
 ## Container creation panel, anchored to the URL bar.
 

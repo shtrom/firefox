@@ -4,17 +4,28 @@
 
 @import url("chrome://browser/content/usercontext/usercontext.css");
 
-.container-editor {
+.container-editor,
+.site-container-editor {
   display: flex;
   padding: var(--space-large);
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-large);
 
-  moz-input-text::part(label) {
+  moz-input-text::part(label),
+  container-select::part(label) {
     font-weight: var(--font-weight-semibold);
   }
+}
 
+.site-container-editor {
+  container-select {
+    --select-margin-inline: 0;
+    --select-min-width: 100%;
+  }
+}
+
+.container-editor {
   .swatches::part(inputs) {
     justify-content: space-between;
   }
