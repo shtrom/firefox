@@ -1285,6 +1285,11 @@ void LIRGenerator::visitTest(MTest* test) {
     return;
   }
 
+  if (opd->isIsResumingGenerator() && opd->isEmittedAtUses()) {
+    add(new (alloc()) LIsResumingGeneratorAndBranch(ifTrue, ifFalse), test);
+    return;
+  }
+
   if (opd->isIteratorHasIndices()) {
     MOZ_ASSERT(opd->isEmittedAtUses());
 
@@ -6727,6 +6732,35 @@ void LIRGenerator::visitIsObject(MIsObject* ins) {
 void LIRGenerator::visitIsGenClosing(MIsGenClosing* ins) {
   MOZ_ASSERT(ins->value()->type() == MIRType::Value);
   define(new (alloc()) LIsGenClosing(useBoxAtStart(ins->value())), ins);
+}
+
+void LIRGenerator::visitIsResumingGenerator(MIsResumingGenerator* ins) {
+  // Try to emit LIsResumingGeneratorAndBranch. IsResumingGenerator loads the
+  // frame descriptor so we also make sure the MTest instruction is the next
+  // instruction, to prevent moving the load past MClearResumingGeneratorFlag.
+  if (CanEmitAtUseForSingleTest(ins)) {
+    MInstructionIterator next(ins->block()->begin(ins));
+    next++;
+    if (*next == ins->usesBegin()->consumer()->toDefinition()) {
+      emitAtUses(ins);
+      return;
+    }
+  }
+
+  define(new (alloc()) LIsResumingGenerator(), ins);
+}
+
+void LIRGenerator::visitResumeFrameArg(MResumeFrameArg* ins) {
+  defineBox(new (alloc()) LResumeFrameArg(), ins);
+}
+
+void LIRGenerator::visitAssertResumeKindIsNext(MAssertResumeKindIsNext* ins) {
+  add(new (alloc()) LAssertResumeKindIsNext(temp()), ins);
+}
+
+void LIRGenerator::visitClearResumingGeneratorFlag(
+    MClearResumingGeneratorFlag* ins) {
+  add(new (alloc()) LClearResumingGeneratorFlag(), ins);
 }
 
 void LIRGenerator::visitIsSuspendedGenerator(MIsSuspendedGenerator* ins) {

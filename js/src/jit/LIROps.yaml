@@ -2682,6 +2682,9 @@
   operands:
     input: BoxedValue
 
+- name: IsResumingGeneratorAndBranch
+  successors: [ifTrue, ifFalse]
+
 - name: CloseIterCache
   operands:
     iter: WordSized
