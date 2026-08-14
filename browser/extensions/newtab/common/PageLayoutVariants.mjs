@@ -57,7 +57,7 @@ const SIDE_BY_SIDE_CLASSES = {
 
 export const SIDE_BY_SIDE_PAGE_LAYOUTS = Object.keys(SIDE_BY_SIDE_CLASSES);
 
-const PREF_PAGE_LAYOUT_VARIANT = "pageLayouts.variant";
+export const PREF_PAGE_LAYOUT_VARIANT = "pageLayouts.variant";
 
 /**
  * Returns the assigned page layout variant, whether or not it can currently
