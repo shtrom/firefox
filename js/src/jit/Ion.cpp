@@ -399,8 +399,9 @@ uint8_t* jit::LazyLinkTopActivation(JSContext* cx,
 
   // Enter the Baseline code instead of Ion code in two cases:
   //
-  // * The caller is resuming a suspended generator: the Ion prologue doesn't
-  //   support this.
+  // * The caller is resuming a suspended generator. Ion's resume dispatch only
+  //   handles the Next resume kind so this just means a resume that hits this
+  //   rare window doesn't enter Ion yet.
   // * The caller pushed a trial-inlining ICScript for us: it's only used by
   //   Baseline code.
   FrameDescriptor descriptor = jsFrame->descriptor();

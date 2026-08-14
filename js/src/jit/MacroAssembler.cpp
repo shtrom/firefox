@@ -4135,10 +4135,9 @@ void MacroAssembler::loadJitCodeRaw(Register func, Register dest) {
 
 void MacroAssembler::loadJitCodeRawNoIon(Register func, Register dest,
                                          Register scratch) {
-  // This is used when calling a trial-inlined script using a private
-  // ICScript to collect callsite-specific CacheIR. Ion doesn't use
-  // the baseline ICScript, so we want to enter at the highest
-  // available non-Ion tier.
+  // Enter at the highest available non-Ion tier. This is used for trial-inlined
+  // scripts, because Ion doesn't use the private ICScript, and for Throw and
+  // Return generator resumes.
 
   Label useJitCodeRaw, done;
   loadPrivate(Address(func, JSFunction::offsetOfJitInfoOrScript()), dest);

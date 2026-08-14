@@ -122,7 +122,7 @@ BaselineInterpreterGenerator::BaselineInterpreterGenerator(JSContext* cx,
                       /* no handlerArgs */) {}
 
 bool BaselineCompilerHandler::init() {
-  if (!analysis_.init(alloc_)) {
+  if (!analysis_.init()) {
     return false;
   }
 
@@ -6664,11 +6664,18 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   MOZ_ASSERT(masm.framePushed() == sizeof(uintptr_t));
   masm.setFramePushed(0);
 
-  // Load the code to call. We can't use jitCodeRaw unconditionally because it
-  // may point to Ion code and the Ion prologue doesn't support resuming a
-  // generator.
+  // Load the code to call. Throw and Return currently always resume in
+  // Baseline; see MaybeEnterJit.
   Register code = regs.takeAny();
+  Label baselineOnly, gotEntry;
+  masm.unboxInt32(resumeKindSlot, scratch1);
+  masm.branch32(Assembler::NotEqual, scratch1,
+                Imm32(int32_t(GeneratorResumeKind::Next)), &baselineOnly);
+  masm.loadJitCodeRaw(callee, code);
+  masm.jump(&gotEntry);
+  masm.bind(&baselineOnly);
   masm.loadJitCodeRawNoIon(callee, code, scratch1);
+  masm.bind(&gotEntry);
   regs.add(callee);
 
   masm.switchToObjectRealm(genObj, scratch1);

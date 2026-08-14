@@ -21902,11 +21902,16 @@ void CodeGenerator::visitGeneratorResume(LGeneratorResume* lir) {
                             /* hasInlined = */ false,
                             /* isResumingGenerator = */ true));
 
-  // Load the code to call. We can't use jitCodeRaw unconditionally because it
-  // may point to Ion code and the Ion prologue doesn't support resuming a
-  // generator.
+  // Load the code to call. Throw and Return currently always resume in
+  // Baseline; see MaybeEnterJit.
   Register code = callee;
-  masm.loadJitCodeRawNoIon(callee, code, scratch);
+  if (resumeKind == int32_t(GeneratorResumeKind::Next)) {
+    masm.loadJitCodeRaw(callee, code);
+  } else {
+    MOZ_ASSERT(resumeKind == int32_t(GeneratorResumeKind::Throw) ||
+               resumeKind == int32_t(GeneratorResumeKind::Return));
+    masm.loadJitCodeRawNoIon(callee, code, scratch);
+  }
 
   masm.switchToObjectRealm(genObj, scratch);
 
