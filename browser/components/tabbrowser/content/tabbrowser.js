@@ -4889,17 +4889,20 @@
       if (typeof elementIndex != "number" && typeof tabIndex != "number") {
         // Move the new tab after another tab if needed, to the end otherwise.
         elementIndex = Infinity;
+        let insertRelatedAfterCurrent = Services.prefs.getBoolPref(
+          "browser.tabs.insertRelatedAfterCurrent"
+        );
         if (
           !bulkOrderedOpen &&
-          ((openerTab &&
-            Services.prefs.getBoolPref(
-              "browser.tabs.insertRelatedAfterCurrent"
-            )) ||
+          ((openerTab && insertRelatedAfterCurrent) ||
             Services.prefs.getBoolPref("browser.tabs.insertAfterCurrent"))
         ) {
           let lastRelatedTab =
             openerTab && this.#lastRelatedTabMap.get(openerTab);
-          let previousTab = lastRelatedTab || openerTab || this.selectedTab;
+          let previousTab =
+            (insertRelatedAfterCurrent && lastRelatedTab) ||
+            openerTab ||
+            this.selectedTab;
           if (!tabGroup) {
             tabGroup = previousTab.group;
           }
