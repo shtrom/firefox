@@ -3430,8 +3430,7 @@ CSSToLayoutDeviceScale nsGlobalWindowOuter::CSSToDevScaleForBaseWindow(
   return scale;
 }
 
-nsresult nsGlobalWindowOuter::GetInnerSize(CSSSize& aSize,
-                                           CallerType aCallerType) {
+nsresult nsGlobalWindowOuter::GetInnerSize(CSSSize& aSize) {
   if (mDoc && mDoc->IsTopLevelContentDocument() &&
       nsLayoutUtils::ShouldHandleMetaViewport(mDoc)) {
     // Window.inner{Width,Height} depend on minimum-scale size and to get the
@@ -3466,10 +3465,6 @@ nsresult nsGlobalWindowOuter::GetInnerSize(CSSSize& aSize,
 
   aSize = CSSPixel::FromAppUnits(innerSize);
 
-  if (aCallerType == dom::CallerType::System) {
-    return NS_OK;
-  }
-
   switch (StaticPrefs::dom_innerSize_rounding()) {
     case 1:
       aSize.width = std::roundf(aSize.width);
@@ -3486,18 +3481,26 @@ nsresult nsGlobalWindowOuter::GetInnerSize(CSSSize& aSize,
   return NS_OK;
 }
 
-double nsGlobalWindowOuter::GetInnerWidthOuter(CallerType aCallerType,
-                                               ErrorResult& aError) {
+double nsGlobalWindowOuter::GetInnerWidthOuter(ErrorResult& aError) {
   CSSSize size;
-  aError = GetInnerSize(size, aCallerType);
+  aError = GetInnerSize(size);
   return size.width;
 }
 
-double nsGlobalWindowOuter::GetInnerHeightOuter(CallerType aCallerType,
-                                                ErrorResult& aError) {
+nsresult nsGlobalWindowOuter::GetInnerWidth(double* aInnerWidth) {
+  FORWARD_TO_INNER_WITH_STRONG_REF(GetInnerWidth, (aInnerWidth),
+                                   NS_ERROR_UNEXPECTED);
+}
+
+double nsGlobalWindowOuter::GetInnerHeightOuter(ErrorResult& aError) {
   CSSSize size;
-  aError = GetInnerSize(size, aCallerType);
+  aError = GetInnerSize(size);
   return size.height;
+}
+
+nsresult nsGlobalWindowOuter::GetInnerHeight(double* aInnerHeight) {
+  FORWARD_TO_INNER_WITH_STRONG_REF(GetInnerHeight, (aInnerHeight),
+                                   NS_ERROR_UNEXPECTED);
 }
 
 CSSIntSize nsGlobalWindowOuter::GetOuterSize(CallerType aCallerType,
