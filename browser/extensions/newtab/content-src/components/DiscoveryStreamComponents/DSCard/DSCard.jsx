@@ -537,7 +537,9 @@ export class _DSCard extends React.PureComponent {
   renderSectionCardImages() {
     const { sectionsCardImageSizes } = this.props;
 
-    const columns = ["1", "2", "3", "4"];
+    // Derived from the layout's breakpoints rather than a fixed list, so a
+    // 5-column layout renders a 5th variant.
+    const columns = Object.keys(sectionsCardImageSizes);
 
     return (
       <>

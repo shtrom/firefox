@@ -651,7 +651,7 @@ function Widgets() {
   // CSS container queries on the widgets section decide whether the toggle
   // button is shown — see _Widgets.scss. The collapsed row holds one widget
   // per card-column slot regardless of size, so for each card-column count
-  // (1–4) anything past the first N positions overflows. This keeps mediums
+  // (1–5) anything past the first N positions overflows. This keeps mediums
   // to a single (shorter) row rather than stacking them two-deep to fill a
   // large-height band. The matching `data-overflow-N` attribute is read by
   // the @container rules in CSS.
@@ -681,12 +681,14 @@ function Widgets() {
     2: hiddenIndicesAt(2),
     3: hiddenIndicesAt(3),
     4: hiddenIndicesAt(4),
+    5: hiddenIndicesAt(5),
   };
   const overflowAttrs = {
     "data-overflow-1": overflowsAt(1) ? "" : undefined,
     "data-overflow-2": overflowsAt(2) ? "" : undefined,
     "data-overflow-3": overflowsAt(3) ? "" : undefined,
     "data-overflow-4": overflowsAt(4) ? "" : undefined,
+    "data-overflow-5": overflowsAt(5) ? "" : undefined,
   };
   const isCollapsed = novaEnabled && !rowExpanded;
 
@@ -742,6 +744,9 @@ function Widgets() {
                   ? ""
                   : undefined,
                 "data-hidden-4": hiddenAtCols[4].has(renderIdx)
+                  ? ""
+                  : undefined,
+                "data-hidden-5": hiddenAtCols[5].has(renderIdx)
                   ? ""
                   : undefined,
               };
