@@ -1562,8 +1562,7 @@ FilterInstance::FilterInstance(
       filterToUserSpace * GetUserSpaceToFrameSpaceInCSSPxTransform();
   // mFilterSpaceToFrameSpaceInCSSPxTransform is always invertible
   mFrameSpaceInCSSPxToFilterSpaceTransform =
-      mFilterSpaceToFrameSpaceInCSSPxTransform;
-  mFrameSpaceInCSSPxToFilterSpaceTransform.Invert();
+      mFilterSpaceToFrameSpaceInCSSPxTransform.Inverse();
 
   nsIntRect targetBounds;
   if (aPreFilterInkOverflowRectOverride) {
@@ -1817,9 +1816,8 @@ void FilterInstance::BuildSourceImage(DrawTarget* aDest,
   // code more complex while being hard to get right without introducing
   // subtle bugs, and in practice it probably makes no real difference.)
   gfxContext ctx(offscreenDT);
-  gfxMatrix devPxToCssPxTM = SVGUtils::GetCSSPxToDevPxMatrix(mTargetFrame);
-  DebugOnly<bool> invertible = devPxToCssPxTM.Invert();
-  MOZ_ASSERT(invertible);
+  gfxMatrix devPxToCssPxTM =
+      SVGUtils::GetCSSPxToDevPxMatrix(mTargetFrame).Inverse();
   ctx.SetMatrixDouble(devPxToCssPxTM * mPaintTransform *
                       gfxMatrix::Translation(-neededRect.TopLeft()));
 

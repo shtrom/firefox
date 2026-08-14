@@ -652,8 +652,7 @@ void SVGUtils::PaintFrameWithEffects(nsIFrame* aFrame, gfxContext& aContext,
     if (shouldPushMask) {
       // We want the mask to be untransformed so use the inverse of the
       // current transform as the maskTransform to compensate.
-      Matrix maskTransform = aContext.CurrentMatrix();
-      maskTransform.Invert();
+      Matrix maskTransform = aContext.CurrentMatrix().Inverse();
       target->PushGroupForBlendBack(gfxContentType::COLOR_ALPHA,
                                     maskFrame ? 1.0f : maskUsage.Opacity(),
                                     maskSurface, maskTransform);
@@ -683,8 +682,8 @@ void SVGUtils::PaintFrameWithEffects(nsIFrame* aFrame, gfxContext& aContext,
     // pixels (SVG user space units). But PaintFilteredFrame expects it to be
     // scaled in such a way that its user space units are device pixels. So we
     // have to adjust the scale.
-    gfxMatrix reverseScaleMatrix = SVGUtils::GetCSSPxToDevPxMatrix(aFrame);
-    DebugOnly<bool> invertible = reverseScaleMatrix.Invert();
+    gfxMatrix reverseScaleMatrix =
+        SVGUtils::GetCSSPxToDevPxMatrix(aFrame).Inverse();
     target->SetMatrixDouble(reverseScaleMatrix * aTransform *
                             target->CurrentMatrixDouble());
 
@@ -763,8 +762,7 @@ bool SVGUtils::HitTestRect(const gfx::Matrix& aMatrix, float aRX, float aRY,
   if (rect.IsEmpty() || aMatrix.IsSingular()) {
     return false;
   }
-  gfx::Matrix toRectSpace = aMatrix;
-  toRectSpace.Invert();
+  gfx::Matrix toRectSpace = aMatrix.Inverse();
   gfx::Point p = toRectSpace.TransformPoint(gfx::Point(aX, aY));
   return rect.x <= p.x && p.x <= rect.XMost() && rect.y <= p.y &&
          p.y <= rect.YMost();
@@ -1117,10 +1115,9 @@ static gfxRect PathExtentsToMaxStrokeExtents(const gfxRect& aPathExtents,
 
   gfxMatrix matrix = aMatrix;
 
-  if (Maybe<gfxMatrix> outerSVGToUser =
+  if (Maybe<gfxMatrix> userToOuterSVG =
           SVGUtils::GetNonScalingStrokeTransform(aFrame)) {
-    outerSVGToUser->Invert();
-    matrix.PreMultiply(*outerSVGToUser);
+    matrix.PreMultiply(userToOuterSVG->Inverse());
   }
 
   double dx = style_expansion * (std::abs(matrix._11) + std::abs(matrix._21));
