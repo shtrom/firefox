@@ -10,7 +10,7 @@ import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
  * @import {SearchEngine} from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import {SapLocation, SmartbarInput} from "moz-src:///browser/components/urlbar/content/SmartbarInput.mjs"
  * @import {UrlbarView} from "chrome://browser/content/urlbar/UrlbarView.mjs"
- * @import {WindowMode} from "moz-src:///browser/components/urlbar/content/UrlbarInput.mjs"
+ * @import {WindowMode} from "moz-src:///browser/components/urlbar/content/UrlbarInputBase.mjs"
  * @import {SearchEngineInfo} from "chrome://browser/content/urlbar/SearchEngineStore.mjs"
  */
 

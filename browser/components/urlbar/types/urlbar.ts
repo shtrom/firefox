@@ -12,7 +12,7 @@ type UrlbarChildController =
   import("../content/UrlbarChildController.mjs").UrlbarChildController;
 type UrlbarParentController =
   import("../UrlbarParentController.sys.mjs").UrlbarParentController;
-type UrlbarInput = import("../content/UrlbarInput.mjs").UrlbarInput;
+type UrlbarInput = import("../content/UrlbarInputBase.mjs").UrlbarInput;
 type UrlbarQueryContext =
   import("../content/UrlbarQueryContext.mjs").UrlbarQueryContext;
 type UrlbarResult = import("../content/UrlbarResult.mjs").UrlbarResult;

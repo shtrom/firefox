@@ -34,7 +34,7 @@
   if (AIWindow.isOpeningAIWindow(window)) {
     ChromeUtils.importESModule("chrome://browser/content/urlbar/SmartbarInput.mjs", { global: "current" });
   }
-  ChromeUtils.importESModule("chrome://browser/content/urlbar/UrlbarInput.mjs", { global: "current" });
+  ChromeUtils.importESModule("chrome://browser/content/urlbar/UrlbarInputBase.mjs", { global: "current" });
 }
 
 window.onload = gBrowserInit.onLoad.bind(gBrowserInit);
