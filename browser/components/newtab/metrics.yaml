@@ -1636,10 +1636,7 @@ topsites:
       - achurchwell@mozilla.com
     expires: never
     extra_keys:
-      advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
-      is_sponsored: *is_sponsored
       position: *topsite_position
     send_in_pings:
       - newtab
@@ -1659,10 +1656,7 @@ topsites:
       - achurchwell@mozilla.com
     expires: never
     extra_keys:
-      advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
-      is_sponsored: *is_sponsored
       position: *topsite_position
     send_in_pings:
       - newtab
@@ -1682,10 +1676,7 @@ topsites:
       - achurchwell@mozilla.com
     expires: never
     extra_keys:
-      advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
-      is_sponsored: *is_sponsored
       position: *topsite_position
     send_in_pings:
       - newtab
@@ -1705,10 +1696,7 @@ topsites:
       - achurchwell@mozilla.com
     expires: never
     extra_keys:
-      advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
-      is_sponsored: *is_sponsored
       position: *topsite_position
       has_title_changed: &has_title_changed
         description: Whether the topsite title was changed.
