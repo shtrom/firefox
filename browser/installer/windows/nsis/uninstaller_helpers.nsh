@@ -346,19 +346,7 @@ Function PostUpdateInstallation
     SetShellVarContext all    ; Set SHCTX to all users (e.g. HKLM)
     DeleteRegValue HKLM "Software\Mozilla" "${BrandShortName}InstallerTest"
     StrCpy $RegHive "HKLM"
-    ${RegCleanMain} "Software\Mozilla"
-    ${RegCleanUninstall}
-    ${UpdateProtocolHandlers}
-    ${FixShellIconHandler} "HKLM"
-    ${SetAppLSPCategories} ${LSP_CATEGORIES}
-
-    ; Add the Firewall entries after an update
-    Call AddFirewallEntries
-
-    ReadRegStr $0 HKLM "Software\mozilla.org\Mozilla" "CurrentVersion"
-    ${If} "$0" != "${GREVersion}"
-      WriteRegStr HKLM "Software\mozilla.org\Mozilla" "CurrentVersion" "${GREVersion}"
-    ${EndIf}
+    Call PostUpdateElevated
   ${EndIf}
 
   ${RemoveDeprecatedKeys}
@@ -435,6 +423,69 @@ Function PostUpdateInstallation
     Pop $TmpVal ; get "Marker"
   ${EndIf}
 
+!ifdef MOZ_LAUNCHER_PROCESS
+  ${ResetLauncherProcessDefaults}
+!endif
+
+  ${WriteToastNotificationRegistration} $RegHive
+
+; Make sure the scheduled task registration for the default browser agent gets
+; updated, but only if we're not the instance of PostUpdate that was started
+; by the service, because this needs to run as the actual user. Also, don't do
+; that if the installer was told not to register the agent task at all.
+; XXXbytesized - This also needs to un-register any scheduled tasks for the WDBA
+;                that were registered using elevation, but currently it does
+;                not. See Bugs 1638509 and 1902719.
+!ifdef MOZ_DEFAULT_BROWSER_AGENT
+${If} $RegHive == "HKCU"
+  ClearErrors
+  ReadRegDWORD $0 HKCU "Software\Mozilla\${AppName}\Installer\$AppUserModelID" \
+                    "DidRegisterDefaultBrowserAgent"
+  ${If} $0 != 0
+  ${OrIf} ${Errors}
+    ExecWait '"$INSTDIR\default-browser-agent.exe" register-task $AppUserModelID'
+  ${EndIf}
+${EndIf}
+!endif
+
+${RemoveDefaultBrowserAgentShortcut}
+FunctionEnd
+
+; This function runs each update IF THE UPDATE REQUIRED THE UPDATER TO ELEVATE
+; ITSELF. It runs as the user who requested the update, and (if it runs) it is
+; guaranteed to run after PostUpdateInstallation.
+;
+; Avoid putting logic here, since it will only run on some installations. If
+; you do put logic here, check that it behaves correctly on per-user
+; installations.
+Function PostUpdateCurrentUser
+  ; (This will be filled in later in the stack.)
+  Call PostUpdateInstallation
+FunctionEnd
+
+; This function runs each update with admin privileges, if possible.
+;
+; Avoid putting logic here, since it only affects systemwide installations.
+; Prefer PostUpdateInstallation if you don't need to access HKLM.
+;
+; It does not make sense to access HKCU here.
+Function PostUpdateElevated
+  ; RegHive=HKLM, ShellVarContext=all
+
+  ${RegCleanMain} "Software\Mozilla"
+  ${RegCleanUninstall}
+  ${UpdateProtocolHandlers}
+  ${FixShellIconHandler} "HKLM"
+  ${SetAppLSPCategories} ${LSP_CATEGORIES}
+
+  ; Add the Firewall entries after an update
+  Call AddFirewallEntries
+
+  ReadRegStr $0 HKLM "Software\mozilla.org\Mozilla" "CurrentVersion"
+  ${If} "$0" != "${GREVersion}"
+    WriteRegStr HKLM "Software\mozilla.org\Mozilla" "CurrentVersion" "${GREVersion}"
+  ${EndIf}
+
 !ifdef MOZ_MAINTENANCE_SERVICE
   Call IsUserAdmin
   Pop $R0
@@ -479,45 +530,6 @@ Function PostUpdateInstallation
     ${EndIf}
   ${EndIf}
 !endif
-
-!ifdef MOZ_LAUNCHER_PROCESS
-  ${ResetLauncherProcessDefaults}
-!endif
-
-  ${WriteToastNotificationRegistration} $RegHive
-
-; Make sure the scheduled task registration for the default browser agent gets
-; updated, but only if we're not the instance of PostUpdate that was started
-; by the service, because this needs to run as the actual user. Also, don't do
-; that if the installer was told not to register the agent task at all.
-; XXXbytesized - This also needs to un-register any scheduled tasks for the WDBA
-;                that were registered using elevation, but currently it does
-;                not. See Bugs 1638509 and 1902719.
-!ifdef MOZ_DEFAULT_BROWSER_AGENT
-${If} $RegHive == "HKCU"
-  ClearErrors
-  ReadRegDWORD $0 HKCU "Software\Mozilla\${AppName}\Installer\$AppUserModelID" \
-                    "DidRegisterDefaultBrowserAgent"
-  ${If} $0 != 0
-  ${OrIf} ${Errors}
-    ExecWait '"$INSTDIR\default-browser-agent.exe" register-task $AppUserModelID'
-  ${EndIf}
-${EndIf}
-!endif
-
-${RemoveDefaultBrowserAgentShortcut}
-FunctionEnd
-
-; This function runs each update IF THE UPDATE REQUIRED THE UPDATER TO ELEVATE
-; ITSELF. It runs as the user who requested the update, and (if it runs) it is
-; guaranteed to run after PostUpdate_Installation.
-;
-; Avoid putting logic here, since it will only run on some installations. If
-; you do put logic here, check that it behaves correctly on per-user
-; installations.
-Function PostUpdateCurrentUser
-  ; (This will be filled in later in the stack.)
-  Call PostUpdateInstallation
 FunctionEnd
 
 Function OnUpdateDesktopLauncherHandler
