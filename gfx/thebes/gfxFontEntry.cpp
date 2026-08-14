@@ -53,7 +53,6 @@ gfxFontEntry::gfxFontEntry(const nsACString& aName, bool aIsStandardFace)
       mIgnoreGSUB(false),
       mSkipDefaultFeatureSpaceCheck(false),
       mSVGInitialized(false),
-      mHasCmapTable(false),
       mGrFaceInitialized(false),
       mCheckedForColorGlyph(false),
       mCheckedForVariationAxes(false),
@@ -122,7 +121,7 @@ void gfxFontEntry::InitializeFrom(fontlist::Face* aFace,
   MOZ_PUSH_IGNORE_THREAD_SAFETY
   mFamilyName = aFamily->DisplayName().AsString(list);
   MOZ_POP_THREAD_SAFETY
-  mHasCmapTable = TrySetShmemCharacterMap();
+  TrySetShmemCharacterMap();
 }
 
 bool gfxFontEntry::TrySetShmemCharacterMap() {
