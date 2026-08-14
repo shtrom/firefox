@@ -37,9 +37,11 @@ import org.mozilla.fenix.trackingprotection.TrackingProtectionCategory.SOCIAL_ME
 import org.mozilla.fenix.trackingprotection.TrackingProtectionCategory.TRACKING_CONTENT
 import mozilla.components.ui.icons.R as iconsR
 
+@Suppress("LongParameterList")
 @Composable
 internal fun TrackersBlockedPanel(
     title: String,
+    url: String,
     numberOfTrackersBlocked: Int,
     numberOfTrackersBlockedThisWeek: Int,
     bucketedTrackers: TrackerBuckets,
@@ -50,7 +52,8 @@ internal fun TrackersBlockedPanel(
     MenuScaffold(
         header = {
             SubmenuHeader(
-                header = title,
+                title = title,
+                url = url,
                 onClick = onBackButtonClick,
             )
         },
@@ -131,6 +134,7 @@ private fun TrackersBlockedPanelPreview() {
         ) {
             TrackersBlockedPanel(
                 title = "Mozilla",
+                url = "www.mozilla.com",
                 numberOfTrackersBlocked = 0,
                 numberOfTrackersBlockedThisWeek = 33,
                 bucketedTrackers = TrackerBuckets(),

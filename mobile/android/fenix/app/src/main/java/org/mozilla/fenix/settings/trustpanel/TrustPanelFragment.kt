@@ -376,6 +376,7 @@ class TrustPanelFragment : BottomSheetDialogFragment() {
                         Route.TrackersPanel -> {
                             TrackersBlockedPanel(
                                 title = args.title,
+                                url = args.url,
                                 numberOfTrackersBlocked = numberOfTrackersBlocked,
                                 numberOfTrackersBlockedThisWeek = numberOfTrackersBlockedThisWeek,
                                 bucketedTrackers = bucketedTrackers,
@@ -398,6 +399,7 @@ class TrustPanelFragment : BottomSheetDialogFragment() {
                         Route.TrackerCategoryDetailsPanel -> {
                             TrackerCategoryDetailsPanel(
                                 title = args.title,
+                                url = args.url,
                                 detailedTrackerCategory = detailedTrackerCategory,
                                 bucketedTrackers = bucketedTrackers,
                                 onBackButtonClick = {

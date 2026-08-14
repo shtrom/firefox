@@ -28,6 +28,7 @@ import org.mozilla.fenix.trackingprotection.TrackingProtectionCategory
 @Composable
 internal fun TrackerCategoryDetailsPanel(
     title: String,
+    url: String,
     detailedTrackerCategory: TrackingProtectionCategory?,
     bucketedTrackers: TrackerBuckets,
     onBackButtonClick: () -> Unit,
@@ -35,7 +36,8 @@ internal fun TrackerCategoryDetailsPanel(
     MenuScaffold(
         header = {
             SubmenuHeader(
-                header = title,
+                title = title,
+                url = url,
                 onClick = onBackButtonClick,
             )
         },
@@ -106,6 +108,7 @@ private fun TrackersBlockedPanelPreview() {
         ) {
             TrackerCategoryDetailsPanel(
                 title = "Mozilla",
+                url = "www.mozilla.com",
                 detailedTrackerCategory = TrackingProtectionCategory.CROSS_SITE_TRACKING_COOKIES,
                 bucketedTrackers = TrackerBuckets(),
                 onBackButtonClick = {},
