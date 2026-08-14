@@ -255,6 +255,13 @@ export class TelemetryFeed {
       ?.inferredTelemetrySettingsOverrides;
   }
 
+  get tileIdRedactedForSponsored() {
+    return (
+      this.store?.getState()?.Prefs.values?.trainhopConfig?.newtabPing
+        ?.redactTileIdForSponsored || false
+    );
+  }
+
   /**
    * Checks if the Coarse Interest Vector (CIV) has recorded any clicks.
    * Used for the optimizeInferred feature to determine if private ping
@@ -623,7 +630,7 @@ export class TelemetryFeed {
       result.content_redacted = true;
       return result;
     }
-    // For spocs we need to retain the tile id.
+
     if (this.redactNewTabPingEnabled && isSponsored) {
       const {
         // eslint-disable-next-line no-unused-vars
@@ -634,6 +641,13 @@ export class TelemetryFeed {
         topic,
         ...result
       } = pingDict;
+
+      // For spocs we need to retain the tile id, unless we're configured to
+      // redact it.
+      if (this.tileIdRedactedForSponsored) {
+        delete result.tile_id;
+      }
+
       result.content_redacted = true;
       return result;
     }
