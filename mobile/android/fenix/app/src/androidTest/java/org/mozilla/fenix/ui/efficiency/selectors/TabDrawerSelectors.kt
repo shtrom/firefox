@@ -12,6 +12,7 @@ import org.mozilla.fenix.tabstray.TabsTrayTestTag.CLOSE_TAB_GROUP
 import org.mozilla.fenix.tabstray.TabsTrayTestTag.GROUP_NAME
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.helpers.SelectorStrategy
+import mozilla.components.compose.base.R as composeBaseR
 
 object TabDrawerSelectors {
 
@@ -314,6 +315,71 @@ object TabDrawerSelectors {
         groups = listOf("tabItem"),
     )
 
+    // The "Share" item in the tab-selection three dot menu. It carries the SHARE_BUTTON tag (not
+    // SHARE_ALL_TABS), same as the banner share button in the multiselect menu.
+    val SELECT_TABS_SHARE_BUTTON = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TAG,
+        value = TabsTrayTestTag.SHARE_BUTTON,
+        description = "Tab selection view three dot menu share button",
+        groups = listOf("tabSelectionThreeDotMainMenu"),
+    )
+
+    @Suppress("ktlint:standard:function-naming")
+    fun SELECTION_COUNTER(numberOfTabs: Int = 0) = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+        value = getStringResource(R.string.tab_tray_multi_select_title, numberOfTabs),
+        description = "Multi-selection counter: $numberOfTabs selected",
+        groups = listOf(),
+    )
+
+    val TAB_SEARCH_BUTTON = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TAG,
+        value = TabsTrayTestTag.TAB_SEARCH_ICON,
+        description = "Open tab search button",
+        groups = listOf(),
+    )
+
+    // The tab search input is a Material3 SearchBar InputField, which exposes no testTag; its default
+    // "Search" content description is the only stable handle, matching how the legacy robot located it.
+    val TAB_SEARCH_FIELD = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
+        value = "Search",
+        description = "Tab search input field",
+        groups = listOf(),
+    )
+
+    val TAB_SEARCH_CLEAR_BUTTON = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
+        value = getStringResource(composeBaseR.string.text_field_cross_trailing_icon_default_content_description),
+        description = "Clear tab search text button",
+        groups = listOf(),
+    )
+
+    val TAB_SEARCH_NO_RESULTS_TITLE = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+        value = getStringResource(R.string.tab_manager_no_search_results),
+        description = "Tab search no matches found message",
+        groups = listOf("tabSearchNoResults"),
+    )
+
+    val TAB_SEARCH_NO_RESULTS_SUBTITLE = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+        value = getStringResource(R.string.tab_manager_no_search_results_additional_text),
+        description = "Tab search try another search message",
+        groups = listOf("tabSearchNoResults"),
+    )
+
+    // Tab search results render via FaviconListItem (title passed as a merged `label`), so the
+    // tag+child-text TAB_ITEM_WITH_TITLE can't locate them the way it does grid tab items; match the
+    // title text directly, as the legacy robot did with onNodeWithText.
+    @Suppress("ktlint:standard:function-naming")
+    fun TAB_SEARCH_RESULT(tabTitle: String = "") = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+        value = tabTitle,
+        description = "Tab search result with title: $tabTitle",
+        groups = listOf(),
+    )
+
     val all = listOf(
         TABS_TRAY,
         NORMAL_BROWSING_EMPTY_TABS_PAGE,
@@ -355,5 +421,13 @@ object TabDrawerSelectors {
         TAB_ITEM_WITH_TITLE(),
         ADD_TO_NEW_TAB_GROUP_BUTTON,
         ADD_TO_EXISTING_TAB_GROUP_BUTTON(),
+        SELECT_TABS_SHARE_BUTTON,
+        SELECTION_COUNTER(),
+        TAB_SEARCH_BUTTON,
+        TAB_SEARCH_FIELD,
+        TAB_SEARCH_CLEAR_BUTTON,
+        TAB_SEARCH_NO_RESULTS_TITLE,
+        TAB_SEARCH_NO_RESULTS_SUBTITLE,
+        TAB_SEARCH_RESULT(),
     )
 }

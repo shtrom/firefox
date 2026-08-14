@@ -70,6 +70,14 @@ object ShareOverlaySelectors {
         groups = listOf("shareTabLayout"),
     )
 
+    // The list of tabs/sites being shared, shown at the top of the share sheet when sharing tabs.
+    val SHARED_SITE_LIST = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_RES_ID,
+        value = "shared_site_list",
+        description = "Shared tabs site list",
+        groups = listOf("shareTabsSiteList"),
+    )
+
     val all = listOf(
         SHARING_LAYOUT,
         DEVICES_LIST,
@@ -79,5 +87,6 @@ object ShareOverlaySelectors {
         RECENTLY_USED_HEADER,
         ALL_ACTIONS_HEADER,
         SAVE_AS_PDF_LABEL,
+        SHARED_SITE_LIST,
     )
 }

@@ -2,6 +2,7 @@ package org.mozilla.fenix.ui.efficiency.tests
 
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SmokeTest
+import org.mozilla.fenix.helpers.Constants
 import org.mozilla.fenix.helpers.MockBrowserDataHelper
 import org.mozilla.fenix.helpers.TestAssetHelper.genericAssets
 import org.mozilla.fenix.helpers.TestAssetHelper.getGenericAsset
@@ -15,6 +16,7 @@ import org.mozilla.fenix.ui.efficiency.selectors.TabDrawerSelectors.DELETE_TAB_G
 import org.mozilla.fenix.ui.efficiency.selectors.TabDrawerSelectors.DELETE_TAB_GROUP_DIALOG_DELETE_GROUP_BUTTON
 import org.mozilla.fenix.ui.efficiency.selectors.TabDrawerSelectors.TAB_GROUPS_BUTTON
 import org.mozilla.fenix.ui.efficiency.selectors.TabDrawerSelectors.TAB_ITEM_WITH_TITLE
+import org.mozilla.fenix.ui.efficiency.selectors.ToolbarSelectors
 
 class TabbedBrowsingTest : BaseTest() {
 
@@ -255,6 +257,90 @@ class TabbedBrowsingTest : BaseTest() {
             .mozVerify(HomeSelectors.PRIVATE_BROWSING_INFO_CARD_TITLE)
         on.tabDrawer.navigateToPage()
             .mozVerify(TabDrawerSelectors.EMPTY_PRIVATE_TABS_LIST)
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/903592
+    @SmokeTest
+    @Test
+    fun verifyCloseAllPrivateTabsNotificationTest() {
+        val defaultWebPage = mockWebServer.getGenericAsset(1)
+
+        on.home.mozClick(HomeSelectors.PRIVATE_BROWSING_BUTTON)
+        on.browserPage.navigateToPage(defaultWebPage.url.toString())
+            .verifyPageContentWithReload(defaultWebPage.url.toString(), defaultWebPage.content)
+
+        on.notification.openNotificationTray()
+            .verifyPrivateTabsNotification()
+            .clickClosePrivateTabsNotification()
+
+        // Tapping the notification erases private tabs and relaunches to the private homepage (which
+        // also collapses the shade); the info card confirms both that the sheet closed and that we
+        // landed on the private homepage.
+        on.home.mozVerify(HomeSelectors.PRIVATE_BROWSING_INFO_CARD_TITLE)
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/903598
+    @SmokeTest
+    @Test
+    fun shareTabsFromTabsTrayTest() {
+        val firstWebsite = mockWebServer.getGenericAsset(1)
+        val secondWebsite = mockWebServer.getGenericAsset(2)
+
+        on.browserPage.navigateToPage(firstWebsite.url.toString())
+            .verifyPageContentWithReload(firstWebsite.url.toString(), firstWebsite.content)
+        on.tabDrawer.navigateToPage()
+            .mozClick(TabDrawerSelectors.FAB)
+        on.searchBar
+            .mozEnterText(secondWebsite.url.toString(), SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+            .mozPressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+        on.browserPage.navigateToPage()
+            .verifyPageContentWithReload(secondWebsite.url.toString(), secondWebsite.content)
+
+        on.tabDrawer.navigateToPage()
+            .verifyExistingOpenTabs(firstWebsite.title, secondWebsite.title)
+            .selectTabsForSharing(firstWebsite.title, secondWebsite.title)
+            .shareSelectedTabs()
+
+        on.shareOverlay
+            .verifyShareTabsOverlay(firstWebsite.title, secondWebsite.title)
+            .verifySharingWithSelectedApp(
+                appName = Constants.GMAIL_APP_NAME,
+                appPackageName = Constants.PackageName.GMAIL_APP,
+                content = "${firstWebsite.url}\n\n${secondWebsite.url}",
+                subject = "${firstWebsite.title}, ${secondWebsite.title}",
+            )
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3968085
+    @SmokeTest
+    @Test
+    fun verifyTheSearchTabsFunctionalityTest() {
+        val firstWebPage = mockWebServer.getGenericAsset(1)
+        val secondWebPage = mockWebServer.getGenericAsset(2)
+
+        on.browserPage.navigateToPage(firstWebPage.url.toString())
+            .verifyPageContentWithReload(firstWebPage.url.toString(), firstWebPage.content)
+        on.tabDrawer.navigateToPage()
+            .mozClick(TabDrawerSelectors.FAB)
+        on.searchBar
+            .mozEnterText(secondWebPage.url.toString(), SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+            .mozPressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+        on.browserPage.navigateToPage()
+            .verifyPageContentWithReload(secondWebPage.url.toString(), secondWebPage.content)
+
+        on.tabDrawer.navigateToPage()
+            .openTabSearch()
+            .typeInTabSearch("android")
+            .mozVerifyElementsByGroup("tabSearchNoResults")
+        on.tabDrawer
+            .clearTabSearch()
+            .typeInTabSearch("localhost")
+            .mozVerify(TabDrawerSelectors.TAB_SEARCH_RESULT(firstWebPage.title))
+            .mozClick(TabDrawerSelectors.TAB_SEARCH_RESULT(firstWebPage.title))
+
+        on.browserPage
+            .verifyPageContent(firstWebPage.content)
+            .mozVerify(ToolbarSelectors.TAB_COUNTER_WITH_COUNT("2"))
     }
 
     private fun verifyGroup(tabGroupTitle: String, tabGroupColor: String, numberOfTabs: Int = 1) {

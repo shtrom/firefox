@@ -83,6 +83,38 @@ class TabDrawerPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRu
         return this
     }
 
+    fun selectTabsForSharing(vararg tabTitles: String): TabDrawerPage {
+        mozClick(TabDrawerSelectors.THREE_DOT_BUTTON)
+        mozClick(TabDrawerSelectors.SELECT_TABS_BUTTON)
+        tabTitles.forEachIndexed { index, title ->
+            mozClick(TabDrawerSelectors.TAB_ITEM_WITH_TITLE(title))
+            mozVerify(TabDrawerSelectors.SELECTION_COUNTER(index + 1))
+        }
+        return this
+    }
+
+    fun shareSelectedTabs(): TabDrawerPage {
+        mozClick(TabDrawerSelectors.TAB_SELECTION_THREE_DOT_BUTTON)
+        mozVerify(TabDrawerSelectors.SELECT_TABS_SHARE_BUTTON)
+        mozClick(TabDrawerSelectors.SELECT_TABS_SHARE_BUTTON)
+        return this
+    }
+
+    fun openTabSearch(): TabDrawerPage {
+        mozClick(TabDrawerSelectors.TAB_SEARCH_BUTTON)
+        return this
+    }
+
+    fun typeInTabSearch(query: String): TabDrawerPage {
+        mozEnterText(query, TabDrawerSelectors.TAB_SEARCH_FIELD)
+        return this
+    }
+
+    fun clearTabSearch(): TabDrawerPage {
+        mozClick(TabDrawerSelectors.TAB_SEARCH_CLEAR_BUTTON)
+        return this
+    }
+
     private fun selectTabsAndTapAddToGroup(tabTitle: String) {
         mozClick(TabDrawerSelectors.THREE_DOT_BUTTON)
         mozClick(TabDrawerSelectors.SELECT_TABS_BUTTON)

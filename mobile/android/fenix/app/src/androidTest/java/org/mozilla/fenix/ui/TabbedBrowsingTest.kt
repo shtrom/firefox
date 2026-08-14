@@ -176,6 +176,12 @@ class TabbedBrowsingTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/903592
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.TabbedBrowsingTest#verifyCloseAllPrivateTabsNotificationTest"],
+        bug = 2063303,
+        since = "2026-08",
+        notes = "Port asserts the erase-notification title only (not the body text); tightened the final check to the private homepage (PRIVATE_BROWSING_INFO_CARD_TITLE).",
+    )
     @SmokeTest
     @Test
     fun verifyCloseAllPrivateTabsNotificationTest() {
@@ -438,6 +444,11 @@ class TabbedBrowsingTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/903598
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.TabbedBrowsingTest#shareTabsFromTabsTrayTest"],
+        bug = 2063303,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun shareTabsFromTabsTrayTest() {
@@ -586,6 +597,11 @@ class TabbedBrowsingTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3968085
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.TabbedBrowsingTest#verifyTheSearchTabsFunctionalityTest"],
+        bug = 2063303,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyTheSearchTabsFunctionalityTest() {

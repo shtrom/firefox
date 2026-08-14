@@ -4,9 +4,13 @@
 
 package org.mozilla.fenix.ui.efficiency.pageObjects
 
+import android.os.Build
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.test.uiautomator.UiSelector
+import org.mozilla.fenix.R
+import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
+import org.mozilla.fenix.helpers.TestHelper.appName
 import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
@@ -133,6 +137,46 @@ class NotificationPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTes
     }
 
     /**
+     * Verifies the "close private tabs" notification. On Android 14+ it is a single actionable
+     * notification ("Close private tabs?"); below that it is the app's private-session notification
+     * with a "Close private tabs" action.
+     */
+    fun verifyPrivateTabsNotification(): NotificationPage {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            mozVerify(
+                NotificationSelectors.SYSTEM_NOTIFICATION(getStringResource(R.string.notification_erase_title_android_14)),
+                timeout = PRIVATE_NOTIFICATION_TIMEOUT_MS,
+            )
+        } else {
+            mozVerify(NotificationSelectors.SYSTEM_NOTIFICATION("$appName (Private)"), timeout = PRIVATE_NOTIFICATION_TIMEOUT_MS)
+            mozVerify(NotificationSelectors.SYSTEM_NOTIFICATION("Close private tabs"), timeout = PRIVATE_NOTIFICATION_TIMEOUT_MS)
+        }
+        return this
+    }
+
+    /**
+     * Clicks the close-private-tabs notification, which erases private tabs and returns to the home
+     * screen. On Android 14+ the whole notification is the tap target; below that it is the "Close
+     * private tabs" action button.
+     */
+    fun clickClosePrivateTabsNotification(): NotificationPage {
+        val closeTarget = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            getStringResource(R.string.notification_erase_title_android_14)
+        } else {
+            "Close private tabs"
+        }
+        val selector = NotificationSelectors.SYSTEM_NOTIFICATION(closeTarget)
+        mozVerify(selector, timeout = PRIVATE_NOTIFICATION_TIMEOUT_MS)
+        mozClick(selector)
+        return this
+    }
+
+    fun verifyNotificationDoesNotExist(text: String): NotificationPage {
+        mozVerifyElementAbsent(NotificationSelectors.SYSTEM_NOTIFICATION(text))
+        return this
+    }
+
+    /**
      * Closes the shade and returns the app to the foreground.
      *
      * Back is what dismisses the shade, but it does not always take, so the close is confirmed and
@@ -163,5 +207,10 @@ class NotificationPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTes
         const val ACTION_RETRIES = 3
         const val WINDOW_UPDATE_TIMEOUT = 5_000L
         const val SYSTEM_UI_PACKAGE = "com.android.systemui"
+
+        // The private-session notification is a plain foreground-service notification, which Android 14
+        // defers from display for ~10s after the service starts (unlike a MediaStyle media notification,
+        // which shows immediately). Wait well past that window before giving up.
+        const val PRIVATE_NOTIFICATION_TIMEOUT_MS = 20_000L
     }
 }
