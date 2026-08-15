@@ -625,7 +625,8 @@ Maybe<AnchorPosInfo> AnchorPositioningUtils::ResolveAnchorPosRect(
 }
 
 Maybe<nsSize> AnchorPositioningUtils::ResolveAnchorPosSize(
-    const nsIFrame* aPositioned, const ScopedNameRef& aAnchorName,
+    const nsIFrame* aPositioned, const nsIFrame* aAbsoluteContainingBlock,
+    const ScopedNameRef& aAnchorName,
     AnchorPosResolutionCache* aResolutionCache) {
   auto anchorName = GetUsedAnchorName(aPositioned, aAnchorName);
   if (!anchorName) {

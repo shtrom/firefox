@@ -329,7 +329,8 @@ struct AnchorPositioningUtils {
       AnchorPosResolutionCache* aResolutionCache);
 
   static Maybe<nsSize> ResolveAnchorPosSize(
-      const nsIFrame* aPositioned, const ScopedNameRef& aAnchorName,
+      const nsIFrame* aPositioned, const nsIFrame* aAbsoluteContainingBlock,
+      const ScopedNameRef& aAnchorName,
       AnchorPosResolutionCache* aResolutionCache);
 
   /**
