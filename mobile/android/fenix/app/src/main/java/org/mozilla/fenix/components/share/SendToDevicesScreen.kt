@@ -30,13 +30,13 @@ import androidx.compose.ui.unit.dp
 import mozilla.components.compose.base.BottomSheetHandle
 import mozilla.components.concept.sync.Device
 import mozilla.components.concept.sync.DeviceType
+import mozilla.components.ui.icons.R as IconsR
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.menu.compose.MenuGroup
 import org.mozilla.fenix.components.menu.compose.MenuItem
 import org.mozilla.fenix.share.ShareViewModel
 import org.mozilla.fenix.share.listadapters.SyncShareOption
 import org.mozilla.fenix.theme.FirefoxTheme
-import mozilla.components.ui.icons.R as IconsR
 
 private val NoDevicesAvailableDescriptionHorizontalPadding = 16.dp
 private val SendToDevicesContentHorizontalPadding = 16.dp
@@ -54,25 +54,20 @@ internal fun SendToDevicesContent(
     val singleDevices = uiState.devices.filterIsInstance<SyncShareOption.SingleDevice>()
     FirefoxTheme {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = SendToDevicesContentHorizontalPadding)
-                .nestedScroll(rememberNestedScrollInteropConnection()),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = SendToDevicesContentHorizontalPadding)
+                    .nestedScroll(rememberNestedScrollInteropConnection())
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 BottomSheetHandle(
                     onRequestDismiss = onDismiss,
-                    contentDescription = stringResource(
-                        R.string.send_to_devices_bottom_sheet_close_content_description,
-                    ),
-                    modifier = Modifier
-                        .padding(vertical = 16.dp)
-                        .align(Alignment.CenterHorizontally),
+                    contentDescription =
+                        stringResource(R.string.send_to_devices_bottom_sheet_close_content_description),
+                    modifier = Modifier.padding(vertical = 16.dp).align(Alignment.CenterHorizontally),
                 )
 
                 Text(
@@ -80,21 +75,20 @@ internal fun SendToDevicesContent(
                     style = FirefoxTheme.typography.headline7,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            bottom = 16.dp,
-                            top = 8.dp,
-                            start = 16.dp,
-                            end = 16.dp,
-                        ),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                bottom = 16.dp,
+                                top = 8.dp,
+                                start = 16.dp,
+                                end = 16.dp,
+                            ),
                 )
             }
 
             Column(
-                modifier = Modifier
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = SendToDevicesContentBottomPadding),
+                modifier =
+                    Modifier.verticalScroll(rememberScrollState()).padding(bottom = SendToDevicesContentBottomPadding)
             ) {
                 if (singleDevices.isEmpty()) {
                     NoDevicesAvailable()
@@ -123,13 +117,15 @@ private fun DeviceList(
         for (option in devices) {
             MenuItem(
                 label = option.device.displayName,
-                beforeIconPainter = painterResource(
-                    id = if (option.device.deviceType == DeviceType.MOBILE) {
-                        IconsR.drawable.mozac_ic_device_mobile_24
-                    } else {
-                        IconsR.drawable.mozac_ic_device_desktop_24
-                    },
-                ),
+                beforeIconPainter =
+                    painterResource(
+                        id =
+                            if (option.device.deviceType == DeviceType.MOBILE) {
+                                IconsR.drawable.mozac_ic_device_mobile_24
+                            } else {
+                                IconsR.drawable.mozac_ic_device_desktop_24
+                            }
+                    ),
                 onClick = { onDeviceClick(option) },
             )
         }
@@ -152,9 +148,7 @@ private fun ColumnScope.NoDevicesAvailable() {
     Image(
         painter = painterResource(id = R.drawable.send_link_to_device_no_devices_available),
         contentDescription = stringResource(id = R.string.synced_tabs_connect_another_device),
-        modifier = Modifier
-            .padding(16.dp)
-            .align(Alignment.CenterHorizontally),
+        modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally),
     )
 
     Text(
@@ -162,9 +156,7 @@ private fun ColumnScope.NoDevicesAvailable() {
         style = FirefoxTheme.typography.headline6,
         color = MaterialTheme.colorScheme.primary,
         textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
     )
 
     Text(
@@ -178,18 +170,20 @@ private fun ColumnScope.NoDevicesAvailable() {
     Spacer(modifier = Modifier.height(40.dp))
 }
 
-private fun previewDevice(name: String, type: DeviceType) = SyncShareOption.SingleDevice(
-    device = Device(
-        id = name,
-        displayName = name,
-        deviceType = type,
-        isCurrentDevice = false,
-        lastAccessTime = null,
-        capabilities = emptyList(),
-        subscriptionExpired = false,
-        subscription = null,
-    ),
-)
+private fun previewDevice(name: String, type: DeviceType) =
+    SyncShareOption.SingleDevice(
+        device =
+            Device(
+                id = name,
+                displayName = name,
+                deviceType = type,
+                isCurrentDevice = false,
+                lastAccessTime = null,
+                capabilities = emptyList(),
+                subscriptionExpired = false,
+                subscription = null,
+            )
+    )
 
 @PreviewLightDark
 @Composable
@@ -197,12 +191,14 @@ private fun SendToDevicesContentWithDevicesPreview() {
     FirefoxTheme {
         Surface {
             SendToDevicesContent(
-                uiState = ShareViewModel.ShareUiState(
-                    devices = listOf(
-                        previewDevice("My Phone", DeviceType.MOBILE),
-                        previewDevice("My Laptop", DeviceType.DESKTOP),
+                uiState =
+                    ShareViewModel.ShareUiState(
+                        devices =
+                            listOf(
+                                previewDevice("My Phone", DeviceType.MOBILE),
+                                previewDevice("My Laptop", DeviceType.DESKTOP),
+                            )
                     ),
-                ),
                 onDismiss = {},
                 onSendToDevice = {},
                 onSendToAll = {},

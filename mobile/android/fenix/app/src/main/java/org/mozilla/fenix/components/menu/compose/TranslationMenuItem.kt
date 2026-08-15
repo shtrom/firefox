@@ -7,13 +7,12 @@ package org.mozilla.fenix.components.menu.compose
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import mozilla.components.ui.icons.R as iconsR
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.menu.store.TranslationInfo
-import mozilla.components.ui.icons.R as iconsR
 
 /**
- * Translation menu item.
- * Only shown if the current webpage can be translated.
+ * Translation menu item. Only shown if the current webpage can be translated.
  *
  * @param translationInfo Translation information and configuration.
  * @param isReaderViewActive Whether the reader view is active.

@@ -31,10 +31,10 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import mozilla.components.compose.base.button.IconButton
 import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
+import mozilla.components.ui.icons.R as iconsR
 import org.mozilla.fenix.theme.FirefoxTheme
 import org.mozilla.fenix.theme.PreviewThemeProvider
 import org.mozilla.fenix.theme.Theme
-import mozilla.components.ui.icons.R as iconsR
 
 @Composable
 internal fun SubmenuHeader(
@@ -44,10 +44,10 @@ internal fun SubmenuHeader(
     onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .padding(start = 4.dp, end = 16.dp)
-            .defaultMinSize(minHeight = 56.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            Modifier.padding(start = 4.dp, end = 16.dp)
+                .defaultMinSize(minHeight = 56.dp)
+                .verticalScroll(rememberScrollState()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
@@ -68,8 +68,7 @@ internal fun SubmenuHeader(
                     text = title.ifEmpty { url.tryGetHostFromUrl() },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .semantics { heading() },
+                    modifier = Modifier.semantics { heading() },
                     style = FirefoxTheme.typography.headline7,
                 )
                 if (title.isNotEmpty()) {
@@ -86,14 +85,9 @@ internal fun SubmenuHeader(
 
 @Preview
 @Composable
-private fun SubmenuHeaderPreview(
-    @PreviewParameter(PreviewThemeProvider::class) theme: Theme,
-) {
+private fun SubmenuHeaderPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
     FirefoxTheme(theme) {
-        Column(
-            modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.surface),
-        ) {
+        Column(modifier = Modifier.background(color = MaterialTheme.colorScheme.surface)) {
             SubmenuHeader(
                 title = "sub-menu title",
                 url = "https://www.mozilla.com",

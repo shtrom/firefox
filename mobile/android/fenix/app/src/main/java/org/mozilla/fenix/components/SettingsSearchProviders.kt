@@ -14,13 +14,13 @@ import org.mozilla.fenix.summarization.onboarding.SummarizationFeatureDiscoveryC
 
 /**
  * Builds the list of [SettingsSearchProvider]s covering settings the XML-parsing path in
- * [org.mozilla.fenix.settings.settingssearch.DefaultFenixSettingsIndexer] cannot reach: Compose
- * screens with no backing preference file, and entries inside an XML screen that the parser does not
- * emit (an empty `PreferenceCategory` whose contents are built in code, for instance).
+ * [org.mozilla.fenix.settings.settingssearch.DefaultFenixSettingsIndexer] cannot reach: Compose screens with no backing
+ * preference file, and entries inside an XML screen that the parser does not emit (an empty `PreferenceCategory` whose
+ * contents are built in code, for instance).
  *
- * This is the source of truth for which providers exist. It is wired into the settings indexer from
- * [Components] and is exercised by `SettingsSearchProviderRegistrationTest` so that a screen losing
- * its provider fails a test rather than silently disappearing from settings search.
+ * This is the source of truth for which providers exist. It is wired into the settings indexer from [Components] and is
+ * exercised by `SettingsSearchProviderRegistrationTest` so that a screen losing its provider fails a test rather than
+ * silently disappearing from settings search.
  *
  * @param summarizationFeatureConfiguration Gates whether the Page Summaries screen is indexed.
  * @param isFirefoxLabsEnabled Returns whether Firefox Labs is currently enabled.
@@ -28,10 +28,11 @@ import org.mozilla.fenix.summarization.onboarding.SummarizationFeatureDiscoveryC
 internal fun settingsSearchProviders(
     summarizationFeatureConfiguration: SummarizationFeatureDiscoveryConfiguration,
     isFirefoxLabsEnabled: () -> Boolean,
-): List<SettingsSearchProvider> = listOf(
-    DataChoicesSearchProvider,
-    AIControlsSearchProvider,
-    PageSummariesSettingsSearchProvider(summarizationFeatureConfiguration),
-    FirefoxLabsSettingsSearchProvider(isFirefoxLabsEnabled),
-    ToolbarShortcutSettingsSearchProvider,
-)
+): List<SettingsSearchProvider> =
+    listOf(
+        DataChoicesSearchProvider,
+        AIControlsSearchProvider,
+        PageSummariesSettingsSearchProvider(summarizationFeatureConfiguration),
+        FirefoxLabsSettingsSearchProvider(isFirefoxLabsEnabled),
+        ToolbarShortcutSettingsSearchProvider,
+    )

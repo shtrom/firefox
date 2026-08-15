@@ -14,12 +14,11 @@ import org.mozilla.fenix.utils.Settings
  *
  * @property topSites List of [TopSite] to display.
  * @property colors The color set defined by [TopSiteColors] used to style a top site.
- * @property isAddShortcutEnabled Whether the "Add shortcut" tile is enabled. When expanded it is
- * shown after the last shortcut, matching the shortcuts library. When collapsed it is only shown if
- * it fits within [TOP_SITES_TO_SHOW].
+ * @property isAddShortcutEnabled Whether the "Add shortcut" tile is enabled. When expanded it is shown after the last
+ *   shortcut, matching the shortcuts library. When collapsed it is only shown if it fits within [TOP_SITES_TO_SHOW].
  * @property showExpandToggle Whether to show the control that expands and collapses the section.
- * @property showShortcutsLibraryButton Whether to show the header button that opens the shortcuts
- * library. Hidden while the expand/collapse experiment is active, as that control supersedes it.
+ * @property showShortcutsLibraryButton Whether to show the header button that opens the shortcuts library. Hidden while
+ *   the expand/collapse experiment is active, as that control supersedes it.
  */
 internal data class TopSiteState(
     val topSites: List<TopSite>,
@@ -32,8 +31,8 @@ internal data class TopSiteState(
     companion object {
 
         /**
-         * Builds a new [TopSiteState] from the current [AppState] and [Settings], or null when the
-         * top sites section should be hidden.
+         * Builds a new [TopSiteState] from the current [AppState] and [Settings], or null when the top sites section
+         * should be hidden.
          *
          * @param appState State to build the [TopSiteState] from.
          * @param settings [Settings] corresponding to how the top sites should be displayed.
@@ -51,15 +50,13 @@ internal data class TopSiteState(
                     // Expanding is worthwhile when it reveals either more shortcuts, or the
                     // "Add shortcut" tile that does not fit in the collapsed grid.
                     val hasHiddenShortcuts = topSites.size > TOP_SITES_TO_SHOW
-                    val hasHiddenAddShortcut = isAddShortcutEnabled &&
-                        topSites.size >= TOP_SITES_TO_SHOW
+                    val hasHiddenAddShortcut = isAddShortcutEnabled && topSites.size >= TOP_SITES_TO_SHOW
 
                     TopSiteState(
                         topSites = topSites,
                         colors = TopSiteColors.colors(wallpaperState = appState.wallpaperState),
                         isAddShortcutEnabled = isAddShortcutEnabled,
-                        showExpandToggle = settings.showMoreShortcuts &&
-                            (hasHiddenShortcuts || hasHiddenAddShortcut),
+                        showExpandToggle = settings.showMoreShortcuts && (hasHiddenShortcuts || hasHiddenAddShortcut),
                         showShortcutsLibraryButton = !settings.showMoreShortcuts,
                     )
                 }

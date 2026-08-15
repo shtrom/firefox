@@ -40,13 +40,9 @@ internal fun TrackerCategoryDetailsPanel(
                 url = url,
                 onClick = onBackButtonClick,
             )
-        },
+        }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-        ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             val trackerCategoryTitle: String
             val trackerCategoryDescription: String
 
@@ -102,10 +98,7 @@ internal fun TrackerCategoryDetailsPanel(
 @Composable
 private fun TrackersBlockedPanelPreview() {
     FirefoxTheme {
-        Column(
-            modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.surface),
-        ) {
+        Column(modifier = Modifier.background(color = MaterialTheme.colorScheme.surface)) {
             TrackerCategoryDetailsPanel(
                 title = "Mozilla",
                 url = "www.mozilla.com",

@@ -15,8 +15,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.semantics.Role
 
 /**
- * Used when toggleable needs to be debounced to prevent rapid successive toggles
- * from calling the `onValueChange` function.
+ * Used when toggleable needs to be debounced to prevent rapid successive toggles from calling the `onValueChange`
+ * function.
  *
  * @param value Whether the underlying element is toggled on or off.
  * @param enabled Whether the underlying element will handle input events.
@@ -45,6 +45,6 @@ fun Modifier.debouncedToggleable(
                     lastToggleTime = currentSystemTime
                 }
             },
-        ),
+        )
     )
 }
