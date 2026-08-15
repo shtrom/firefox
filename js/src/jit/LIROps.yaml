@@ -3382,6 +3382,10 @@
   gen_boilerplate: false
 
 #ifdef ENABLE_WASM_JSPI
+- name: WasmSuspend
+  gen_boilerplate: false
+- name: WasmPrepareResume
+  gen_boilerplate: false
 - name: WasmResume
   gen_boilerplate: false
 #endif

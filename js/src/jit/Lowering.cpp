@@ -7471,8 +7471,7 @@ void LIRGenerator::visitWasmFindHandler(MWasmFindHandler* ins) {
 }
 
 void LIRGenerator::visitWasmSuspend(MWasmSuspend* ins) {
-  // This is a call instruction, all other registers should be spilled
-  // We're not passing params either, so we can just let registers be free
+  // This is a call instruction, all other registers should be spilled.
   auto* lir = new (alloc())
       LWasmSuspend(useFixedAtStart(ins->instance(), InstanceReg),
                    useRegisterAtStart(ins->suspendedCont()),
@@ -7492,18 +7491,20 @@ void LIRGenerator::visitWasmResumeBarrier(MWasmResumeBarrier* ins) {
   assignWasmSafepoint(lir);
 }
 
+void LIRGenerator::visitWasmPrepareResume(MWasmPrepareResume* ins) {
+  auto* lir = new (alloc())
+      LWasmPrepareResume(useRegister(ins->cont()), temp(), temp());
+  define(lir, ins);
+}
+
 void LIRGenerator::visitWasmResume(MWasmResume* ins) {
-  // This is a call instruction, all other registers should be spilled
-  // We're not passing params either, so we can just let registers be free
-  LAllocation handlersParamsArea = LAllocation();
-  if (ins->hasHandlersParamsArea()) {
-    handlersParamsArea = useRegisterAtStart(ins->handlersParamsArea());
-  }
+  // This is a call instruction, all other registers should be spilled.
+  // handlersParamsArea is passed as a frame-pointer-relative offset to
+  // EmitResume to avoid excessive register pressure on 32-bit.
   auto* lir = new (alloc())
       LWasmResume(useFixedAtStart(ins->instance(), InstanceReg),
-                  useRegisterAtStart(ins->cont()), handlersParamsArea,
-                  tempFixed(ABINonArgReg0), tempFixed(ABINonArgReg1),
-                  tempFixed(ABINonArgReg2));
+                  useRegisterAtStart(ins->cont()), tempFixed(ABINonArgReg0),
+                  tempFixed(ABINonArgReg1), tempFixed(ABINonArgReg2));
 
   add(lir, ins);
   assignWasmSafepoint(lir);
