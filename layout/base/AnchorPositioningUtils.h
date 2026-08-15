@@ -451,17 +451,28 @@ struct AnchorPositioningUtils {
     // The overall frame rect formed by unioning the frame's fragment rects.
     nsRect mRect;
   };
+  enum class UnionFragments : bool {
+    // Union every fragment of the frame.
+    All,
+    // Union only the fragments under the given containing block continuation.
+    SameContainingBlockOnly,
+  };
+
   /**
    * Get the union of the rects of aFrame and its continuations (but not if the
    * context is paginated and they're on a different page, as it doesn't make
    * sense to "merge" their rects in that case).
    *
    * @param aFrame The target frame whose combined fragments are wanted.
-   * @param aContainingBlock If provided, union fragments only up to its
-   * fragmentation boundary.
+   * @param aContainingBlock The frame whose coordinate space the result is
+   * expressed in.
+   * @param aUnionFragments Which of aFrame's fragments to union: all of them,
+   * or only those under aContainingBlock. SameContainingBlockOnly requires
+   * aContainingBlock to be a proper ancestor of aFrame.
    */
   static CombinedFragments GetCombinedFragmentRects(
-      const nsIFrame* aFrame, const nsIFrame* aContainingBlock = nullptr);
+      const nsIFrame* aFrame, const nsIFrame* aContainingBlock,
+      UnionFragments aUnionFragments);
 
   // Helper to get shadow root for a property's tree scope
   static const dom::ShadowRoot* GetShadowRootForTreeScope(
