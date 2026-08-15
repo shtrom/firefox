@@ -515,7 +515,7 @@ Maybe<nsRect> AnchorPositioningUtils::GetAnchorPosRect(
       return Nothing{};
     }
     return Some(
-        nsLayoutUtils::GetCombinedFragmentRects(aAnchor).mRect +
+        GetCombinedFragmentRects(aAnchor).mRect +
         aAnchor->GetOffsetToIgnoringScrolling(aAbsoluteContainingBlock));
   }();
   return rect.map([&](const nsRect& aRect) {
@@ -647,8 +647,7 @@ Maybe<nsSize> AnchorPositioningUtils::ResolveAnchorPosSize(
   if (!anchor) {
     return Nothing{};
   }
-  const auto size =
-      nsLayoutUtils::GetCombinedFragmentRects(anchor).mRect.Size();
+  const auto size = GetCombinedFragmentRects(anchor).mRect.Size();
   if (entry) {
     *entry =
         Some(AnchorPosResolutionData{size, Nothing{}, aAnchorName.mTreeScope});
@@ -1323,6 +1322,60 @@ static nscoord BSizeFromPhysicalSize(const nsSize& aSize,
   return LogicalSize{aWritingMode, aSize}.BSize(aWritingMode);
 }
 
+auto AnchorPositioningUtils::GetCombinedFragmentRects(
+    const nsIFrame* aFrame, const nsIFrame* aContainingBlock)
+    -> CombinedFragments {
+  bool mustCheckCBFragment = false;
+  nsPoint offset{};
+  if (aContainingBlock) {
+    MOZ_ASSERT(nsLayoutUtils::IsProperAncestorFrame(aContainingBlock, aFrame));
+    mustCheckCBFragment = aContainingBlock->GetPrevContinuation() ||
+                          aContainingBlock->GetNextContinuation();
+    offset = aFrame->GetOffsetToIgnoringScrolling(aContainingBlock);
+  }
+  bool isPaginated = aFrame->PresContext()->IsPaginated();
+
+  // Lazy getter for aFrame's page-frame ancestor, if any.
+  Maybe<const nsIFrame*> maybePageFrame;
+  auto currPageFrame = [=, &maybePageFrame]() -> const nsIFrame* {
+    MOZ_ASSERT(isPaginated);
+    if (!maybePageFrame) {
+      maybePageFrame.emplace(nsLayoutUtils::GetPageFrame(aFrame));
+    }
+    return maybePageFrame.ref();
+  };
+
+  // A continuation is considered "on the same page" if the context is not
+  // paginated, or if it has the same page-frame ancestor.
+  auto onSamePage = [=](const nsIFrame* aContinuation) -> bool {
+    return !isPaginated ||
+           nsLayoutUtils::GetPageFrame(aContinuation) == currPageFrame();
+  };
+
+  auto inSameCBFragment = [&](const nsIFrame* aContinuation) {
+    return !mustCheckCBFragment || nsLayoutUtils::IsProperAncestorFrame(
+                                       aContainingBlock, aContinuation);
+  };
+
+  // Collect rects from our continuations (limited to those that are on the
+  // same page if the context is paginated).
+  nsRect rect = aFrame->GetRectRelativeToSelf();
+  const auto* next = aFrame->GetNextContinuation();
+  for (; next && onSamePage(next) && inSameCBFragment(next);
+       next = next->GetNextContinuation()) {
+    rect =
+        rect.Union(next->GetRectRelativeToSelf() + next->GetOffsetTo(aFrame));
+  }
+  const auto* prev = aFrame->GetPrevContinuation();
+  for (; prev && onSamePage(prev) && inSameCBFragment(prev);
+       prev = prev->GetPrevContinuation()) {
+    rect =
+        rect.Union(prev->GetRectRelativeToSelf() + prev->GetOffsetTo(aFrame));
+  }
+
+  return CombinedFragments{prev, next, rect + offset};
+}
+
 nsRect AnchorPositioningUtils::ReassembleAnchorRect(
     const nsIFrame* aAnchor, const nsIFrame* aContainingBlock) {
   const nsIFrame* matchingCB =
@@ -1332,8 +1385,7 @@ nsRect AnchorPositioningUtils::ReassembleAnchorRect(
     return nsRect{};
   }
   // Union fragments of the anchor within this containing block.
-  const auto fragRect =
-      nsLayoutUtils::GetCombinedFragmentRects(aAnchor, matchingCB);
+  const auto fragRect = GetCombinedFragmentRects(aAnchor, matchingCB);
   // This anchor is contained within this CB fragment, or the containing block
   // is inline.
   // TODO(dshin, bug 2014554): Handle inline containing blocks properly. Inline
@@ -1364,7 +1416,7 @@ nsRect AnchorPositioningUtils::ReassembleAnchorRect(
                "block-start?");
     MOZ_ASSERT(nsLayoutUtils::IsProperAncestorFrame(prevCb, prev));
 
-    const auto r = nsLayoutUtils::GetCombinedFragmentRects(prev, prevCb);
+    const auto r = GetCombinedFragmentRects(prev, prevCb);
     const auto inkOverflowSize = InkOverflowSize(prevCb);
     const auto prevCBBSize = BSizeFromPhysicalSize(inkOverflowSize, cbwm);
 
@@ -1405,7 +1457,7 @@ nsRect AnchorPositioningUtils::ReassembleAnchorRect(
         unfragmentedAnchorRect.BEnd(cbwm) == relevantCbSize.BSize(cbwm),
         "Next continuation exists this continuation didn't hit block-end?");
     MOZ_ASSERT(nsLayoutUtils::IsProperAncestorFrame(nextCb, next));
-    const auto r = nsLayoutUtils::GetCombinedFragmentRects(next, nextCb);
+    const auto r = GetCombinedFragmentRects(next, nextCb);
 
     const auto inkOverflowSize = InkOverflowSize(nextCb);
     relevantCbSize.BSize(cbwm) += BSizeFromPhysicalSize(inkOverflowSize, cbwm);
