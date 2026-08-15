@@ -432,6 +432,15 @@ struct AnchorPositioningUtils {
   static nsRect ReassembleAnchorRect(const nsIFrame* aAnchor,
                                      const nsIFrame* aContainingBlock);
 
+  /**
+   * Return the continuation (or IB-split sibling) of aContainingBlock that is a
+   * proper ancestor of aAnchor, which may not be aContainingBlock itself when
+   * the containing block is fragmented. Return nullptr if no continuation of
+   * aContainingBlock contains aAnchor.
+   */
+  static const nsIFrame* GetMatchingContainingBlock(
+      const nsIFrame* aAnchor, const nsIFrame* aContainingBlock);
+
   struct CombinedFragments {
     // Previous continuation, if exists, that got skipped due to being on a
     // different page, or a different containing block continuation.

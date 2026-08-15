@@ -1288,7 +1288,7 @@ bool AnchorPositioningUtils::TriggerLayoutOnOverflow(PresShell* aPresShell,
   return didLayoutPositionedItems;
 }
 
-static const nsIFrame* GetMatchingContainingBlock(
+const nsIFrame* AnchorPositioningUtils::GetMatchingContainingBlock(
     const nsIFrame* aAnchor, const nsIFrame* aContainingBlock) {
   MOZ_ASSERT(nsLayoutUtils::IsProperAncestorFrameConsideringContinuations(
       aContainingBlock, aAnchor));
