@@ -25,8 +25,7 @@ import org.mozilla.fenix.theme.Theme
 @RunWith(AndroidJUnit4::class)
 class TopSitesExpandToggleTest {
 
-    @get:Rule
-    val composeTestRule = createComposeRule()
+    @get:Rule val composeTestRule = createComposeRule()
 
     private fun setTopSitesContent(
         count: Int,
@@ -34,11 +33,12 @@ class TopSitesExpandToggleTest {
         isExpanded: Boolean,
         onExpandToggleClick: () -> Unit = {},
     ) {
-        val topSites = FakeHomepagePreview.topSites(
-            providedCount = 0,
-            pinnedCount = 0,
-            defaultCount = count,
-        )
+        val topSites =
+            FakeHomepagePreview.topSites(
+                providedCount = 0,
+                pinnedCount = 0,
+                defaultCount = count,
+            )
         composeTestRule.setContent {
             FirefoxTheme(theme = Theme.Light) {
                 Surface {
@@ -74,16 +74,14 @@ class TopSitesExpandToggleTest {
     fun `GIVEN more sites than fit WHEN collapsed THEN only the collapsed limit is rendered`() {
         setTopSitesContent(count = 12, showExpandToggle = true, isExpanded = false)
 
-        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT)
-            .assertCountEquals(TOP_SITES_TO_SHOW)
+        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT).assertCountEquals(TOP_SITES_TO_SHOW)
     }
 
     @Test
     fun `GIVEN more sites than fit WHEN expanded THEN every site is rendered`() {
         setTopSitesContent(count = 12, showExpandToggle = true, isExpanded = true)
 
-        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT)
-            .assertCountEquals(12)
+        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT).assertCountEquals(12)
     }
 
     @Test
@@ -121,20 +119,23 @@ class TopSitesExpandToggleTest {
         isAddShortcutEnabled: Boolean = false,
         showExpandToggle: Boolean = true,
     ) {
-        val state = TopSiteState(
-            topSites = FakeHomepagePreview.topSites(
-                providedCount = 0,
-                pinnedCount = 0,
-                defaultCount = count,
-            ),
-            colors = TopSiteColors(
-                titleTextColor = Color.Black,
-                sponsoredTextColor = Color.Black,
-                faviconCardBackgroundColor = Color.White,
-            ),
-            isAddShortcutEnabled = isAddShortcutEnabled,
-            showExpandToggle = showExpandToggle,
-        )
+        val state =
+            TopSiteState(
+                topSites =
+                    FakeHomepagePreview.topSites(
+                        providedCount = 0,
+                        pinnedCount = 0,
+                        defaultCount = count,
+                    ),
+                colors =
+                    TopSiteColors(
+                        titleTextColor = Color.Black,
+                        sponsoredTextColor = Color.Black,
+                        faviconCardBackgroundColor = Color.White,
+                    ),
+                isAddShortcutEnabled = isAddShortcutEnabled,
+                showExpandToggle = showExpandToggle,
+            )
         composeTestRule.setContent {
             FirefoxTheme(theme = Theme.Light) {
                 Surface {
@@ -153,13 +154,11 @@ class TopSitesExpandToggleTest {
     fun `GIVEN the section starts collapsed WHEN the toggle is clicked THEN every site is shown`() {
         setStatefulTopSitesContent(count = 12)
 
-        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT)
-            .assertCountEquals(TOP_SITES_TO_SHOW)
+        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT).assertCountEquals(TOP_SITES_TO_SHOW)
 
         composeTestRule.onNodeWithTag(TopSitesTestTag.EXPAND_TOGGLE).performClick()
 
-        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT)
-            .assertCountEquals(12)
+        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT).assertCountEquals(12)
     }
 
     @Test
@@ -170,8 +169,7 @@ class TopSitesExpandToggleTest {
             showExpandToggle = false,
         )
 
-        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT)
-            .assertCountEquals(TOP_SITES_TO_SHOW)
+        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT).assertCountEquals(TOP_SITES_TO_SHOW)
         composeTestRule.onAllNodesWithTag(TopSitesTestTag.EXPAND_TOGGLE).assertCountEquals(0)
         composeTestRule.onAllNodesWithTag(TopSitesTestTag.ADD_SHORTCUT_ROOT).assertCountEquals(0)
     }
@@ -196,8 +194,7 @@ class TopSitesExpandToggleTest {
 
         composeTestRule.onNodeWithTag(TopSitesTestTag.EXPAND_TOGGLE).performClick()
 
-        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT)
-            .assertCountEquals(TOP_SITES_TO_SHOW)
+        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT).assertCountEquals(TOP_SITES_TO_SHOW)
         composeTestRule.onAllNodesWithTag(TopSitesTestTag.ADD_SHORTCUT_ROOT).assertCountEquals(1)
     }
 
@@ -234,7 +231,6 @@ class TopSitesExpandToggleTest {
         composeTestRule.onNodeWithTag(TopSitesTestTag.EXPAND_TOGGLE).performClick()
         composeTestRule.onNodeWithTag(TopSitesTestTag.EXPAND_TOGGLE).performClick()
 
-        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT)
-            .assertCountEquals(TOP_SITES_TO_SHOW)
+        composeTestRule.onAllNodesWithTag(TopSitesTestTag.TOP_SITE_ITEM_ROOT).assertCountEquals(TOP_SITES_TO_SHOW)
     }
 }

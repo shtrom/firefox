@@ -6,6 +6,7 @@ package org.mozilla.fenix.settings.ai
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.mockk.every
+import kotlin.test.assertEquals
 import mozilla.components.concept.ai.controls.AIControllableFeature
 import mozilla.components.concept.ai.controls.AIFeatureMetadata
 import mozilla.components.support.test.robolectric.testContext
@@ -13,7 +14,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.fenix.R
 import org.mozilla.fenix.ext.components
-import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 class AIControlsSearchProviderTest {
@@ -33,14 +33,16 @@ class AIControlsSearchProviderTest {
 
     @Test
     fun `GIVEN controllable features WHEN getting search items THEN an item per feature is returned after the block AI enhancements item`() {
-        val feature = AIControllableFeature.inMemory(
-            id = AIFeatureMetadata.FeatureId("test.feature"),
-            description = AIFeatureMetadata.Description(
-                titleRes = R.string.firefox_labs_title,
-                descriptionRes = R.string.firefox_labs_title,
-                iconRes = 0,
-            ),
-        )
+        val feature =
+            AIControllableFeature.inMemory(
+                id = AIFeatureMetadata.FeatureId("test.feature"),
+                description =
+                    AIFeatureMetadata.Description(
+                        titleRes = R.string.firefox_labs_title,
+                        descriptionRes = R.string.firefox_labs_title,
+                        iconRes = 0,
+                    ),
+            )
         every { testContext.components.aiFeatureRegistry.getFeatures() } returns listOf(feature)
 
         val keys = AIControlsSearchProvider.getSearchItems(testContext).map { it.preferenceKey }

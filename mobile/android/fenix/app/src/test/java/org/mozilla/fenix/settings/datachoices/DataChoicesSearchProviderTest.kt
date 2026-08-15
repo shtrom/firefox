@@ -6,11 +6,11 @@ package org.mozilla.fenix.settings.datachoices
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.mockk.every
+import kotlin.test.assertEquals
 import mozilla.components.support.test.robolectric.testContext
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.fenix.ext.components
-import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 class DataChoicesSearchProviderTest {
