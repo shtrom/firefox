@@ -1362,24 +1362,26 @@ auto AnchorPositioningUtils::GetCombinedFragmentRects(
     return true;
   };
 
+  auto GetRectInContainingBlockSpace = [&](const nsIFrame* aContinuation) {
+    return aContinuation->GetRectRelativeToSelf() +
+           aContinuation->GetOffsetToIgnoringScrolling(aContainingBlock);
+  };
+
   // Collect rects from our continuations (limited to those that are on the
   // same page if the context is paginated).
-  nsRect rect = aFrame->GetRectRelativeToSelf();
+  nsRect rect = GetRectInContainingBlockSpace(aFrame);
   const auto* next = aFrame->GetNextContinuation();
   for (; next && onSamePage(next) && inSameCBFragment(next);
        next = next->GetNextContinuation()) {
-    rect =
-        rect.Union(next->GetRectRelativeToSelf() + next->GetOffsetTo(aFrame));
+    rect = rect.Union(GetRectInContainingBlockSpace(next));
   }
   const auto* prev = aFrame->GetPrevContinuation();
   for (; prev && onSamePage(prev) && inSameCBFragment(prev);
        prev = prev->GetPrevContinuation()) {
-    rect =
-        rect.Union(prev->GetRectRelativeToSelf() + prev->GetOffsetTo(aFrame));
+    rect = rect.Union(GetRectInContainingBlockSpace(prev));
   }
 
-  const nsPoint offset = aFrame->GetOffsetToIgnoringScrolling(aContainingBlock);
-  return CombinedFragments{prev, next, rect + offset};
+  return CombinedFragments{prev, next, rect};
 }
 
 nsRect AnchorPositioningUtils::ReassembleAnchorRect(
