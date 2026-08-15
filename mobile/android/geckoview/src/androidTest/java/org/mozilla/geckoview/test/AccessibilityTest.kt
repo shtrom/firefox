@@ -8,6 +8,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.text.InputType
+import android.text.SpannableString
+import android.text.style.LocaleSpan
 import android.view.View
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityEvent
@@ -44,6 +46,7 @@ import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.AssertCalled
 import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.ShouldContinue
 import org.mozilla.geckoview.test.rule.GeckoSessionTestRule.WithDisplay
+import java.util.Locale
 
 const val DISPLAY_WIDTH = 480
 const val DISPLAY_HEIGHT = 640
@@ -311,7 +314,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with href",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     equalTo("free"),
                 )
             }
@@ -399,7 +402,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Hint has field name",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("Naame description"),
                 )
             }
@@ -419,7 +422,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Hint has field name",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("Last, required"),
                 )
             }
@@ -448,7 +451,7 @@ class AccessibilityTest : BaseSessionTest() {
             @AssertCalled(count = 1)
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 val node = createNodeInfo(getSourceId(event))
-                assertThat("Text node should match text", node.text as String, equalTo(", sweet "))
+                assertThat("Text node should match text", node.text.toString(), equalTo(", sweet "))
             }
         })
 
@@ -462,7 +465,7 @@ class AccessibilityTest : BaseSessionTest() {
             @AssertCalled(count = 1)
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 val node = createNodeInfo(getSourceId(event))
-                assertThat("Text node should match text", node.text as String, equalTo("world"))
+                assertThat("Text node should match text", node.text.toString(), equalTo("world"))
             }
         })
 
@@ -472,7 +475,7 @@ class AccessibilityTest : BaseSessionTest() {
             @AssertCalled(count = 1)
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 val node = createNodeInfo(getSourceId(event))
-                assertThat("Text node should match text", node.contentDescription as String, equalTo("sweet"))
+                assertThat("Text node should match text", node.contentDescription.toString(), equalTo("sweet"))
             }
         })
 
@@ -495,7 +498,7 @@ class AccessibilityTest : BaseSessionTest() {
             @AssertCalled(count = 1)
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 val node = createNodeInfo(getSourceId(event))
-                assertThat("Text node should match text", node.text as String, equalTo("Hello "))
+                assertThat("Text node should match text", node.text.toString(), equalTo("Hello "))
             }
         })
     }
@@ -669,7 +672,7 @@ class AccessibilityTest : BaseSessionTest() {
 
     @Test fun testMoveByCharacter() {
         var nodeId = AccessibilityNodeProvider.HOST_VIEW_ID
-        mainSession.loadTestPath(LOREM_IPSUM_HTML_PATH)
+        mainSession.loadUri("data:text/html;charset=utf-8,<p>🤦‍♂️ Peanut</p>")
         waitForInitialFocus(true)
 
         sessionRule.waitUntilCalled(object : EventDelegate {
@@ -677,7 +680,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on first text leaf", node.text as String, startsWith("Lorem ipsum"))
+                assertThat("Accessibility focus on first text leaf", node.text.toString(), startsWith("🤦‍♂️ Peanut"))
             }
         })
 
@@ -686,21 +689,21 @@ class AccessibilityTest : BaseSessionTest() {
             AccessibilityNodeInfo.ACTION_NEXT_AT_MOVEMENT_GRANULARITY,
             moveByGranularityArguments(AccessibilityNodeInfo.MOVEMENT_GRANULARITY_CHARACTER),
         )
-        waitUntilTextTraversed(0, 1, nodeId) // "L"
+        waitUntilTextTraversed(0, 5, nodeId) // "🤦‍♂️"
 
         provider.performAction(
             nodeId,
             AccessibilityNodeInfo.ACTION_NEXT_AT_MOVEMENT_GRANULARITY,
             moveByGranularityArguments(AccessibilityNodeInfo.MOVEMENT_GRANULARITY_CHARACTER),
         )
-        waitUntilTextTraversed(1, 2, nodeId) // "o"
+        waitUntilTextTraversed(5, 6, nodeId) // " "
 
         provider.performAction(
             nodeId,
             AccessibilityNodeInfo.ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY,
             moveByGranularityArguments(AccessibilityNodeInfo.MOVEMENT_GRANULARITY_CHARACTER),
         )
-        waitUntilTextTraversed(0, 1, nodeId) // "L"
+        waitUntilTextTraversed(0, 5, nodeId) // "🤦‍♂️"
     }
 
     @Test fun testMoveByWord() {
@@ -713,7 +716,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on first text leaf", node.text as String, startsWith("Lorem ipsum"))
+                assertThat("Accessibility focus on first text leaf", node.text.toString(), startsWith("Lorem ipsum"))
             }
         })
 
@@ -749,7 +752,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on first text leaf", node.text as String, startsWith("Lorem ipsum"))
+                assertThat("Accessibility focus on first text leaf", node.text.toString(), startsWith("Lorem ipsum"))
             }
         })
 
@@ -789,7 +792,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on link", node.contentDescription as String, startsWith("anim id"))
+                assertThat("Accessibility focus on link", node.contentDescription.toString(), startsWith("anim id"))
             }
         })
 
@@ -847,7 +850,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on link", node.contentDescription as String, startsWith("anim id"))
+                assertThat("Accessibility focus on link", node.contentDescription.toString(), startsWith("anim id"))
             }
         })
 
@@ -903,7 +906,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on first text leaf", node.text as String, startsWith("Lorem ipsum"))
+                assertThat("Accessibility focus on first text leaf", node.text.toString(), startsWith("Lorem ipsum"))
             }
         })
 
@@ -956,7 +959,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on first heading", node.contentDescription as String, startsWith("Fried cheese"))
+                assertThat("Accessibility focus on first heading", node.contentDescription.toString(), startsWith("Fried cheese"))
                 assertThat(
                     "First heading is level 1",
                     node.extras.getCharSequence("AccessibilityNodeInfo.roleDescription")!!.toString(),
@@ -971,7 +974,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on second heading", node.contentDescription as String, startsWith("Popcorn shrimp"))
+                assertThat("Accessibility focus on second heading", node.contentDescription.toString(), startsWith("Popcorn shrimp"))
                 assertThat(
                     "Second heading is level 2",
                     node.extras.getCharSequence("AccessibilityNodeInfo.roleDescription")!!.toString(),
@@ -986,7 +989,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("Accessibility focus on second heading", node.contentDescription as String, startsWith("Chicken fingers"))
+                assertThat("Accessibility focus on second heading", node.contentDescription.toString(), startsWith("Chicken fingers"))
                 assertThat(
                     "Third heading is level 3",
                     node.extras.getCharSequence("AccessibilityNodeInfo.roleDescription")!!.toString(),
@@ -1020,7 +1023,7 @@ class AccessibilityTest : BaseSessionTest() {
                 assertThat("Checkbox node has correct role", node.text.toString(), equalTo("many option"))
                 assertThat(
                     "Hint has description",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("description"),
                 )
             }
@@ -1574,7 +1577,10 @@ class AccessibilityTest : BaseSessionTest() {
 
         assertThat("Label bounds are in parent", rootBounds.contains(labelBounds), equalTo(true))
         assertThat("First node is a label", labelNode.className.toString(), equalTo("android.view.View"))
-        assertThat("Label has text", labelNode.text.toString(), equalTo("Name:"))
+        assertThat("Label has text", labelNode.text.toString(), equalTo("Nom:"))
+        val spannable = labelNode.text as SpannableString
+        val spans = spannable.getSpans(0, spannable.length, LocaleSpan::class.java)
+        assertThat("Label is French", spans.firstOrNull()?.locale, equalTo(Locale.FRENCH))
         assertThat("Label node is visible to user", labelNode.isVisibleToUser, equalTo(true))
 
         val entryNode = createNodeInfo(rootNode.getChildId(1))
@@ -1584,8 +1590,8 @@ class AccessibilityTest : BaseSessionTest() {
         assertThat("Entry node is visible to user", entryNode.isVisibleToUser, equalTo(true))
         assertThat(
             "Entry hint is label",
-            entryNode.extras.getString("AccessibilityNodeInfo.hint"),
-            equalTo("Name:"),
+            entryNode.hintText.toString(),
+            equalTo("Nom:"),
         )
         assertThat(
             "Entry input type is correct",
@@ -1646,7 +1652,7 @@ class AccessibilityTest : BaseSessionTest() {
             override fun onAccessibilityFocused(event: AccessibilityEvent) {
                 nodeId = getSourceId(event)
                 val node = createNodeInfo(nodeId)
-                assertThat("heading has correct content", node.text as String, equalTo("Hello, world!"))
+                assertThat("heading has correct content", node.text.toString(), equalTo("Hello, world!"))
             }
         })
 
@@ -1705,7 +1711,7 @@ class AccessibilityTest : BaseSessionTest() {
         assertThat("section has one child", innerDocNode.childCount, equalTo(1))
 
         val node = createNodeInfo(section.getChildId(0))
-        assertThat("Text node has text", node.text as String, equalTo("Hello, world!"))
+        assertThat("Text node has text", node.text.toString(), equalTo("Hello, world!"))
         var nodeBounds = Rect()
         node.getBoundsInScreen(nodeBounds)
         assertThat("inner node in inner doc bounds", innerDocBounds.contains(nodeBounds), equalTo(true))
@@ -1767,7 +1773,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on text leaf",
-                    node.text as String,
+                    node.text.toString(),
                     startsWith("One"),
                 )
                 assertThat(
@@ -1790,7 +1796,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on link",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("Two"),
                 )
                 assertThat(
@@ -1849,7 +1855,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with href",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("a with href"),
                 )
                 assertThat(
@@ -1868,7 +1874,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with no attributes",
-                    node.text as String,
+                    node.text.toString(),
                     startsWith("a with no attributes"),
                 )
                 assertThat(
@@ -1887,7 +1893,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with name",
-                    node.text as String,
+                    node.text.toString(),
                     startsWith("a with name"),
                 )
                 assertThat(
@@ -1906,7 +1912,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with onclick",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("a with onclick"),
                 )
                 assertThat(
@@ -1925,7 +1931,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on span with role link",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("span with role link"),
                 )
                 assertThat(
@@ -1953,7 +1959,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with href",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("a with href"),
                 )
             }
@@ -1967,7 +1973,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with onclick",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("a with onclick"),
                 )
             }
@@ -1981,7 +1987,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on span with role link",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("span with role link"),
                 )
             }
@@ -2006,7 +2012,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Accessibility focus on ARIA 1.0 combobox",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("ARIA 1.0 combobox"),
                 )
             }
@@ -2025,7 +2031,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Accessibility focus on ARIA 1.1 combobox",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("ARIA 1.1 combobox"),
                 )
             }
@@ -2053,7 +2059,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Accessibility focus on ARIA 1.0 combobox",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("ARIA 1.0 combobox"),
                 )
             }
@@ -2072,7 +2078,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Accessibility focus on ARIA 1.1 combobox",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("ARIA 1.1 combobox"),
                 )
             }
@@ -2097,7 +2103,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Accessibility focus on ARIA searchbox",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("ARIA searchbox"),
                 )
             }
@@ -2116,7 +2122,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Accessibility focus on HTML search input",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("HTML search input"),
                 )
             }
@@ -2144,7 +2150,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Accessibility focus on ARIA searchbox",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("ARIA searchbox"),
                 )
             }
@@ -2163,7 +2169,7 @@ class AccessibilityTest : BaseSessionTest() {
                 )
                 assertThat(
                     "Accessibility focus on HTML search input",
-                    node.extras.getString("AccessibilityNodeInfo.hint"),
+                    node.hintText.toString(),
                     equalTo("HTML search input"),
                 )
             }
@@ -2185,7 +2191,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with href",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("a with href"),
                 )
             }
@@ -2209,7 +2215,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with no attributes",
-                    node.text as String,
+                    node.text.toString(),
                     startsWith("a with no attributes"),
                 )
             }
@@ -2239,7 +2245,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with name",
-                    node.text as String,
+                    node.text.toString(),
                     startsWith("a with name"),
                 )
                 assertThat(
@@ -2258,7 +2264,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on a with onclick",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("a with onclick"),
                 )
                 assertThat(
@@ -2287,7 +2293,7 @@ class AccessibilityTest : BaseSessionTest() {
                 val node = createNodeInfo(nodeId)
                 assertThat(
                     "Accessibility focus on span with role link",
-                    node.contentDescription as String,
+                    node.contentDescription.toString(),
                     startsWith("span with role link"),
                 )
                 assertThat(

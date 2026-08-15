@@ -10,8 +10,6 @@ import { L10nCache } from "chrome://browser/content/urlbar/L10nCache.mjs";
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  ContextualIdentityService:
-    "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   UrlbarSearchOneOffs:
     "moz-src:///browser/components/urlbar/UrlbarSearchOneOffs.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
@@ -3683,7 +3681,7 @@ export class UrlbarView {
 
     if (
       result.type == UrlbarShared.RESULT_TYPE.TAB_SWITCH &&
-      UrlbarShared.isContainerUserContextId(result.payload.userContextId)
+      UrlbarShared.isContainerUserContextId(result.payload.userContext?.id)
     ) {
       if (!contextualIdentityAction) {
         contextualIdentityAction = actionNode.cloneNode(true);
@@ -3725,9 +3723,7 @@ export class UrlbarView {
 
   // Proton only
   #addContextualIdentityToSwitchTabChiclet(result, actionNode) {
-    let label = lazy.ContextualIdentityService.getUserContextLabel(
-      result.payload.userContextId
-    );
+    let { color, iconUrl, label } = result.payload.userContext;
     // To avoid flicker don't update the label unless necessary.
     if (
       actionNode.classList.contains("urlbarView-userContext") &&
@@ -3737,42 +3733,33 @@ export class UrlbarView {
       return;
     }
     actionNode.innerHTML = "";
-    let identity = lazy.ContextualIdentityService.getPublicIdentityFromId(
-      result.payload.userContextId
-    );
-    if (identity) {
+    if (label) {
       actionNode.classList.add("urlbarView-userContext");
       actionNode.classList.remove("urlbarView-switchToTab");
-      if (identity.color) {
+      if (color) {
         actionNode.className = actionNode.className.replace(
           /identity-color-\w*/g,
           ""
         );
-        actionNode.classList.add("identity-color-" + identity.color);
+        actionNode.classList.add("identity-color-" + color);
       }
 
       let textModeLabel = this.#createElement("div");
       textModeLabel.classList.add("urlbarView-userContext-textMode");
+      textModeLabel.innerText = label;
+      actionNode.appendChild(textModeLabel);
 
-      if (label) {
-        textModeLabel.innerText = label;
-        actionNode.appendChild(textModeLabel);
-
-        let iconModeLabel = this.#createElement("div");
-        iconModeLabel.classList.add("urlbarView-userContext-iconMode");
-        actionNode.appendChild(iconModeLabel);
-        let iconURL = lazy.ContextualIdentityService.getContainerIconURL(
-          identity.icon
-        );
-        if (iconURL) {
-          let userContextIcon = this.#createElement("img");
-          userContextIcon.classList.add("urlbarView-userContext-icon");
-          userContextIcon.setAttribute("alt", label);
-          userContextIcon.src = iconURL;
-          iconModeLabel.appendChild(userContextIcon);
-        }
-        actionNode.setAttribute("tooltiptext", label);
+      let iconModeLabel = this.#createElement("div");
+      iconModeLabel.classList.add("urlbarView-userContext-iconMode");
+      actionNode.appendChild(iconModeLabel);
+      if (iconUrl) {
+        let userContextIcon = this.#createElement("img");
+        userContextIcon.classList.add("urlbarView-userContext-icon");
+        userContextIcon.setAttribute("alt", label);
+        userContextIcon.src = iconUrl;
+        iconModeLabel.appendChild(userContextIcon);
       }
+      actionNode.setAttribute("tooltiptext", label);
     }
   }
 
@@ -3831,23 +3818,14 @@ export class UrlbarView {
   }
 
   #updateUserContextAction(item, result) {
-    let identity;
+    let color;
     let iconUrl;
     let label;
     if (
       result.type == UrlbarShared.RESULT_TYPE.TAB_SWITCH &&
-      result.payload.userContextId &&
-      UrlbarShared.isContainerUserContextId(result.payload.userContextId)
+      UrlbarShared.isContainerUserContextId(result.payload.userContext?.id)
     ) {
-      identity = lazy.ContextualIdentityService.getPublicIdentityFromId(
-        result.payload.userContextId
-      );
-      iconUrl = identity?.icon
-        ? lazy.ContextualIdentityService.getContainerIconURL(identity.icon)
-        : null;
-      label = lazy.ContextualIdentityService.getUserContextLabel(
-        result.payload.userContextId
-      ).trim();
+      ({ color, iconUrl, label } = result.payload.userContext);
     }
 
     let contextNode = item._elements.get("userContext");
@@ -3871,8 +3849,8 @@ export class UrlbarView {
         break;
       }
     }
-    if (identity?.color) {
-      contextNode.classList.add("identity-color-" + identity.color);
+    if (color) {
+      contextNode.classList.add("identity-color-" + color);
     }
 
     if (label) {

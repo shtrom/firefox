@@ -40,9 +40,15 @@
   --col-span-3: #{--col-span(3)};
   --col-span-12: #{--col-span(12)};
   --col-span-16: #{--col-span(16)};
+  --col-span-20: #{--col-span(20)};
 
   // Maximum width of .content: 16 columns + 15 gaps
   --content-max-width: var(--col-span-16);
+}
+
+// A 5-column story grid needs 20.
+.nova-enabled.container.sections-5-col {
+  --content-max-width: var(--col-span-20);
 }
 
 .nova-enabled.container {
@@ -106,8 +112,8 @@
 }
 
 // Spans all three columns, so it reclaims both side gutters and their gaps
-// (324px) at widths where .content is still bounded by them. Capped at the
-// same 16 columns .content is, so wide viewports are unchanged.
+// (324px) at widths where .content is still bounded by them. Capped at the same
+// columns .content is, so the two stay aligned at every width.
 // TODO(Bug 2061740): at the smallest widths this now runs under
 // .personalizeButtonWrapper (position: fixed, inset-inline-end: --space-xlarge,
 // z-index 5), which used to sit clear of .content in the side gutter. Needs the

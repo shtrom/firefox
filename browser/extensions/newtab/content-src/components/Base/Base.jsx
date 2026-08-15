@@ -1095,6 +1095,21 @@ export class BaseContent extends React.PureComponent {
         .join(" ");
       const logoShouldBeCentered =
         noFeedOrContentWidgets && !hasManyTopSitesRows;
+      // The 5-column story grid is driven by the layout data alone: the content
+      // band only widens when every section has a columnCount: 5 entry. Sections
+      // share one subgrid track count, so a layout set where only some sections
+      // define 5 columns has to stay at 4 — widening it would leave the others
+      // with no tile for the active breakpoint, and nothing to render.
+      const sectionsWithLayouts = Object.values(
+        props.DiscoveryStream.feeds?.data ?? {}
+      ).find(feed => feed?.data?.sections?.length)?.data?.sections;
+      const hasFiveColumnLayout =
+        !!sectionsWithLayouts?.length &&
+        sectionsWithLayouts.every(section =>
+          section.layout?.responsiveLayouts?.some(
+            layout => layout.columnCount === 5
+          )
+        );
       // Rendered as a direct child of .container unless the logo is centered,
       // so position: sticky is bounded by .container (which spans the whole
       // page) rather than .content (which now ends above the content band).
@@ -1147,7 +1162,7 @@ export class BaseContent extends React.PureComponent {
             className={`nova-outer-wrapper${this.state.fixedSearch ? " stuck-search" : ""}`}
           >
             <div
-              className={`container nova-enabled${logoShouldBeCentered ? " logo-in-content" : ""}`}
+              className={`container nova-enabled${logoShouldBeCentered ? " logo-in-content" : ""}${hasFiveColumnLayout ? " sections-5-col" : ""}`}
             >
               <aside className="sidebar-inline-start">
                 {!prefs.hideLogo && !logoShouldBeCentered && !isPageEmpty && (

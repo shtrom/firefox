@@ -74,17 +74,23 @@ in the add-on preferences, and GitHub needs your username. In the
 Bugzilla preferences, also enable *Count open needinfos too* so that
 needinfo requests are included in the badge.
 
+(getting-attention)=
+
 ## Getting attention
 
-We expect reviews to happen within a day or two, and most of them do.
+We expect reviews to happen within a business day or two, and most of them do.
 Requesting review from a [group](#review-groups) rather than an individual is the best way
 to get a quick answer, as any member of the group can pick the patch up.
 
-If a reviewer hasn't responded after two or three days:
+All the delays on this page are in business days: weekends and public holidays
+do not count, and reviewers are spread across many time zones and countries, so
+their non-working days may not be the same as yours.
+
+If a reviewer hasn't responded after two or three business days:
 
 - Ping the review group's channel, or contact the reviewer directly (either via e-mail or on Matrix).
 - Join developers on [Mozilla's Matrix server](https://chat.mozilla.org), and ask if anyone knows why a review may be delayed. Please link to the bug too.
-- If the review is still not addressed after a week, request review from a group covering that code, or from another peer or the module owner listed in [mots](/mots/index.md).
+- If the review is still not addressed after a business week, request review from a group covering that code, or from another peer or the module owner listed in [mots](/mots/index.md).
 
 Remember that reviewers are human too, and may have complex reasons that prevent them from reviewing your patch in a timely manner. Be confident in reaching out to your reviewer, but be mindful of the [Mozilla Community Participation Guidelines](https://www.mozilla.org/en-US/about/governance/policies/participation/) while doing so.
 

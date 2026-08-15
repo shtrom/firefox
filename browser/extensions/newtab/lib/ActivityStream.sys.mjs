@@ -758,13 +758,6 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "telemetry.privatePing.redactNewtabPing.enabled",
-    {
-      title: "Redacts content interaction ids from original New Tab ping",
-      value: false,
-    },
-  ],
-  [
     "telemetry.privatePing.inferredInterests.enabled",
     {
       title:
@@ -2324,7 +2317,8 @@ const FEEDS_DATA = [
     name: "sportsfeed",
     factory: () => new lazy.SportsFeed(),
     title: "Handles persistent state for the Sports widget",
-    value: true,
+    // Bug 2063657: the sports widget is retired; removed in bug 2063656.
+    value: false,
   },
   {
     name: "privacyfeed",

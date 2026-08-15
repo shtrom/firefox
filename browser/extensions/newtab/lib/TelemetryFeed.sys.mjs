@@ -58,8 +58,6 @@ const PREF_SHOW_SPONSORED_STORIES = "showSponsored";
 const PREF_SHOW_SPONSORED_TOPSITES = "showSponsoredTopSites";
 const BLANK_HOMEPAGE_URL = "chrome://browser/content/blanktab.html";
 const PREF_PRIVATE_PING_ENABLED = "telemetry.privatePing.enabled";
-const PREF_REDACT_NEWTAB_PING_ENABLED =
-  "telemetry.privatePing.redactNewtabPing.enabled";
 const PREF_MERINO_FEED_EXPERIMENT =
   "browser.newtabpage.activity-stream.discoverystream.merino-feed-experiment";
 const PREF_PRIVATE_PING_INFERRED_ENABLED =
@@ -202,10 +200,6 @@ export class TelemetryFeed {
     return this._prefs.get(PREF_PRIVATE_PING_ENABLED);
   }
 
-  get redactNewTabPingEnabled() {
-    return this._prefs.get(PREF_REDACT_NEWTAB_PING_ENABLED);
-  }
-
   get privatePingInferredInterestsEnabled() {
     return (
       this._prefs.get(PREF_PRIVATE_PING_INFERRED_ENABLED) &&
@@ -253,6 +247,13 @@ export class TelemetryFeed {
   get inferredTelemetrySettingsOverrides() {
     return this.store?.getState()?.InferredPersonalization
       ?.inferredTelemetrySettingsOverrides;
+  }
+
+  get tileIdRedactedForSponsored() {
+    return (
+      this.store?.getState()?.Prefs.values?.trainhopConfig?.newtabPing
+        ?.redactTileIdForSponsored || false
+    );
   }
 
   /**
@@ -597,14 +598,13 @@ export class TelemetryFeed {
 
   /**
    * Removes fields that link to any user content preference.
-   * Redactions only occur if the appropriate pref is enabled.
    *
    * @param {*} pingDict Input dictionary
    * @param {boolean} isSponsored Is this in ad, in which case there is nothing we can redact currently
-   * @returns {*} Possibly redacted dictionary
+   * @returns {*} Redacted dictionary
    */
   redactNewTabPing(pingDict, isSponsored = false) {
-    if (this.redactNewTabPingEnabled && !isSponsored) {
+    if (!isSponsored) {
       const {
         // eslint-disable-next-line no-unused-vars
         corpus_item_id,
@@ -623,22 +623,25 @@ export class TelemetryFeed {
       result.content_redacted = true;
       return result;
     }
-    // For spocs we need to retain the tile id.
-    if (this.redactNewTabPingEnabled && isSponsored) {
-      const {
-        // eslint-disable-next-line no-unused-vars
-        section,
-        // eslint-disable-next-line no-unused-vars
-        selected_topics,
-        // eslint-disable-next-line no-unused-vars
-        topic,
-        ...result
-      } = pingDict;
-      result.content_redacted = true;
-      return result;
+
+    const {
+      // eslint-disable-next-line no-unused-vars
+      section,
+      // eslint-disable-next-line no-unused-vars
+      selected_topics,
+      // eslint-disable-next-line no-unused-vars
+      topic,
+      ...result
+    } = pingDict;
+
+    // For spocs we need to retain the tile id, unless we're configured to
+    // redact it.
+    if (this.tileIdRedactedForSponsored) {
+      delete result.tile_id;
     }
 
-    return pingDict; // No modification
+    result.content_redacted = true;
+    return result;
   }
 
   /**
@@ -937,7 +940,6 @@ export class TelemetryFeed {
       case "PIN": {
         Glean.topsites.pin.record({
           newtab_visit_id: session.session_id,
-          is_sponsored: false,
           position: action.data.action_position,
         });
         break;
@@ -945,7 +947,6 @@ export class TelemetryFeed {
       case "UNPIN": {
         Glean.topsites.unpin.record({
           newtab_visit_id: session.session_id,
-          is_sponsored: false,
           position: action.data.action_position,
         });
         break;
@@ -953,7 +954,6 @@ export class TelemetryFeed {
       case "TOP_SITES_ADD": {
         Glean.topsites.add.record({
           newtab_visit_id: session.session_id,
-          is_sponsored: false,
           position: action.data.action_position,
         });
         break;
@@ -961,7 +961,6 @@ export class TelemetryFeed {
       case "TOP_SITES_EDIT": {
         Glean.topsites.edit.record({
           newtab_visit_id: session.session_id,
-          is_sponsored: false,
           position: action.data.action_position,
           has_title_changed: action.data.hasTitleChanged,
           has_url_changed: action.data.hasURLChanged,
@@ -1095,7 +1094,6 @@ export class TelemetryFeed {
           layout_name,
           matches_selected_topic,
           received_rank,
-          recommendation_id,
           recommended_at,
           scheduled_corpus_item_id,
           section_position,
@@ -1149,9 +1147,7 @@ export class TelemetryFeed {
                   received_rank,
                   recommended_at,
                 }
-              : {
-                  recommendation_id,
-                }),
+              : {}),
           };
           if (this.trainhopClickOnlyEnabled) {
             this.transitionToPrivateSession();
@@ -2273,9 +2269,7 @@ export class TelemetryFeed {
                 received_rank: datum.received_rank,
                 recommended_at: datum.recommended_at,
               }
-            : {
-                recommendation_id: datum.recommendation_id,
-              }),
+            : {}),
         };
 
         if (this.trainhopClickOnlyEnabled) {
@@ -2391,9 +2385,7 @@ export class TelemetryFeed {
               received_rank: tile.received_rank,
               recommended_at: tile.recommended_at,
             }
-          : {
-              recommendation_id: tile.recommendation_id,
-            }),
+          : {}),
       };
       this.recordOrQueueEvent(
         "impression",

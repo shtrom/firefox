@@ -591,10 +591,6 @@ newtab:
     expires: never
     extra_keys:
       newtab_visit_id: *newtab_visit_id
-      section:
-        description: >
-          section that had impression event
-        type: string
       section_position:
         description: >
           position of section on newtab
@@ -629,10 +625,6 @@ newtab:
     expires: never
     extra_keys:
       newtab_visit_id: *newtab_visit_id
-      section:
-        description: >
-          section that had impression event
-        type: string
       section_position:
         description: >
           position of section on newtab
@@ -663,10 +655,6 @@ newtab:
     expires: never
     extra_keys:
       newtab_visit_id: *newtab_visit_id
-      section:
-        description: >
-          section that had impression event
-        type: string
       section_position:
         description: >
           position of section on newtab
@@ -694,10 +682,6 @@ newtab:
     expires: never
     extra_keys:
       newtab_visit_id: *newtab_visit_id
-      section:
-        description: >
-          section that had impression event
-        type: string
       section_position:
         description: >
           position of section on newtab
@@ -725,10 +709,6 @@ newtab:
     expires: never
     extra_keys:
       newtab_visit_id: *newtab_visit_id
-      section:
-        description: >
-          section that had unblock event
-        type: string
       section_position:
         description: >
           position of section on newtab
@@ -1636,10 +1616,7 @@ topsites:
       - achurchwell@mozilla.com
     expires: never
     extra_keys:
-      advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
-      is_sponsored: *is_sponsored
       position: *topsite_position
     send_in_pings:
       - newtab
@@ -1659,10 +1636,7 @@ topsites:
       - achurchwell@mozilla.com
     expires: never
     extra_keys:
-      advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
-      is_sponsored: *is_sponsored
       position: *topsite_position
     send_in_pings:
       - newtab
@@ -1682,10 +1656,7 @@ topsites:
       - achurchwell@mozilla.com
     expires: never
     extra_keys:
-      advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
-      is_sponsored: *is_sponsored
       position: *topsite_position
     send_in_pings:
       - newtab
@@ -1705,10 +1676,7 @@ topsites:
       - achurchwell@mozilla.com
     expires: never
     extra_keys:
-      advertiser_name: *advertiser_name
-      tile_id: *tile_id
       newtab_visit_id: *newtab_visit_id
-      is_sponsored: *is_sponsored
       position: *topsite_position
       has_title_changed: &has_title_changed
         description: Whether the topsite title was changed.
@@ -2034,11 +2002,6 @@ pocket:
       position: &pocket_position
         description: The position (0-index) of the pocket tile.
         type: quantity
-      recommendation_id: &recommendation_id
-        description: >
-          The id from the Pocket API response that returned the recommendation.
-          Like "{61934fe5-fbb0-4f4e-b9dd-7eab5f6ee9cd}".
-        type: string
       tile_id: &pocket_tile_id
         description: >
           A content identifier.
@@ -2067,17 +2030,6 @@ pocket:
       recommended_at: &recommended_at
         description: The time in milliseconds the recomendation was recommended at.
         type: quantity
-      topic:
-        description: The topic of the recommendation. Like "entertainment".
-        type: string
-      selected_topics:
-        description: >
-          The list of topics the user selected
-        type: string
-      section:
-        description: >
-          If click belongs in a section, the name of the section
-        type: string
       section_position:
         description: >
           If click belongs in a section, the numeric position of the section
@@ -2123,7 +2075,6 @@ pocket:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
@@ -2133,17 +2084,6 @@ pocket:
         description: >
           Returns value based on if a the topic of the pocket recommendation matches one
           of the user-selected topic categories
-        type: string
-      topic:
-        description: The topic of the recommendation. Like "entertainment".
-        type: string
-      selected_topics:
-        description: >
-          The list of topics the user selected
-        type: string
-      section:
-        description: >
-          If click belongs in a section, the name of the section
         type: string
       section_position:
         description: >
@@ -2179,16 +2119,11 @@ pocket:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
       received_rank: *received_rank
       recommended_at: *recommended_at
-      section:
-        description: >
-          If click belongs in a section, the name of the section
-        type: string
       section_position:
         description: >
           If click belongs in a section, the numeric position of the section
@@ -2233,7 +2168,6 @@ pocket:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
@@ -2529,7 +2463,6 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
@@ -2576,7 +2509,6 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
@@ -2628,7 +2560,6 @@ newtab_content:
       is_sponsored: *is_sponsored_pocket
       format: *format
       position: *pocket_position
-      recommendation_id: *recommendation_id
       tile_id: *pocket_tile_id
       scheduled_corpus_item_id: *scheduled_corpus_item_id
       corpus_item_id: *corpus_item_id
