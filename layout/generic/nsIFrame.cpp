@@ -8235,6 +8235,12 @@ Matrix4x4Flagged nsIFrame::GetTransformMatrix(
     nsIFrame** aOutAncestor, TransformMatrixFlags aFlags) const {
   MOZ_ASSERT(aOutAncestor, "Need a place to put the ancestor!");
 
+  auto GetPositionMaybeIgnoringScrolling = [aFlags](const nsIFrame* aFrame) {
+    return aFlags.contains(TransformMatrixFlag::IgnoreScrolling)
+               ? aFrame->GetPositionIgnoringScrolling()
+               : aFrame->GetPosition();
+  };
+
   /* If we're transformed, we want to hand back the combination
    * transform/translate matrix that will apply our current transform, then
    * shift us to our parent.
@@ -8269,7 +8275,7 @@ Matrix4x4Flagged nsIFrame::GetTransformMatrix(
     // a canvas frame to a scroll frame) is in layout coordinates, so
     // apply it before applying any layout-to-visual transform.
     *aOutAncestor = GetParent();
-    nsPoint delta = GetPosition();
+    nsPoint delta = GetPositionMaybeIgnoringScrolling(this);
     /* Combine the raw transform with a translation to our parent. */
     result.PostTranslate(NSAppUnitsToFloatPixels(delta.x, scaleFactor),
                          NSAppUnitsToFloatPixels(delta.y, scaleFactor), 0.0f);
@@ -8331,7 +8337,7 @@ Matrix4x4Flagged nsIFrame::GetTransformMatrix(
   // the same parent chain and compute the offset.
   const int32_t finalAPD = PresContext()->AppUnitsPerDevPixel();
   // offset accumulates the offset at finalAPD.
-  nsPoint offset = GetPosition();
+  nsPoint offset = GetPositionMaybeIgnoringScrolling(this);
 
   int32_t currAPD = (*aOutAncestor)->PresContext()->AppUnitsPerDevPixel();
   // docOffset accumulates the current offset at currAPD, and then flushes to
@@ -8341,7 +8347,7 @@ Matrix4x4Flagged nsIFrame::GetTransformMatrix(
 
   while (*aOutAncestor != aStopAtAncestor.mFrame &&
          !shouldStopAt(current, aStopAtAncestor, *aOutAncestor, aFlags)) {
-    docOffset += (*aOutAncestor)->GetPosition();
+    docOffset += GetPositionMaybeIgnoringScrolling(*aOutAncestor);
 
     nsIFrame* parent = (*aOutAncestor)->GetParent();
     if (!parent) {

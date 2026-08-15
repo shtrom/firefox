@@ -458,6 +458,14 @@ struct AnchorPositioningUtils {
     SameContainingBlockOnly,
   };
 
+  enum class ApplyTransform : bool {
+    // The returned rect is untransformed. The caller is not expected to apply
+    // transforms to it afterwards.
+    No,
+    // The returned rect takes transforms between aFrame and aContainingBlock
+    // into account, if any.
+    Yes,
+  };
   /**
    * Get the union of the rects of aFrame and its continuations (but not if the
    * context is paginated and they're on a different page, as it doesn't make
@@ -469,10 +477,15 @@ struct AnchorPositioningUtils {
    * @param aUnionFragments Which of aFrame's fragments to union: all of them,
    * or only those under aContainingBlock. SameContainingBlockOnly requires
    * aContainingBlock to be a proper ancestor of aFrame.
+   * @param aApplyTransform Whether the returned mRect takes transforms between
+   * aFrame and aContainingBlock into account per
+   * https://drafts.csswg.org/css-anchor-position-1/#determining. Transforms are
+   * applied only when aContainingBlock is a proper ancestor of aFrame.
+   *
    */
   static CombinedFragments GetCombinedFragmentRects(
       const nsIFrame* aFrame, const nsIFrame* aContainingBlock,
-      UnionFragments aUnionFragments);
+      UnionFragments aUnionFragments, ApplyTransform aApplyTransform);
 
   // Helper to get shadow root for a property's tree scope
   static const dom::ShadowRoot* GetShadowRootForTreeScope(

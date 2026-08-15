@@ -75,6 +75,9 @@ enum class TransformMatrixFlag : uint8_t {
   // Stop the ancestor walk at a stacking context, or at a frame with a display
   // port.
   StopAtStackingContextAndDisplayPort,
+  // Accumulate the offsets between frames as if every scroll container on the
+  // way to the ancestor were scrolled to its origin.
+  IgnoreScrolling,
 };
 using TransformMatrixFlags = mozilla::EnumSet<TransformMatrixFlag>;
 

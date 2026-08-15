@@ -10652,6 +10652,14 @@
   mirror: always
   rust: true
 
+# Whether anchor positioning takes the anchor element's transforms into account.
+# https://drafts.csswg.org/css-anchor-position-1/#determining
+- name: layout.css.anchor-positioning.follows-transforms.enabled
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+  rust: true
+
 # Whether to enable appearance: base for authors.
 - name: layout.css.appearance-base.enabled
   type: RelaxedAtomicBool
