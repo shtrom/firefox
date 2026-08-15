@@ -31,11 +31,11 @@ plugins {
     id 'ApkSizePlugin'
     id "mozac.ConfigPlugin"
     id 'org.mozilla.conventions.mach-tasks'
+    id 'com.diffplug.spotless'
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.dependency.analysis)
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.ksp)
-    alias(libs.plugins.spotless)
 }
 
 def tryInt = { string ->
@@ -312,6 +312,9 @@ subprojects { project ->
             || projectName == 'test_runner'
     ) {
         apply plugin: "com.diffplug.spotless"
+        mozilla {
+            ktfmtSourcePaths = ["**/*.kt", "!**/thirdparty/**"]
+        }
 
         spotless {
             lineEndings = com.diffplug.spotless.LineEnding.UNIX

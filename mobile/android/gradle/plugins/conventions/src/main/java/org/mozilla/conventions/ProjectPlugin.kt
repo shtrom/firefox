@@ -25,6 +25,7 @@ import org.gradle.api.tasks.testing.TestOutputEvent
 import org.gradle.api.tasks.testing.TestOutputListener
 import org.gradle.api.tasks.testing.TestResult
 import org.gradle.process.CommandLineArgumentProvider
+import org.mozilla.conventions.ktfmt.configureKtfmt
 import java.io.File
 
 class ProjectPlugin : Plugin<Project> {
@@ -59,6 +60,7 @@ class ProjectPlugin : Plugin<Project> {
         configureGleanSubstitution(project, extraProperties)
         configureGleanVersionResolution(project)
         configureKtlint(project, mozilla)
+        configureKtfmt(project, mozilla)
         configureDetekt(project, mozilla)
         configureAndroidComponentsLint(project, mozilla, topsrcdir)
         configureTestOutputFormatting(project)

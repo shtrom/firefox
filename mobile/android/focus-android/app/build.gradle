@@ -631,6 +631,7 @@ if (project.hasProperty("coverage")) {
 
 mozilla {
     ktlintSourcePaths = ["src/**/*.kt", "!**/build/**/*.kt"]
+    ktfmtSourcePaths = ["src/**/*.kt", "!**/build/**/*.kt"]
     detektSourcePaths = [
         "**/src/**/*.kt",
         "!**/test/**", "!**/androidTest/**", "!**/build/**", "!**/resources/**", "!**/tmp/**",
