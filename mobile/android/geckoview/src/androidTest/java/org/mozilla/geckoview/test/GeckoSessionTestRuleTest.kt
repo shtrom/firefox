@@ -1981,7 +1981,6 @@ class GeckoSessionTestRuleTest : BaseSessionTest(noErrorCollector = true) {
         sessionRule.performTestEndCheck()
     }
 
-    @Suppress("ktlint:standard:annotation")
     @Test fun addExternalDelegateDuringNextWait() {
         mainSession.loadTestPath(HELLO_HTML_PATH)
         sessionRule.waitForPageStop()

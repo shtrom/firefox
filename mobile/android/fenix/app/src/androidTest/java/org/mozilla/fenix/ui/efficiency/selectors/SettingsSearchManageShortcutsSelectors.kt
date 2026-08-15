@@ -21,7 +21,7 @@ object SettingsSearchManageShortcutsSelectors {
     )
 
     // A single engine row in the shortcuts list, keyed by the engine name (the row's Text node).
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun SEARCH_ENGINE_SHORTCUT(engineName: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = engineName,

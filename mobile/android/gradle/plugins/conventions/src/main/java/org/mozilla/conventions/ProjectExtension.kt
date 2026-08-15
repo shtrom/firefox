@@ -10,7 +10,6 @@ import org.gradle.api.provider.Property
 
 interface ProjectExtension {
     val androidComponentsProject: Property<Boolean>
-    val ktlintSourcePaths: ListProperty<String>
     val ktfmtSourcePaths: ListProperty<String>
     val detektSourcePaths: ListProperty<String>
     val detektConfig: Property<String>

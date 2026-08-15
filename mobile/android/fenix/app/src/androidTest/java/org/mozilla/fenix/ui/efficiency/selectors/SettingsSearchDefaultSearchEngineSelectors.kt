@@ -14,7 +14,6 @@ object SettingsSearchDefaultSearchEngineSelectors {
         groups = listOf("requiredForPage"),
     )
 
-    @Suppress("ktlint:standard:function-naming")
     fun DEFAULT_SEARCH_ENGINE_OPTION(engineName: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_AND_TEXT,
         value = "engine_text",

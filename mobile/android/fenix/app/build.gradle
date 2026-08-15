@@ -782,7 +782,6 @@ def getSupportedLocales() {
 }
 
 mozilla {
-    ktlintSourcePaths = ["src/**/*.kt", "!**/build/**/*.kt"]
     ktfmtSourcePaths = ["src/**/*.kt", "!**/build/**/*.kt"]
     detektSourcePaths = [
         "**/src/**/*.kt",

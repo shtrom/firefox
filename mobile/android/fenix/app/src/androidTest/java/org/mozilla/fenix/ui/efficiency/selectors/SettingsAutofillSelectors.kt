@@ -129,7 +129,7 @@ object SettingsAutofillSelectors {
         groups = listOf("deleteAddress"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun SAVED_ADDRESS(name: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = name,

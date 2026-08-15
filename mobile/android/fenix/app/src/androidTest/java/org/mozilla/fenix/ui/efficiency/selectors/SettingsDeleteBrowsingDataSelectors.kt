@@ -74,7 +74,7 @@ object SettingsDeleteBrowsingDataSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun OPEN_TABS_DETAILS(count: String = "0") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT,
         value = "$count tabs",
@@ -82,7 +82,7 @@ object SettingsDeleteBrowsingDataSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun BROWSING_HISTORY_DETAILS(addresses: String = "0") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
         value = "$addresses addresses",

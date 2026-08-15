@@ -131,7 +131,7 @@ object ToolbarSelectors {
     // An item in the context menu shown after long-pressing the display-mode (browser) URL box, e.g.
     // "Copy", "Paste", "Paste & Go". Mirrors the legacy clickDisplayModeToolbarContextMenuItem, which
     // matched these by content description on the Compose toolbar.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun DISPLAY_MODE_TOOLBAR_MENU_ITEM(contentDescription: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = contentDescription,
@@ -139,7 +139,7 @@ object ToolbarSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun SEARCH_ENGINE_SELECTOR_ICON(searchEngineName: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = getStringResource(R.string.search_engine_selector_content_description, searchEngineName),
@@ -163,7 +163,7 @@ object ToolbarSelectors {
 
     // UIAutomator rather than Compose: this is asserted on BrowserPage with GeckoView active, where
     // Compose sync can hang (same reason TAB_COUNTER_UIAUTOMATOR exists).
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun TAB_COUNTER_WITH_COUNT(openTabs: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
         value = "Non-private Tabs Open: $openTabs",
@@ -174,7 +174,7 @@ object ToolbarSelectors {
     // UIAutomator rather than Compose: asserted on BrowserPage with GeckoView active (see
     // TAB_COUNTER_WITH_COUNT). The capitalized "Private Tabs Open:" is distinct from the normal
     // counter's "Non-private Tabs Open:" fragment, so a description-contains match won't cross over.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun PRIVATE_TAB_COUNTER_WITH_COUNT(openTabs: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
         value = "Private Tabs Open: $openTabs",
@@ -182,7 +182,7 @@ object ToolbarSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun TAB_STRIP_TAB_COUNTER_WITH_COUNT(openTabs: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = "Non-private Tabs Open: $openTabs. Tap to switch tabs.",
@@ -196,7 +196,7 @@ object ToolbarSelectors {
     // accessibility tree lags the Compose tree by seconds for the counter, so a UIAutomator check can
     // still read the old count while Compose already shows the new one. Mirrors the legacy
     // BrowserRobot.verifyTabCounter, which read the counter via composeTestRule.onNodeWithContentDescription.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun TAB_COUNTER_COMPOSE_WITH_COUNT(openTabs: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = "Non-private Tabs Open: $openTabs. Tap to switch tabs.",
@@ -204,7 +204,7 @@ object ToolbarSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun PRIVATE_TAB_COUNTER_COMPOSE_WITH_COUNT(openTabs: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = "Private Tabs Open: $openTabs. Tap to switch tabs.",
@@ -212,7 +212,7 @@ object ToolbarSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun TAB_STRIP_TAB(tabTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT,
         value = tabTitle,
@@ -220,7 +220,7 @@ object ToolbarSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun TAB_STRIP_CLOSE_TAB_BUTTON(tabTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
         value = "Close tab $tabTitle",

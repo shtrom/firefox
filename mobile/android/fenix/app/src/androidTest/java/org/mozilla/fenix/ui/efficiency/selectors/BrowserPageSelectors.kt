@@ -101,7 +101,7 @@ object BrowserPageSelectors {
         groups = listOf("tabCrashReporter"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun PAGE_CONTENT(text: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
         value = text,
@@ -112,7 +112,7 @@ object BrowserPageSelectors {
     // An item on the GeckoView text-selection floating action bar (and the app's paste popup),
     // matched by exact visible text. Mirrors the legacy clickContextMenuItem, which located items
     // with By.text(item) — covers "Select all", "Copy", "Search", "Private Search", "Paste".
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun TEXT_SELECTION_CONTEXT_MENU_ITEM(item: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR2_BY_TEXT,
         value = item,
@@ -207,7 +207,7 @@ object BrowserPageSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun PREFILLED_USERNAME(text: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_WEB_ID_AND_TEXT,
         value = "username",
@@ -216,7 +216,7 @@ object BrowserPageSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun PREFILLED_PASSWORD(text: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_WEB_ID_AND_TEXT,
         value = "password",
@@ -232,7 +232,7 @@ object BrowserPageSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun SUGGESTED_LOGIN(username: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = username,
@@ -294,7 +294,7 @@ object BrowserPageSelectors {
 
     // A saved-address suggestion row in the autofill prompt, keyed by the substring shown in its
     // name/title (e.g. the street address). App View: package-prefixed res-id + textContains.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun ADDRESS_SUGGESTION(text: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_CONTAINING_TEXT,
         value = "address_name",
@@ -305,7 +305,7 @@ object BrowserPageSelectors {
 
     // Assertion helper: the web street-address field is populated with the expected value.
     // Raw web DOM id + exact text.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun AUTOFILLED_STREET_ADDRESS(text: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_WEB_ID_AND_TEXT,
         value = "streetAddress",
@@ -336,7 +336,7 @@ object BrowserPageSelectors {
 
     // A saved-card suggestion row in the autofill prompt, keyed by the last digits shown in its masked
     // number. App View: package-prefixed res-id + textContains.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun CREDIT_CARD_SUGGESTION(lastDigits: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_CONTAINING_TEXT,
         value = "credit_card_number",
@@ -347,7 +347,7 @@ object BrowserPageSelectors {
 
     // Assertion helper: the web card-number field is populated with the expected value. Raw web DOM id
     // + exact text.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun AUTOFILLED_CREDIT_CARD(number: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_WEB_ID_AND_TEXT,
         value = "cardNumber",
@@ -383,7 +383,7 @@ object BrowserPageSelectors {
     )
 
     // Title of the "open link in another app" prompt, parameterized by the target app name.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun OPEN_IN_APP_PROMPT(appName: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
         value = getStringResource(

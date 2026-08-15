@@ -106,7 +106,7 @@ object CustomTabsSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun MENU_CUSTOM_ITEM(label: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
         value = label,

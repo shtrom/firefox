@@ -105,7 +105,7 @@ object DownloadsSelectors {
      * within ~5.5s, so a slow-but-landed click looks identical to a miss. A dump at one such "failure"
      * showed the link holding input focus — the tap had worked. Waiting is the caller's job here.
      */
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun DOWNLOAD_LINK(fileName: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR2_BY_DESCRIPTION_CONTAINS,
         value = fileName,
@@ -116,7 +116,7 @@ object DownloadsSelectors {
     // --- Downloads list rows (Compose; keyed off DownloadsListTestTag in main source) ---
 
     /** The Downloads-list row for [fileName]; the screen tags each row with the file name. */
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun DOWNLOADED_FILE_LIST_ITEM(fileName: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TAG,
         value = "${DownloadsListTestTag.DOWNLOADS_LIST_ITEM}.$fileName",
@@ -129,7 +129,7 @@ object DownloadsSelectors {
      * outside the Downloads list: the download link on the test page and the completion snackbar.
      * Device-level because the snackbar's file-name node is not reliably in the Compose tree.
      */
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun FILE_NAME_TEXT(fileName: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
         value = fileName,

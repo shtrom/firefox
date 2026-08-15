@@ -145,7 +145,7 @@ object BookmarksSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun MULTI_SELECTION_COUNTER(count: Int = 0) = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = "$count selected",
@@ -153,7 +153,7 @@ object BookmarksSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun ITEM_MENU(title: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = "Item Menu for $title",
@@ -161,7 +161,7 @@ object BookmarksSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun BOOKMARK_ITEM(title: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT_MERGED,
         value = title,
@@ -169,7 +169,7 @@ object BookmarksSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun EXPAND_FOLDER_BUTTON(folderTitle: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = getStringResource(R.string.bookmark_select_folder_expand_folder_content_description, folderTitle),

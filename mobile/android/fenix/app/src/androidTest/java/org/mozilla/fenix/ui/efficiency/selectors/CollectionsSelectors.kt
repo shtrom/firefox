@@ -18,7 +18,7 @@ object CollectionsSelectors {
         groups = listOf("tabsTrayCollectionsSection"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun EXISTING_COLLECTION_WITH_TITLE(collectionTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT,
         value = collectionTitle,
@@ -33,7 +33,7 @@ object CollectionsSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun COLLECTION_WITH_TITLE(collectionTitle: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = collectionTitle,
@@ -41,7 +41,7 @@ object CollectionsSelectors {
         groups = listOf("collectionItem"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun COLLECTION_TAB_WITH_TITLE(tabTitle: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = tabTitle,
@@ -49,7 +49,7 @@ object CollectionsSelectors {
         groups = listOf("collectionTabItem"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun COLLECTION_TAB_WITH_URL(url: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT_SUBSTRING,
         value = url,

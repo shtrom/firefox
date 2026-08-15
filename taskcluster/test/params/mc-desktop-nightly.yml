@@ -764,9 +764,6 @@ existing_tasks:
   source-test-jsshell-bench-sunspider-sm: HxAlqr5PQtOtzLukfCHO4Q
   source-test-jsshell-bench-web-tooling-sm: G0I2H8XbTaeskioopdvm1w
   source-test-jsshell-bench-web-tooling-v8: fKcLQRSsT9eQTcDoOhdHSQ
-  source-test-ktlint-android-components: LPGpNy6mS1yguxA8Zruikg
-  source-test-ktlint-fenix: fwiMAbkITh6RIsB61BwZzA
-  source-test-ktlint-focus: eIeqyyRQSlmJgL8uzyh9XA
   source-test-mozlint-android-android-components: NliWkhZuQqasIx-BavjXtA
   source-test-mozlint-android-fenix: GROiXRwWRj-HLlwOKEKcSw
   source-test-mozlint-android-focus: AY8otzFuR0Gqe-6N02tA4g

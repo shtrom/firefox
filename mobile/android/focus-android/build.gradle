@@ -24,7 +24,6 @@ plugins {
 }
 
 mozilla {
-    ktlintSourcePaths = ["app/**/*.kt", "buildSrc/**/*.kt", "!**/build/**/*.kt"]
     ktfmtSourcePaths = ["app/**/*.kt", "buildSrc/**/*.kt", "!**/build/**/*.kt"]
 }
 

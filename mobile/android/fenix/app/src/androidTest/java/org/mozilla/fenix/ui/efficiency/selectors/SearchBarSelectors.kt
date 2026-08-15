@@ -37,7 +37,7 @@ object SearchBarSelectors {
     // An engine row inside the search-selector popup menu. Each row exposes the plain engine name as
     // its content-description (mirrors the legacy verifySearchShortcutList / selectTemporarySearchMethod
     // which matched hasContentDescription(engineName)).
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun SEARCH_SELECTOR_MENU_ENGINE(engineName: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = engineName,

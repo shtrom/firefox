@@ -27,7 +27,7 @@ object RecentlyClosedTabsSelectors {
         groups = listOf("emptyRecentlyClosedTabsList"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun RECENTLY_CLOSED_ITEM(title: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_AND_TEXT,
         value = "title",
@@ -36,7 +36,7 @@ object RecentlyClosedTabsSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun RECENTLY_CLOSED_ITEM_URL(url: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
         value = url,

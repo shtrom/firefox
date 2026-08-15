@@ -29,7 +29,7 @@ object AddToHomeScreenSelectors {
         groups = listOf("systemPromptItem"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun HOME_SCREEN_SHORTCUT(shortcutTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR2_BY_TEXT,
         value = shortcutTitle,

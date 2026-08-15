@@ -64,7 +64,7 @@ object NotificationSelectors {
     )
 
     // Matched by text anywhere in the shade — a notification's title or body.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun SYSTEM_NOTIFICATION(text: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
         value = text,
@@ -73,7 +73,7 @@ object NotificationSelectors {
     )
 
     // The collapsed notification's top line, used as the swipe handle to expand it.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun NOTIFICATION_TOP_LINE(text: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RAW_RES_ID_CONTAINING_TEXT,
         value = "android:id/notification_top_line",
@@ -92,7 +92,7 @@ object NotificationSelectors {
     // clicks via clickAndSync and reports failure when no window update lands inside its ~5.5s budget --
     // a slow-but-successful pause would then throw. UiObject2.click() just injects the gesture (see the
     // strategy note in Selector.kt); the resulting state is asserted separately.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun MEDIA_NOTIFICATION_CONTROL_BUTTON(action: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR2_BY_DESCRIPTION_CONTAINS,
         value = action,

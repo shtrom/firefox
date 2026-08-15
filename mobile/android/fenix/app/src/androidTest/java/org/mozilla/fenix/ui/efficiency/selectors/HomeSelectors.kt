@@ -109,7 +109,7 @@ object HomeSelectors {
         groups = listOf("privateBrowsingHomeScreen"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun TOP_SITE_ITEM(topSiteTitle: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_ON_ALL_NODES_BY_TAG_WITH_CHILD_TEXT_ON_FIRST,
         value = "top_sites_list.top_site_item",

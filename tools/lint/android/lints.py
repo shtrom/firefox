@@ -197,12 +197,10 @@ def report_gradlew(
     topobjdir = lintargs["topobjdir"]
 
     if fix:
-        ktlint_task = f":{project_name}:ktlintFormat"
         ktfmt_task = f":{project_name}:ktfmtFormat"
     else:
-        ktlint_task = f":{project_name}:ktlint"
         ktfmt_task = f":{project_name}:ktfmtCheck"
-    tasks = [ktlint_task, ktfmt_task, f":{project_name}:detekt"] + list(lint_tasks)
+    tasks = [ktfmt_task, f":{project_name}:detekt"] + list(lint_tasks)
 
     extra_args = lintargs.get("extra_args") or []
     if disable_android_components_tasks:
@@ -261,36 +259,6 @@ def report_gradlew(
                 results.append(result.from_config(config, **err))
     except FileNotFoundError:
         print(f"Could not read detekt report: '{detekt_report}'")
-        pass
-
-    ktlint_file = "ktlint.json"
-    if fix:
-        ktlint_file = "ktlintFormat.json"
-
-    ktlint_report = os.path.join(reports, "ktlint", ktlint_file)
-    if not os.path.exists(ktlint_report):
-        ktlint_report = os.path.join(
-            topsrcdir, subdir, "app", "build", "reports", "ktlint", ktlint_file
-        )
-    try:
-        issues = json.load(open(ktlint_report))
-
-        for issue in issues:
-            name = issue["file"]
-            if is_excluded_file(topsrcdir, excludes, name):
-                continue
-            for error in issue["errors"]:
-                err = {
-                    "rule": error["rule"],
-                    "path": name,
-                    "lineno": error["line"],
-                    "column": error["column"],
-                    "message": error["message"],
-                    "level": "error",
-                }
-                results.append(result.from_config(config, **err))
-    except FileNotFoundError:
-        print(f"Could not read ktlint report: `{ktlint_report}`")
         pass
 
     if not fix:

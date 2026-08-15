@@ -59,7 +59,7 @@ object SettingsHomepageSelectors {
         groups = listOf("homepageSettings"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun OPENING_SCREEN_OPTION(openingScreenOption: String = "") = Selector(
         strategy = SelectorStrategy.ESPRESSO_BY_ID_WITH_SIBLING_TEXT,
         value = "radio_button",

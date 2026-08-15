@@ -212,7 +212,7 @@ object MainMenuSelectors {
     // The "Add <addon>" install icon on a recommended addon row in the expanded Extensions submenu.
     // Keyed on the addon name because there is no test tag on the install icon (see AddonMenuItem);
     // matched at the device level like the legacy installRecommendedAddon (itemWithDescription).
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun RECOMMENDED_ADDON_INSTALL_BUTTON(addonTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
         value = getStringResource(R.string.browser_menu_extension_plus_icon_content_description_2, addonTitle),
@@ -234,7 +234,7 @@ object MainMenuSelectors {
     // The collapsed Extensions main-menu row once an extension is installed: it advertises the addon
     // name in its content description. Mirrors the legacy verifyExtensionsButtonWithInstalledExtension
     // (itemWithResIdAndDescription("mainMenu.extensions", <addon>)).
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun EXTENSIONS_BUTTON_WITH_INSTALLED_EXTENSION(addonTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_AND_DESCRIPTION_CONTAINS,
         value = MenuDialogTestTag.EXTENSIONS,
@@ -245,7 +245,7 @@ object MainMenuSelectors {
 
     // The installed extension row in the expanded Extensions submenu. Mirrors the legacy
     // verifyInstalledExtension (hasTestTag(WEB_EXTENSION_ITEM) + content description contains <addon>).
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun INSTALLED_EXTENSION_ITEM(addonTitle: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TAG_AND_CONTENT_DESCRIPTION_SUBSTRING,
         value = MenuDialogTestTag.WEB_EXTENSION_ITEM,
@@ -370,7 +370,7 @@ object MainMenuSelectors {
         groups = listOf("browserViewMainMenuMoreItems", "moreMainMenuSubList"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun OPEN_IN_APP_NAME_BUTTON(appName: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = getStringResource(R.string.browser_menu_open_in_fenix, appName),

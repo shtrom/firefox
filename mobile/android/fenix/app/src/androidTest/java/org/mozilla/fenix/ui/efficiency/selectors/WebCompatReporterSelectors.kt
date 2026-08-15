@@ -41,7 +41,7 @@ object WebCompatReporterSelectors {
         groups = listOf("reporterViewItems"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun REPORTED_SITE_URL(url: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = url,

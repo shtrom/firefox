@@ -46,7 +46,7 @@ object SettingsAddonsManagerSelectors {
     // the addon name via its content description. requiresScroll so the framework scrolls the row into
     // view before clicking (mirrors the legacy addonsList().scrollIntoView) — needed for add-ons below
     // the fold. Mirrors the legacy installButtonForAddon (withContentDescription("Install <addon>")).
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun INSTALL_ADDON_BUTTON(addonTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
         value = "Install $addonTitle",
@@ -74,7 +74,7 @@ object SettingsAddonsManagerSelectors {
 
     // Title of the add-on install permission dialog ("Add <addon>"). Keyed on the addon name via a
     // text-contains match on the shared dialog "title" id, mirroring the legacy verifyAddonPermissionPrompt.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun ADDON_PERMISSION_PROMPT_TITLE(addonTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_CONTAINING_TEXT,
         value = "title",
@@ -86,7 +86,7 @@ object SettingsAddonsManagerSelectors {
     // Title of the install-completed dialog ("<addon> was added"). The addon's display name may be
     // longer than the recommended-list name (e.g. "Bitwarden" -> "Bitwarden Password Manager"), so a
     // text-contains match on the short name matches both. Mirrors legacy verifyAddonInstallCompletedPrompt.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun ADDON_INSTALL_COMPLETED_TITLE(addonTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_CONTAINING_TEXT,
         value = "title",
@@ -106,7 +106,7 @@ object SettingsAddonsManagerSelectors {
 
     // An installed add-on row in the add-ons manager list, keyed on its name label. A text-contains
     // match on the short name tolerates the longer display name shown in the list.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun INSTALLED_ADDON_ITEM(addonTitle: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_CONTAINING_TEXT,
         value = "add_on_name",

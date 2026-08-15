@@ -45,7 +45,7 @@ object FindInPageSelectors {
         groups = listOf("requiredForPage"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun RESULT_COUNTER(text: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
         value = text,

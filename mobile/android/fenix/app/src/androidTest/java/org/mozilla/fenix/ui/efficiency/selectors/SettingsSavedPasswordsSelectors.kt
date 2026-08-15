@@ -61,7 +61,7 @@ object SettingsSavedPasswordsSelectors {
         groups = listOf("loginDetails"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun SAVED_LOGIN_ENTRY(username: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = username,
@@ -69,7 +69,7 @@ object SettingsSavedPasswordsSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun LOGIN_DETAILS_PASSWORD(password: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TAG_AND_TEXT,
         value = LOGIN_DETAILS_PASSWORD_TEXT_FIELD,

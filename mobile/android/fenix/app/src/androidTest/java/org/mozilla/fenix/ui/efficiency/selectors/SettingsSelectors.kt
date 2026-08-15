@@ -299,7 +299,7 @@ object SettingsSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun SETTING_OPTION_SUMMARY(settingName: String = "", settingSummary: String = "") = Selector(
         strategy = SelectorStrategy.ESPRESSO_BY_TEXT_WITH_SIBLING_TEXT,
         value = settingName,

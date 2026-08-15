@@ -28,7 +28,7 @@ object UnifiedTrustPanelSelectors {
         groups = listOf("clearCookiesAndSiteDataDialog"),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun CLEAR_COOKIES_AND_SITE_DATA_DIALOG_DESCRIPTION(webSite: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = HtmlCompat.fromHtml(
@@ -56,7 +56,7 @@ object UnifiedTrustPanelSelectors {
     // ── Site identity ───────────────────────────────────────────────────────
     // Match the unique testTag AND the text. Text alone is ambiguous — the host also renders in the
     // address bar (gotcha A7) — but tag alone would stop asserting which site the panel is describing.
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun WEBSITE_TITLE(webSite: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TAG_AND_TEXT,
         value = "unified.trust.panel.website",
@@ -65,7 +65,7 @@ object UnifiedTrustPanelSelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    @Suppress("FunctionName")
     fun WEBSITE_URL(webSiteURL: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TAG_AND_TEXT,
         value = "unified.trust.panel.website.url",

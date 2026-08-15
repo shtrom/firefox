@@ -163,7 +163,6 @@ object TabDrawerSelectors {
         groups = listOf("createTabGroupView"),
     )
 
-    @Suppress("ktlint:standard:function-naming")
     fun CREATE_TAB_GROUP_COLOR_BUTTON(color: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = color,
@@ -185,7 +184,6 @@ object TabDrawerSelectors {
         groups = listOf("addToTabGroupView"),
     )
 
-    @Suppress("ktlint:standard:function-naming")
     fun ADD_TO_EXISTING_TAB_GROUP_BUTTON(title: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = title,
@@ -193,7 +191,6 @@ object TabDrawerSelectors {
         groups = listOf("addToTabGroupView"),
     )
 
-    @Suppress("ktlint:standard:function-naming")
     fun TAB_GROUP_ITEM(
         tabGroupTitle: String = "",
         numberOfTabs: Int = 1,
@@ -306,7 +303,6 @@ object TabDrawerSelectors {
         groups = listOf("tabItem"),
     )
 
-    @Suppress("ktlint:standard:function-naming")
     fun TAB_ITEM_WITH_TITLE(tabTitle: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_ON_ALL_NODES_BY_TAG_WITH_CHILD_TEXT_ON_FIRST,
         value = TabsTrayTestTag.TAB_ITEM_ROOT,
@@ -324,7 +320,6 @@ object TabDrawerSelectors {
         groups = listOf("tabSelectionThreeDotMainMenu"),
     )
 
-    @Suppress("ktlint:standard:function-naming")
     fun SELECTION_COUNTER(numberOfTabs: Int = 0) = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = getStringResource(R.string.tab_tray_multi_select_title, numberOfTabs),
@@ -372,7 +367,6 @@ object TabDrawerSelectors {
     // Tab search results render via FaviconListItem (title passed as a merged `label`), so the
     // tag+child-text TAB_ITEM_WITH_TITLE can't locate them the way it does grid tab items; match the
     // title text directly, as the legacy robot did with onNodeWithText.
-    @Suppress("ktlint:standard:function-naming")
     fun TAB_SEARCH_RESULT(tabTitle: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_TEXT,
         value = tabTitle,

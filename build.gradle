@@ -325,13 +325,6 @@ subprojects { project ->
                 }
                 googleJavaFormat(libs.versions.google.java.format.get())
             }
-            kotlin {
-                target project.fileTree(project.projectDir) {
-                    include '**/*.kt'
-                    exclude '**/thirdparty/**'
-                }
-                ktlint("${libs.versions.ktlint.get()}").setEditorConfigPath("${topsrcdir}/mobile/android/geckoview/.editorconfig")
-            }
         }
 
         // Work around https://github.com/diffplug/spotless/issues/1958 by
@@ -390,15 +383,15 @@ tasks.register("lint") {
     description = "Runs lint on all mobile projects."
     mobileProjects.each { dependsOn "${it}:lint" }
 }
-tasks.named("ktlint").configure {
+tasks.named("ktfmtCheck").configure {
     group = "verification"
-    description = "Runs ktlint on all mobile projects."
-    mobileProjects.each { dependsOn "${it}:ktlint" }
+    description = "Runs ktfmtCheck on all mobile projects."
+    mobileProjects.each { dependsOn "${it}:ktfmtCheck" }
 }
-tasks.named("ktlintFormat").configure {
+tasks.named("ktfmtFormat").configure {
     group = "formatting"
-    description = "Runs ktlintFormat on all mobile projects."
-    mobileProjects.each { dependsOn "${it}:ktlintFormat" }
+    description = "Runs ktfmtFormat on all mobile projects."
+    mobileProjects.each { dependsOn "${it}:ktfmtFormat" }
 }
 tasks.named("detekt").configure {
     group = "verification"

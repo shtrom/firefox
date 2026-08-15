@@ -27,7 +27,6 @@ object TabHistorySelectors {
         groups = listOf(),
     )
 
-    @Suppress("ktlint:standard:function-naming")
     fun TAB_HISTORY_ITEM(url: String = "") = Selector(
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT,
         value = url,
