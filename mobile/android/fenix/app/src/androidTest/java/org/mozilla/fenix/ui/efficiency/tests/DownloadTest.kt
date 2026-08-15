@@ -18,7 +18,8 @@ import org.mozilla.fenix.ui.efficiency.selectors.ShareOverlaySelectors
 
 class DownloadTest : BaseTest() {
 
-    private val mockWebServer get() = fenixTestRule.mockWebServer
+    private val mockWebServer
+        get() = fenixTestRule.mockWebServer
 
     // Required for the download prompt: without it the Download button's click is treated as prompt
     // abuse and silently dropped -- the button resolves and the click reports success, but the dialog
@@ -47,8 +48,7 @@ class DownloadTest : BaseTest() {
         // SAVE_AS_PDF_LABEL, not SAVE_AS_PDF_BUTTON: the latter is UIAUTOMATOR_WITH_RES_ID with the
         // value "Save as PDF", so it resolves to the res-id "<pkg>:id/Save as PDF" and can never match.
         // It has no other callers. SAVE_AS_PDF_LABEL matches on text, like the legacy robot did.
-        on.shareOverlay.navigateToPage()
-            .mozClick(ShareOverlaySelectors.SAVE_AS_PDF_LABEL)
+        on.shareOverlay.navigateToPage().mozClick(ShareOverlaySelectors.SAVE_AS_PDF_LABEL)
         on.downloads
             .mozVerifyElementsByGroup("downloadDialog")
             .mozClick(DownloadsSelectors.DOWNLOAD_DIALOG_CONFIRM_BUTTON)
@@ -72,7 +72,8 @@ class DownloadTest : BaseTest() {
         val downloadTestPage = "https://storage.googleapis.com/mobile_test_assets/test_app/downloads.html"
         val downloadFile = "3GB.zip"
 
-        on.browserPage.navigateToPage(downloadTestPage)
+        on.browserPage
+            .navigateToPage(downloadTestPage)
             .clickDownloadLink(downloadFile, downloadTestPage)
             .verifyDownloadPrompt()
             .clickDownloadPromptConfirmButton()
@@ -83,7 +84,8 @@ class DownloadTest : BaseTest() {
         // real network the 3GB download stalls and Fenix auto-pauses it before the shade opens, so the
         // download can already be paused when we arrive. Either way the paused state is asserted next,
         // then the download is resumed and cancelled.
-        on.notification.openNotificationTray()
+        on.notification
+            .openNotificationTray()
             .expandNotification(downloadFile)
             .clickNotificationActionButton(NotificationSelectors.DOWNLOAD_NOTIFICATION_PAUSE_BUTTON)
             .verifyNotificationExists(NotificationSelectors.DOWNLOAD_PAUSED_NOTIFICATION)
@@ -92,7 +94,6 @@ class DownloadTest : BaseTest() {
             .verifyNotificationDoesNotExist(NotificationSelectors.SYSTEM_NOTIFICATION(downloadFile))
             .closeNotificationTray()
 
-        on.downloads.navigateToPage()
-            .mozVerifyElementsByGroup("emptyDownloads")
+        on.downloads.navigateToPage().mozVerifyElementsByGroup("emptyDownloads")
     }
 }

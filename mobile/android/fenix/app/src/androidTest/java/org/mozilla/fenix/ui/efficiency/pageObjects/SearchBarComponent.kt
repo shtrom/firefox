@@ -66,7 +66,7 @@ class SearchBarComponent(composeRule: AndroidComposeTestRule<HomeActivityIntentT
                 value = url,
                 description = "URL bar contains '$url'",
                 groups = listOf(),
-            ),
+            )
         )
         return this
     }
@@ -98,18 +98,16 @@ class SearchBarComponent(composeRule: AndroidComposeTestRule<HomeActivityIntentT
     }
 
     /**
-     * Assert the edit-mode toolbar's text [contains][exists] [expectedText] (whitespace-normalized).
-     * Ports SearchRobot.verifyTypedToolbarText: the box exposes both a Text and an EditableText
-     * semantics property, and the check collapses runs of whitespace so, for example, the
-     * leading/trailing spaces that "Select all" copies compare equal.
+     * Assert the edit-mode toolbar's text [contains][exists] [expectedText] (whitespace-normalized). Ports
+     * SearchRobot.verifyTypedToolbarText: the box exposes both a Text and an EditableText semantics property, and the
+     * check collapses runs of whitespace so, for example, the leading/trailing spaces that "Select all" copies compare
+     * equal.
      */
     fun verifyTypedToolbarText(expectedText: String, exists: Boolean = true): SearchBarComponent {
         mozVerify(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE, timeout = waitingTime)
         val normalizedExpected = normalizeWhitespace(expectedText)
-        val actual = composeRule.onNodeWithTag(ADDRESSBAR_SEARCH_BOX)
-            .fetchSemanticsNode()
-            .config
-            .toNormalizedToolbarText()
+        val actual =
+            composeRule.onNodeWithTag(ADDRESSBAR_SEARCH_BOX).fetchSemanticsNode().config.toNormalizedToolbarText()
         assertTrue(
             "Expected toolbar text '$normalizedExpected' to ${if (exists) "exist" else "not exist"} in '$actual'",
             if (exists) actual.contains(normalizedExpected) else !actual.contains(normalizedExpected),

@@ -23,7 +23,8 @@ import org.mozilla.fenix.ui.efficiency.selectors.ToolbarSelectors
 
 class CustomTabsTest : BaseTest() {
 
-    private val mockWebServer get() = fenixTestRule.mockWebServer
+    private val mockWebServer
+        get() = fenixTestRule.mockWebServer
 
     // Required by verifyDownloadInACustomTabTest: without it the download prompt's Download button
     // resolves and the click reports success, but the click is dropped as prompt abuse, so the dialog
@@ -62,8 +63,7 @@ class CustomTabsTest : BaseTest() {
 
         on.customTabs.launchCustomTab(customTabPage.url.toString())
         on.customTabs.mozVerify(CustomTabsSelectors.CLOSE_BUTTON)
-        on.customTabs.openMainMenu()
-            .mozClick(CustomTabsSelectors.MENU_OPEN_IN_APP)
+        on.customTabs.openMainMenu().mozClick(CustomTabsSelectors.MENU_OPEN_IN_APP)
         // "Open in Firefox" sends the page to the full browser — re-sync confirms we landed there.
         on.browserPage.navigateToPage()
         on.browserPage.verifyPageContent(customTabPage.content)
@@ -79,8 +79,7 @@ class CustomTabsTest : BaseTest() {
 
         on.customTabs.launchCustomTab(customTabPage.url.toString(), "TestMenuItem")
         on.customTabs.clickWebContent("Link 1")
-        on.customTabs.openMainMenu()
-            .mozClick(CustomTabsSelectors.MENU_BACK)
+        on.customTabs.openMainMenu().mozClick(CustomTabsSelectors.MENU_BACK)
         on.customTabs.verifyWebContent(customTabPage.content)
     }
 
@@ -94,11 +93,9 @@ class CustomTabsTest : BaseTest() {
 
         on.customTabs.launchCustomTab(firstCustomTabPage.url.toString(), "TestMenuItem")
         on.customTabs.clickWebContent("Link 1")
-        on.customTabs.openMainMenu()
-            .mozClick(CustomTabsSelectors.MENU_BACK)
+        on.customTabs.openMainMenu().mozClick(CustomTabsSelectors.MENU_BACK)
         on.customTabs.verifyWebContent(firstCustomTabPage.content)
-        on.customTabs.openMainMenu()
-            .mozClick(CustomTabsSelectors.MENU_FORWARD)
+        on.customTabs.openMainMenu().mozClick(CustomTabsSelectors.MENU_FORWARD)
         on.customTabs.verifyWebContent(secondCustomTabPage.content)
     }
 
@@ -110,7 +107,8 @@ class CustomTabsTest : BaseTest() {
         val customTabPage = mockWebServer.getGenericAsset(3)
 
         on.customTabs.launchCustomTab(customTabPage.url.toString())
-        on.findInPage.navigateToPage()
+        on.findInPage
+            .navigateToPage()
             .mozVerify(FindInPageSelectors.FIND_IN_PAGE_NEXT_BUTTON)
             .mozVerify(FindInPageSelectors.FIND_IN_PAGE_PREV_BUTTON)
             .mozVerify(FindInPageSelectors.FIND_IN_PAGE_CLOSE_BUTTON)
@@ -142,7 +140,8 @@ class CustomTabsTest : BaseTest() {
             .mozVerifyElementsByGroup("downloadDialog")
             .mozClick(DownloadsSelectors.DOWNLOAD_DIALOG_CONFIRM_BUTTON)
             .mozVerify(DownloadsSelectors.DOWNLOAD_COMPLETE_SNACKBAR, timeout = 15_000)
-        on.notification.openNotificationTray()
+        on.notification
+            .openNotificationTray()
             .verifyNotificationExists(NotificationSelectors.SYSTEM_NOTIFICATION("Download completed"))
             .closeNotificationTray()
     }
@@ -157,8 +156,7 @@ class CustomTabsTest : BaseTest() {
 
         on.customTabs.launchCustomTab(startPage.url.toString(), "TestMenuItem")
         on.customTabs.clickWebContent("Go to target page")
-        on.customTabs.openMainMenu()
-            .mozLongClick(CustomTabsSelectors.MENU_BACK_COMPOSE)
+        on.customTabs.openMainMenu().mozLongClick(CustomTabsSelectors.MENU_BACK_COMPOSE)
 
         on.tabHistory
             .mozVerify(TabHistorySelectors.TAB_HISTORY_LIST_UIAUTOMATOR)

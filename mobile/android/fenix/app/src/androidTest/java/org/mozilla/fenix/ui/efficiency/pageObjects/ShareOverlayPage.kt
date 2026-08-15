@@ -43,10 +43,11 @@ class ShareOverlayPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTes
         NavigationRegistry.register(
             from = "BrowserPage",
             to = pageName,
-            steps = listOf(
-                NavigationStep.Click(BrowserPageSelectors.MAIN_MENU_BUTTON),
-                NavigationStep.Click(MainMenuSelectors.SHARE_BUTTON),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Click(BrowserPageSelectors.MAIN_MENU_BUTTON),
+                    NavigationStep.Click(MainMenuSelectors.SHARE_BUTTON),
+                ),
         )
     }
 
@@ -66,14 +67,15 @@ class ShareOverlayPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTes
     fun verifyShareTabsOverlay(vararg tabTitles: String): ShareOverlayPage {
         onView(withId(R.id.shared_site_list)).check(matches(isDisplayed()))
         tabTitles.forEach { title ->
-            onView(withText(title)).check(
-                matches(
-                    allOf(
-                        hasSibling(withId(R.id.share_tab_favicon)),
-                        hasSibling(withId(R.id.share_tab_url)),
-                    ),
-                ),
-            )
+            onView(withText(title))
+                .check(
+                    matches(
+                        allOf(
+                            hasSibling(withId(R.id.share_tab_favicon)),
+                            hasSibling(withId(R.id.share_tab_url)),
+                        )
+                    )
+                )
         }
         return this
     }
@@ -88,7 +90,8 @@ class ShareOverlayPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTes
         assertTrue("Sharing app '$appName' not found on device", sharingApp.exists())
         sharingApp.clickAndWaitForNewWindow()
         val urlMatchers = content.split("\n\n").map { IntentMatchers.hasExtra(Intent.EXTRA_TEXT, containsString(it)) }
-        val subjectMatchers = subject.split(", ").map { IntentMatchers.hasExtra(Intent.EXTRA_SUBJECT, containsString(it)) }
+        val subjectMatchers =
+            subject.split(", ").map { IntentMatchers.hasExtra(Intent.EXTRA_SUBJECT, containsString(it)) }
         Intents.intended(allOf(*(urlMatchers + subjectMatchers).toTypedArray()))
         forceCloseApp(appPackageName)
         return this

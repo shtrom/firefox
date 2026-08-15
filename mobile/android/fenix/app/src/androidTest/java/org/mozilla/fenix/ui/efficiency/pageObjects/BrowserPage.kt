@@ -50,31 +50,34 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
         NavigationRegistry.register(
             from = "HomePage",
             to = pageName,
-            steps = listOf(
-                NavigationStep.Click(ToolbarSelectors.TOOLBAR_URL_BOX),
-                NavigationStep.EnterText(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
-                NavigationStep.PressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Click(ToolbarSelectors.TOOLBAR_URL_BOX),
+                    NavigationStep.EnterText(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
+                    NavigationStep.PressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
+                ),
         )
 
         // Use UIAutomator selector to avoid Compose sync hanging when GeckoView is active.
         NavigationRegistry.register(
             from = pageName,
             to = pageName,
-            steps = listOf(
-                NavigationStep.Click(ToolbarSelectors.TOOLBAR_URL_BOX_UIAUTOMATOR),
-                NavigationStep.EnterText(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
-                NavigationStep.PressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Click(ToolbarSelectors.TOOLBAR_URL_BOX_UIAUTOMATOR),
+                    NavigationStep.EnterText(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
+                    NavigationStep.PressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
+                ),
         )
 
         NavigationRegistry.register(
             from = "SearchBarComponent",
             to = pageName,
-            steps = listOf(
-                NavigationStep.EnterText(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
-                NavigationStep.PressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.EnterText(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
+                    NavigationStep.PressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE),
+                ),
         )
 
         // Use UIAutomator selector to avoid Compose sync hanging when GeckoView is active.
@@ -88,20 +91,22 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
         NavigationRegistry.register(
             from = pageName,
             to = "HomePage",
-            steps = listOf(
-                NavigationStep.Click(ToolbarSelectors.NEW_TAB_BUTTON),
-                NavigationStep.PressBack,
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Click(ToolbarSelectors.NEW_TAB_BUTTON),
+                    NavigationStep.PressBack,
+                ),
         )
 
         NavigationRegistry.register(
             from = pageName,
             to = "AddToHomeScreenComponent",
-            steps = listOf(
-                NavigationStep.Click(BrowserPageSelectors.MAIN_MENU_BUTTON),
-                NavigationStep.Click(MainMenuSelectors.MORE_BUTTON),
-                NavigationStep.Click(MainMenuSelectors.ADD_TO_HOMESCREEN_BUTTON),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Click(BrowserPageSelectors.MAIN_MENU_BUTTON),
+                    NavigationStep.Click(MainMenuSelectors.MORE_BUTTON),
+                    NavigationStep.Click(MainMenuSelectors.ADD_TO_HOMESCREEN_BUTTON),
+                ),
         )
 
         // UIAutomator (Compose sync can hang while GeckoView is active) AND the content-description
@@ -125,9 +130,9 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     /**
-     * Taps the Play control on a web media page (video or audio). The tap is confirmed by
-     * [verifyMediaPlaybackState], not by the click call itself -- see
-     * [BrowserPageSelectors.MEDIA_PLAY_BUTTON] for why this is an exact-text, fire-and-forget click.
+     * Taps the Play control on a web media page (video or audio). The tap is confirmed by [verifyMediaPlaybackState],
+     * not by the click call itself -- see [BrowserPageSelectors.MEDIA_PLAY_BUTTON] for why this is an exact-text,
+     * fire-and-forget click.
      */
     fun clickMediaPlayButton(): BrowserPage {
         mozClick(BrowserPageSelectors.MEDIA_PLAY_BUTTON)
@@ -135,9 +140,8 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     /**
-     * Polls the selected tab's media-session playback state until it reaches [expectedState] or the wait
-     * budget runs out. Reads the browser store directly rather than the UI, mirroring the legacy
-     * BrowserRobot.assertPlaybackState.
+     * Polls the selected tab's media-session playback state until it reaches [expectedState] or the wait budget runs
+     * out. Reads the browser store directly rather than the UI, mirroring the legacy BrowserRobot.assertPlaybackState.
      */
     fun verifyMediaPlaybackState(expectedState: MediaSession.PlaybackState): BrowserPage {
         val store = appContext.components.core.store
@@ -156,20 +160,18 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
             Until.findObject(By.res("$packageName:id/engineView")),
             waitingTime,
         )
-        assertTrue(
-            mDevice.wait(Until.findObject(By.textContains(text)), waitingTimeLong) != null,
-        )
+        assertTrue(mDevice.wait(Until.findObject(By.textContains(text)), waitingTimeLong) != null)
         return this
     }
 
     /**
-     * Verify page content that the page only produces after some asynchronous work has settled, reloading
-     * between attempts. Needed for the tracking-protection test page, whose "<category> blocked" report is
-     * written once trackers have been processed — a plain [verifyPageContent] can run before that lands and
-     * no amount of waiting on the current document will make it appear.
+     * Verify page content that the page only produces after some asynchronous work has settled, reloading between
+     * attempts. Needed for the tracking-protection test page, whose "<category> blocked" report is written once
+     * trackers have been processed — a plain [verifyPageContent] can run before that lands and no amount of waiting on
+     * the current document will make it appear.
      *
-     * Mirrors the legacy BrowserRobot.verifyTrackingProtectionWebContent, which retried each assertion with
-     * a page refresh for the same reason.
+     * Mirrors the legacy BrowserRobot.verifyTrackingProtectionWebContent, which retried each assertion with a page
+     * refresh for the same reason.
      */
     fun verifyPageContentWithReload(url: String, text: String, attempts: Int = 3): BrowserPage {
         for (attempt in 1..attempts) {
@@ -204,7 +206,10 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
                 return verifyTranslationSheetIsDisplayed()
             } catch (e: AssertionError) {
                 if (attempt == attempts) throw e
-                Log.i("BrowserPage", "verifyTranslationSheetWithReload: translation sheet absent on attempt $attempt, reloading")
+                Log.i(
+                    "BrowserPage",
+                    "verifyTranslationSheetWithReload: translation sheet absent on attempt $attempt, reloading",
+                )
                 navigateToPage(url, forceNavigation = true)
             }
         }
@@ -238,8 +243,7 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     fun goBackFromHttpsError(): BrowserPage {
-        return clickPageContent(HTTPS_ERROR_GO_BACK)
-            .clickPageContentIfPresent(HTTPS_ERROR_GO_BACK)
+        return clickPageContent(HTTPS_ERROR_GO_BACK).clickPageContentIfPresent(HTTPS_ERROR_GO_BACK)
     }
 
     fun clickPageContent(text: String): BrowserPage {
@@ -253,10 +257,10 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     /**
-     * Click a web-content element and wait for [expectedContent] to render, reloading [url] and
-     * re-clicking between attempts. Mirrors the legacy clickPageObject retry-with-refresh: a tap can
-     * land before GeckoView has wired up the page's DOM handlers, in which case the click is a silent
-     * no-op and waiting on the same document never recovers it.
+     * Click a web-content element and wait for [expectedContent] to render, reloading [url] and re-clicking between
+     * attempts. Mirrors the legacy clickPageObject retry-with-refresh: a tap can land before GeckoView has wired up the
+     * page's DOM handlers, in which case the click is a silent no-op and waiting on the same document never recovers
+     * it.
      */
     fun clickPageObjectUntilContent(
         selector: Selector,
@@ -270,7 +274,10 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
                 return verifyPageContent(expectedContent)
             } catch (e: AssertionError) {
                 if (attempt == attempts) throw e
-                Log.i("BrowserPage", "clickPageObjectUntilContent: '$expectedContent' absent on attempt $attempt, reloading")
+                Log.i(
+                    "BrowserPage",
+                    "clickPageObjectUntilContent: '$expectedContent' absent on attempt $attempt, reloading",
+                )
                 navigateToPage(url, forceNavigation = true)
             }
         }
@@ -280,12 +287,11 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     // --- Downloads from a web page ---
 
     /**
-     * Click the download link named [fileName] and wait for the download prompt, reloading [url]
-     * between attempts.
+     * Click the download link named [fileName] and wait for the download prompt, reloading [url] between attempts.
      *
-     * Mirrors the legacy BrowserRobot.clickDownloadLink, which retried the click three times with a
-     * page refresh in between: the link can be tapped before the page is fully interactive, in which
-     * case the tap lands but no prompt opens — waiting longer on the same document never helps.
+     * Mirrors the legacy BrowserRobot.clickDownloadLink, which retried the click three times with a page refresh in
+     * between: the link can be tapped before the page is fully interactive, in which case the tap lands but no prompt
+     * opens — waiting longer on the same document never helps.
      */
     fun clickDownloadLink(fileName: String, url: String, attempts: Int = 3): BrowserPage {
         for (attempt in 1..attempts) {
@@ -295,7 +301,10 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
                 return this
             } catch (e: AssertionError) {
                 if (attempt == attempts) throw e
-                Log.i("BrowserPage", "clickDownloadLink: no download prompt for '$fileName' on attempt $attempt, reloading")
+                Log.i(
+                    "BrowserPage",
+                    "clickDownloadLink: no download prompt for '$fileName' on attempt $attempt, reloading",
+                )
                 navigateToPage(url, forceNavigation = true)
             }
         }
@@ -303,8 +312,8 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     /**
-     * Assert the full download prompt, not just its title: legacy verifyDownloadPrompt checked the
-     * dialog, its Cancel button and its Download button were all displayed.
+     * Assert the full download prompt, not just its title: legacy verifyDownloadPrompt checked the dialog, its Cancel
+     * button and its Download button were all displayed.
      */
     fun verifyDownloadPrompt(): BrowserPage {
         mozVerify(DownloadsSelectors.DOWNLOAD_DIALOG_TITLE, timeout = waitingTimeLong)
@@ -320,8 +329,8 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     /**
-     * Assert the "Download completed" snackbar for [fileName] — the completion text, the "Open"
-     * action (tag and label) and the file name itself, as legacy verifyDownloadCompleteSnackbar did.
+     * Assert the "Download completed" snackbar for [fileName] — the completion text, the "Open" action (tag and label)
+     * and the file name itself, as legacy verifyDownloadCompleteSnackbar did.
      */
     fun verifyDownloadCompleteSnackbar(fileName: String): BrowserPage {
         // The snackbar only appears once the file has actually transferred, so this waits on the
@@ -343,8 +352,8 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     /**
-     * Wait for the download snackbar to auto-dismiss so it stops covering the page before the
-     * notification shade is opened. Mirrors legacy DownloadRobot.waitUntilDownloadSnackbarGone.
+     * Wait for the download snackbar to auto-dismiss so it stops covering the page before the notification shade is
+     * opened. Mirrors legacy DownloadRobot.waitUntilDownloadSnackbarGone.
      */
     fun waitUntilDownloadSnackbarGone(): BrowserPage {
         mozWaitUntilAbsent(DownloadsSelectors.DOWNLOAD_IN_PROGRESS_SNACKBAR, timeout = waitingTimeLong)
@@ -390,9 +399,9 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     /**
-     * Dismiss the "Stay in / Open in app" prompt if it is showing, otherwise do nothing. The prompt
-     * is not guaranteed to appear when opening a PDF link, so this mirrors the legacy
-     * clickStayInAppPromptButton, which was guarded by an `if (exists())` no-op.
+     * Dismiss the "Stay in / Open in app" prompt if it is showing, otherwise do nothing. The prompt is not guaranteed
+     * to appear when opening a PDF link, so this mirrors the legacy clickStayInAppPromptButton, which was guarded by an
+     * `if (exists())` no-op.
      */
     fun clickStayInAppPromptButtonIfPresent(): BrowserPage {
         mozClickIfPresent(BrowserPageSelectors.STAY_IN_FIREFOX_PROMPT_BUTTON)
@@ -402,9 +411,9 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     // --- Text selection on web content ---
 
     /**
-     * Long-press web-content text containing [text] to raise the text-selection floating action bar.
-     * Waits for the text to render first (a PDF or a freshly loaded page may not be interactive the
-     * instant navigation reports done), mirroring the legacy longClickPageObject's waitForExists.
+     * Long-press web-content text containing [text] to raise the text-selection floating action bar. Waits for the text
+     * to render first (a PDF or a freshly loaded page may not be interactive the instant navigation reports done),
+     * mirroring the legacy longClickPageObject's waitForExists.
      */
     fun longClickWebContentText(text: String): BrowserPage {
         val selector = BrowserPageSelectors.PAGE_CONTENT(text)
@@ -414,9 +423,9 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     /**
-     * Click an item on the text-selection floating action bar (e.g. "Select all", "Copy", "Search",
-     * "Private Search", "Share"). Ports the legacy top-level clickContextMenuItem, which waited for
-     * the item then clicked it by exact text.
+     * Click an item on the text-selection floating action bar (e.g. "Select all", "Copy", "Search", "Private Search",
+     * "Share"). Ports the legacy top-level clickContextMenuItem, which waited for the item then clicked it by exact
+     * text.
      */
     fun clickContextMenuItem(item: String): BrowserPage {
         val selector = BrowserPageSelectors.TEXT_SELECTION_CONTEXT_MENU_ITEM(item)
@@ -427,13 +436,13 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
 
     /**
      * Long-press the display-mode (browser) URL box to raise its context menu. Mirrors the legacy
-     * BrowserRobot.longClickToolbar: the URL box renders as several ADDRESSBAR_URL_BOX nodes and only
-     * the last (unmerged) is the on-screen one, so this cannot go through mozLongClick's single-node
-     * resolution.
+     * BrowserRobot.longClickToolbar: the URL box renders as several ADDRESSBAR_URL_BOX nodes and only the last
+     * (unmerged) is the on-screen one, so this cannot go through mozLongClick's single-node resolution.
      */
     fun longClickToolbar(): BrowserPage {
         composeRule.waitForIdle()
-        composeRule.onAllNodesWithTag(ADDRESSBAR_URL_BOX, useUnmergedTree = true)
+        composeRule
+            .onAllNodesWithTag(ADDRESSBAR_URL_BOX, useUnmergedTree = true)
             .onLast()
             .assertExists()
             .performTouchInput { longClick() }
@@ -447,34 +456,33 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     }
 
     /**
-     * Assert the tab counter shows [numberOfTabs] open tabs, distinguishing the private
-     * ("Private Tabs Open: N") from the normal ("Non-private Tabs Open: N") content description.
-     * Ports the legacy BrowserRobot.verifyTabCounter.
+     * Assert the tab counter shows [numberOfTabs] open tabs, distinguishing the private ("Private Tabs Open: N") from
+     * the normal ("Non-private Tabs Open: N") content description. Ports the legacy BrowserRobot.verifyTabCounter.
      */
     fun verifyTabCounter(numberOfTabs: String, isPrivateBrowsingEnabled: Boolean = false): BrowserPage {
         // Compose (not UIAutomator) content-description: the UIAutomator accessibility tree lags the
         // Compose tree for this counter by seconds, so a UIAutomator check can still read the old count
         // after a new tab has already opened. The Compose tree reflects the new total promptly.
-        val selector = if (isPrivateBrowsingEnabled) {
-            ToolbarSelectors.PRIVATE_TAB_COUNTER_COMPOSE_WITH_COUNT(numberOfTabs)
-        } else {
-            ToolbarSelectors.TAB_COUNTER_COMPOSE_WITH_COUNT(numberOfTabs)
-        }
+        val selector =
+            if (isPrivateBrowsingEnabled) {
+                ToolbarSelectors.PRIVATE_TAB_COUNTER_COMPOSE_WITH_COUNT(numberOfTabs)
+            } else {
+                ToolbarSelectors.TAB_COUNTER_COMPOSE_WITH_COUNT(numberOfTabs)
+            }
         mozVerify(selector, timeout = waitingTimeLong)
         return this
     }
 
     /**
-     * Select [webText] on the page and trigger its "Search"/"Private Search" action from the
-     * text-selection bar, confirming a new tab actually opened (the counter reaches [expectedTabCount]).
+     * Select [webText] on the page and trigger its "Search"/"Private Search" action from the text-selection bar,
+     * confirming a new tab actually opened (the counter reaches [expectedTabCount]).
      *
-     * The GeckoView text-selection Search action silently no-ops when it fires cold — the item is
-     * clickable and the click succeeds, but no tab opens and the page never navigates. A single-shot
-     * sequence is therefore flaky (the legacy test leaned on RetryTestRule(3) to paper over it). This
-     * re-selects the text and re-triggers the action in place until the new tab appears. It deliberately
-     * does NOT reload the page between attempts: the page and its selectable text are still present after
-     * a no-op, and a reload's own URL-box click is itself flaky (UiObject.click can return false), which
-     * would turn one dead attempt into a corrupted state.
+     * The GeckoView text-selection Search action silently no-ops when it fires cold — the item is clickable and the
+     * click succeeds, but no tab opens and the page never navigates. A single-shot sequence is therefore flaky (the
+     * legacy test leaned on RetryTestRule(3) to paper over it). This re-selects the text and re-triggers the action in
+     * place until the new tab appears. It deliberately does NOT reload the page between attempts: the page and its
+     * selectable text are still present after a no-op, and a reload's own URL-box click is itself flaky (UiObject.click
+     * can return false), which would turn one dead attempt into a corrupted state.
      */
     fun searchSelectedWebText(
         webText: String,
@@ -483,11 +491,12 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
         isPrivateBrowsingEnabled: Boolean,
         attempts: Int = 4,
     ): BrowserPage {
-        val counter = if (isPrivateBrowsingEnabled) {
-            ToolbarSelectors.PRIVATE_TAB_COUNTER_COMPOSE_WITH_COUNT(expectedTabCount)
-        } else {
-            ToolbarSelectors.TAB_COUNTER_COMPOSE_WITH_COUNT(expectedTabCount)
-        }
+        val counter =
+            if (isPrivateBrowsingEnabled) {
+                ToolbarSelectors.PRIVATE_TAB_COUNTER_COMPOSE_WITH_COUNT(expectedTabCount)
+            } else {
+                ToolbarSelectors.TAB_COUNTER_COMPOSE_WITH_COUNT(expectedTabCount)
+            }
         for (attempt in 1..attempts) {
             try {
                 longClickWebContentText(webText)
@@ -499,19 +508,21 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
                 return this
             } catch (e: AssertionError) {
                 if (attempt == attempts) throw e
-                Log.i("BrowserPage", "searchSelectedWebText: '$menuItem' opened no new tab on attempt $attempt, re-selecting")
+                Log.i(
+                    "BrowserPage",
+                    "searchSelectedWebText: '$menuItem' opened no new tab on attempt $attempt, re-selecting",
+                )
             }
         }
         return this
     }
 
     /**
-     * Type a username/password into the web login form. Submitting the form GETs to itself, so after
-     * the first save the page reloads; typing the next set of credentials while that reload is still in
-     * flight silently loses them (and the following submit then re-saves the previous login instead of
-     * the new one). Each attempt therefore waits for the reloaded form to be present, enters the
-     * credentials, and asserts the username actually stuck — re-entering if the reload wiped it.
-     * Mirrors the legacy setPageObjectText (waitForExists + retry-with-refresh) sequence.
+     * Type a username/password into the web login form. Submitting the form GETs to itself, so after the first save the
+     * page reloads; typing the next set of credentials while that reload is still in flight silently loses them (and
+     * the following submit then re-saves the previous login instead of the new one). Each attempt therefore waits for
+     * the reloaded form to be present, enters the credentials, and asserts the username actually stuck — re-entering if
+     * the reload wiped it. Mirrors the legacy setPageObjectText (waitForExists + retry-with-refresh) sequence.
      */
     fun setLoginFormCredentials(username: String, password: String, attempts: Int = 4): BrowserPage {
         for (attempt in 1..attempts) {
@@ -523,17 +534,20 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
                 return this
             } catch (e: AssertionError) {
                 if (attempt == attempts) throw e
-                Log.i("BrowserPage", "setLoginFormCredentials: username '$username' didn't stick on attempt $attempt, re-entering")
+                Log.i(
+                    "BrowserPage",
+                    "setLoginFormCredentials: username '$username' didn't stick on attempt $attempt, re-entering",
+                )
             }
         }
         return this
     }
 
     /**
-     * Open the saved-login suggestions bar over the web form's username field. Focusing the field is
-     * what summons the bar, but the first focus sometimes autofills the field directly without ever
-     * showing it, so we re-focus and retry. Mirrors the legacy BrowserRobot.clickSuggestedLoginsButton,
-     * which re-clicked the username field for the same reason.
+     * Open the saved-login suggestions bar over the web form's username field. Focusing the field is what summons the
+     * bar, but the first focus sometimes autofills the field directly without ever showing it, so we re-focus and
+     * retry. Mirrors the legacy BrowserRobot.clickSuggestedLoginsButton, which re-clicked the username field for the
+     * same reason.
      */
     fun clickSuggestedLoginsBar(attempts: Int = 3): BrowserPage {
         for (attempt in 1..attempts) {
@@ -555,14 +569,15 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
         val textMatcher = hasText(expectedText, substring = true, ignoreCase = true)
         try {
             composeRule.waitUntil(timeout) {
-                composeRule.onAllNodesWithTag(ADDRESSBAR_URL, useUnmergedTree = true)
-                    .fetchSemanticsNodes()
-                    .any { textMatcher.matches(it) }
+                composeRule.onAllNodesWithTag(ADDRESSBAR_URL, useUnmergedTree = true).fetchSemanticsNodes().any {
+                    textMatcher.matches(it)
+                }
             }
         } catch (_: ComposeTimeoutException) {
-            val actual = composeRule.onAllNodesWithTag(ADDRESSBAR_URL, useUnmergedTree = true)
-                .fetchSemanticsNodes()
-                .mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString("") }
+            val actual =
+                composeRule.onAllNodesWithTag(ADDRESSBAR_URL, useUnmergedTree = true).fetchSemanticsNodes().mapNotNull {
+                    it.config.getOrNull(SemanticsProperties.Text)?.joinToString("")
+                }
             throw AssertionError("Expected URL to contain '$expectedText' but found: $actual")
         }
         return this
@@ -570,13 +585,14 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
 
     /**
      * Assert the Gecko engine's font-size factor matches [textSizePercentage], mirroring the legacy
-     * checkTextSizeOnWebsite: the accessibility slider ultimately drives engine.settings.fontSizeFactor,
-     * so this reads the applied engine setting rather than measuring rendered text. The step math
+     * checkTextSizeOnWebsite: the accessibility slider ultimately drives engine.settings.fontSizeFactor, so this reads
+     * the applied engine setting rather than measuring rendered text. The step math
      * (MIN_VALUE/STEP_SIZE/DECIMAL_CONVERSION) is copied from the legacy accessibility robot.
      */
     fun verifyTextSizeOnWebsite(textSizePercentage: Int): BrowserPage {
         val steps = (textSizePercentage - FONT_SIZE_MIN_VALUE) / FONT_SIZE_STEP_SIZE
-        val expectedFactor = ((steps * FONT_SIZE_STEP_SIZE) + FONT_SIZE_MIN_VALUE).toFloat() / FONT_SIZE_DECIMAL_CONVERSION
+        val expectedFactor =
+            ((steps * FONT_SIZE_STEP_SIZE) + FONT_SIZE_MIN_VALUE).toFloat() / FONT_SIZE_DECIMAL_CONVERSION
         assertTrue(
             "Text size on website was not set to: $textSizePercentage",
             appContext.components.core.engine.settings.fontSizeFactor == expectedFactor,
@@ -608,8 +624,8 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
      * Click the "Select address" header of the autofill prompt.
      *
      * Mirrors the legacy BrowserRobot.clickSelectAddressButton retry that works around
-     * https://bugzilla.mozilla.org/show_bug.cgi?id=1816869 — the prompt sometimes fails to surface,
-     * so we re-focus other form fields to re-trigger Gecko autofill and retry.
+     * https://bugzilla.mozilla.org/show_bug.cgi?id=1816869 — the prompt sometimes fails to surface, so we re-focus
+     * other form fields to re-trigger Gecko autofill and retry.
      */
     fun clickSelectAddressButton(): BrowserPage {
         for (i in 1..AUTOFILL_RETRY_COUNT) {
@@ -658,8 +674,8 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     /**
      * Click the "Select credit card" header of the autofill prompt.
      *
-     * Mirrors [clickSelectAddressButton]'s retry around bug 1816869 — the prompt sometimes fails to
-     * surface, so we re-focus the card-number field to re-trigger Gecko autofill and retry.
+     * Mirrors [clickSelectAddressButton]'s retry around bug 1816869 — the prompt sometimes fails to surface, so we
+     * re-focus the card-number field to re-trigger Gecko autofill and retry.
      */
     fun clickSelectCreditCardButton(): BrowserPage {
         for (i in 1..AUTOFILL_RETRY_COUNT) {

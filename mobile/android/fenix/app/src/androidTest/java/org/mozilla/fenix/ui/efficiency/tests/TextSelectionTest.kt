@@ -11,7 +11,8 @@ import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
 
 class TextSelectionTest : BaseTest() {
 
-    private val mockWebServer get() = fenixTestRule.mockWebServer
+    private val mockWebServer
+        get() = fenixTestRule.mockWebServer
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326832
     @SmokeTest
@@ -20,7 +21,8 @@ class TextSelectionTest : BaseTest() {
         val genericURL = mockWebServer.getGenericAsset(1)
 
         on.home.navigateToPage()
-        on.browserPage.navigateToPage(genericURL.url.toString())
+        on.browserPage
+            .navigateToPage(genericURL.url.toString())
             .longClickWebContentText("content")
             .clickContextMenuItem("Select all")
             .clickContextMenuItem("Copy")
@@ -41,7 +43,8 @@ class TextSelectionTest : BaseTest() {
         on.home.navigateToPage()
         on.home.switchToPrivateBrowsingMode()
 
-        on.browserPage.navigateToPage(genericURL.url.toString())
+        on.browserPage
+            .navigateToPage(genericURL.url.toString())
             .verifyPageContent(genericURL.content)
             .searchSelectedWebText(
                 webText = "content",
@@ -59,13 +62,15 @@ class TextSelectionTest : BaseTest() {
         val genericURL = mockWebServer.getGenericAsset(3)
 
         on.home.navigateToPage()
-        on.browserPage.navigateToPage(genericURL.url.toString())
+        on.browserPage
+            .navigateToPage(genericURL.url.toString())
             .clickPageContent("PDF form file")
             .clickStayInAppPromptButtonIfPresent()
             .longClickWebContentText("Crossing")
             .clickContextMenuItem("Copy")
 
-        on.searchBar.navigateToPage()
+        on.searchBar
+            .navigateToPage()
             .clickClearButton()
             .verifySearchBarPlaceholder()
             .longClickToolbar()
@@ -80,7 +85,8 @@ class TextSelectionTest : BaseTest() {
         val genericURL = mockWebServer.getGenericAsset(3)
 
         on.home.navigateToPage()
-        on.browserPage.navigateToPage(genericURL.url.toString())
+        on.browserPage
+            .navigateToPage(genericURL.url.toString())
             .clickPageContent("PDF form file")
             .clickStayInAppPromptButtonIfPresent()
             .longClickWebContentText("Crossing")

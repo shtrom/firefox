@@ -49,10 +49,11 @@ class SettingsPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRul
         NavigationRegistry.register(
             from = pageName,
             to = "SettingsAccessibilityPage",
-            steps = listOf(
-                NavigationStep.Swipe(SettingsSelectors.ACCESSIBILITY_BUTTON),
-                NavigationStep.Click(SettingsSelectors.ACCESSIBILITY_BUTTON),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Swipe(SettingsSelectors.ACCESSIBILITY_BUTTON),
+                    NavigationStep.Click(SettingsSelectors.ACCESSIBILITY_BUTTON),
+                ),
         )
         NavigationRegistry.register(
             from = pageName,
@@ -87,27 +88,30 @@ class SettingsPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRul
         NavigationRegistry.register(
             from = pageName,
             to = "SettingsPageSummariesPage",
-            steps = listOf(
-                // "Page summaries" sits below the fold in the General section, so scroll it into view first.
-                NavigationStep.Swipe(SettingsSelectors.PAGE_SUMMARIES_BUTTON),
-                NavigationStep.Click(SettingsSelectors.PAGE_SUMMARIES_BUTTON),
-            ),
+            steps =
+                listOf(
+                    // "Page summaries" sits below the fold in the General section, so scroll it into view first.
+                    NavigationStep.Swipe(SettingsSelectors.PAGE_SUMMARIES_BUTTON),
+                    NavigationStep.Click(SettingsSelectors.PAGE_SUMMARIES_BUTTON),
+                ),
         )
         NavigationRegistry.register(
             from = pageName,
             to = "GooglePlayPage",
-            steps = listOf(
-                NavigationStep.Swipe(SettingsSelectors.RATE_ON_GOOGLE_PLAY_BUTTON),
-                NavigationStep.Click(SettingsSelectors.RATE_ON_GOOGLE_PLAY_BUTTON),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Swipe(SettingsSelectors.RATE_ON_GOOGLE_PLAY_BUTTON),
+                    NavigationStep.Click(SettingsSelectors.RATE_ON_GOOGLE_PLAY_BUTTON),
+                ),
         )
         NavigationRegistry.register(
             from = pageName,
             to = "SettingsAboutPage",
-            steps = listOf(
-                NavigationStep.Swipe(SettingsSelectors.ABOUT_FIREFOX_BUTTON),
-                NavigationStep.Click(SettingsSelectors.ABOUT_FIREFOX_BUTTON),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Swipe(SettingsSelectors.ABOUT_FIREFOX_BUTTON),
+                    NavigationStep.Click(SettingsSelectors.ABOUT_FIREFOX_BUTTON),
+                ),
         )
     }
 
@@ -129,21 +133,22 @@ class SettingsPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRul
 
     /**
      * Assert the "Set as default browser" preference's Switch is in the given state. Mirrors legacy
-     * SettingsRobot.verifyDefaultBrowserToggle: the Switch (R.id.switch_widget) is a cousin of the
-     * preference title, so it is matched via hasCousin rather than as the title itself.
+     * SettingsRobot.verifyDefaultBrowserToggle: the Switch (R.id.switch_widget) is a cousin of the preference title, so
+     * it is matched via hasCousin rather than as the title itself.
      */
     fun verifyDefaultBrowserToggle(isEnabled: Boolean): SettingsPage {
         scrollToSettingText(getStringResource(R.string.preferences_set_as_default_browser))
-        onView(withText(R.string.preferences_set_as_default_browser)).check(
-            matches(
-                hasCousin(
-                    allOf(
-                        withId(R.id.switch_widget),
-                        if (isEnabled) isChecked() else isNotChecked(),
-                    ),
-                ),
-            ),
-        )
+        onView(withText(R.string.preferences_set_as_default_browser))
+            .check(
+                matches(
+                    hasCousin(
+                        allOf(
+                            withId(R.id.switch_widget),
+                            if (isEnabled) isChecked() else isNotChecked(),
+                        )
+                    )
+                )
+            )
         return this
     }
 

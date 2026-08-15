@@ -5,9 +5,9 @@
 package org.mozilla.fenix.ui.efficiency.navigation
 
 /**
- * App launch/state a page is reached under. Mirrors the HomeActivityIntentTestRule flags on BaseTest,
- * with the same defaults — so LaunchConfig() equals the harness's normal launch. Declare a non-default
- * value on a page's AppEntry edge when the page only exists under a special launch (e.g. onboarding).
+ * App launch/state a page is reached under. Mirrors the HomeActivityIntentTestRule flags on BaseTest, with the same
+ * defaults — so LaunchConfig() equals the harness's normal launch. Declare a non-default value on a page's AppEntry
+ * edge when the page only exists under a special launch (e.g. onboarding).
  */
 data class LaunchConfig(
     val skipOnboarding: Boolean = true,

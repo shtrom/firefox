@@ -12,7 +12,8 @@ import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
 import org.mozilla.fenix.ui.efficiency.selectors.SettingsAutofillSelectors
 
 class CreditCardAutofillTest : BaseTest() {
-    private val mockWebServer get() = fenixTestRule.mockWebServer
+    private val mockWebServer
+        get() = fenixTestRule.mockWebServer
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1512792
     // Converted from legacy CreditCardAutofillTest.verifyCreditCardAutofillTest
@@ -22,7 +23,8 @@ class CreditCardAutofillTest : BaseTest() {
         val creditCardFormPage = mockWebServer.creditCardFormAsset
         val card = CreditCardTestData.FIRST
 
-        on.settingsAutofill.navigateToPage()
+        on.settingsAutofill
+            .navigateToPage()
             .fillAndSaveCreditCard(card)
             // Opening Manage cards surfaces the "secure your cards" prompt; declining it here means it
             // won't interrupt the autofill selection once we're on the web form.
@@ -33,7 +35,8 @@ class CreditCardAutofillTest : BaseTest() {
             // reach the browser is correct (otherwise it stops one level short, on the Settings list).
             .mozPressBackUntilGone(SettingsAutofillSelectors.SAVED_CREDIT_CARD)
 
-        on.browserPage.navigateToPage(creditCardFormPage.url.toString())
+        on.browserPage
+            .navigateToPage(creditCardFormPage.url.toString())
             .clickCreditCardNumberField()
             .clickSelectCreditCardButton()
             .clickCreditCardSuggestion(card.lastDigits)
@@ -47,7 +50,8 @@ class CreditCardAutofillTest : BaseTest() {
     fun deleteSavedCreditCardUsingToolbarButtonTest() {
         val card = CreditCardTestData.FIRST
 
-        on.settingsAutofill.navigateToPage()
+        on.settingsAutofill
+            .navigateToPage()
             .fillAndSaveCreditCard(card)
             .mozClick(SettingsAutofillSelectors.MANAGE_SAVED_CREDIT_CARDS_BUTTON)
             // Opening Manage cards offers to put saved cards behind a device lock; decline so the flow
@@ -72,7 +76,8 @@ class CreditCardAutofillTest : BaseTest() {
     fun deleteSavedCreditCardUsingMenuButtonTest() {
         val card = CreditCardTestData.FIRST
 
-        on.settingsAutofill.navigateToPage()
+        on.settingsAutofill
+            .navigateToPage()
             .fillAndSaveCreditCard(card)
             .mozClick(SettingsAutofillSelectors.MANAGE_SAVED_CREDIT_CARDS_BUTTON)
             // Opening Manage cards offers to put saved cards behind a device lock; decline so the flow

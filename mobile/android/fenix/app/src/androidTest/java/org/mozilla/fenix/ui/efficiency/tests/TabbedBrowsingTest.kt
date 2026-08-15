@@ -20,21 +20,20 @@ import org.mozilla.fenix.ui.efficiency.selectors.ToolbarSelectors
 
 class TabbedBrowsingTest : BaseTest() {
 
-    private val mockWebServer get() = fenixTestRule.mockWebServer
+    private val mockWebServer
+        get() = fenixTestRule.mockWebServer
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1046683
     @Test
     fun verifySyncedTabsWhenUserIsNotSignedInTest() {
-        on.tabDrawer.navigateToPage()
-            .mozVerifyElementIsNotSelected(TabDrawerSelectors.SYNCED_TABS_BUTTON)
+        on.tabDrawer.navigateToPage().mozVerifyElementIsNotSelected(TabDrawerSelectors.SYNCED_TABS_BUTTON)
         on.tabDrawer
             .mozClick(TabDrawerSelectors.SYNCED_TABS_BUTTON)
             .mozVerifyElementIsSelected(TabDrawerSelectors.SYNCED_TABS_BUTTON)
         on.tabDrawer
             .mozVerifyElementsByGroup("tabDrawerUnauthenticatedSyncedTabs")
             .mozClick(TabDrawerSelectors.SIGN_IN_TO_SYNC_BUTTON)
-        on.settingsTurnOnSync
-            .mozVerifyElementsByGroup()
+        on.settingsTurnOnSync.mozVerifyElementsByGroup()
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/903587
@@ -43,15 +42,15 @@ class TabbedBrowsingTest : BaseTest() {
     fun verifyPrivateTabsTrayWithOpenTabTest() {
         val website = mockWebServer.getGenericAsset(1)
 
-        on.tabDrawer.navigateToPage()
+        on.tabDrawer
+            .navigateToPage()
             .mozClick(TabDrawerSelectors.PRIVATE_TABS_PAGE_BUTTON)
             .mozClick(TabDrawerSelectors.FAB)
         on.searchBar
             .mozEnterText(website.url.toString(), SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
             .mozPressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
         on.browserPage.navigateToPage()
-        on.tabDrawer.navigateToPage()
-            .mozVerifyElementIsNotSelected(TabDrawerSelectors.NORMAL_BROWSING_OPEN_TABS_BUTTON)
+        on.tabDrawer.navigateToPage().mozVerifyElementIsNotSelected(TabDrawerSelectors.NORMAL_BROWSING_OPEN_TABS_BUTTON)
         on.tabDrawer.mozVerifyElementIsSelected(TabDrawerSelectors.PRIVATE_TABS_PAGE_BUTTON)
         on.tabDrawer.mozVerifyElementIsNotSelected(TabDrawerSelectors.TAB_GROUPS_BUTTON)
         on.tabDrawer.mozVerifyElementIsNotSelected(TabDrawerSelectors.SYNCED_TABS_BUTTON)
@@ -67,9 +66,7 @@ class TabbedBrowsingTest : BaseTest() {
     @SmokeTest
     @Test
     fun verifyTheTabsGroupButtonTabsTrayPositionTest() {
-        on.tabDrawer
-            .navigateToPage()
-            .mozVerifyElementsByGroup("tabDrawerBannerButtons")
+        on.tabDrawer.navigateToPage().mozVerifyElementsByGroup("tabDrawerBannerButtons")
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/4034504
@@ -81,12 +78,9 @@ class TabbedBrowsingTest : BaseTest() {
         MockBrowserDataHelper.createTabItem(webPages[0].url.toString())
         MockBrowserDataHelper.createTabItem(webPages[1].url.toString())
 
-        on.tabDrawer
-            .navigateToPage()
-        on.tabDrawer
-            .selectAllTabsAndCreateTabGroup()
-        on.tabDrawer
-            .mozClick(TAB_GROUPS_BUTTON)
+        on.tabDrawer.navigateToPage()
+        on.tabDrawer.selectAllTabsAndCreateTabGroup()
+        on.tabDrawer.mozClick(TAB_GROUPS_BUTTON)
         on.tabDrawer
             .deleteTabGroupFromTabGroupPage()
             .mozVerifyElementsByGroup("deleteTabGroupDialog")
@@ -109,16 +103,17 @@ class TabbedBrowsingTest : BaseTest() {
         MockBrowserDataHelper.createTabItem(webPages[0].url.toString())
         MockBrowserDataHelper.createTabItem(webPages[1].url.toString())
 
-        on.tabDrawer
-            .navigateToPage()
+        on.tabDrawer.navigateToPage()
         on.tabDrawer
             .selectAllTabsAndCreateTabGroup(tabGroupColor = tabGroupColor)
             .mozVerify(TAB_ITEM_WITH_TITLE(tabTitle = tabGroupTitle))
+        on.tabDrawer.closeTabGroup().mozVerifyElementsByGroup("emptyNormalBrowsingTabDrawerView")
         on.tabDrawer
-            .closeTabGroup()
-            .mozVerifyElementsByGroup("emptyNormalBrowsingTabDrawerView")
-        on.tabDrawer
-            .openTabGroupFromTabGroupPage(tabGroupTitle = tabGroupTitle, numberOfTabs = 2, tabGroupColor = tabGroupColor)
+            .openTabGroupFromTabGroupPage(
+                tabGroupTitle = tabGroupTitle,
+                numberOfTabs = 2,
+                tabGroupColor = tabGroupColor,
+            )
             .swipCloseTabGroupBottomSheet()
             .mozVerifyElementsByGroup("normalBrowsingTabDrawerView")
     }
@@ -135,14 +130,12 @@ class TabbedBrowsingTest : BaseTest() {
         MockBrowserDataHelper.createTabItem(webPages[1].url.toString())
         MockBrowserDataHelper.createTabItem(webPages[2].url.toString())
 
-        on.tabDrawer
-            .navigateToPage()
-        on.tabDrawer
-            .selectTabsAndCreateFirstTabGroup(
-                tabTitle = webPages[0].title,
-                tabGroupTitle = tabGroupTitle,
-                tabGroupColor = tabGroupColor,
-            )
+        on.tabDrawer.navigateToPage()
+        on.tabDrawer.selectTabsAndCreateFirstTabGroup(
+            tabTitle = webPages[0].title,
+            tabGroupTitle = tabGroupTitle,
+            tabGroupColor = tabGroupColor,
+        )
 
         closeApp(composeRule.activityRule)
         restartApp(composeRule.activityRule)
@@ -166,20 +159,17 @@ class TabbedBrowsingTest : BaseTest() {
         MockBrowserDataHelper.createTabItem(webPages[1].url.toString())
         MockBrowserDataHelper.createTabItem(webPages[2].url.toString())
 
-        on.tabDrawer
-            .navigateToPage()
-        on.tabDrawer
-            .selectTabsAndCreateFirstTabGroup(
-                tabTitle = webPages[0].title,
-                tabGroupTitle = firstTabGroupTitle,
-                tabGroupColor = firstTabGroupColor,
-            )
-        on.tabDrawer
-            .selectTabsAndAddToNewTabGroup(
-                tabTitle = webPages[1].title,
-                tabGroupTitle = secondTabGroupTitle,
-                tabGroupColor = secondTabGroupColor,
-            )
+        on.tabDrawer.navigateToPage()
+        on.tabDrawer.selectTabsAndCreateFirstTabGroup(
+            tabTitle = webPages[0].title,
+            tabGroupTitle = firstTabGroupTitle,
+            tabGroupColor = firstTabGroupColor,
+        )
+        on.tabDrawer.selectTabsAndAddToNewTabGroup(
+            tabTitle = webPages[1].title,
+            tabGroupTitle = secondTabGroupTitle,
+            tabGroupColor = secondTabGroupColor,
+        )
 
         closeApp(composeRule.activityRule)
         restartApp(composeRule.activityRule)
@@ -207,21 +197,18 @@ class TabbedBrowsingTest : BaseTest() {
         MockBrowserDataHelper.createTabItem(webPages[1].url.toString())
         MockBrowserDataHelper.createTabItem(webPages[2].url.toString())
 
-        on.tabDrawer
-            .navigateToPage()
-        on.tabDrawer
-            .selectTabsAndCreateFirstTabGroup(
-                tabTitle = webPages[0].title,
-                tabGroupTitle = tabGroupTitle,
-                tabGroupColor = tabGroupColor,
-            )
-        on.tabDrawer
-            .selectTabsAndAddToExistingTabGroup(
-                tabTitle = webPages[1].title,
-                tabGroupTitle = tabGroupTitle,
-                numberOfTabs = 1,
-                tabGroupColor = tabGroupColor,
-            )
+        on.tabDrawer.navigateToPage()
+        on.tabDrawer.selectTabsAndCreateFirstTabGroup(
+            tabTitle = webPages[0].title,
+            tabGroupTitle = tabGroupTitle,
+            tabGroupColor = tabGroupColor,
+        )
+        on.tabDrawer.selectTabsAndAddToExistingTabGroup(
+            tabTitle = webPages[1].title,
+            tabGroupTitle = tabGroupTitle,
+            numberOfTabs = 1,
+            tabGroupColor = tabGroupColor,
+        )
 
         closeApp(composeRule.activityRule)
         restartApp(composeRule.activityRule)
@@ -240,11 +227,9 @@ class TabbedBrowsingTest : BaseTest() {
         val firstWebPage = mockWebServer.getGenericAsset(1)
         val secondWebPage = mockWebServer.getGenericAsset(2)
 
-        on.home
-            .mozClick(HomeSelectors.PRIVATE_BROWSING_BUTTON)
+        on.home.mozClick(HomeSelectors.PRIVATE_BROWSING_BUTTON)
         on.browserPage.navigateToPage(firstWebPage.url.toString())
-        on.tabDrawer.navigateToPage()
-            .mozClick(TabDrawerSelectors.FAB)
+        on.tabDrawer.navigateToPage().mozClick(TabDrawerSelectors.FAB)
         on.searchBar
             .mozEnterText(secondWebPage.url.toString(), SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
             .mozPressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
@@ -253,10 +238,8 @@ class TabbedBrowsingTest : BaseTest() {
         closeApp(composeRule.activityRule)
         restartApp(composeRule.activityRule)
 
-        on.home
-            .mozVerify(HomeSelectors.PRIVATE_BROWSING_INFO_CARD_TITLE)
-        on.tabDrawer.navigateToPage()
-            .mozVerify(TabDrawerSelectors.EMPTY_PRIVATE_TABS_LIST)
+        on.home.mozVerify(HomeSelectors.PRIVATE_BROWSING_INFO_CARD_TITLE)
+        on.tabDrawer.navigateToPage().mozVerify(TabDrawerSelectors.EMPTY_PRIVATE_TABS_LIST)
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/903592
@@ -266,12 +249,11 @@ class TabbedBrowsingTest : BaseTest() {
         val defaultWebPage = mockWebServer.getGenericAsset(1)
 
         on.home.mozClick(HomeSelectors.PRIVATE_BROWSING_BUTTON)
-        on.browserPage.navigateToPage(defaultWebPage.url.toString())
+        on.browserPage
+            .navigateToPage(defaultWebPage.url.toString())
             .verifyPageContentWithReload(defaultWebPage.url.toString(), defaultWebPage.content)
 
-        on.notification.openNotificationTray()
-            .verifyPrivateTabsNotification()
-            .clickClosePrivateTabsNotification()
+        on.notification.openNotificationTray().verifyPrivateTabsNotification().clickClosePrivateTabsNotification()
 
         // Tapping the notification erases private tabs and relaunches to the private homepage (which
         // also collapses the shade); the info card confirms both that the sheet closed and that we
@@ -286,17 +268,17 @@ class TabbedBrowsingTest : BaseTest() {
         val firstWebsite = mockWebServer.getGenericAsset(1)
         val secondWebsite = mockWebServer.getGenericAsset(2)
 
-        on.browserPage.navigateToPage(firstWebsite.url.toString())
+        on.browserPage
+            .navigateToPage(firstWebsite.url.toString())
             .verifyPageContentWithReload(firstWebsite.url.toString(), firstWebsite.content)
-        on.tabDrawer.navigateToPage()
-            .mozClick(TabDrawerSelectors.FAB)
+        on.tabDrawer.navigateToPage().mozClick(TabDrawerSelectors.FAB)
         on.searchBar
             .mozEnterText(secondWebsite.url.toString(), SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
             .mozPressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
-        on.browserPage.navigateToPage()
-            .verifyPageContentWithReload(secondWebsite.url.toString(), secondWebsite.content)
+        on.browserPage.navigateToPage().verifyPageContentWithReload(secondWebsite.url.toString(), secondWebsite.content)
 
-        on.tabDrawer.navigateToPage()
+        on.tabDrawer
+            .navigateToPage()
             .verifyExistingOpenTabs(firstWebsite.title, secondWebsite.title)
             .selectTabsForSharing(firstWebsite.title, secondWebsite.title)
             .shareSelectedTabs()
@@ -318,17 +300,17 @@ class TabbedBrowsingTest : BaseTest() {
         val firstWebPage = mockWebServer.getGenericAsset(1)
         val secondWebPage = mockWebServer.getGenericAsset(2)
 
-        on.browserPage.navigateToPage(firstWebPage.url.toString())
+        on.browserPage
+            .navigateToPage(firstWebPage.url.toString())
             .verifyPageContentWithReload(firstWebPage.url.toString(), firstWebPage.content)
-        on.tabDrawer.navigateToPage()
-            .mozClick(TabDrawerSelectors.FAB)
+        on.tabDrawer.navigateToPage().mozClick(TabDrawerSelectors.FAB)
         on.searchBar
             .mozEnterText(secondWebPage.url.toString(), SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
             .mozPressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
-        on.browserPage.navigateToPage()
-            .verifyPageContentWithReload(secondWebPage.url.toString(), secondWebPage.content)
+        on.browserPage.navigateToPage().verifyPageContentWithReload(secondWebPage.url.toString(), secondWebPage.content)
 
-        on.tabDrawer.navigateToPage()
+        on.tabDrawer
+            .navigateToPage()
             .openTabSearch()
             .typeInTabSearch("android")
             .mozVerifyElementsByGroup("tabSearchNoResults")
@@ -338,18 +320,16 @@ class TabbedBrowsingTest : BaseTest() {
             .mozVerify(TabDrawerSelectors.TAB_SEARCH_RESULT(firstWebPage.title))
             .mozClick(TabDrawerSelectors.TAB_SEARCH_RESULT(firstWebPage.title))
 
-        on.browserPage
-            .verifyPageContent(firstWebPage.content)
-            .mozVerify(ToolbarSelectors.TAB_COUNTER_WITH_COUNT("2"))
+        on.browserPage.verifyPageContent(firstWebPage.content).mozVerify(ToolbarSelectors.TAB_COUNTER_WITH_COUNT("2"))
     }
 
     private fun verifyGroup(tabGroupTitle: String, tabGroupColor: String, numberOfTabs: Int = 1) {
-        on.home
-            .navigateToPage()
-        on.tabDrawer
-            .navigateToPage()
-            .mozVerify(TAB_ITEM_WITH_TITLE(tabTitle = tabGroupTitle))
-        on.tabDrawer
-            .verifyTabGroupFromTabGroupPage(tabGroupTitle = tabGroupTitle, numberOfTabs = numberOfTabs, tabGroupColor = tabGroupColor)
+        on.home.navigateToPage()
+        on.tabDrawer.navigateToPage().mozVerify(TAB_ITEM_WITH_TITLE(tabTitle = tabGroupTitle))
+        on.tabDrawer.verifyTabGroupFromTabGroupPage(
+            tabGroupTitle = tabGroupTitle,
+            numberOfTabs = numberOfTabs,
+            tabGroupColor = tabGroupColor,
+        )
     }
 }

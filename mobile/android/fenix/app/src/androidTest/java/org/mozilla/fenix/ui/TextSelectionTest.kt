@@ -4,6 +4,7 @@
 
 package org.mozilla.fenix.ui
 
+import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
 import mozilla.components.feature.sitepermissions.SitePermissionsRules
 import org.junit.Rule
 import org.junit.Test
@@ -25,16 +26,14 @@ import org.mozilla.fenix.ui.robots.homeScreen
 import org.mozilla.fenix.ui.robots.longClickPageObject
 import org.mozilla.fenix.ui.robots.navigationToolbar
 import org.mozilla.fenix.ui.robots.searchScreen
-import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
 
 class TextSelectionTest {
-    @get:Rule(order = 0)
-    val fenixTestRule: FenixTestRule = FenixTestRule()
+    @get:Rule(order = 0) val fenixTestRule: FenixTestRule = FenixTestRule()
 
-    private val mockWebServer get() = fenixTestRule.mockWebServer
+    private val mockWebServer
+        get() = fenixTestRule.mockWebServer
 
-    @get:Rule(order = 1)
-    val retryTestRule = RetryTestRule(3)
+    @get:Rule(order = 1) val retryTestRule = RetryTestRule(3)
 
     @get:Rule(order = 2)
     val retryableComposeTestRule = RetryableComposeTestRule {
@@ -45,14 +44,16 @@ class TextSelectionTest {
                 // workaround for toolbar at top position by default
                 // remove with https://bugzilla.mozilla.org/show_bug.cgi?id=1917640
                 shouldUseBottomToolbar = true,
-            ),
-        ) { it.activity }
+            )
+        ) {
+            it.activity
+        }
     }
 
-    private val composeTestRule get() = retryableComposeTestRule.current
+    private val composeTestRule
+        get() = retryableComposeTestRule.current
 
-    @get:Rule(order = 3)
-    val memoryLeaksRule = DetectMemoryLeaksRule(composeTestRule = { composeTestRule })
+    @get:Rule(order = 3) val memoryLeaksRule = DetectMemoryLeaksRule(composeTestRule = { composeTestRule })
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326832
     @Converted(
@@ -65,16 +66,16 @@ class TextSelectionTest {
     fun verifySelectAllTextOptionTest() {
         val genericURL = mockWebServer.getGenericAsset(1)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            longClickPageObject(composeTestRule, itemContainingText("content"))
-            clickContextMenuItem("Select all")
-            clickContextMenuItem("Copy")
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                longClickPageObject(composeTestRule, itemContainingText("content"))
+                clickContextMenuItem("Select all")
+                clickContextMenuItem("Copy")
+            }
 
         browserScreen(composeTestRule) {
-        longClickToolbar()
-        clickDisplayModeToolbarContextMenuItem("Paste")
+            longClickToolbar()
+            clickDisplayModeToolbarContextMenuItem("Paste")
         }
 
         searchScreen(composeTestRule) {
@@ -89,12 +90,12 @@ class TextSelectionTest {
     fun verifyCopyTextOptionTest() {
         val genericURL = mockWebServer.getGenericAsset(1)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            longClickPageObject(composeTestRule, itemContainingText("content"))
-            clickContextMenuItem("Copy")
-        }.openNavigationToolbar {
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                longClickPageObject(composeTestRule, itemContainingText("content"))
+                clickContextMenuItem("Copy")
+            }
+            .openNavigationToolbar {}
 
         searchScreen(composeTestRule) {
             clickClearButton()
@@ -109,12 +110,13 @@ class TextSelectionTest {
     fun verifyShareSelectedTextOptionTest() {
         val genericURL = mockWebServer.getGenericAsset(1)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            longClickPageObject(composeTestRule, itemWithText(genericURL.content))
-        }.clickShareSelectedText {
-            verifyAndroidShareLayout()
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                longClickPageObject(composeTestRule, itemWithText(genericURL.content))
+            }
+            .clickShareSelectedText {
+                verifyAndroidShareLayout()
+            }
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326830
@@ -122,14 +124,14 @@ class TextSelectionTest {
     fun verifySearchTextOptionTest() {
         val genericURL = mockWebServer.getGenericAsset(1)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            longClickPageObject(composeTestRule, itemContainingText("content"))
-            clickContextMenuItem("Search")
-            mDevice.waitForIdle()
-            verifyUrl("content")
-            verifyTabCounter("2")
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                longClickPageObject(composeTestRule, itemContainingText("content"))
+                clickContextMenuItem("Search")
+                mDevice.waitForIdle()
+                verifyUrl("content")
+                verifyTabCounter("2")
+            }
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326831
@@ -143,33 +145,31 @@ class TextSelectionTest {
     fun verifyPrivateSearchTextTest() {
         val genericURL = mockWebServer.getGenericAsset(1)
 
-        homeScreen(composeTestRule) {
-        }.togglePrivateBrowsingMode()
+        homeScreen(composeTestRule) {}.togglePrivateBrowsingMode()
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            verifyPageContent(genericURL.content)
-            longClickPageObject(composeTestRule, itemContainingText("content"))
-            clickContextMenuItem("Private Search")
-            verifyTabCounter("2", isPrivateBrowsingEnabled = true)
-            verifyUrl("content")
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                verifyPageContent(genericURL.content)
+                longClickPageObject(composeTestRule, itemContainingText("content"))
+                clickContextMenuItem("Private Search")
+                verifyTabCounter("2", isPrivateBrowsingEnabled = true)
+                verifyUrl("content")
+            }
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326834
     @Test
     fun verifySelectAllPDFTextOptionTest() {
-        val genericURL =
-            mockWebServer.getGenericAsset(3)
+        val genericURL = mockWebServer.getGenericAsset(3)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            clickPageObject(composeTestRule, itemWithText("PDF form file"))
-            clickStayInAppPromptButton()
-            longClickPageObject(composeTestRule, itemContainingText("Crossing"))
-            clickContextMenuItem("Select all")
-            clickContextMenuItem("Copy")
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                clickPageObject(composeTestRule, itemWithText("PDF form file"))
+                clickStayInAppPromptButton()
+                longClickPageObject(composeTestRule, itemContainingText("Crossing"))
+                clickContextMenuItem("Select all")
+                clickContextMenuItem("Copy")
+            }
 
         browserScreen(composeTestRule) {
             longClickToolbar()
@@ -192,17 +192,16 @@ class TextSelectionTest {
     @SmokeTest
     @Test
     fun verifyCopyPDFTextOptionTest() {
-        val genericURL =
-            mockWebServer.getGenericAsset(3)
+        val genericURL = mockWebServer.getGenericAsset(3)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            clickPageObject(composeTestRule, itemContainingText("PDF form file"))
-            clickStayInAppPromptButton()
-            longClickPageObject(composeTestRule, itemContainingText("Crossing"))
-            clickContextMenuItem("Copy")
-        }.openNavigationToolbar {
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                clickPageObject(composeTestRule, itemContainingText("PDF form file"))
+                clickStayInAppPromptButton()
+                longClickPageObject(composeTestRule, itemContainingText("Crossing"))
+                clickContextMenuItem("Copy")
+            }
+            .openNavigationToolbar {}
         searchScreen(retryableComposeTestRule.current) {
             clickClearButton()
             verifySearchBarPlaceholder("Search or enter address")
@@ -215,17 +214,17 @@ class TextSelectionTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326835
     @Test
     fun verifyShareSelectedPDFTextOptionTest() {
-        val genericURL =
-            mockWebServer.getGenericAsset(3)
+        val genericURL = mockWebServer.getGenericAsset(3)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            clickPageObject(composeTestRule, itemWithText("PDF form file"))
-            clickStayInAppPromptButton()
-            longClickPageObject(composeTestRule, itemContainingText("Crossing"))
-        }.clickShareSelectedText {
-            verifyAndroidShareLayout()
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                clickPageObject(composeTestRule, itemWithText("PDF form file"))
+                clickStayInAppPromptButton()
+                longClickPageObject(composeTestRule, itemContainingText("Crossing"))
+            }
+            .clickShareSelectedText {
+                verifyAndroidShareLayout()
+            }
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326836
@@ -237,38 +236,35 @@ class TextSelectionTest {
     @SmokeTest
     @Test
     fun verifySearchPDFTextOptionTest() {
-        val genericURL =
-            mockWebServer.getGenericAsset(3)
+        val genericURL = mockWebServer.getGenericAsset(3)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            clickPageObject(composeTestRule, itemWithText("PDF form file"))
-            clickStayInAppPromptButton()
-            longClickPageObject(composeTestRule, itemContainingText("Crossing"))
-            clickContextMenuItem("Search")
-            verifyUrl("Crossing")
-            verifyTabCounter("2")
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                clickPageObject(composeTestRule, itemWithText("PDF form file"))
+                clickStayInAppPromptButton()
+                longClickPageObject(composeTestRule, itemContainingText("Crossing"))
+                clickContextMenuItem("Search")
+                verifyUrl("Crossing")
+                verifyTabCounter("2")
+            }
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326837
     @Test
     fun verifyPrivateSearchPDFTextOptionTest() {
-        val genericURL =
-            mockWebServer.getGenericAsset(3)
+        val genericURL = mockWebServer.getGenericAsset(3)
 
-        homeScreen(composeTestRule) {
-        }.togglePrivateBrowsingMode()
+        homeScreen(composeTestRule) {}.togglePrivateBrowsingMode()
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-            clickPageObject(composeTestRule, itemWithText("PDF form file"))
-            clickStayInAppPromptButton()
-            longClickPageObject(composeTestRule, itemContainingText("Crossing"))
-            clickContextMenuItem("Private Search")
-            verifyUrl("Crossing")
-            verifyTabCounter("2", isPrivateBrowsingEnabled = true)
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(genericURL.url) {
+                clickPageObject(composeTestRule, itemWithText("PDF form file"))
+                clickStayInAppPromptButton()
+                longClickPageObject(composeTestRule, itemContainingText("Crossing"))
+                clickContextMenuItem("Private Search")
+                verifyUrl("Crossing")
+                verifyTabCounter("2", isPrivateBrowsingEnabled = true)
+            }
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2326813
@@ -276,10 +272,7 @@ class TextSelectionTest {
     fun verifyUrlBarTextSelectionOptionsTest() {
         val genericURL = mockWebServer.getGenericAsset(1)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-        }.openNavigationToolbar {
-        }
+        navigationToolbar(composeTestRule) {}.enterURLAndEnterToBrowser(genericURL.url) {}.openNavigationToolbar {}
         searchScreen(retryableComposeTestRule.current) {
             longClickToolbar()
             verifyTextSelectionOptions("Copy", "Cut")
@@ -291,10 +284,7 @@ class TextSelectionTest {
     fun verifyCopyUrlBarTextSelectionOptionTest() {
         val genericURL = mockWebServer.getGenericAsset(1)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-        }.openNavigationToolbar {
-        }
+        navigationToolbar(composeTestRule) {}.enterURLAndEnterToBrowser(genericURL.url) {}.openNavigationToolbar {}
         searchScreen(retryableComposeTestRule.current) {
             longClickToolbar()
             clickContextMenuItem("Copy")
@@ -311,10 +301,7 @@ class TextSelectionTest {
     fun verifyCutUrlBarTextSelectionOptionTest() {
         val genericURL = mockWebServer.getGenericAsset(1)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(genericURL.url) {
-        }.openNavigationToolbar {
-        }
+        navigationToolbar(composeTestRule) {}.enterURLAndEnterToBrowser(genericURL.url) {}.openNavigationToolbar {}
         searchScreen(retryableComposeTestRule.current) {
             longClickToolbar()
             clickContextMenuItem("Cut")
@@ -331,20 +318,20 @@ class TextSelectionTest {
         val firstWebsite = mockWebServer.getGenericAsset(1)
         val secondWebsite = mockWebServer.getGenericAsset(2)
 
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(firstWebsite.url) {
-            longClickToolbar()
-            clickDisplayModeToolbarContextMenuItem("Copy")
-        }
-        navigationToolbar(composeTestRule) {
-        }.enterURLAndEnterToBrowser(secondWebsite.url) {
-            longClickToolbar()
-            clickDisplayModeToolbarContextMenuItem("Paste")
-        }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(firstWebsite.url) {
+                longClickToolbar()
+                clickDisplayModeToolbarContextMenuItem("Copy")
+            }
+        navigationToolbar(composeTestRule) {}
+            .enterURLAndEnterToBrowser(secondWebsite.url) {
+                longClickToolbar()
+                clickDisplayModeToolbarContextMenuItem("Paste")
+            }
         searchScreen(composeTestRule) {
-            verifyTypedToolbarText(firstWebsite.url.toString(), exists = true)
-        }.dismissSearchBar {
-        }
+                verifyTypedToolbarText(firstWebsite.url.toString(), exists = true)
+            }
+            .dismissSearchBar {}
         browserScreen(composeTestRule) {
             verifyUrl(secondWebsite.url.toString())
             longClickToolbar()

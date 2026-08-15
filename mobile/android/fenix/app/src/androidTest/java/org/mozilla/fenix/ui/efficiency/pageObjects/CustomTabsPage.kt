@@ -26,10 +26,11 @@ class CustomTabsPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestR
 
     fun launchCustomTab(url: String, customMenuItemLabel: String = ""): CustomTabsPage {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val intent = createCustomTabIntent(url, customMenuItemLabel).apply {
-            setClass(context, IntentReceiverActivity::class.java)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        val intent =
+            createCustomTabIntent(url, customMenuItemLabel).apply {
+                setClass(context, IntentReceiverActivity::class.java)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         context.startActivity(intent)
         mozVerify(CustomTabsSelectors.MAIN_MENU_BUTTON) // wait for the custom-tab toolbar to settle
         PageStateTracker.currentPageName = pageName

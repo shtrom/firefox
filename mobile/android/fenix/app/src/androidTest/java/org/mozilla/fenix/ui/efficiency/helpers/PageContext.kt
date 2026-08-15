@@ -5,6 +5,7 @@
 package org.mozilla.fenix.ui.efficiency.helpers
 
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.ui.efficiency.pageObjects.AddToHomeScreenComponent
 import org.mozilla.fenix.ui.efficiency.pageObjects.BookmarkSearchPage
@@ -59,7 +60,6 @@ import org.mozilla.fenix.ui.efficiency.pageObjects.TabHistoryPage
 import org.mozilla.fenix.ui.efficiency.pageObjects.ToolbarComponent
 import org.mozilla.fenix.ui.efficiency.pageObjects.UnifiedTrustPanelPage
 import org.mozilla.fenix.ui.efficiency.pageObjects.WebCompatReporterPage
-import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
 
 class PageContext(val composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *>) {
     // Let's make sure we have them in a lexicographic order
@@ -130,7 +130,9 @@ class PageContext(val composeRule: AndroidComposeTestRule<HomeActivityIntentTest
             HomeActivityIntentTestRule(
                 skipOnboarding = skipOnboarding,
                 isPageLoadTranslationsPromptEnabled = isPageLoadTranslationsPromptEnabled,
-            ),
-        ) { it.activity }
+            )
+        ) {
+            it.activity
+        }
     }
 }

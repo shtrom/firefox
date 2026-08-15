@@ -4,13 +4,8 @@
 
 package org.mozilla.fenix.ui.efficiency.pageObjects
 
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.filter
-import androidx.compose.ui.test.hasAnyChild
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
-import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onFirst
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTimeShort
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
@@ -46,10 +41,11 @@ class HomePage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *
         NavigationRegistry.register(
             from = "MainMenuPage",
             to = "SettingsPage",
-            steps = listOf(
-                NavigationStep.Swipe(MainMenuSelectors.SETTINGS_BUTTON),
-                NavigationStep.Click(MainMenuSelectors.SETTINGS_BUTTON),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Swipe(MainMenuSelectors.SETTINGS_BUTTON),
+                    NavigationStep.Click(MainMenuSelectors.SETTINGS_BUTTON),
+                ),
         )
 
         NavigationRegistry.register(
@@ -102,10 +98,10 @@ class HomePage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *
     }
 
     /**
-     * Switch the homepage into private browsing mode and confirm it took effect. The homepage
-     * private/normal button is a toggle, and the session may already be in either mode (state can
-     * leak from a prior test or run), so a single blind click can land back on the normal homepage.
-     * Click, and if the private homepage card is not shown, toggle once more, then assert it.
+     * Switch the homepage into private browsing mode and confirm it took effect. The homepage private/normal button is
+     * a toggle, and the session may already be in either mode (state can leak from a prior test or run), so a single
+     * blind click can land back on the normal homepage. Click, and if the private homepage card is not shown, toggle
+     * once more, then assert it.
      */
     fun switchToPrivateBrowsingMode(): HomePage {
         for (attempt in 1..2) {

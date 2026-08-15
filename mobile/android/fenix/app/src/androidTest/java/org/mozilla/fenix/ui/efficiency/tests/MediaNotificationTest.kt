@@ -14,12 +14,13 @@ import org.mozilla.fenix.ui.efficiency.selectors.NotificationSelectors
 
 /**
  * Tests for verifying basic functionality of media notifications:
- * - video and audio playback system notifications appear and can pause the media content
- * Note: this test only verifies media notifications, not media itself.
+ * - video and audio playback system notifications appear and can pause the media content Note: this test only verifies
+ *   media notifications, not media itself.
  */
 class MediaNotificationTest : BaseTest() {
 
-    private val mockWebServer get() = fenixTestRule.mockWebServer
+    private val mockWebServer
+        get() = fenixTestRule.mockWebServer
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1347033
     // Converted from legacy MediaNotificationTest.verifyVideoPlaybackSystemNotificationTest
@@ -28,11 +29,13 @@ class MediaNotificationTest : BaseTest() {
     fun verifyVideoPlaybackSystemNotificationTest() {
         val videoTestPage = mockWebServer.videoPageAsset
 
-        on.browserPage.navigateToPage(videoTestPage.url.toString())
+        on.browserPage
+            .navigateToPage(videoTestPage.url.toString())
             .clickMediaPlayButton()
             .verifyMediaPlaybackState(MediaSession.PlaybackState.PLAYING)
 
-        on.notification.openNotificationTray()
+        on.notification
+            .openNotificationTray()
             .verifyNotificationExists(NotificationSelectors.SYSTEM_NOTIFICATION(videoTestPage.title))
             .clickMediaNotificationControlButton("Pause")
             .verifyMediaNotificationButtonState("Play")
@@ -40,10 +43,10 @@ class MediaNotificationTest : BaseTest() {
 
         on.browserPage.verifyMediaPlaybackState(MediaSession.PlaybackState.PAUSED)
 
-        on.tabDrawer.navigateToPage()
-            .closeTabWithTitle(videoTestPage.title)
+        on.tabDrawer.navigateToPage().closeTabWithTitle(videoTestPage.title)
 
-        on.notification.openNotificationTray()
+        on.notification
+            .openNotificationTray()
             .verifyNotificationDoesNotExist(NotificationSelectors.SYSTEM_NOTIFICATION(videoTestPage.title))
             .closeNotificationTray()
     }
@@ -55,11 +58,13 @@ class MediaNotificationTest : BaseTest() {
     fun verifyAudioPlaybackSystemNotificationTest() {
         val audioTestPage = mockWebServer.audioPageAsset
 
-        on.browserPage.navigateToPage(audioTestPage.url.toString())
+        on.browserPage
+            .navigateToPage(audioTestPage.url.toString())
             .clickMediaPlayButton()
             .verifyMediaPlaybackState(MediaSession.PlaybackState.PLAYING)
 
-        on.notification.openNotificationTray()
+        on.notification
+            .openNotificationTray()
             .verifyNotificationExists(NotificationSelectors.SYSTEM_NOTIFICATION(audioTestPage.title))
             .clickMediaNotificationControlButton("Pause")
             .verifyMediaNotificationButtonState("Play")
@@ -67,10 +72,10 @@ class MediaNotificationTest : BaseTest() {
 
         on.browserPage.verifyMediaPlaybackState(MediaSession.PlaybackState.PAUSED)
 
-        on.tabDrawer.navigateToPage()
-            .closeTabWithTitle(audioTestPage.title)
+        on.tabDrawer.navigateToPage().closeTabWithTitle(audioTestPage.title)
 
-        on.notification.openNotificationTray()
+        on.notification
+            .openNotificationTray()
             .verifyNotificationDoesNotExist(NotificationSelectors.SYSTEM_NOTIFICATION(audioTestPage.title))
             .closeNotificationTray()
     }
