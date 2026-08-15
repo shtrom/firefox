@@ -624,7 +624,12 @@ class Stepper {
 
   getNextBreakPoint() {
     this.breakPoints.sort((a, b) => a - b);
-    return this.breakPoints.find(idx => idx > this.currentIdx) ?? null;
+    for (const breakPoint of this.breakPoints) {
+      if (breakPoint > this.currentIdx) {
+        return breakPoint;
+      }
+    }
+    return null;
   }
 
   breakIt(idx, callback) {
