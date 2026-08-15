@@ -35,7 +35,7 @@ class SapiCallback final : public nsISpeechTaskCallback {
     mStartingTime = TimeStamp::Now();
   }
 
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL
   NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(SapiCallback, nsISpeechTaskCallback)
 
   NS_DECL_NSISPEECHTASKCALLBACK

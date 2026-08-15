@@ -35,7 +35,7 @@ class SpeechTaskCallback final : public nsISpeechTaskCallback {
   SpeechTaskCallback(nsISpeechTask* aTask, AVSpeechSynthesizer* aSynth,
                      const nsTArray<size_t>& aOffsets);
 
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL
   NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(SpeechTaskCallback,
                                            nsISpeechTaskCallback)
 
