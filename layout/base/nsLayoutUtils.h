@@ -3096,7 +3096,8 @@ class nsLayoutUtils {
    * root of the frame tree if |aTopFrame| is nullptr, and returns true if
    * a transformed frame is encountered.
    */
-  static bool IsTransformed(nsIFrame* aForFrame, nsIFrame* aTopFrame = nullptr);
+  static bool IsTransformed(const nsIFrame* aForFrame,
+                            const nsIFrame* aTopFrame = nullptr);
 
   /**
    * Walk up from aFrame to the cross-doc root, accumulating all the APZ
