@@ -4183,6 +4183,7 @@ void CanvasRenderingContext2D::SetFont(const nsACString& aFont,
 
   if (ResolveFontLang()) {
     CurrentState().fontGroup = nullptr;
+    mFontGroupCache.reset(nullptr);
   }
 
   SetFontInternal(aFont, aError);
@@ -4220,10 +4221,15 @@ bool CanvasRenderingContext2D::SetFontInternal(const nsACString& aFont,
     return SetFontInternalDisconnected(aFont, aError);
   }
 
+  if (!mFontStyleCache) {
+    mFontGroupCache.reset(nullptr);
+    mFontStyleCache = MakeUnique<FontStyleCache>();
+  }
+
   nsPresContext* c = presShell->GetPresContext();
   FontStyleCacheKey key{aFont, CurrentState().resolvedFontLang,
                         c->RestyleManager()->GetRestyleGeneration()};
-  auto entry = mFontStyleCache.Lookup(key);
+  auto entry = mFontStyleCache->Lookup(key);
   if (!entry) {
     FontStyleData newData;
     newData.mKey = key;
@@ -4446,6 +4452,28 @@ bool CanvasRenderingContext2D::SetFontInternalDisconnected(
     return true;
   }
 
+  // Do we have a cached fontgroup that corresponds to this `font` value?
+  if (!mFontGroupCache) {
+    mFontStyleCache.reset(nullptr);
+    mFontGroupCache = MakeUnique<FontGroupCache>();
+  }
+
+  auto& state = CurrentState();
+  FontGroupCacheKey key(
+      aFont, fontFaceSetImpl ? fontFaceSetImpl->GetRebuildGeneration() : 0);
+  auto entry = mFontGroupCache->Lookup(key);
+  if (entry) {
+    const auto& data = entry.Data();
+    if (data.mFontGroup) {
+      state.fontGroup = data.mFontGroup;
+      state.specifiedFont = data.mKey.mSpecifiedFont;
+      state.resolvedFont = data.mResolvedFont;
+      state.fontFont = data.mFont;
+      state.fontComputedStyle = nullptr;
+      return true;
+    }
+  }
+
   // In the OffscreenCanvas case we don't have the context necessary to call
   // GetFontStyleForServo(), as we do in the main-thread canvas context, so
   // instead we borrow ParseFontShorthandForMatching to parse the attribute.
@@ -4464,7 +4492,6 @@ bool CanvasRenderingContext2D::SetFontInternalDisconnected(
   fontStyle.allowForceGDIClassic = false;
 #endif
 
-  auto& state = CurrentState();
   switch (state.fontWidth) {
     case CanvasFontStretch::Normal:
       // Leave whatever the shorthand set.
@@ -4573,6 +4600,11 @@ bool CanvasRenderingContext2D::SetFontInternalDisconnected(
     state.fontFont.variantCaps = fontStyle.variantCaps;
     state.fontComputedStyle = nullptr;
   }
+
+  FontGroupCacheData data(key, state.fontGroup, state.resolvedFont,
+                          state.fontFont);
+  entry.Set(std::move(data));
+
   return true;
 }
 
@@ -5460,6 +5492,7 @@ gfxFontGroup* CanvasRenderingContext2D::GetCurrentFontStyle() {
   if (ResolveFontLang()) {
     // If lang has changed, any cached fontGroup needs to be replaced.
     CurrentState().fontGroup = nullptr;
+    mFontGroupCache.reset(nullptr);
   } else {
     // If there is a cached fontGroup, check if visibility setting matches;
     // if not, we can't use it and will have to re-create it.
