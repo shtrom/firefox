@@ -11,6 +11,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.onChildAt
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.tabstray.TabsTrayTestTag
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
@@ -132,6 +133,21 @@ class TabDrawerPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRu
             .onChildAt(position - 1)
             .assert(hasTestTag(TabsTrayTestTag.TAB_ITEM_ROOT))
             .assert(hasAnyChild(hasText(tabTitle)))
+        return this
+    }
+
+    /**
+     * Open the private tab at 1-based [position] in the private-tabs list.
+     *
+     * Positional like verifyOpenTabsOrder above, and for the same reason: the mozClick family can only say "click
+     * something matching", not "click the nth child". Note the legacy helper indexes from 0.
+     *
+     * Lands on the browser, so re-anchor with `on.browserPage.navigateToPage()` before returning here — a TabDrawerPage
+     * -> TabDrawerPage path resolves to no steps and would silently do nothing.
+     */
+    fun openPrivateTab(position: Int): TabDrawerPage {
+        mozVerify(TabDrawerSelectors.PRIVATE_TABS_LIST)
+        composeRule.onNodeWithTag(TabsTrayTestTag.PRIVATE_TABS_LIST).onChildAt(position - 1).performClick()
         return this
     }
 
