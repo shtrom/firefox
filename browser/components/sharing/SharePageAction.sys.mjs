@@ -17,7 +17,33 @@ const ENABLED_PREF = "browser.urlbar.share-button.enabled";
 const BUTTON_ID = "share-button";
 const PANEL_ID = "share-panel";
 const TEMPLATE_ID = "template-share-panel";
+const COPY_LINK_BUTTON_ID = "share-panel-copy-link";
+const OS_SHARE_BUTTON_ID = "share-panel-os-share";
+const MAIL_SHARE_BUTTON_ID = "share-panel-mail";
+const SCREENSHOTS_BUTTON_ID = "share-panel-screenshot";
 const QR_CODE_BUTTON_ID = "share-panel-qr-code";
+const DEVICE_SHARE_BUTTON_ID = "share-panel-send-to-device";
+
+function shouldButtonBeVisible(buttonId, isShareable) {
+  switch (buttonId) {
+    case SCREENSHOTS_BUTTON_ID: {
+      return true;
+    }
+    case OS_SHARE_BUTTON_ID: {
+      return AppConstants.platform !== "linux" && isShareable;
+    }
+    case MAIL_SHARE_BUTTON_ID: {
+      return AppConstants.platform === "linux" && isShareable;
+    }
+    case COPY_LINK_BUTTON_ID:
+    case QR_CODE_BUTTON_ID:
+    case DEVICE_SHARE_BUTTON_ID: {
+      return isShareable;
+    }
+  }
+
+  return false;
+}
 
 XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
@@ -74,10 +100,19 @@ class SharePageActionClass {
   }
 
   handleEvent(event) {
-    if (event.type === "click") {
-      this.togglePanel(event);
-    } else if (event.type === "command") {
-      this.handleCommand(event);
+    switch (event.type) {
+      case "click": {
+        this.togglePanel(event);
+        break;
+      }
+      case "command": {
+        this.handleCommand(event);
+        break;
+      }
+      case "popupshowing": {
+        this.handlePopupShowing(event);
+        break;
+      }
     }
   }
 
@@ -86,11 +121,11 @@ class SharePageActionClass {
     let hintL10nId;
 
     switch (event.target.id) {
-      case "share-panel-copy-link": {
+      case COPY_LINK_BUTTON_ID: {
         hintL10nId = this.#copyLink(panel);
         break;
       }
-      case "share-panel-screenshot": {
+      case SCREENSHOTS_BUTTON_ID: {
         Services.obs.notifyObservers(
           event.target.documentGlobal,
           "menuitem-screenshot",
@@ -102,7 +137,7 @@ class SharePageActionClass {
         this.#showQRCode(panel);
         break;
       }
-      case "share-panel-os-share": {
+      case OS_SHARE_BUTTON_ID: {
         this.#handleOsShare(panel);
         break;
       }
@@ -176,6 +211,17 @@ class SharePageActionClass {
     );
   }
 
+  handlePopupShowing(event) {
+    const panel = event.target;
+    let isShareable = !!lazy.SharingUtils.getLinkToShare(panel).urlToShare;
+
+    for (let button of panel.querySelectorAll(
+      "#share-panel-mainView toolbarbutton"
+    )) {
+      button.hidden = !shouldButtonBeVisible(button.id, isShareable);
+    }
+  }
+
   togglePanel(event) {
     if (event.button !== 0) {
       return;
@@ -216,6 +262,7 @@ class SharePageActionClass {
       template.replaceWith(template.content);
 
       panel.addEventListener("command", this);
+      panel.addEventListener("popupshowing", this);
     }
 
     return panel;
