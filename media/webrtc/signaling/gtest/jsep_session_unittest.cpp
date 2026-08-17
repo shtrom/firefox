@@ -78,8 +78,10 @@ class JsepSessionTest : public JsepSessionTestBase,
     EXPECT_EQ(NS_OK, mSessionOff->Init());
     EXPECT_EQ(NS_OK, mSessionAns->Init());
 
+    DefaultCodecPreferences prefs;
     AutoTArray<UniquePtr<JsepCodecDescription>, 16> preferredCodecs;
-    PeerConnectionImpl::SetupPreferredCodecs(preferredCodecs);
+    EnumerateDefaultVideoCodecs(&preferredCodecs, prefs);
+    EnumerateDefaultAudioCodecs(&preferredCodecs, prefs);
     for (auto& codec : preferredCodecs) {
       // Make H264 P0 recvonly everywhere for better test coverage.
       // TODO: For unit testing JSEP, the preferred codecs list should be
@@ -95,7 +97,7 @@ class JsepSessionTest : public JsepSessionTestBase,
     mSessionAns->SetDefaultCodecs(preferredCodecs);
 
     std::vector<PeerConnectionImpl::RtpExtensionHeader> preferredHeaders;
-    PeerConnectionImpl::SetupPreferredRtpExtensions(preferredHeaders);
+    PeerConnectionImpl::GetDefaultRtpExtensions(prefs, preferredHeaders);
 
     for (const auto& header : preferredHeaders) {
       mSessionOff->AddRtpExtension(header.mMediaType, header.extensionname,
@@ -3905,7 +3907,7 @@ TEST_F(JsepSessionTest, ValidateNoFmtpLineForRedInOfferAndAnswer) {
   ASSERT_TRUE(offerTransceivers[1].mSendTrack.GetNegotiatedDetails());
   ASSERT_TRUE(offerTransceivers[1].mRecvTrack.GetNegotiatedDetails());
   // Note that the number of recv/send codecs here differ because some codecs
-  // are recvonly. See SetupPreferredCodecs above.
+  // are recvonly. See EnumerateDefault*Codecs above.
   ASSERT_EQ(7U, offerTransceivers[1]
                     .mSendTrack.GetNegotiatedDetails()
                     ->GetEncoding(0)
