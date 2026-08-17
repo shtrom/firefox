@@ -641,7 +641,6 @@ class SettingsFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFragment 
                 showSecretDebugMenuThisSession
             findPreference<Preference>(getPreferenceKey(R.string.pref_key_sync_debug))?.isVisible =
                 showSecretDebugMenuThisSession
-            findPreference<Preference>(getPreferenceKey(R.string.pref_key_firefox_labs))?.isVisible = enableFirefoxLabs
             preferenceStartProfiler?.isVisible =
                 showSecretDebugMenuThisSession && (components.core.engine.profiler?.isProfilerActive() != null)
         }

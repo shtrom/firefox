@@ -204,11 +204,6 @@ class SecretSettingsFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFra
             onPreferenceChangeListener = SharedPreferenceUpdater()
         }
 
-        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_enable_firefox_labs).apply {
-            isChecked = settings.enableFirefoxLabs
-            onPreferenceChangeListener = SharedPreferenceUpdater()
-        }
-
         requirePreference<SwitchPreferenceCompat>(R.string.pref_key_top_sites_pager).apply {
             isChecked = settings.topSitesPager
             onPreferenceChangeListener = SharedPreferenceUpdater()
