@@ -33,6 +33,11 @@ CHROME_SYMBOL_SERVER = (
     "https://chromium-browser-symsrv.commondatastorage.googleapis.com"
 )
 
+# symbols.mozilla.org only includes user-mode system libraries so the kernel
+# and driver frames that a system-wide ETW trace picks up have to come from
+# Microsoft directly.
+MICROSOFT_SYMBOL_SERVER = "https://msdl.microsoft.com/download/symbols"
+
 
 class ETWProfile(RaptorProfiling):
     """Record kernel ETW traces (.etl) using xperf (via pre-configured
@@ -188,6 +193,8 @@ class ETWProfile(RaptorProfiling):
             "--presymbolicate",
             "--breakpad-symbol-server",
             "https://symbols.mozilla.org/",
+            "--windows-symbol-server",
+            MICROSOFT_SYMBOL_SERVER,
         ]
 
         moz_fetch = Path(os.environ["MOZ_FETCHES_DIR"])
