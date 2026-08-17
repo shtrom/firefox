@@ -6,6 +6,7 @@ package org.mozilla.fenix.ui.efficiency.pageObjects
 
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
+import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
@@ -30,6 +31,24 @@ class SystemSettingsPage(composeRule: AndroidComposeTestRule<HomeActivityIntentT
                     NavigationStep.Click(SettingsSelectors.NOTIFICATIONS_BUTTON),
                 ),
         )
+    }
+
+    /** Open the Permissions list from the Android App info screen. */
+    fun openAppPermissions(): SystemSettingsPage {
+        // Waits first: the caller has just left Fenix via an intent, and the Settings activity may not have
+        // drawn yet. The legacy helper clicks immediately and races that launch.
+        mozVerify(SystemSettingsSelectors.APP_INFO_PERMISSIONS_ROW, timeout = waitingTime)
+        mozClick(SystemSettingsSelectors.APP_INFO_PERMISSIONS_ROW)
+        return this
+    }
+
+    /** Grant [permissionName] from the app-permissions list. */
+    fun allowAppPermission(permissionName: String): SystemSettingsPage {
+        mozVerify(SystemSettingsSelectors.APP_PERMISSION_ROW(permissionName), timeout = waitingTime)
+        mozClick(SystemSettingsSelectors.APP_PERMISSION_ROW(permissionName))
+        mozVerify(SystemSettingsSelectors.APP_PERMISSION_ALLOW_OPTION, timeout = waitingTime)
+        mozClick(SystemSettingsSelectors.APP_PERMISSION_ALLOW_OPTION)
+        return this
     }
 
     override fun mozGetSelectorsByGroup(group: String): List<Selector> {

@@ -20,12 +20,16 @@ import org.mozilla.fenix.helpers.MockBrowserDataHelper
 import org.mozilla.fenix.helpers.SearchMockServerRule
 import org.mozilla.fenix.helpers.TestAssetHelper.getGenericAsset
 import org.mozilla.fenix.helpers.TestHelper.appContext
+import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
 import org.mozilla.fenix.ui.efficiency.pageObjects.HistorySearchGroupPage
+import org.mozilla.fenix.ui.efficiency.pageObjects.SystemSettingsPage
 import org.mozilla.fenix.ui.efficiency.selectors.BrowserPageSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.HistorySelectors
 import org.mozilla.fenix.ui.efficiency.selectors.HomeSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.SearchBarSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.SettingsTurnOnSyncSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.SystemSettingsSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.TabDrawerSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.ToolbarSelectors
 
@@ -46,6 +50,12 @@ class SearchTest : BaseTest(isPocketEnabled = false) {
     // PageContext by design — see HistorySearchGroupPage.
     private val searchGroup
         get() = HistorySearchGroupPage(composeRule)
+
+    // SystemSettingsPage is not on PageContext (nothing referenced it until now) and this flow reaches the
+    // Android Settings app through Fenix's own "Go to settings" intent rather than a registered edge, so it is
+    // instantiated locally. get() binds it to the current retry attempt's composeRule.
+    private val systemSettings
+        get() = SystemSettingsPage(composeRule)
 
     // Legacy SearchTest drives these URLs off SearchMockServerRule, whose dispatcher 404s everything
     // except searchResults.html. That is load-bearing for verifyTabsSearchWithOpenTabsTest: the tabs
@@ -403,5 +413,65 @@ class SearchTest : BaseTest(isPocketEnabled = false) {
         // disappears. mozWaitUntilAbsent and not mozVerifyElementAbsent: the homepage rebuilds asynchronously
         // after the deletions, and legacy covers that with a 1s window wait before a single-shot check.
         on.home.navigateToPage().mozWaitUntilAbsent(HomeSelectors.RECENTLY_VISITED_SEARCH_GROUP(queryString))
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1059459
+    @SmokeTest
+    @Test
+    fun verifyQRScanningCameraAccessDialogTest() {
+        // Same guard as legacy: with no camera the flow cannot be exercised, so skip rather than fail.
+        val cameraManager = appContext.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        Assume.assumeTrue(cameraManager.cameraIdList.isNotEmpty())
+
+        // This test ends with camera permission granted and pref_key_camera_permissions_needed flipped to
+        // false, and nothing in the harness restores either. Legacy gets away with it because the orchestrator
+        // wipes package data per test method; BaseTest's retry re-runs in the same process, where a second
+        // attempt would take a completely different path through TurnOnSyncFragment. So reset both up front.
+        // Clearing the flags matters as much as the revoke: the flow ends with "Deny and don't ask again",
+        // which sets FLAG_PERMISSION_USER_FIXED, and a plain revoke leaves it set — a second attempt is then
+        // auto-denied with no dialog at all and fails looking for a Deny button that never appears. Scoped to
+        // this app and this permission on purpose; the device-wide `pm reset-permissions` also strips
+        // permissions the instrumentation itself relies on and crashes the test process.
+        val cameraPermission = "android.permission.CAMERA"
+        mDevice.executeShellCommand(
+            "pm clear-permission-flags ${appContext.packageName} $cameraPermission user-fixed user-set"
+        )
+        mDevice.executeShellCommand("pm revoke ${appContext.packageName} $cameraPermission")
+        appContext.components.settings.setCameraPermissionNeededState = true
+
+        on.searchBar
+            .navigateToPage(forceNavigation = true)
+            .mozClick(SearchBarSelectors.SEARCH_ENGINE_SELECTOR)
+            .mozClick(SearchBarSelectors.SEARCH_SHORTCUT("DuckDuckGo"))
+            .mozClick(SearchBarSelectors.SCAN_BUTTON)
+            .mozClick(SystemSettingsSelectors.PERMISSION_DENY_BUTTON)
+            .mozClick(SearchBarSelectors.SCAN_BUTTON)
+            .mozClick(SystemSettingsSelectors.PERMISSION_DENY_AND_DONT_ASK_AGAIN_BUTTON)
+            // Back out until the homepage TOOLBAR is showing, not just HOMEPAGE_VIEW: the homepage view
+            // resolves behind the search overlay, so anchoring on it returns immediately while the toolbar is
+            // still covered — and HomePage's arrival check needs the menu button, so the following
+            // navigateToPage would then route through the "New tab" edge and fail.
+            .mozPressBackUntilPresent(HomeSelectors.MAIN_MENU_BUTTON)
+
+        // Re-anchor the page tracker too — it is still on SearchBarComponent, and findPath would otherwise
+        // route SearchBar -> BrowserPage by TYPING A URL to reach anything else.
+        on.home.navigateToPage()
+
+        // Routed through Settings rather than the main menu's own Sign in row, which is the registered edge;
+        // same destination, and it keeps the nav graph as the single source of truth for how to get there.
+        on.settingsTurnOnSync
+            .navigateToPage()
+            .clickReadyToScanUntilPermissionDialog()
+            .mozClick(SettingsTurnOnSyncSelectors.PERMISSION_DIALOG_DISMISS_BUTTON)
+        on.settingsTurnOnSync
+            .clickReadyToScanUntilPermissionDialog()
+            .mozClick(SettingsTurnOnSyncSelectors.PERMISSION_DIALOG_GO_TO_SETTINGS_BUTTON)
+
+        // Leaves Fenix for the Android Settings app.
+        systemSettings.openAppPermissions().allowAppPermission("Camera")
+
+        on.settingsTurnOnSync.returnFromSystemSettings().mozClick(SettingsTurnOnSyncSelectors.READY_TO_SCAN_BUTTON)
+
+        on.searchBar.verifyScannerOpen()
     }
 }

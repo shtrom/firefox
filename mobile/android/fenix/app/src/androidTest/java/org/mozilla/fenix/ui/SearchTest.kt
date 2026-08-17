@@ -182,6 +182,11 @@ class SearchTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1059459
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.SearchTest#verifyQRScanningCameraAccessDialogTest"],
+        bug = 2063102,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyQRScanningCameraAccessDialogTest() {
