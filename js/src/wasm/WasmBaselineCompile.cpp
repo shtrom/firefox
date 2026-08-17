@@ -269,7 +269,8 @@ bool BaseCompiler::addInterruptCheck() {
                 &ok);
   trap(wasm::Trap::CheckInterrupt);
   masm.bind(&ok);
-  return createStackMap("addInterruptCheck");
+  // stackmap for: interrupt check
+  return createStackMap(Some(wasm::Trap::CheckInterrupt));
 }
 
 void BaseCompiler::checkDivideByZero(RegI32 rhs) {
@@ -559,7 +560,8 @@ bool BaseCompiler::beginFunction() {
   ExitStubMapVector extras;
   StackMap* functionEntryStackMap;
   if (!stackMapGenerator_.generateStackmapEntriesForTrapExit(args, &extras) ||
-      !stackMapGenerator_.createStackMap("stack check", extras,
+      // stackmap for: stack overflow check
+      !stackMapGenerator_.createStackMap(Some(Trap::StackOverflow), extras,
                                          HasDebugFrameWithLiveRefs::No, stk_,
                                          &functionEntryStackMap)) {
     return false;
@@ -669,7 +671,8 @@ bool BaseCompiler::beginFunction() {
 
   if (compilerEnv_.debugEnabled()) {
     insertBreakablePoint(CallSiteKind::EnterFrame);
-    if (!createStackMap("debug: enter-frame breakpoint")) {
+    // stackmap for: debug: enter-frame breakpoint
+    if (!createStackMap(Nothing() /* stackmap pertains to a call */)) {
       return false;
     }
   }
@@ -730,13 +733,15 @@ bool BaseCompiler::endFunction() {
     // it can be clobbered, and/or modified by the debug trap.
     saveRegisterReturnValues(resultType);
     insertBreakablePoint(CallSiteKind::Breakpoint);
-    if (!createStackMap("debug: return-point breakpoint",
+    // stackmap for: debug: return-point breakpoint
+    if (!createStackMap(Nothing() /* stackmap pertains to a call */,
                         HasDebugFrameWithLiveRefs::Maybe)) {
       return false;
     }
 
     insertBreakablePoint(CallSiteKind::LeaveFrame);
-    if (!createStackMap("debug: leave-frame breakpoint",
+    // stackmap for: debug: leave-frame breakpoint
+    if (!createStackMap(Nothing() /* stackmap pertains to a call */,
                         HasDebugFrameWithLiveRefs::Maybe)) {
       return false;
     }
@@ -1658,7 +1663,8 @@ bool BaseCompiler::insertDebugCollapseFrame() {
   }
 
   insertBreakablePoint(CallSiteKind::CollapseFrame);
-  return createStackMap("debug: collapse-frame breakpoint",
+  // stackmap for: debug: collapse-frame breakpoint
+  return createStackMap(Nothing() /* stackmap pertains to a call */,
                         HasDebugFrameWithLiveRefs::Maybe);
 }
 
@@ -2059,7 +2065,8 @@ bool BaseCompiler::callIndirect(uint32_t funcTypeIndex, uint32_t tableIndex,
   CalleeDesc callee =
       CalleeDesc::wasmTable(codeMeta_, table, tableIndex, callIndirectId);
   StackMap* oobTrapStackMap;
-  if (!createAbortingOutOfLineTrapStackMap(&oobTrapStackMap)) {
+  if (!createAbortingOutOfLineTrapStackMap(&oobTrapStackMap,
+                                           Trap::OutOfBounds)) {
     return false;
   }
   OutOfLineCode* oob = addOutOfLineCode(new (alloc_) OutOfLineTrap(
@@ -2095,7 +2102,8 @@ bool BaseCompiler::callIndirect(uint32_t funcTypeIndex, uint32_t tableIndex,
   Label* nullCheckFailed = nullptr;
 #ifndef WASM_HAS_HEAPREG
   StackMap* nullTrapStackMap;
-  if (!createAbortingOutOfLineTrapStackMap(&nullTrapStackMap)) {
+  if (!createAbortingOutOfLineTrapStackMap(&nullTrapStackMap,
+                                           Trap::IndirectCallToNull)) {
     return false;
   }
   OutOfLineCode* nullref = addOutOfLineCode(new (alloc_) OutOfLineTrap(
@@ -5460,7 +5468,8 @@ bool BaseCompiler::emitCall() {
     raOffset = callDefinition(funcIndex, baselineCall);
   }
 
-  if (!createStackMap("emitCall", raOffset)) {
+  // stackmap for: emitCall
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */, raOffset)) {
     return false;
   }
 
@@ -5571,10 +5580,14 @@ bool BaseCompiler::emitCallIndirect() {
                     /*tailCall*/ false, &fastCallOffset, &slowCallOffset)) {
     return false;
   }
-  if (!createStackMap("emitCallIndirect", fastCallOffset)) {
+  // stackmap for: emitCallIndirect (fast)
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */,
+                      fastCallOffset)) {
     return false;
   }
-  if (!createStackMap("emitCallIndirect", slowCallOffset)) {
+  // stackmap for: emitCallIndirect (slow)
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */,
+                      slowCallOffset)) {
     return false;
   }
 
@@ -5696,10 +5709,14 @@ bool BaseCompiler::emitCallRef() {
                &slowCallOffset)) {
     return false;
   }
-  if (!createStackMap("emitCallRef", fastCallOffset)) {
+  // stackmap for: emitCallRef (fast)
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */,
+                      fastCallOffset)) {
     return false;
   }
-  if (!createStackMap("emitCallRef", slowCallOffset)) {
+  // stackmap for: emitCallRef (slow)
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */,
+                      slowCallOffset)) {
     return false;
   }
 
@@ -5807,7 +5824,8 @@ bool BaseCompiler::emitUnaryMathBuiltinCall(SymbolicAddress callee,
   }
 
   CodeOffset raOffset = builtinCall(callee, baselineCall);
-  if (!createStackMap("emitUnaryMathBuiltin[..]", raOffset)) {
+  // stackmap for: emitUnaryMathBuiltinCall
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */, raOffset)) {
     return false;
   }
 
@@ -5850,7 +5868,8 @@ bool BaseCompiler::emitDivOrModI64BuiltinCall(SymbolicAddress callee,
   masm.passABIArg(rhs.low);
   CodeOffset raOffset = masm.callWithABI(
       bytecodeOffset(), callee, mozilla::Some(fr.getInstancePtrOffset()));
-  if (!createStackMap("emitDivOrModI64Bui[..]", raOffset)) {
+  // stackmap for: emitDivOrModI64BuiltinCall
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */, raOffset)) {
     return false;
   }
 
@@ -5882,7 +5901,8 @@ bool BaseCompiler::emitConvertInt64ToFloatingCallout(SymbolicAddress callee,
   CodeOffset raOffset = masm.callWithABI(
       bytecodeOffset(), callee, mozilla::Some(fr.getInstancePtrOffset()),
       resultType == ValType::F32 ? ABIType::Float32 : ABIType::Float64);
-  if (!createStackMap("emitConvertInt64To[..]", raOffset)) {
+  // stackmap for: emitConvertInt64ToFloatingCallout
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */, raOffset)) {
     return false;
   }
 
@@ -5926,7 +5946,8 @@ bool BaseCompiler::emitConvertFloatingToInt64Callout(SymbolicAddress callee,
   masm.passABIArg(doubleInput, ABIType::Float64);
   CodeOffset raOffset = masm.callWithABI(
       bytecodeOffset(), callee, mozilla::Some(fr.getInstancePtrOffset()));
-  if (!createStackMap("emitConvertFloatin[..]", raOffset)) {
+  // stackmap for: emitConvertFloatingToInt64Callout
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */, raOffset)) {
     return false;
   }
 
@@ -6588,11 +6609,14 @@ bool BaseCompiler::emitInstanceCall(const SymbolicAddressSignature& builtin) {
   CodeOffset trapStackMapKey;
   builtinInstanceMethodCall(builtin, instanceArg, baselineCall,
                             &callStackMapKey, &trapStackMapKey);
-  if (!createStackMap("emitInstanceCall-call", callStackMapKey)) {
+  if (!createStackMap(Nothing() /* stackmap pertains to a call */,
+                      callStackMapKey)) {
     return false;
   }
   if (trapStackMapKey.bound() &&
-      !createStackMap("emitInstanceCall-trap", trapStackMapKey)) {
+      // FIXME: this is a kludge in that it assumes that the trap kind created
+      // by builtinInstanceMethodCall is ThrowReported.
+      !createStackMap(Some(wasm::Trap::ThrowReported), trapStackMapKey)) {
     return false;
   }
   endCall(baselineCall, stackSpace);
@@ -9170,7 +9194,7 @@ bool BaseCompiler::emitRefCast(bool nullable) {
   RegRef ref = popRef();
 
   StackMap* trapStackMap;
-  if (!createAbortingOutOfLineTrapStackMap(&trapStackMap)) {
+  if (!createAbortingOutOfLineTrapStackMap(&trapStackMap, Trap::BadCast)) {
     return false;
   }
   OutOfLineCode* ool = addOutOfLineCode(
@@ -10711,7 +10735,8 @@ bool BaseCompiler::emitBody() {
           sync();
 
           insertBreakablePoint(CallSiteKind::Breakpoint);
-          if (!createStackMap("debug: per-insn breakpoint")) {
+          // stackmap for: debug: per-insn breakpoint
+          if (!createStackMap(Nothing() /* stackmap pertains to a call */)) {
             return false;
           }
           previousBreakablePoint_ = masm.currentOffset();
