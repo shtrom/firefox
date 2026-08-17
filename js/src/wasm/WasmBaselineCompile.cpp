@@ -2065,8 +2065,8 @@ bool BaseCompiler::callIndirect(uint32_t funcTypeIndex, uint32_t tableIndex,
   CalleeDesc callee =
       CalleeDesc::wasmTable(codeMeta_, table, tableIndex, callIndirectId);
   StackMap* oobTrapStackMap;
-  if (!createAbortingOutOfLineTrapStackMap(&oobTrapStackMap,
-                                           Trap::OutOfBounds)) {
+  if (!createDebugOnlyStackMapForNonResumingTrap(&oobTrapStackMap,
+                                                 Trap::OutOfBounds)) {
     return false;
   }
   OutOfLineCode* oob = addOutOfLineCode(new (alloc_) OutOfLineTrap(
@@ -2102,8 +2102,8 @@ bool BaseCompiler::callIndirect(uint32_t funcTypeIndex, uint32_t tableIndex,
   Label* nullCheckFailed = nullptr;
 #ifndef WASM_HAS_HEAPREG
   StackMap* nullTrapStackMap;
-  if (!createAbortingOutOfLineTrapStackMap(&nullTrapStackMap,
-                                           Trap::IndirectCallToNull)) {
+  if (!createDebugOnlyStackMapForNonResumingTrap(&nullTrapStackMap,
+                                                 Trap::IndirectCallToNull)) {
     return false;
   }
   OutOfLineCode* nullref = addOutOfLineCode(new (alloc_) OutOfLineTrap(
@@ -9194,7 +9194,8 @@ bool BaseCompiler::emitRefCast(bool nullable) {
   RegRef ref = popRef();
 
   StackMap* trapStackMap;
-  if (!createAbortingOutOfLineTrapStackMap(&trapStackMap, Trap::BadCast)) {
+  if (!createDebugOnlyStackMapForNonResumingTrap(&trapStackMap,
+                                                 Trap::BadCast)) {
     return false;
   }
   OutOfLineCode* ool = addOutOfLineCode(

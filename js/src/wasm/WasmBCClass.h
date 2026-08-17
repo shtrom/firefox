@@ -961,10 +961,11 @@ struct BaseCompiler final {
   [[nodiscard]] bool createStackMap(
       Maybe<Trap> reason, HasDebugFrameWithLiveRefs debugFrameWithLiveRefs);
 
-  // Creates a stack map for an aborting trap instruction that will be emitted
-  // OOL.
-  [[nodiscard]] bool createAbortingOutOfLineTrapStackMap(StackMap** result,
-                                                         Trap t);
+  // When compiling for debugging, creates a stack map for a non-resuming trap
+  // instruction of kind `t1`, and, if specified, `t2`.  When not compiling for
+  // debugging, no stackmap is generated.
+  [[nodiscard]] bool createDebugOnlyStackMapForNonResumingTrap(
+      StackMap** result, Trap t1, Trap t2 = Trap::Limit);
 
   ////////////////////////////////////////////////////////////
   //

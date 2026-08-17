@@ -167,19 +167,23 @@ bool BaseCompiler::createStackMap(
          (!stackMap || stackMaps_->add(masm.currentOffset(), stackMap));
 }
 
-[[nodiscard]] bool BaseCompiler::createAbortingOutOfLineTrapStackMap(
-    StackMap** result, Trap t) {
-  // `t` definitely won't resume.
-  MOZ_ASSERT(!TrapMightResume(t));
+bool BaseCompiler::createDebugOnlyStackMapForNonResumingTrap(
+    StackMap** result, Trap t1, Trap t2) {
+  // `t1`, and, if specified `t2`, definitely won't resume.
+  MOZ_ASSERT(t1 != Trap::Limit);
+  MOZ_ASSERT(!TrapMightResume(t1));
+  MOZ_ASSERT_IF(t2 != Trap::Limit, !TrapMightResume(t2));
 
   if (MOZ_LIKELY(!compilerEnv_.debugEnabled())) {
     *result = nullptr;
     return true;
   }
 
+  // We can use either `t1` or `t2` (when valid) here, since ::createStackMap
+  // cares only about their resumability, and we established that above.
   ExitStubMapVector extras;
   return stackMapGenerator_.createStackMap(
-      Some(t), extras, HasDebugFrameWithLiveRefs::Maybe, stk_, result);
+      Some(t1), extras, HasDebugFrameWithLiveRefs::Maybe, stk_, result);
 }
 
 bool MachineStackTracker::cloneTo(MachineStackTracker* dst) {
