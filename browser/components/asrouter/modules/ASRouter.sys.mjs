@@ -2410,6 +2410,7 @@ export class _ASRouter {
    *   | "groupImpressions"
    *   | "messageImpressions"
    *   | "screenImpressions"
+   *   | "multiProfileMessageImpressions"
    *   | "messageBlockList"
    * @param {object|string[]} value New value to set for state[key]
    * @returns {Promise<unknown>} The new value in state
@@ -2422,6 +2423,7 @@ export class _ASRouter {
       case "groupImpressions":
       case "messageImpressions":
       case "screenImpressions":
+      case "multiProfileMessageImpressions":
         if (typeof value !== "object") {
           throw new Error("Invalid impression data");
         }
@@ -2435,7 +2437,22 @@ export class _ASRouter {
         throw new Error("Invalid state key");
     }
     const newState = await this.setState(() => {
-      this._storage.set(key, value);
+      if (key === "multiProfileMessageImpressions") {
+        // Persist mutated entries and delete any that were removed by the edit.
+        const oldImpressions = this.state.multiProfileMessageImpressions || {};
+        const messageIds = new Set([
+          ...Object.keys(oldImpressions),
+          ...Object.keys(value),
+        ]);
+        for (const messageId of messageIds) {
+          this._storage.setSharedMessageImpressions(
+            messageId,
+            value[messageId]
+          );
+        }
+      } else {
+        this._storage.set(key, value);
+      }
       return { [key]: value };
     });
     return newState[key];
