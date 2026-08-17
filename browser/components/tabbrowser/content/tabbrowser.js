@@ -9500,6 +9500,14 @@
       this._requestCount = aOrigRequestCount || 0;
     }
 
+    get #documentGlobal() {
+      return this._tab.documentGlobal;
+    }
+
+    get #tabbrowser() {
+      return this._tab.documentGlobal.gBrowser;
+    }
+
     destroy() {
       delete this._tab;
       delete this._browser;
@@ -9507,7 +9515,7 @@
 
     _callProgressListeners(...args) {
       args.unshift(this._browser);
-      return gBrowser._callProgressListeners.apply(gBrowser, args);
+      return this.#tabbrowser._callProgressListeners(...args);
     }
 
     _shouldShowProgress(aRequest) {
@@ -9564,7 +9572,7 @@
 
       if (this._totalProgress && this._tab.hasAttribute("busy")) {
         this._tab.setAttribute("progress", "true");
-        gBrowser._tabAttrModified(this._tab, ["progress"]);
+        this.#tabbrowser._tabAttrModified(this._tab, ["progress"]);
       }
 
       this._callProgressListeners("onProgressChange", [
@@ -9674,14 +9682,18 @@
                   originalLocation
                 ))
             ) {
-              gBrowser.setInitialTabTitle(this._tab, originalLocation.spec, {
-                isURL: true,
-              });
+              this.#tabbrowser.setInitialTabTitle(
+                this._tab,
+                originalLocation.spec,
+                {
+                  isURL: true,
+                }
+              );
 
               this._browser.browsingContext.nonWebControlledLoadingURI =
                 originalLocation;
-              if (this._tab.selected && !gBrowser.userTypedValue) {
-                gURLBar.setURI();
+              if (this._tab.selected && !this.#tabbrowser.userTypedValue) {
+                this.#documentGlobal.gURLBar.setURI();
               }
             }
           }
@@ -9698,12 +9710,12 @@
             aWebProgress.isTopLevel
           ) {
             this._tab.setAttribute("busy", "true");
-            gBrowser._tabAttrModified(this._tab, ["busy"]);
+            this.#tabbrowser._tabAttrModified(this._tab, ["busy"]);
             this._tab._notselectedsinceload = !this._tab.selected;
           }
 
           if (this._tab.selected) {
-            gBrowser._isBusy = true;
+            this.#tabbrowser._isBusy = true;
           }
         }
       } else if (aStateFlags & STATE_STOP && aStateFlags & STATE_IS_NETWORK) {
@@ -9722,7 +9734,7 @@
             aWebProgress.isTopLevel &&
             !aWebProgress.isLoadingDocument &&
             Components.isSuccessCode(aStatus) &&
-            !gBrowser.tabAnimationsInProgress &&
+            !this.#tabbrowser.tabAnimationsInProgress &&
             !gReduceMotion
           ) {
             if (this._tab._notselectedsinceload) {
@@ -9765,7 +9777,7 @@
               aStatus != Cr.NS_BINDING_CANCELLED_OLD_LOAD &&
               !isNavigating
             ) {
-              gURLBar.setURI();
+              this.#documentGlobal.gURLBar.setURI();
             }
           } else if (isSuccessful) {
             this._browser.urlbarChangeTracker.finishedLoad();
@@ -9789,7 +9801,7 @@
           // new tabs behavior is set to open a blank page.
           // This is a no-op unless this._browser.documentURI is in
           // FAVICON_DEFAULTS.
-          gBrowser.setDefaultIcon(this._tab, this._browser.documentURI);
+          this.#tabbrowser.setDefaultIcon(this._tab, this._browser.documentURI);
         }
 
         // For keyword URIs clear the user typed value since they will be changed into real URIs
@@ -9798,11 +9810,11 @@
         }
 
         if (this._tab.selected) {
-          gBrowser._isBusy = false;
+          this.#tabbrowser._isBusy = false;
         }
 
         if (modifiedAttrs.length) {
-          gBrowser._tabAttrModified(this._tab, modifiedAttrs);
+          this.#tabbrowser._tabAttrModified(this._tab, modifiedAttrs);
         }
       }
 
@@ -9880,16 +9892,18 @@
         // attribute here.
         if (isErrorPage && this._tab.hasAttribute("busy")) {
           this._tab.removeAttribute("busy");
-          gBrowser._tabAttrModified(this._tab, ["busy"]);
+          this.#tabbrowser._tabAttrModified(this._tab, ["busy"]);
         }
 
         if (!isSameDocument) {
           // If the browser was playing audio, we should remove the playing state.
           if (this._tab.hasAttribute("soundplaying")) {
-            clearTimeout(this._tab._soundPlayingAttrRemovalTimer);
+            this.#documentGlobal.clearTimeout(
+              this._tab._soundPlayingAttrRemovalTimer
+            );
             this._tab._soundPlayingAttrRemovalTimer = 0;
             this._tab.removeAttribute("soundplaying");
-            gBrowser._tabAttrModified(this._tab, ["soundplaying"]);
+            this.#tabbrowser._tabAttrModified(this._tab, ["soundplaying"]);
           }
 
           // If the browser was previously muted, we should restore the muted state.
@@ -9897,8 +9911,8 @@
             this._tab.linkedBrowser.browsingContext?.mediaController?.mute();
           }
 
-          if (gBrowser.isFindBarInitialized(this._tab)) {
-            let findBar = gBrowser.getCachedFindBar(this._tab);
+          if (this.#tabbrowser.isFindBarInitialized(this._tab)) {
+            let findBar = this.#tabbrowser.getCachedFindBar(this._tab);
 
             // Close the Find toolbar if we're in old-style TAF mode
             if (findBar.findMode != findBar.FIND_NORMAL) {
@@ -9911,7 +9925,7 @@
           // context, see https://bugzilla.mozilla.org/show_bug.cgi?id=585653
           // and https://github.com/whatwg/html/issues/2174
           if (!isReload) {
-            gBrowser.setTabTitle(this._tab);
+            this.#tabbrowser.setTabTitle(this._tab);
           }
 
           // Don't clear the favicon if this tab is in the pending
@@ -9932,7 +9946,7 @@
           }
 
           if (!isReload && aWebProgress.isLoadingDocument) {
-            let triggerer = gBrowser._getTriggeringPrincipalFromHistory(
+            let triggerer = this.#tabbrowser._getTriggeringPrincipalFromHistory(
               this._browser
             );
             // Typing a url, searching or clicking a bookmark will load a new
@@ -9941,7 +9955,7 @@
             if (triggerer && triggerer.isSystemPrincipal) {
               // Reset the related tab map so that the next tab opened will be related
               // to this new document and not to tabs opened by the previous one.
-              gBrowser.clearRelatedTabs();
+              this.#tabbrowser.clearRelatedTabs();
             }
           }
 
@@ -9952,10 +9966,10 @@
             this._browser.originalURI = aRequest.originalURI;
           }
 
-          if (!gBrowser._allowTransparentBrowser) {
+          if (!this.#tabbrowser._allowTransparentBrowser) {
             this._browser.toggleAttribute(
               "transparent",
-              AIWindow.isAIWindowActive(window) &&
+              AIWindow.isAIWindowActive(this.#documentGlobal) &&
                 AIWindow.isAIWindowContentPage(aLocation)
             );
           }
@@ -9964,20 +9978,20 @@
         let userContextId = this._browser.getAttribute("usercontextid") || 0;
         if (this._browser.registeredOpenURI) {
           let uri = this._browser.registeredOpenURI;
-          gBrowser.UrlbarProviderOpenTabs.unregisterOpenTab(
+          this.#tabbrowser.UrlbarProviderOpenTabs.unregisterOpenTab(
             uri.spec,
             userContextId,
             this._tab.group?.id,
-            PrivateBrowsingUtils.isWindowPrivate(window)
+            PrivateBrowsingUtils.isWindowPrivate(this.#documentGlobal)
           );
           delete this._browser.registeredOpenURI;
         }
         if (!isBlankPageURL(aLocation.spec)) {
-          gBrowser.UrlbarProviderOpenTabs.registerOpenTab(
+          this.#tabbrowser.UrlbarProviderOpenTabs.registerOpenTab(
             aLocation.spec,
             userContextId,
             this._tab.group?.id,
-            PrivateBrowsingUtils.isWindowPrivate(window)
+            PrivateBrowsingUtils.isWindowPrivate(this.#documentGlobal)
           );
           this._browser.registeredOpenURI = aLocation;
 
@@ -9989,11 +10003,13 @@
           }
         }
 
-        if (this._tab != gBrowser.selectedTab) {
-          let tabCacheIndex = gBrowser._tabLayerCache.indexOf(this._tab);
+        if (this._tab != this.#tabbrowser.selectedTab) {
+          let tabCacheIndex = this.#tabbrowser._tabLayerCache.indexOf(
+            this._tab
+          );
           if (tabCacheIndex != -1) {
-            gBrowser._tabLayerCache.splice(tabCacheIndex, 1);
-            gBrowser._getSwitcher().cleanUpTabAfterEviction(this._tab);
+            this.#tabbrowser._tabLayerCache.splice(tabCacheIndex, 1);
+            this.#tabbrowser._getSwitcher().cleanUpTabAfterEviction(this._tab);
           }
         }
       }
