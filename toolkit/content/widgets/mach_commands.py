@@ -286,7 +286,25 @@ def addstory(command_context, name, project_name, path):
     help="Fetch the current Nova design tokens from Figma before building. "
     "Requires a valid FIGMA_ACCESS_TOKEN in your environment.",
 )
-def buildtokens(command_context, fetch_figma):
+@CommandArgument(
+    "--match",
+    action="append",
+    dest="match",
+    default=None,
+    metavar="SUBSTRING",
+    help="Only import fetched tokens whose path contains SUBSTRING. May be "
+    "passed multiple times. Requires --fetch-figma.",
+)
+@CommandArgument(
+    "--all",
+    action="store_true",
+    dest="import_all",
+    help="Import every fetched change without prompting for a selection. "
+    "Requires --fetch-figma.",
+)
+def buildtokens(command_context, fetch_figma, match, import_all):
+    if (match or import_all) and not fetch_figma:
+        raise UserError("--match and --all only apply together with --fetch-figma.")
     if run_mach(
         command_context,
         "npm",
@@ -298,15 +316,17 @@ def buildtokens(command_context, fetch_figma):
             args=["ci", "--prefix=toolkit/themes/shared/design-system"],
         )
     if fetch_figma:
-        failed = run_mach(
-            command_context,
-            "npm",
-            args=[
-                "run",
-                "fetch-figma-nova",
-                "--prefix=toolkit/themes/shared/design-system",
-            ],
-        )
+        fetch_args = [
+            "run",
+            "fetch-figma-nova",
+            "--prefix=toolkit/themes/shared/design-system",
+            "--",
+        ]
+        for substring in match or []:
+            fetch_args.append(f"--match={substring}")
+        if import_all:
+            fetch_args.append("--all")
+        failed = run_mach(command_context, "npm", args=fetch_args)
         if failed:
             raise UserError(
                 "Failed to access Figma API, is FIGMA_ACCESS_TOKEN set and valid?"
