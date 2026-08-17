@@ -15,6 +15,7 @@
 #include "mozilla/AbstractThread.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/Monitor.h"
+#include "mozilla/TargetShutdownTaskSet.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/UniquePtr.h"
 #include "nsIDirectTaskDispatcher.h"
@@ -913,6 +914,10 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
     mMonitor.AssertCurrentThreadOwns();
     return !mBackMessageQueue.IsEmpty();
   }
+
+  /* Tasks to run at shutdown. */
+  TargetShutdownTaskSet mShutdownTasks MOZ_GUARDED_BY(mMonitor);
+
   /**
    * This enum specifies where this graph is in its lifecycle. This is used
    * to control shutdown.
