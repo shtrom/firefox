@@ -2071,7 +2071,7 @@ DeviceColor gfxPlatform::TransformPixel(const sRGBColor& in,
 
 nsTArray<uint8_t> gfxPlatform::GetPrefCMSOutputProfileData() {
   const auto mirror = StaticPrefs::gfx_color_management_display_profile();
-  const auto fname = *mirror;
+  const auto& fname = *mirror;
   if (fname == "") {
     return nsTArray<uint8_t>();
   }
