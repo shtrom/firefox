@@ -11212,6 +11212,16 @@ bool wasm::IonCompileFunctions(const CodeMetadata& codeMeta,
             "# wasm::IonCompileFunctions: starting on function index %d",
             (int)func.index);
 
+#ifdef DEBUG
+    // Snapshot the "frontier" of the trapsite vectors so we can determine
+    // which ones are added to during compilation of this function.
+    mozilla::EnumeratedArray<Trap, uint32_t, size_t(Trap::Limit)>
+        trapSitesBefore;
+    for (Trap kind : mozilla::MakeEnumeratedRange(Trap::Limit)) {
+      trapSitesBefore[kind] = uint32_t(masm.trapSites().length(kind));
+    }
+#endif
+
     Decoder d(func.begin, func.end, func.bytecodeOffset, error);
 
     // Build the local types vector.
@@ -11284,6 +11294,24 @@ bool wasm::IonCompileFunctions(const CodeMetadata& codeMeta,
     if (!code->funcs.emplaceBack(func.index, observedFeatures)) {
       return false;
     }
+
+#ifdef DEBUG
+    // Get a second snapshot of the frontier of the TrapSite vectors, and
+    // use this to check that traps that need a stackmap, actually have one.
+    mozilla::EnumeratedArray<Trap, uint32_t, size_t(Trap::Limit)>
+        trapSitesAfter;
+    for (Trap kind : mozilla::MakeEnumeratedRange(Trap::Limit)) {
+      trapSitesAfter[kind] = uint32_t(masm.trapSites().length(kind));
+    }
+
+    // Do the check.  This asserts if the check fails.
+    auto checkThisTrapKind = [](Trap t) -> bool {
+      // Temporary setting, to make all of this a no-op.
+      return false;
+    };
+    CheckStackMapsForTraps(masm, code->stackMaps, trapSitesBefore,
+                           trapSitesAfter, checkThisTrapKind);
+#endif
 
     JitSpew(JitSpew_Codegen,
             "# wasm::IonCompileFunctions: completed function index %d",

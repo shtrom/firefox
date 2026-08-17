@@ -654,6 +654,22 @@ void CheckWholeCellLastElementCache(jit::MacroAssembler& masm,
 // * it is OK to claim an invalid key is valid (`true` is returned)
 // * it is not OK to claim a valid key is invalid (`false` returned)
 bool IsPlausibleStackMapKey(const uint8_t* base, uint32_t stackmapOffset);
+
+using TrapSitesFrontierArray =
+    mozilla::EnumeratedArray<Trap, uint32_t, size_t(Trap::Limit)>;
+
+// Check that traps have an associated stack map.  The check is performed only
+// for traps `t` for which `checkThisTrapKind` returns `true`.  For each such
+// `t`, trap site indices to be checked are taken from `trapSitesBefore[t]` to
+// `trapSitesAfter[t] - 1`.  The trap sites and instructions to inspect are to
+// be found in `masm`, and the corresponding stack maps in `stackMaps`.
+//
+// Returns without comment on success; MOZ_ASSERTs on failure.
+void CheckStackMapsForTraps(const jit::MacroAssembler& masm,
+                            const StackMaps& stackMaps,
+                            const TrapSitesFrontierArray& trapSitesBefore,
+                            const TrapSitesFrontierArray& trapSitesAfter,
+                            bool (*checkThisTrapKind)(Trap));
 #endif
 
 }  // namespace wasm

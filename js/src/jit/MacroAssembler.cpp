@@ -6165,24 +6165,6 @@ uint8_t MacroAssembler::getByteAtOffset(size_t offset) const {
 #endif
 }
 
-// This is an InstructionBytes source that reads bytes from an assembler buffer.
-class InstructionBytesFromMasm : public wasm::InstructionBytes {
-  const MacroAssembler& masm_;
-  uint32_t baseOffset_ = 0;
-
- public:
-  explicit InstructionBytesFromMasm(const MacroAssembler& masm,
-                                    uint32_t baseOffset)
-      : masm_(masm), baseOffset_(baseOffset) {
-    MOZ_ASSERT(baseOffset < masm.readableSize());
-  }
-  bool isU32aligned() const override { return (baseOffset_ & 3) == 0; }
-  uint8_t get(size_t offset) const override {
-    MOZ_ASSERT(offset < 16);
-    return masm_.getByteAtOffset(baseOffset_ + offset);
-  }
-};
-
 mozilla::Atomic<uint32_t> ctr(0);
 void MacroAssembler::appendAndVerify(wasm::Trap trap,
                                      wasm::TrapMachineInsn insn,
@@ -6193,8 +6175,8 @@ void MacroAssembler::appendAndVerify(wasm::Trap trap,
   // length `fcr.length()` and kind `insn`.  Ask SummarizeTrapInstruction
   // to look at it and check it agrees.
   if (!oom() && fcr.isValid()) {
-    InstructionBytesFromMasm insnSource(*this, fcr.offset());
-    wasm::SummarizeResult summary = SummarizeTrapInstruction(insnSource);
+    wasm::SummarizeResult summary =
+        wasm::SummarizeTrapInstruction(*this, fcr.offset());
     // The instruction must be identifiable
     MOZ_ASSERT(summary.identified());
     // .. and have the correct kind and length
