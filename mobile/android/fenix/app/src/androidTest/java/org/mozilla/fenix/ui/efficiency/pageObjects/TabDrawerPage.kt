@@ -4,8 +4,15 @@
 
 package org.mozilla.fenix.ui.efficiency.pageObjects
 
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasAnyChild
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.onChildAt
+import androidx.compose.ui.test.onNodeWithTag
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
+import org.mozilla.fenix.tabstray.TabsTrayTestTag
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.helpers.SwipeDirection
@@ -108,6 +115,23 @@ class TabDrawerPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRu
 
     fun clearTabSearch(): TabDrawerPage {
         mozClick(TabDrawerSelectors.TAB_SEARCH_CLEAR_BUTTON)
+        return this
+    }
+
+    /**
+     * Assert the tab at a 1-based [position] in the normal-browsing list is the one titled [tabTitle].
+     *
+     * Ordering cannot be expressed with the mozVerify* family, which only answers "does any node match". The wait is
+     * delegated to the harness first because the positional assert below is a one-shot check and would race a list that
+     * is still populating.
+     */
+    fun verifyOpenTabsOrder(position: Int, tabTitle: String): TabDrawerPage {
+        mozVerifyAnyHasChildWithText(TabDrawerSelectors.TAB_ITEM_ROOT, tabTitle)
+        composeRule
+            .onNodeWithTag(TabsTrayTestTag.NORMAL_TABS_LIST)
+            .onChildAt(position - 1)
+            .assert(hasTestTag(TabsTrayTestTag.TAB_ITEM_ROOT))
+            .assert(hasAnyChild(hasText(tabTitle)))
         return this
     }
 

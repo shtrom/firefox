@@ -18,6 +18,7 @@ import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.mozilla.fenix.R
+import org.mozilla.fenix.customannotations.Converted
 import org.mozilla.fenix.customannotations.SkipLeaks
 import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.ext.components
@@ -842,6 +843,18 @@ class SearchTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2154199
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.SearchTest#verifyTabsSearchWithOpenTabsTest"],
+        bug = 2063043,
+        since = "2026-08",
+        notes =
+            "Full parity. Two deliberate deviations: the negative suggestion check asserts no " +
+                "suggestion row contains the term (legacy matched the plural container tag with " +
+                "assertAny(hasText().not()), which passes whenever any node lacks the text), and the " +
+                "typed-toolbar check is a substring text match rather than a normalized semantics read. " +
+                "The URL-based suggestion assertions depend on SearchMockServerRule 404ing the asset so " +
+                "the tabs stay untitled; the port keeps that rule to preserve them.",
+    )
     @SmokeTest
     @Test
     fun verifyTabsSearchWithOpenTabsTest() {
