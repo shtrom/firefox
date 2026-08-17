@@ -931,7 +931,7 @@ RefPtr<ServiceWorkerRegistrationPromise> ServiceWorkerManager::Register(
   auto lifetime = DetermineLifetimeForClient(aClientInfo);
 
   uint16_t ipAddressSpace = 0;
-  auto policyContainerArgs = aClientInfo.GetPolicyContainerArgs();
+  const auto& policyContainerArgs = aClientInfo.GetPolicyContainerArgs();
   if (policyContainerArgs.isSome()) {
     ipAddressSpace =
         static_cast<uint16_t>(policyContainerArgs->ipAddressSpace());
@@ -1871,7 +1871,7 @@ nsresult ServiceWorkerManager::PrincipalInfoToScopeKey(
     return NS_ERROR_FAILURE;
   }
 
-  auto content = aPrincipalInfo.get_ContentPrincipalInfo();
+  const auto& content = aPrincipalInfo.get_ContentPrincipalInfo();
 
   nsAutoCString suffix;
   content.attrs().CreateSuffix(suffix);
