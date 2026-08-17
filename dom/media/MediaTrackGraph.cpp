@@ -2019,10 +2019,10 @@ void MediaTrackGraphImpl::RunInStableState(bool aSourceIsMTG) {
         "LIFECYCLE_WAITING_FOR_THREAD_SHUTDOWN",
         "LIFECYCLE_WAITING_FOR_TRACK_DESTRUCTION"};
 
-    if (LifecycleStateRef() != LIFECYCLE_RUNNING) {
+    if (LifecycleState() != LIFECYCLE_RUNNING) {
       LOG(LogLevel::Debug,
           ("{}: Running stable state callback. Current state: {}",
-           fmt::ptr(this), LifecycleState_str[LifecycleStateRef()]));
+           fmt::ptr(this), LifecycleState_str[LifecycleState()]));
     }
 
     runnables = std::move(mUpdateRunnables);
@@ -2036,7 +2036,7 @@ void MediaTrackGraphImpl::RunInStableState(bool aSourceIsMTG) {
 
     mMainThreadGraphTime = mNextMainThreadGraphTime;
 
-    if (LifecycleStateRef() == LIFECYCLE_WAITING_FOR_MAIN_THREAD_CLEANUP &&
+    if (LifecycleState() == LIFECYCLE_WAITING_FOR_MAIN_THREAD_CLEANUP &&
         IsEmpty()) {
       MOZ_ASSERT(!AbstractThread::GetCurrent()->HasTailTasksFor(this));
       MOZ_ASSERT(mBackMessageQueue.IsEmpty());
@@ -2055,11 +2055,11 @@ void MediaTrackGraphImpl::RunInStableState(bool aSourceIsMTG) {
     // If this MediaTrackGraph has entered regular (non-forced) shutdown it
     // is not able to process any more messages. Those messages being added to
     // the graph in the first place is an error.
-    MOZ_DIAGNOSTIC_ASSERT(LifecycleStateRef() <
+    MOZ_DIAGNOSTIC_ASSERT(LifecycleState() <
                               LIFECYCLE_WAITING_FOR_MAIN_THREAD_CLEANUP ||
                           mForceShutDownReceived || IsEmpty());
 
-    if (LifecycleStateRef() == LIFECYCLE_THREAD_NOT_STARTED) {
+    if (LifecycleState() == LIFECYCLE_THREAD_NOT_STARTED) {
       // Start the driver now. We couldn't start it earlier because the graph
       // might exit immediately on finding it has no tracks. The first message
       // for a new graph must create a track.
@@ -2081,7 +2081,7 @@ void MediaTrackGraphImpl::RunInStableState(bool aSourceIsMTG) {
                              true);  // always proxy
     }
 
-    if (LifecycleStateRef() == LIFECYCLE_WAITING_FOR_MAIN_THREAD_CLEANUP &&
+    if (LifecycleState() == LIFECYCLE_WAITING_FOR_MAIN_THREAD_CLEANUP &&
         mForceShutDownReceived) {
       // Defer calls to RunDuringShutdown() to happen while mMonitor is not
       // held.
@@ -2101,7 +2101,7 @@ void MediaTrackGraphImpl::RunInStableState(bool aSourceIsMTG) {
       mMainThread->Dispatch(event.forget());
     }
 
-    mGraphDriverRunning = LifecycleStateRef() == LIFECYCLE_RUNNING;
+    mGraphDriverRunning = LifecycleState() == LIFECYCLE_RUNNING;
   }
 
   // Make sure we get a new current time in the next event loop task
@@ -2120,7 +2120,7 @@ void MediaTrackGraphImpl::RunInStableState(bool aSourceIsMTG) {
 #ifdef DEBUG
   mCanRunMessagesSynchronously =
       !mGraphDriverRunning &&
-      LifecycleStateRef() >= LIFECYCLE_WAITING_FOR_THREAD_SHUTDOWN;
+      LifecycleState() >= LIFECYCLE_WAITING_FOR_THREAD_SHUTDOWN;
 #endif
 
   for (const auto& runnable : runnables) {
@@ -4026,7 +4026,7 @@ void MediaTrackGraphImpl::PendingResumeOperation::Apply(
 void MediaTrackGraphImpl::PendingResumeOperation::Abort() {
   // The graph is shutting down before the operation completed.
   MOZ_ASSERT(!mDestinationTrack->GraphImpl() ||
-             mDestinationTrack->GraphImpl()->LifecycleStateRef() ==
+             mDestinationTrack->GraphImpl()->LifecycleState() ==
                  MediaTrackGraphImpl::LIFECYCLE_WAITING_FOR_THREAD_SHUTDOWN);
   mHolder.Reject(false, __func__);
 }
@@ -4562,7 +4562,7 @@ nsresult MediaTrackGraphImpl::TailDispatchMessage(
           MOZ_DIAGNOSTIC_ASSERT(trackCount == mMainThreadTrackCount);
           MOZ_DIAGNOSTIC_ASSERT(portCount == mMainThreadPortCount);
           if (IsEmpty() &&
-              LifecycleStateRef() >= LIFECYCLE_WAITING_FOR_TRACK_DESTRUCTION) {
+              LifecycleState() >= LIFECYCLE_WAITING_FOR_TRACK_DESTRUCTION) {
             Destroy();
           }
         }));
@@ -4592,7 +4592,7 @@ nsresult MediaTrackGraphImpl::QueueMessageForTailDispatch(
     // TailDispatchMessage, because the main thread event queue will not be
     // available late in shutdown when objects may still be releasing tracks.
     if (!mGraphDriverRunning &&
-        LifecycleStateRef() > LIFECYCLE_WAITING_FOR_MAIN_THREAD_CLEANUP) {
+        LifecycleState() > LIFECYCLE_WAITING_FOR_MAIN_THREAD_CLEANUP) {
       // The graph control loop is not running and main thread cleanup has
       // happened. From now on we can't tail dispatch to the graph, because
       // messages will never be processed again, so just RunDuringShutdown this
@@ -4610,7 +4610,7 @@ nsresult MediaTrackGraphImpl::QueueMessageForTailDispatch(
       mCanRunMessagesSynchronously = true;
 #endif
       if (IsEmpty() &&
-          LifecycleStateRef() >= LIFECYCLE_WAITING_FOR_TRACK_DESTRUCTION) {
+          LifecycleState() >= LIFECYCLE_WAITING_FOR_TRACK_DESTRUCTION) {
         Destroy();
       }
       return NS_OK;

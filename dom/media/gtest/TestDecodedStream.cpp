@@ -194,7 +194,7 @@ class TestDecodedStream : public Test {
     // Graph should be shut down.
     ASSERT_TRUE(mGraph->OnGraphThreadOrNotRunning())
     << "Not on graph thread so graph must still be running!";
-    ASSERT_EQ(mGraph->LifecycleStateRef(),
+    ASSERT_EQ(mGraph->LifecycleState(),
               MediaTrackGraphImpl::LIFECYCLE_WAITING_FOR_THREAD_SHUTDOWN)
         << "The graph should be in its final state. Note it does not advance "
            "the state any further on thread shutdown.";

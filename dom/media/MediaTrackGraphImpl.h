@@ -523,10 +523,9 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * Returns true when there are no active tracks.
    */
   bool IsEmpty() const {
-    MOZ_ASSERT(
-        OnGraphThreadOrNotRunning() ||
-        (NS_IsMainThread() &&
-         LifecycleStateRef() >= LIFECYCLE_WAITING_FOR_MAIN_THREAD_CLEANUP));
+    MOZ_ASSERT(OnGraphThreadOrNotRunning() ||
+               (NS_IsMainThread() &&
+                LifecycleState() >= LIFECYCLE_WAITING_FOR_MAIN_THREAD_CLEANUP));
     return mTracks.IsEmpty() && mSuspendedTracks.IsEmpty() && mPortCount == 0;
   }
 
@@ -969,8 +968,7 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * the end of an iteration.  All other transitions occur on the main thread.
    */
   LifecycleState mLifecycleState MOZ_GUARDED_BY(mMonitor);
-  const LifecycleState& LifecycleStateRef() const
-      MOZ_NO_THREAD_SAFETY_ANALYSIS {
+  LifecycleState LifecycleState() const MOZ_NO_THREAD_SAFETY_ANALYSIS {
 #if DEBUG
     if (mGraphDriverRunning) {
       mMonitor.AssertCurrentThreadOwns();
