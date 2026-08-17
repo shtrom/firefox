@@ -19,6 +19,9 @@ import org.mozilla.fenix.ui.efficiency.selectors.ToolbarSelectors
 
 class SearchTest : BaseTest() {
 
+    private val generalEnginesList = listOf("DuckDuckGo", "Google", "Bing")
+    private val topicEnginesList = listOf("Wikipedia (en)")
+
     // Legacy SearchTest drives these URLs off SearchMockServerRule, whose dispatcher 404s everything
     // except searchResults.html. That is load-bearing for verifyTabsSearchWithOpenTabsTest: the tabs
     // never load, so they have no title and the awesomebar row shows the URL, which is what the
@@ -55,6 +58,26 @@ class SearchTest : BaseTest() {
 
         // Then: the search bar elements should load
         on.searchBar.mozVerifyElementsByGroup("requiredForPage")
+    }
+
+    // Verifies a temporary change of search engine from the Search shortcut menu
+    @SmokeTest
+    @Test
+    fun searchEnginesCanBeChangedTemporarilyFromSearchSelectorMenuTest() {
+        (generalEnginesList + topicEnginesList).forEach { searchEngine ->
+            on.searchBar
+                .navigateToPage()
+                .mozClick(SearchBarSelectors.SEARCH_ENGINE_SELECTOR)
+                .mozVerify(SearchBarSelectors.SEARCH_SHORTCUT(searchEngine))
+                .mozClick(SearchBarSelectors.SEARCH_SHORTCUT(searchEngine))
+                .mozVerify(ToolbarSelectors.SEARCH_ENGINE_SELECTOR_ICON(searchEngine))
+                .mozEnterText("mozilla ", SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+                .mozPressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+
+            on.browserPage.navigateToPage().verifyUrl("mozilla")
+
+            on.home.navigateToPage()
+        }
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2154199

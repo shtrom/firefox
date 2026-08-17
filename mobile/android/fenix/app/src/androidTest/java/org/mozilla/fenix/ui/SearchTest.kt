@@ -257,6 +257,14 @@ class SearchTest {
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/235395
     // Verifies a temporary change of search engine from the Search shortcut menu
+    @Converted(
+        replacedBy =
+            [
+                "org.mozilla.fenix.ui.efficiency.tests.SearchTest#searchEnginesCanBeChangedTemporarilyFromSearchSelectorMenuTest"
+            ],
+        bug = 2063045,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun searchEnginesCanBeChangedTemporarilyFromSearchSelectorMenuTest() {
