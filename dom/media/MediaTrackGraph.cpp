@@ -44,6 +44,7 @@
 #include "mozilla/dom/BaseAudioContextBinding.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/WorkletThread.h"
+#include "mozilla/ipc/IOThread.h"
 #include "mozilla/media/MediaUtils.h"
 #include "transport/runnable_utils.h"
 #include "webaudio/blink/DenormalDisabler.h"
@@ -1916,13 +1917,18 @@ class MediaTrackGraphShutDownRunnable : public Runnable {
       track->RemoveAllResourcesAndListenersImpl();
     }
 
-#ifdef DEBUG
+    TargetShutdownTaskSet::TasksArray shutdownTasks;
     {
       MonitorAutoLock lock(mGraph->mMonitor);
       MOZ_ASSERT(mGraph->mUpdateRunnables.IsEmpty());
+      shutdownTasks = mGraph->mShutdownTasks.Extract();
     }
-#endif
+
     mGraph->mPendingUpdateRunnables.Clear();
+
+    for (auto& shutdownTask : shutdownTasks) {
+      shutdownTask->TargetShutdown();
+    }
 
     mGraph->RemoveShutdownBlocker();
 
@@ -4462,10 +4468,13 @@ nsresult MediaTrackGraphImpl::Dispatch(
     event = MakeAndAddRef<DefaultShutdownRunnableWrapper>(event.forget());
   }
 
-  MOZ_ASSERT(RequiresTailDispatchFromCurrentThread(),
-             "Tail dispatch will be used for the Dispatch below");
+  // Enforce tail-dispatch. The IOThread is exempt as it dispatches messages to
+  // AudioWorklet from JS.
+  MOZ_ASSERT_IF(
+      ipc::IOThread::Get()->GetEventTarget() != GetCurrentSerialEventTarget(),
+      RequiresTailDispatchFromCurrentThread());
 
-  if (aReason == TailDispatch) {
+  if (aReason == TailDispatch || !RequiresTailDispatchFromCurrentThread()) {
     return TailDispatchMessage(event.forget());
   }
   return QueueMessageForTailDispatch(event.forget());
@@ -4481,16 +4490,18 @@ TaskDispatcher& MediaTrackGraphImpl::TailDispatcher() {
 
 NS_IMETHODIMP MediaTrackGraphImpl::RegisterShutdownTask(
     nsITargetShutdownTask* aTask) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  MonitorAutoLock lock(mMonitor);
+  return mShutdownTasks.AddTask(aTask);
 }
 
 NS_IMETHODIMP MediaTrackGraphImpl::UnregisterShutdownTask(
     nsITargetShutdownTask* aTask) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  MonitorAutoLock lock(mMonitor);
+  return mShutdownTasks.RemoveTask(aTask);
 }
 
 nsIEventTarget::FeatureFlags MediaTrackGraphImpl::GetFeatures() {
-  return SUPPORTS_BASE;
+  return SUPPORTS_SHUTDOWN_TASKS;
 }
 
 nsresult MediaTrackGraphImpl::TailDispatchMessage(
