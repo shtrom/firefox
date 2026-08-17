@@ -3464,6 +3464,10 @@ export var Policies = {
         features.http = !policies.HttpsOnly;
       }
 
+      if ("DisableServiceWorkers" in policies) {
+        features.serviceworkers = !policies.DisableServiceWorkers;
+      }
+
       return features;
     },
 

@@ -22,12 +22,38 @@
 #include "nsCOMPtr.h"
 #include "nsContentPolicyUtils.h"
 #include "nsIContentSecurityPolicy.h"
+#include "nsIEnterprisePolicies.h"
 #include "nsIGlobalObject.h"
 #include "nsIPrincipal.h"
 #include "nsIURL.h"
 #include "nsPrintfCString.h"
 
 namespace mozilla::dom {
+
+bool IsServiceWorkersDisabledByPolicy(nsIURI* aURI) {
+  if (!aURI) {
+    return false;
+  }
+
+  // The policy service only controls http-like requests
+  if (!net::SchemeIsHttpOrHttps(aURI)) {
+    return false;
+  }
+
+  nsCOMPtr<nsIEnterprisePolicies> policyService =
+      do_GetService("@mozilla.org/enterprisepolicies;1");
+  if (!policyService) {
+    return false;
+  }
+
+  bool isAllowed = true;
+  if (NS_FAILED(policyService->IsAllowedForURI("serviceworkers"_ns, aURI,
+                                               &isAllowed))) {
+    return false;
+  }
+
+  return !isAllowed;
+}
 
 static bool IsServiceWorkersTestingEnabledInGlobal(JSObject* const aGlobal) {
   if (const nsCOMPtr<nsPIDOMWindowInner> innerWindow =
@@ -68,6 +94,16 @@ bool ServiceWorkersEnabled(JSContext* aCx, JSObject* aGlobal) {
     if (!StaticPrefs::extensions_serviceWorkerRegister_allowed()) {
       if (principal->GetIsAddonPrincipal()) {
         return false;
+      }
+    }
+
+    // Check whether service workers are disabled by an enterprise policy.
+    if (const nsCOMPtr<nsPIDOMWindowInner> innerWindow =
+            Navigator::GetWindowFromGlobal(jsGlobal)) {
+      if (BrowsingContext* bc = innerWindow->GetBrowsingContext()) {
+        if (bc->Top()->ServiceWorkersDisabledByPolicy()) {
+          return false;
+        }
       }
     }
   }
