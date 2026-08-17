@@ -94,12 +94,11 @@ addPdfStructTreeTest(
                   role: "TR",
                   children: [
                     {
-                      // XXX pdf.js doesn't support attributes yet, so we can't
-                      // test scope, headers, col/row span, etc.
                       role: "TH",
                       children: [
                         { role: "NonStruct", children: [{ content: ["tc1"] }] },
                       ],
+                      scope: "Column",
                     },
                     {
                       role: "TH",
@@ -109,6 +108,8 @@ addPdfStructTreeTest(
                           children: [{ content: [" ", "tc2"] }],
                         },
                       ],
+                      structId: "id1",
+                      scope: "Column",
                     },
                   ],
                 },
@@ -120,6 +121,8 @@ addPdfStructTreeTest(
                       children: [
                         { role: "NonStruct", children: [{ content: ["tc3"] }] },
                       ],
+                      structId: "id2",
+                      scope: "Row",
                     },
                     {
                       role: "TD",
@@ -129,6 +132,7 @@ addPdfStructTreeTest(
                           children: [{ content: [" ", "tc4"] }],
                         },
                       ],
+                      headers: ["id1", "id2"],
                     },
                   ],
                 },
