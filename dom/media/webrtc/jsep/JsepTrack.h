@@ -178,11 +178,11 @@ class JsepTrack {
   bool GetReceptive() const { return mReceptive; }
 
   void PopulatePreferredCodecs(
-      const std::vector<UniquePtr<JsepCodecDescription>>& aPreferredCodecs,
+      const nsTArray<UniquePtr<JsepCodecDescription>>& aPreferredCodecs,
       bool aUsePreferredCodecsOrder);
 
   virtual void PopulateCodecs(
-      const std::vector<UniquePtr<JsepCodecDescription>>& prototype,
+      const nsTArray<UniquePtr<JsepCodecDescription>>& prototype,
       bool aUsePreferredCodecsOrder = false);
 
   template <class UnaryFunction>

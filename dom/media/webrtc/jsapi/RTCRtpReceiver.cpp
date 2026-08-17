@@ -1003,7 +1003,7 @@ void RTCRtpReceiver::SyncFromJsep(const JsepTransceiver& aJsepTransceiver) {
 }
 
 void RTCRtpReceiver::SyncToJsep(JsepTransceiver& aJsepTransceiver) const {
-  if (!mTransceiver->GetPreferredCodecs().empty()) {
+  if (!mTransceiver->GetPreferredCodecs().IsEmpty()) {
     aJsepTransceiver.mRecvTrack.PopulateCodecs(
         mTransceiver->GetPreferredCodecs(),
         mTransceiver->GetPreferredCodecsInUse());

@@ -113,8 +113,8 @@ class JsepSessionImpl : public JsepSession, public JsepSessionCopyableStuff {
       SdpDirectionAttribute::Direction direction =
           SdpDirectionAttribute::Direction::kSendrecv) override;
 
-  virtual std::vector<UniquePtr<JsepCodecDescription>>& Codecs() override {
-    return mSupportedCodecs;
+  virtual Span<UniquePtr<JsepCodecDescription>> Codecs() override {
+    return Span(mSupportedCodecs);
   }
 
   virtual Result CreateOffer(const JsepOfferOptions& options,
@@ -181,9 +181,8 @@ class JsepSessionImpl : public JsepSession, public JsepSessionCopyableStuff {
 
   virtual bool CheckNegotiationNeeded() const override;
 
-  virtual void SetDefaultCodecs(
-      const std::vector<UniquePtr<JsepCodecDescription>>& aPreferredCodecs)
-      override;
+  virtual void SetDefaultCodecs(const nsTArray<UniquePtr<JsepCodecDescription>>&
+                                    aPreferredCodecs) override;
 
  private:
   friend class JsepSessionTest;
@@ -281,7 +280,7 @@ class JsepSessionImpl : public JsepSession, public JsepSessionCopyableStuff {
   UniquePtr<Sdp> mCurrentRemoteDescription;
   UniquePtr<Sdp> mPendingLocalDescription;
   UniquePtr<Sdp> mPendingRemoteDescription;
-  std::vector<UniquePtr<JsepCodecDescription>> mSupportedCodecs;
+  nsTArray<UniquePtr<JsepCodecDescription>> mSupportedCodecs;
   SdpHelper mSdpHelper;
   UniquePtr<SdpParser> mParser;
 };
