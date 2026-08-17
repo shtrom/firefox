@@ -25,6 +25,7 @@
 #include "mozilla/ScopeExit.h"
 #include "mozilla/StaticPrefs_clipboard.h"
 #include "mozilla/StaticPrefs_widget.h"
+#include "mozilla/TextUtils.h"
 #include "mozilla/WindowsVersion.h"
 #include "mozilla/widget/WebCustomFormatUtils.h"
 #include "nsArrayUtils.h"
@@ -92,6 +93,35 @@ static inline nsresult CheckClipboardByteSize(HGLOBAL aHGlobal,
   }
 
   return NS_OK;
+}
+
+// Web-originated format names must be of the form "Web Custom Format",
+// followed by the item's index -- see the W3C clipboard-apis spec, Appendix A
+// (https://www.w3.org/TR/clipboard-apis/#to-write-web-custom-formats).  That
+// algorithm appends the index, increments it, and breaks once it exceeds 100.
+// (That was probably supposed to be 99 but...).
+// The spec does not say that clipboard reads need to validate these names but
+// external applications that want "Web Custom Format" interop should write
+// according to the web format spec, to avoid surprising behavior.
+static bool IsWebCustomFormatSlotName(const nsACString& aFormatName) {
+  constexpr auto kSlotPrefix = "Web Custom Format"_ns;
+  if (!StringBeginsWith(aFormatName, kSlotPrefix)) {
+    return false;
+  }
+  if (kSlotPrefix.Length() >= aFormatName.Length() ||
+      (aFormatName.Length() - kSlotPrefix.Length() > 3)) {
+    return false;
+  }
+
+  uint32_t index = 0;
+  for (uint32_t i = kSlotPrefix.Length(); i < aFormatName.Length(); ++i) {
+    if (!mozilla::IsAsciiDigit(aFormatName.CharAt(i))) {
+      return false;
+    }
+    index = index * 10;
+    index += static_cast<uint32_t>(aFormatName.CharAt(i) - '0');
+  }
+  return index <= 100;
 }
 
 // Reads the "Web Custom Format Map" clipboard format and decodes its JSON
@@ -1214,7 +1244,7 @@ nsClipboard::GetDataFromDataObject(IDataObject* aDataObject, UINT anIndex,
     nsDependentCSubstring essence(
         Substring(aFlavor, strlen(kWebCustomFormatPrefix)));
     auto entry = map.Lookup(essence);
-    if (!entry) {
+    if (!entry || !IsWebCustomFormatSlotName(entry.Data())) {
       return nsCOMPtr<nsISupports>{};
     }
     format = GetFormat(entry.Data().get());
@@ -1741,7 +1771,7 @@ nsClipboard::HasNativeClipboardDataMatchingFlavors(
       nsDependentCSubstring essence(
           Substring(flavor, strlen(kWebCustomFormatPrefix)));
       auto entry = webCustomFormatMap.Lookup(essence);
-      if (!entry) {
+      if (!entry || !IsWebCustomFormatSlotName(entry.Data())) {
         continue;
       }
       UINT cf = GetFormat(entry.Data().get());
