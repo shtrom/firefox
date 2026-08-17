@@ -29,6 +29,8 @@ support-files = [ "!/browser/components/places/tests/browser/head.js"]
 
 ["browser_testSharePanelCopyLink.js"]
 
+["browser_testSharePanelQRCode.js"]
+
 ["browser_testSharePanelScreenshot.js"]
 
 ["browser_testShareTabGroup.js"]
