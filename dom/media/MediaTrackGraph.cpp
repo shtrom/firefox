@@ -1599,7 +1599,7 @@ auto MediaTrackGraphImpl::OneIterationImpl(
       MOZ_ASSERT(mGraph->mTaskDispatcher.isNothing());
 
       sCurrentThreadTLS.set(mGraph);
-      mTaskDispatcher.emplace(aGraph, /* aIsTailDispatcher = */ true);
+      mTaskDispatcher.emplace(aGraph, aGraph->mTailDispatcherPolicy);
       mGraph->mTaskDispatcher.emplace(*mTaskDispatcher);
     }
     ~DispatchGuard() {
@@ -3412,7 +3412,7 @@ MediaTrackGraphImpl::MediaTrackGraphImpl(uint64_t aWindowID,
                                          AudioDeviceID aPrimaryOutputDeviceID,
                                          AbstractThread* aMainThread)
     : MediaTrackGraph(aSampleRate, aPrimaryOutputDeviceID),
-      AbstractThread(/*aSupportsTailDispatch=*/true),
+      AbstractThread(TailDispatchPolicy::TargetAtomicity),
       mWindowID(aWindowID),
       mFirstCycleBreaker(0)
       // An offline graph is not initially processing.
