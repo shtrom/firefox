@@ -13,29 +13,21 @@
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 
-const lazy = {};
-
-ChromeUtils.defineESModuleGetters(lazy, {
-  BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
-  OpenSearchManager:
-    "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
-  SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
-});
-
-ChromeUtils.defineLazyGetter(lazy, "SearchModeSwitcherL10n", () => {
-  return new Localization(["browser/browser.ftl"]);
-});
-
 const { XPCOMUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/XPCOMUtils.sys.mjs"
 );
 
-XPCOMUtils.defineLazyPreferenceGetter(
-  lazy,
-  "settingsRedesignEnabled",
-  "browser.settings-redesign.enabled",
-  true
-);
+const lazy = XPCOMUtils.declareLazy({
+  BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
+  OpenSearchManager:
+    "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
+  SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
+  SearchModeSwitcherL10n: () => new Localization(["browser/browser.ftl"]),
+  settingsRedesignEnabled: {
+    pref: "browser.settings-redesign.enabled",
+    default: true,
+  },
+});
 
 // Default icon used for engines that do not have icons loaded.
 const DEFAULT_ENGINE_ICON =
