@@ -84,7 +84,6 @@ preprocessed_intervention_files = [
     "bug1936429-diadora.com-hide-extra-scrollbars.css",
     "bug1939248-rosasthai.com.js",
     "bug1940173-bambulab.com-fix_image_flickering.css",
-    "bug1941530-climate.rutgers.edu-fix-broken-images.css",
     "bug1942292-beterbed.nl-hide_extra_scrollbars.css",
     "bug1943987-andisearch.com-fix-offscreen-elements.css",
     "bug1944518-app.powerbi.com-hide_extra_scrollbars.css",
