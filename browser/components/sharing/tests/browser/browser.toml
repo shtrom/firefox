@@ -27,6 +27,8 @@ support-files = [ "!/browser/components/places/tests/browser/head.js"]
 ["browser_testShareFolderEmpties.js"]
 support-files = [ "!/browser/components/places/tests/browser/head.js"]
 
+["browser_testSharePanelButtonVisibility.js"]
+
 ["browser_testSharePanelCopyLink.js"]
 
 ["browser_testSharePanelQRCode.js"]
