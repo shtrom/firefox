@@ -655,6 +655,7 @@ class TabManagementFragment : Fragment() {
                             restoredState.config.copy(
                                 displayTabsInGrid = settings.gridTabView,
                                 homepageAsNewTabEnabled = settings.enableHomepageAsNewTab,
+                                tabGroupsEnabled = settings.tabGroupsEnabled,
                             )
                     ) ?: createInitialState(args, settings),
                 middlewares =
