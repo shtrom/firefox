@@ -151,7 +151,6 @@ import org.mozilla.fenix.home.topsites.getTopSitesConfig
 import org.mozilla.fenix.home.ui.HomeSwipeIntegration
 import org.mozilla.fenix.home.ui.Homepage
 import org.mozilla.fenix.home.ui.WallpaperBackground
-import org.mozilla.fenix.ipprotection.store.IPProtectionOnboardingPrompt
 import org.mozilla.fenix.ipprotection.store.Surface as IPProtectionSurface
 import org.mozilla.fenix.messaging.DefaultMessageController
 import org.mozilla.fenix.messaging.FenixMessageSurfaceId
@@ -268,7 +267,6 @@ class HomeFragment : Fragment() {
     private val topSitesBinding = ViewBoundFeatureWrapper<TopSitesBinding>()
     private val trackersBlockedFeature = ViewBoundFeatureWrapper<TrackersBlockedFeature>()
     private val ipProtectionWarningBinding = ViewBoundFeatureWrapper<IPProtectionWarningBinding>()
-    private val ipProtectionOnboardingPrompt = ViewBoundFeatureWrapper<IPProtectionOnboardingPrompt>()
     private val continuousOnboardingFeature = ViewBoundFeatureWrapper<ContinuousOnboardingFeature>()
 
     private val homepageEdgeToEdgeFeature = ViewBoundFeatureWrapper<HomepageEdgeToEdgeFeature>()
@@ -1373,23 +1371,6 @@ class HomeFragment : Fragment() {
             owner = this,
             view = view,
         )
-
-        ipProtectionOnboardingPrompt.set(
-            feature =
-                IPProtectionOnboardingPrompt(
-                    repository = requireComponents.ipProtectionPromptRepository,
-                    timeProvider = DefaultDateTimeProvider(),
-                    store = requireComponents.ipProtection.store,
-                    onShowOnboarding = {
-                        findNavController()
-                            .navigate(
-                                HomeFragmentDirections.actionGlobalIpProtectionDialog(IPProtectionSurface.HOMEPAGE)
-                            )
-                    },
-                ),
-            owner = this,
-            view = view,
-        )
     }
 
     private fun initContinuousOnboardingFeature() {
@@ -1407,6 +1388,10 @@ class HomeFragment : Fragment() {
                                 entrypoint = FenixFxAEntryPoint.NewUserOnboarding
                             ),
                     )
+            },
+            navigateToIpProtection = {
+                findNavController()
+                    .navigate(HomeFragmentDirections.actionGlobalIpProtectionDialog(IPProtectionSurface.HOMEPAGE))
             },
         )
     }
