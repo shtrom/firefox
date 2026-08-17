@@ -259,6 +259,14 @@ Section "-InstallStartCleanup"
   ${GetParameters} $R8
   ${GetOptions} "$R8" "/INI=" $R7
   ${Unless} ${Errors}
+    ; If the path is not absolute, resolve it relative to the directory
+    ; containing the installer executable. This supports deployment tools
+    ; like SCCM that stage the installer in a randomly-named directory
+    ; whose absolute path is not known in advance.
+    System::Call 'shlwapi::PathIsRelativeW(w R7) i .R0'
+    ${If} $R0 <> 0
+      StrCpy $R7 "$EXEDIR\$R7"
+    ${EndIf}
     ; The configuration file must also exist
     ${If} ${FileExists} "$R7"
       ReadINIStr $R9 $R7 "Install" "RemoveDistributionDir"
