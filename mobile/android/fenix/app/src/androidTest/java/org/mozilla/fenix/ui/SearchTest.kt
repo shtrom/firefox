@@ -217,6 +217,11 @@ class SearchTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/235397
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.SearchTest#scanQRCodeToOpenAWebpageTest"],
+        bug = 2063052,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun scanQRCodeToOpenAWebpageTest() {

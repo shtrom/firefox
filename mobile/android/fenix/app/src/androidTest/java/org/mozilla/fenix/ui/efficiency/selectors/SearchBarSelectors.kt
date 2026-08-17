@@ -7,6 +7,7 @@ package org.mozilla.fenix.ui.efficiency.selectors
 import mozilla.components.browser.toolbar.R as toolbarR
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_SEARCH_BOX
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.SEARCH_SELECTOR
+import mozilla.components.feature.qr.R as qrR
 import org.mozilla.fenix.R
 import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
@@ -117,6 +118,14 @@ object SearchBarSelectors {
             groups = listOf(),
         )
 
+    val SCAN_BUTTON =
+        Selector(
+            strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
+            value = getStringResource(qrR.string.mozac_feature_qr_scanner),
+            description = "QR scan button",
+            groups = listOf(),
+        )
+
     // Clear (X) button in the edit-mode toolbar. Content-description "Clear", keyed off the string
     // resource so it survives localization (mirrors the legacy SearchRobot.clickClearButton).
     // UiObject2 (By.descContains) rather than UiObject: UiObject.click() returns false on this button
@@ -142,6 +151,7 @@ object SearchBarSelectors {
             FIREFOX_SUGGEST_HEADER,
             SEARCH_SUGGESTION,
             SEARCH_SUGGESTION_WITH_TEXT(),
+            SCAN_BUTTON,
             CLEAR_BUTTON,
         )
 }

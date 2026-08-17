@@ -4,11 +4,15 @@
 
 package org.mozilla.fenix.ui.efficiency.tests
 
+import android.content.Context
+import android.hardware.camera2.CameraManager
+import org.junit.Assume
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.ext.components
+import org.mozilla.fenix.helpers.AppAndSystemHelper
 import org.mozilla.fenix.helpers.MockBrowserDataHelper
 import org.mozilla.fenix.helpers.SearchMockServerRule
 import org.mozilla.fenix.helpers.TestAssetHelper.getGenericAsset
@@ -58,6 +62,26 @@ class SearchTest : BaseTest() {
 
         // Then: the search bar elements should load
         on.searchBar.mozVerifyElementsByGroup("requiredForPage")
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/235397
+    @SmokeTest
+    @Test
+    fun scanQRCodeToOpenAWebpageTest() {
+        // Same guard as the legacy test: with no camera the scanner cannot be exercised at all, so the
+        // test is skipped rather than failed.
+        val cameraManager = appContext.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        Assume.assumeTrue(cameraManager.cameraIdList.isNotEmpty())
+
+        on.searchBar
+            .navigateToPage()
+            .mozClick(SearchBarSelectors.SEARCH_ENGINE_SELECTOR)
+            .mozClick(SearchBarSelectors.SEARCH_SHORTCUT("DuckDuckGo"))
+            .mozClick(SearchBarSelectors.SCAN_BUTTON)
+
+        AppAndSystemHelper.grantSystemPermission()
+
+        on.searchBar.verifyScannerOpen()
     }
 
     // Verifies a temporary change of search engine from the Search shortcut menu
