@@ -23,10 +23,6 @@ const lazy = XPCOMUtils.declareLazy({
     "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
   SearchModeSwitcherL10n: () => new Localization(["browser/browser.ftl"]),
-  settingsRedesignEnabled: {
-    pref: "browser.settings-redesign.enabled",
-    default: true,
-  },
 });
 
 // Default icon used for engines that do not have icons loaded.
@@ -474,7 +470,9 @@ export class SearchModeSwitcher {
       // all local search modes regardless of the prefs.
       this.#engines = searchEngines.concat(
         UrlbarShared.LOCAL_SEARCH_MODES.filter(
-          engine => lazy.settingsRedesignEnabled || UrlbarPrefs.get(engine.pref)
+          engine =>
+            UrlbarPrefs.get("browser.settings-redesign.enabled") ||
+            UrlbarPrefs.get(engine.pref)
         )
       );
     }

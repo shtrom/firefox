@@ -1935,7 +1935,7 @@ export class UrlbarView {
     noWrap.appendChild(titleSeparator);
     item._elements.set("titleSeparator", titleSeparator);
 
-    if (Services.prefs.getBoolPref("browser.nova.enabled", false)) {
+    if (UrlbarPrefs.get("browser.nova.enabled")) {
       let userContext = this.#createElement("span");
       userContext.classList.add(
         "urlbarView-user-context",
@@ -3664,7 +3664,7 @@ export class UrlbarView {
         : "urlbar-result-action-switch-tab",
     });
 
-    if (!Services.prefs.getBoolPref("browser.nova.enabled", false)) {
+    if (!UrlbarPrefs.get("browser.nova.enabled")) {
       this.#updateOtherActionChicletsProton(result, actionNode);
       return;
     }

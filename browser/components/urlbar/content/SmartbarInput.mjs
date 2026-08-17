@@ -80,10 +80,6 @@ const lazy = XPCOMUtils.declareLazy({
     service: "@mozilla.org/url-query-string-stripper;1",
     iid: Ci.nsIURLQueryStringStripper,
   },
-  QUERY_STRIPPING_STRIP_ON_SHARE: {
-    pref: "privacy.query_stripping.strip_on_share.enabled",
-    default: false,
-  },
   logger: () => UrlbarShared.getLogger({ prefix: "SmartbarInput" }),
   getCurrentTabUrl:
     "moz-src:///browser/components/aiwindow/ui/modules/ChatUtils.sys.mjs",
@@ -5369,7 +5365,7 @@ ${
     // Register a listener that hides the menu item if there is nothing to copy.
     contextMenu.addEventListener("popupshowing", () => {
       // feature is not enabled
-      if (!lazy.QUERY_STRIPPING_STRIP_ON_SHARE) {
+      if (!UrlbarPrefs.get("privacy.query_stripping.strip_on_share.enabled")) {
         stripOnShare.setAttribute("hidden", true);
         return;
       }

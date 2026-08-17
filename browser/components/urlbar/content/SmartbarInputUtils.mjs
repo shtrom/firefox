@@ -5,6 +5,7 @@
 import { MultilineEditor } from "chrome://browser/content/multilineeditor/multiline-editor.mjs";
 import { createMentionsPlugin } from "chrome://browser/content/multilineeditor/plugins/MentionsPlugin.mjs";
 import { createCommandsPlugin } from "chrome://browser/content/multilineeditor/plugins/CommandsPlugin.mjs";
+import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 
 /**
  * @import {SmartbarInput} from "chrome://browser/content/urlbar/SmartbarInput.mjs"
@@ -24,23 +25,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   SmartbarMentionsPanelSearch:
     "moz-src:///browser/components/urlbar/SmartbarMentionsPanelSearch.sys.mjs",
 });
-
-const { XPCOMUtils } = ChromeUtils.importESModule(
-  "resource://gre/modules/XPCOMUtils.sys.mjs"
-);
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  lazy,
-  "maxResults",
-  "browser.urlbar.mentions.maxResults"
-);
-
-XPCOMUtils.defineLazyPreferenceGetter(
-  lazy,
-  "agentEnabled",
-  "browser.smartwindow.agent.enabled",
-  false
-);
 
 ChromeUtils.defineLazyGetter(lazy, "log", function () {
   return console.createInstance({
@@ -73,7 +57,10 @@ const COMMAND_TRIGGER = "inline-command";
  * @returns {boolean}
  */
 function isAgentCommandAvailable() {
-  return lazy.agentEnabled && lazy.MonitorUIUtils.isMonitorRegionSupported();
+  return (
+    UrlbarPrefs.get("browser.smartwindow.agent.enabled") &&
+    lazy.MonitorUIUtils.isMonitorRegionSupported()
+  );
 }
 
 /**
@@ -166,7 +153,7 @@ function getMentionSuggestions(mentionSearch, searchString) {
         seen.add(item.url);
         return true;
       })
-      .slice(0, lazy.maxResults)
+      .slice(0, UrlbarPrefs.get("mentions.maxResults"))
       .map(({ url, title, icon }) => ({
         id: url,
         label: title,

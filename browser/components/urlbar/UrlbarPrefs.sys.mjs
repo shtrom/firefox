@@ -259,6 +259,9 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   // for mdn suggestions.
   ["mdn.showLessFrequentlyCount", 0],
 
+  // The maximum number of tab mentions the Smartbar suggests.
+  ["mentions.maxResults", 5],
+
   // Comma-separated list of client variants to send to Merino
   ["merino.clientVariants", ""],
 
@@ -774,7 +777,10 @@ const PREF_OTHER_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   ["browser.search.suggest.enabled", true],
   ["browser.search.suggest.enabled.private", false],
   ["browser.search.widget.new", true],
+  ["browser.settings-redesign.enabled", true],
+  ["browser.smartwindow.agent.enabled", false],
   ["keyword.enabled", true],
+  ["privacy.query_stripping.strip_on_share.enabled", true],
   ["security.insecure_connection_text.enabled", true],
   [TelemetryReportingPolicy.TOU_ACCEPTED_DATE_PREF, 0],
   ["ui.popup.disable_autohide", false],
