@@ -470,6 +470,11 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   // search host.
   ["scotchBonnet.persistSearchMode", false],
 
+  // Whether the search button declines to be the target of the toolbar tab
+  // stop in front of the input. The shipping default is set in firefox.js,
+  // where it's enabled on Nightly only.
+  ["searchModeSwitcher.skipTabStop", false],
+
   // Feature gate pref for search restrict keywords being shown in the urlbar.
   ["searchRestrictKeywords.featureGate", false],
 
