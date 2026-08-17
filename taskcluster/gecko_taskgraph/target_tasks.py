@@ -1745,8 +1745,7 @@ def retrigger_perftests_autoland_commits(full_task_graph, parameters, graph_conf
     - "perftest-android-hw-a55-aarch64-shippable-startup-fenix-cold-view-nav-start",
     - "perftest-android-hw-a55-aarch64-shippable-startup-fenix-homeview-startup",
     - "perftest-android-hw-a55-aarch64-shippable-startup-fenix-newssite-applink-startup",
-    - "perftest-android-hw-a55-aarch64-shippable-startup-fenix-shopify-applink-startup",
-    - "perftest-android-hw-a55-aarch64-shippable-startup-fenix-tab-restore-shopify"
+    - "perftest-android-hw-a55-aarch64-shippable-startup-fenix-tab-restore-newssite"
     - "test-windows11-64-24h2-shippable/opt-browsertime-benchmark-firefox-speedometer3",
     """
     retrigger_count = 4
