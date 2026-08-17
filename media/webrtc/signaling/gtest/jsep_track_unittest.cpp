@@ -77,8 +77,6 @@ class JsepTrackTest : public JsepTrackTestBase {
     MockJsepCodecPreferences prefs;
     aOverrides.ApplyToPrefs(prefs);
 
-    prefs.mUseRemb = aOverrides.mEnableRemb;
-    prefs.mUseTransportCC = aOverrides.mEnableTransportCC;
     JsepCodecPreferences& prefsRef = prefs;
     std::cout << "CodecPrefrences: " << prefsRef << "\n";
     AutoTArray<UniquePtr<JsepCodecDescription>, 16> results;
