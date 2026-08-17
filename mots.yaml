@@ -8,7 +8,7 @@
 # documentation and how to modify this file.
 repo: mozilla-central
 created_at: '2021-10-14T12:50:40.073465'
-updated_at: '2026-08-10T15:43:04.147480+00:00'
+updated_at: '2026-08-14T22:20:03.123725+00:00'
 export:
   path: ./docs/mots/index.md
   format: md
@@ -2996,23 +2996,6 @@ modules:
       - *lina
     machine_name: core_storage
 
-  - name: 'Core: String'
-    description: ''
-    includes:
-      - xpcom/string/**/*
-    meta:
-      group: dev-tech-xpcom
-      url: '{ref}`String Guide`'
-      components:
-        - Core::String
-      owners_emeritus:
-        - David Baron
-      peers_emeritus:
-        - Eric Rahm
-    owners: []
-    peers: []
-    machine_name: core_string
-
   - name: 'Core: Style System'
     description: CSS style sheet handling; style data computation
     includes:
@@ -3486,6 +3469,7 @@ modules:
       - xpcom/ioutils/**/*
       - xpcom/reflect/**/*
       - xpcom/rust/**/*
+      - xpcom/string/**/*
       - xpcom/system/**/*
       - xpcom/tests/**/*
       - xpcom/threads/**/*
@@ -3493,6 +3477,7 @@ modules:
     meta:
       owners_emeritus:
         - Benjamin Smedberg
+        - David Baron (String)
       peers_emeritus:
         - Doug Turner
         - Eric Rahm
@@ -4869,5 +4854,5 @@ modules:
         - Ryan Tilder
       group: dev-platform
 hashes:
-  config: 047f362e10b5d3c0d197644c02c888be932b73dd
-  export: b38e97f0df6cea50fe3a137e2bb1a48c1fb3c0f2
+  config: 96fa3e78dff983949b24a845149735502b9efeb9
+  export: de8a46a6ef62ee1e3822e46a0f8ab016338ac7b1
