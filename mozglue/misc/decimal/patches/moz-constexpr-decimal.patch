@@ -1,40 +1,7 @@
-diff --git a/dom/html/HTMLInputElement.cpp b/dom/html/HTMLInputElement.cpp
-index 7fdf38c5cb7c3..8bce5c3312f55 100644
---- a/dom/html/HTMLInputElement.cpp
-+++ b/dom/html/HTMLInputElement.cpp
-@@ -187,16 +187,18 @@ static const nsAttrValue::EnumTable kCaptureTable[] = {
- 
- static const nsAttrValue::EnumTable* kCaptureDefault = &kCaptureTable[2];
- 
--const Decimal HTMLInputElement::kStepScaleFactorDate = Decimal(86400000);
--const Decimal HTMLInputElement::kStepScaleFactorNumberRange = Decimal(1);
--const Decimal HTMLInputElement::kStepScaleFactorTime = Decimal(1000);
--const Decimal HTMLInputElement::kStepScaleFactorMonth = Decimal(1);
--const Decimal HTMLInputElement::kStepScaleFactorWeek = Decimal(7 * 86400000);
--const Decimal HTMLInputElement::kDefaultStepBase = Decimal(0);
--const Decimal HTMLInputElement::kDefaultStepBaseWeek = Decimal(-259200000);
--const Decimal HTMLInputElement::kDefaultStep = Decimal(1);
--const Decimal HTMLInputElement::kDefaultStepTime = Decimal(60);
--const Decimal HTMLInputElement::kStepAny = Decimal(0);
-+using namespace blink;
-+
-+constexpr Decimal HTMLInputElement::kStepScaleFactorDate(86400000_d);
-+constexpr Decimal HTMLInputElement::kStepScaleFactorNumberRange(1_d);
-+constexpr Decimal HTMLInputElement::kStepScaleFactorTime(1000_d);
-+constexpr Decimal HTMLInputElement::kStepScaleFactorMonth(1_d);
-+constexpr Decimal HTMLInputElement::kStepScaleFactorWeek(7 * 86400000_d);
-+constexpr Decimal HTMLInputElement::kDefaultStepBase(0_d);
-+constexpr Decimal HTMLInputElement::kDefaultStepBaseWeek(-259200000_d);
-+constexpr Decimal HTMLInputElement::kDefaultStep(1_d);
-+constexpr Decimal HTMLInputElement::kDefaultStepTime(60_d);
-+constexpr Decimal HTMLInputElement::kStepAny(0_d);
- 
- const double HTMLInputElement::kMinimumYear = 1;
- const double HTMLInputElement::kMaximumYear = 275760;
-diff --git a/mozglue/misc/decimal/Decimal.cpp b/mozglue/misc/decimal/Decimal.cpp
+diff --git a/Decimal.cpp b/Decimal.cpp
 index cc828e28439f5..7d2bcfa712c5d 100644
---- a/mozglue/misc/decimal/Decimal.cpp
-+++ b/mozglue/misc/decimal/Decimal.cpp
+--- a/Decimal.cpp
++++ b/Decimal.cpp
 @@ -41,12 +41,6 @@ namespace blink {
  
  namespace DecimalPrivate {
@@ -111,10 +78,10 @@ index cc828e28439f5..7d2bcfa712c5d 100644
  
  Decimal::Decimal(const EncodedData& data)
      : m_data(data)
-diff --git a/mozglue/misc/decimal/Decimal.h b/mozglue/misc/decimal/Decimal.h
+diff --git a/Decimal.h b/Decimal.h
 index 10d0e2c7cefa3..4bb9a841e585f 100644
---- a/mozglue/misc/decimal/Decimal.h
-+++ b/mozglue/misc/decimal/Decimal.h
+--- a/Decimal.h
++++ b/Decimal.h
 @@ -65,9 +65,28 @@
  namespace blink {
  

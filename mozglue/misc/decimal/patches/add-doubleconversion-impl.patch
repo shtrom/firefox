@@ -1,6 +1,6 @@
-diff --git a/mozglue/misc/decimal/Decimal.cpp b/mozglue/misc/decimal/Decimal.cpp
---- a/mozglue/misc/decimal/Decimal.cpp
-+++ b/mozglue/misc/decimal/Decimal.cpp
+diff --git a/Decimal.cpp b/Decimal.cpp
+--- a/Decimal.cpp
++++ b/Decimal.cpp
 @@ -25,16 +25,17 @@
   * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
   * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
