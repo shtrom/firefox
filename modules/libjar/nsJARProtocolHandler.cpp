@@ -63,7 +63,10 @@ already_AddRefed<nsJARProtocolHandler> nsJARProtocolHandler::GetSingleton() {
   if (!gJarHandler) {
     gJarHandler = new nsJARProtocolHandler();
     if (NS_SUCCEEDED(gJarHandler->Init())) {
-      ClearOnShutdown(&gJarHandler);
+      // Chrome JS module loading reads from omni.ja, so the handler has to
+      // outlive mozJSModuleLoader::UnloadLoaders(), which runs after
+      // XPCOMShutdownFinal.
+      ClearOnShutdown(&gJarHandler, ShutdownPhase::CCPostLastCycleCollection);
     } else {
       gJarHandler = nullptr;
     }
