@@ -117,8 +117,6 @@ fail-if = [
 
 ["browser_dbg-tabs.js"]
 
-["browser_dbg-telemetry-stylesheets.js"]
-
 ["browser_dbg-toggling-tools.js"]
 
 ["browser_dbg-ua-widgets.js"]
