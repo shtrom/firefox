@@ -1416,7 +1416,6 @@ ${
     // Use the current value if we don't have a UrlbarResult e.g. because the
     // view is closed.
     let url = this.untrimmedValue;
-    openParams.postData = null;
 
     if (!url) {
       this.#handleEmptyValueNavigation(event);
@@ -1465,7 +1464,13 @@ ${
       openParams.schemelessInput = this.#getSchemelessInput(
         this.untrimmedValue
       );
-      this.#loadURL({ url, event, where, params: openParams, browserId });
+      this.#loadURL({
+        loadRequest: { urlLoad: { url, postData: null } },
+        event,
+        where,
+        params: openParams,
+        browserId,
+      });
       return;
     }
 
@@ -1502,7 +1507,6 @@ ${
         if (heuristicResult) {
           this.pickResult({ result: heuristicResult, event, browserId });
         } else if (fixup) {
-          openParams.postData = fixup.postData;
           if (!fixup.keywordAsSent) {
             // `fixup.url` is not a search engine url, so we annotate if the
             // untrimmed value contained a scheme, to potentially be later
@@ -1512,7 +1516,9 @@ ${
             );
           }
           this.#loadURL({
-            url: fixup.url,
+            loadRequest: {
+              urlLoad: { url: fixup.url, postData: fixup.postData },
+            },
             event,
             where,
             params: openParams,
@@ -1773,7 +1779,9 @@ ${
         windowMode: this.windowMode,
       });
       this.#loadURL({
-        url: this._untrimmedValue,
+        loadRequest: {
+          urlLoad: { url: this._untrimmedValue, postData: null },
+        },
         event,
         where,
         params: openParams,
@@ -2152,7 +2160,6 @@ ${
       resultDetails: {
         source: result.source,
         type: result.type,
-        searchTerm: result.payload.suggestion ?? result.payload.query,
       },
       keepViewOpen,
       browserId,
@@ -4147,7 +4154,7 @@ ${
     this.view.close({ elementPicked: true });
 
     this.#loadURL({
-      url,
+      loadRequest: { urlLoad: { url, postData: null } },
       event,
       where,
       params: {
@@ -4168,8 +4175,6 @@ ${
    *
    * @property {object} [triggeringPrincipal]
    *   The principal that the action was triggered from.
-   * @property {nsIInputStream} [postData]
-   *   The POST data associated with a search submission.
    * @property {boolean} [allowInheritPrincipal]
    *   Whether the principal can be inherited.
    * @property {nsILoadInfo.SchemelessInputType} [schemelessInput]
@@ -4182,38 +4187,16 @@ ${
    *
    * @property {Values<typeof UrlbarShared.RESULT_TYPE>} [type]
    *   Details of the result type, if any.
-   * @property {string} [searchTerm]
-   *   Search term of the result source, if any.
    * @property {Values<typeof UrlbarShared.RESULT_SOURCE>} [source]
    *   Details of the result source, if any.
    */
 
   /**
-   * @param {UrlbarLoadRequest} loadRequest
-   * @returns {Promise<{url:string, postData: ?nsIInputStream}>}
-   */
-  async #loadRequestToUrl(loadRequest) {
-    if (loadRequest.engineSearch) {
-      return await this.controller.getEngineSubmission(
-        loadRequest.engineSearch
-      );
-    }
-
-    return {
-      url: loadRequest.urlLoad.url,
-      postData: loadRequest.urlLoad.postData
-        ? lazy.UrlbarUtils.getPostDataStream(loadRequest.urlLoad.postData)
-        : null,
-    };
-  }
-
-  /**
    * Loads the url in the appropriate place.
    *
    * @param {object} options
-   * @param {string} [options.url]
-   *   The URL to open.
-   * @param {UrlbarLoadRequest} [options.loadRequest]
+   * @param {UrlbarLoadRequest} options.loadRequest
+   *   What to load.
    * @param {Event} options.event
    *   The event that triggered to load the url.
    * @param {string} options.where
@@ -4230,7 +4213,6 @@ ${
    *   load to the tab selected when it was committed.
    */
   async #loadURL({
-    url,
     loadRequest,
     event,
     where,
@@ -4257,31 +4239,19 @@ ${
       keyDownEnterDeferred = this._keyDownEnterDeferred;
     }
 
-    if (loadRequest) {
-      let urlAndPostData;
-      try {
-        urlAndPostData = await this.#loadRequestToUrl(loadRequest);
-      } catch (ex) {
-        keyDownEnterDeferred?.reject(ex);
-        throw ex;
-      }
-      url = urlAndPostData.url;
-      params.postData = urlAndPostData.postData;
-    }
-
     let userTypedValue;
     if (this.#isAddressbar && where == "current") {
-      // Make sure URL is formatted properly (don't show punycode).
-      let formattedURL = url;
-      try {
-        formattedURL = losslessDecodeURI(new URL(url).URI);
-      } catch {}
-
-      this.value =
-        lazy.UrlbarUtils.isPersistedSearchTermsEnabled() &&
-        resultDetails?.searchTerm
-          ? resultDetails.searchTerm
-          : formattedURL;
+      if (loadRequest.engineSearch) {
+        this.value = loadRequest.engineSearch.query;
+      } else {
+        let { url } = loadRequest.urlLoad;
+        // Make sure URL is formatted properly (don't show punycode).
+        try {
+          this.value = losslessDecodeURI(new URL(url).URI);
+        } catch {
+          this.value = url;
+        }
+      }
       userTypedValue = this.value;
     }
 
@@ -4290,7 +4260,8 @@ ${
     if (where == "current") {
       params.indicateErrorPageLoad = true;
       params.allowPinnedTabHostChange = this.#isAddressbar;
-      params.allowPopups = url.startsWith("javascript:");
+      params.allowPopups =
+        loadRequest.urlLoad?.url.startsWith("javascript:") ?? false;
     }
 
     // Ensure the window gets the `private` feature if the current window
@@ -4313,17 +4284,13 @@ ${
     // Notify about the start of navigation.
     this.#notifyStartNavigation(resultDetails);
 
-    let loadStatus = this.controller.loadURL({
-      url,
+    let loadStatus = await this.controller.loadURL({
+      loadRequest,
       where,
       params,
       browserId,
       userTypedValue,
     });
-    // In the message-passing path, loadURL returns a promise.
-    if (loadStatus.then) {
-      loadStatus = await loadStatus;
-    }
     // Hand the loaded browser's id to the deferred-Enter key up handler so it
     // can focus it parent-side.
     keyDownEnterDeferred?.resolve(loadStatus.browserId);

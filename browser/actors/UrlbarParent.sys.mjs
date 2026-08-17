@@ -235,8 +235,6 @@ export class UrlbarParent extends JSWindowActorParent {
           message.data.browserId
         );
         break;
-      case "GetEngineSubmission":
-        return controller.getEngineSubmission(message.data.opts);
     }
     return undefined;
   }

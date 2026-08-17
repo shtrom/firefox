@@ -517,12 +517,4 @@ export class UrlbarParentControllerProxy {
       browserId,
     });
   }
-
-  /** @type {typeof UrlbarParentController.prototype.getEngineSubmission} */
-  getEngineSubmission(opts) {
-    return this.#actor.sendQuery("GetEngineSubmission", {
-      instanceId: this.#instanceId,
-      opts,
-    });
-  }
 }
