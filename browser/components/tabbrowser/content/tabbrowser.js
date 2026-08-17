@@ -36,59 +36,6 @@
   /**
    * Updates the User Context UI indicators if the browser is in a non-default context
    */
-  function updateUserContextUIIndicator() {
-    function replaceContainerClass(classType, element, value) {
-      let prefix = "identity-" + classType + "-";
-      if (value && element.classList.contains(prefix + value)) {
-        return;
-      }
-      for (let className of element.classList) {
-        if (className.startsWith(prefix)) {
-          element.classList.remove(className);
-        }
-      }
-      if (value) {
-        element.classList.add(prefix + value);
-      }
-    }
-
-    let hbox = document.getElementById("userContext-icons");
-
-    let userContextId = gBrowser.selectedBrowser.getAttribute("usercontextid");
-    if (!userContextId) {
-      // The container-creation panel can temporarily reveal this indicator to
-      // use it as its anchor; don't hide it again while that panel is up.
-      let creationPanel = document.getElementById("containerCreation-panel");
-      if (creationPanel && creationPanel.state != "closed") {
-        return;
-      }
-      replaceContainerClass("color", hbox, "");
-      hbox.hidden = true;
-      return;
-    }
-
-    let identity =
-      ContextualIdentityService.getPublicIdentityFromId(userContextId);
-    if (!identity) {
-      replaceContainerClass("color", hbox, "");
-      hbox.hidden = true;
-      return;
-    }
-
-    replaceContainerClass("color", hbox, identity.color);
-
-    let label = ContextualIdentityService.getUserContextLabel(userContextId);
-    document.getElementById("userContext-label").textContent = label;
-    // Also set the container label as the tooltip so we can only show the icon
-    // in small windows.
-    hbox.setAttribute("tooltiptext", label);
-
-    let indicator = document.getElementById("userContext-indicator");
-    replaceContainerClass("icon", indicator, identity.icon);
-
-    hbox.hidden = false;
-  }
-
   async function getTotalMemoryUsage() {
     const procInfo = await ChromeUtils.requestProcInfo();
     let totalMemoryUsage = procInfo.memory;
@@ -149,7 +96,7 @@
       // Sync dialog cannot be used inside drop event handler.
       let answer = await tabbrowser.OpenInTabsUtils.promiseConfirmOpenInTabs(
         links.length,
-        window
+        tabbrowser.documentGlobal
       );
       if (!answer) {
         return;
@@ -159,7 +106,9 @@
     let urls = [];
     let postDatas = [];
     for (let link of links) {
-      let data = await UrlbarUtils.getShortcutOrURIAndPostData(link.url);
+      let data = await tabbrowser.UrlbarUtils.getShortcutOrURIAndPostData(
+        link.url
+      );
       urls.push(data.url);
       postDatas.push(data.postData);
     }
@@ -822,7 +771,7 @@
         tab.setAttribute("usercontextid", userContextId);
         ContextualIdentityService.setTabStyle(tab);
       }
-      updateUserContextUIIndicator();
+      this.#updateUserContextUIIndicator();
 
       this.#tabForBrowser.set(browser, tab);
 
@@ -844,6 +793,64 @@
         filter,
         Ci.nsIWebProgress.NOTIFY_ALL
       );
+    }
+
+    #updateUserContextUIIndicator() {
+      function replaceContainerClass(classType, element, value) {
+        let prefix = "identity-" + classType + "-";
+        if (value && element.classList.contains(prefix + value)) {
+          return;
+        }
+        for (let className of element.classList) {
+          if (className.startsWith(prefix)) {
+            element.classList.remove(className);
+          }
+        }
+        if (value) {
+          element.classList.add(prefix + value);
+        }
+      }
+
+      let hbox = this.ownerDocument.getElementById("userContext-icons");
+
+      let userContextId = this.selectedBrowser.getAttribute("usercontextid");
+      if (!userContextId) {
+        // The container-creation panel can temporarily reveal this indicator to
+        // use it as its anchor; don't hide it again while that panel is up.
+        let creationPanel = this.ownerDocument.getElementById(
+          "containerCreation-panel"
+        );
+        if (creationPanel && creationPanel.state != "closed") {
+          return;
+        }
+        replaceContainerClass("color", hbox, "");
+        hbox.hidden = true;
+        return;
+      }
+
+      let identity =
+        ContextualIdentityService.getPublicIdentityFromId(userContextId);
+      if (!identity) {
+        replaceContainerClass("color", hbox, "");
+        hbox.hidden = true;
+        return;
+      }
+
+      replaceContainerClass("color", hbox, identity.color);
+
+      let label = ContextualIdentityService.getUserContextLabel(userContextId);
+      this.ownerDocument.getElementById("userContext-label").textContent =
+        label;
+      // Also set the container label as the tooltip so we can only show the icon
+      // in small windows.
+      hbox.setAttribute("tooltiptext", label);
+
+      let indicator = this.ownerDocument.getElementById(
+        "userContext-indicator"
+      );
+      replaceContainerClass("icon", indicator, identity.icon);
+
+      hbox.hidden = false;
     }
 
     /**
@@ -1963,7 +1970,7 @@
         }
       }
 
-      updateUserContextUIIndicator();
+      this.#updateUserContextUIIndicator();
       gPermissionPanel.updateSharingIndicator();
 
       // Enable touch events to start a native dragging
@@ -3099,7 +3106,7 @@
       // We don't want to update the container icon and identifier if
       // this is not the selected browser.
       if (aTab.selected) {
-        updateUserContextUIIndicator();
+        this.#updateUserContextUIIndicator();
       }
 
       // Only fire this event if the tab is already in the DOM
@@ -10101,7 +10108,7 @@
       loadURIOptions.loadFlags |= loadURIOptions.flags | LOAD_FLAGS_NONE;
       delete loadURIOptions.flags;
       loadURIOptions.hasValidUserGestureActivation ??=
-        document.hasValidTransientUserGestureActivation;
+        browser.ownerDocument.hasValidTransientUserGestureActivation;
     },
 
     _loadFlagsToFixupFlags(browser, loadFlags) {
@@ -10148,9 +10155,10 @@
       uriString,
       { loadFlags, globalHistoryOptions }
     ) {
+      let { SponsorProtection } = browser.getTabBrowser();
       if (globalHistoryOptions?.triggeringSponsoredURL) {
         if (globalHistoryOptions.triggeringSource == "newtab") {
-          gBrowser.SponsorProtection.addProtectedBrowser(browser);
+          SponsorProtection.addProtectedBrowser(browser);
         }
 
         try {
@@ -10174,7 +10182,7 @@
           );
         } catch (e) {}
       } else {
-        gBrowser.SponsorProtection.removeProtectedBrowser(browser);
+        SponsorProtection.removeProtectedBrowser(browser);
       }
 
       if (globalHistoryOptions?.triggeringSearchEngine) {
