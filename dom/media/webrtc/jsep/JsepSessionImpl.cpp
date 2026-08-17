@@ -209,7 +209,7 @@ nsresult JsepSessionImpl::AddDtlsFingerprint(
 }
 
 nsresult JsepSessionImpl::AddRtpExtension(
-    JsepMediaType mediaType, const std::string& extensionName,
+    JsepMediaType mediaType, const nsACString& extensionName,
     SdpDirectionAttribute::Direction direction) {
   mLastError.clear();
 
@@ -233,26 +233,27 @@ nsresult JsepSessionImpl::AddRtpExtension(
       mediaType,
       {freeEntry, direction,
        // do we want to specify direction?
-       direction != SdpDirectionAttribute::kSendrecv, extensionName, ""}};
+       direction != SdpDirectionAttribute::kSendrecv, nsCString(extensionName),
+       ""_ns}};
 
   mRtpExtensions.push_back(std::move(extMediaType));
   return NS_OK;
 }
 
 nsresult JsepSessionImpl::AddAudioRtpExtension(
-    const std::string& extensionName,
+    const nsACString& extensionName,
     SdpDirectionAttribute::Direction direction) {
   return AddRtpExtension(JsepMediaType::kAudio, extensionName, direction);
 }
 
 nsresult JsepSessionImpl::AddVideoRtpExtension(
-    const std::string& extensionName,
+    const nsACString& extensionName,
     SdpDirectionAttribute::Direction direction) {
   return AddRtpExtension(JsepMediaType::kVideo, extensionName, direction);
 }
 
 nsresult JsepSessionImpl::AddAudioVideoRtpExtension(
-    const std::string& extensionName,
+    const nsACString& extensionName,
     SdpDirectionAttribute::Direction direction) {
   return AddRtpExtension(JsepMediaType::kAudioVideo, extensionName, direction);
 }
@@ -477,20 +478,22 @@ std::vector<SdpExtmapAttributeList::Extmap> JsepSessionImpl::GetRtpExtensions(
       if (includes_send && StaticPrefs::media_peerconnection_video_use_dd() &&
           msection.GetAttributeList().HasAttribute(
               SdpAttribute::kSimulcastAttribute)) {
-        AddVideoRtpExtension(webrtc::RtpExtension::kDependencyDescriptorUri,
-                             SdpDirectionAttribute::kSendonly);
+        AddVideoRtpExtension(
+            nsLiteralCString(webrtc::RtpExtension::kDependencyDescriptorUri),
+            SdpDirectionAttribute::kSendonly);
       }
       if (msection.GetAttributeList().HasAttribute(
               SdpAttribute::kRidAttribute)) {
         // We need RID support
         // TODO: Would it be worth checking that the direction is sane?
-        AddVideoRtpExtension(webrtc::RtpExtension::kRidUri,
+        AddVideoRtpExtension(nsLiteralCString(webrtc::RtpExtension::kRidUri),
                              SdpDirectionAttribute::kSendonly);
 
         if (mRtxIsAllowed &&
             Preferences::GetBool("media.peerconnection.video.use_rtx", false)) {
-          AddVideoRtpExtension(webrtc::RtpExtension::kRepairedRidUri,
-                               SdpDirectionAttribute::kSendonly);
+          AddVideoRtpExtension(
+              nsLiteralCString(webrtc::RtpExtension::kRepairedRidUri),
+              SdpDirectionAttribute::kSendonly);
         }
       }
       break;

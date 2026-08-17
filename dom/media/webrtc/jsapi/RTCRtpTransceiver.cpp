@@ -980,8 +980,7 @@ void RTCRtpTransceiver::ToDomHeaderExtensions(
   aDetails.ForEachRTPHeaderExtension(
       [&](const SdpExtmapAttributeList::Extmap& aExtmap) {
         RTCRtpHeaderExtensionParameters ext;
-        ext.mUri.Construct(
-            NS_ConvertUTF8toUTF16(aExtmap.extensionname.c_str()));
+        ext.mUri.Construct(NS_ConvertUTF8toUTF16(aExtmap.extensionname));
         ext.mId.Construct(aExtmap.entry);
         // We do not negotiate RFC 6904 encrypted header extensions. When we do,
         // this should report encrypted=true with the inner (unwrapped) URI.

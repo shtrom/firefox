@@ -476,7 +476,7 @@ TEST_F(JsepTrackTest, CheckForAnsweringWithExtmapAllowMixedWhenNotOffered) {
 
 // Appends a sendrecv a=extmap entry to an msection.
 static void AddExtmap(SdpMediaSection& aMsection, uint16_t aId,
-                      const std::string& aUri,
+                      const nsACString& aUri,
                       const SdpDirectionAttribute::Direction aDir =
                           SdpDirectionAttribute::kSendrecv) {
   auto& attrs = aMsection.GetAttributeList();
@@ -499,7 +499,7 @@ TEST_F(JsepTrackTest, TwoByteExtIdKeptOnSendWhenExtmapAllowMixed) {
   GetOffer().GetAttributeList().SetAttribute(
       MakeUnique<SdpFlagAttribute>(SdpAttribute::kExtmapAllowMixedAttribute));
   CreateAnswer();
-  const std::string uri = "urn:ietf:params:rtp-hdrext:toffset";
+  const nsLiteralCString uri = "urn:ietf:params:rtp-hdrext:toffset"_ns;
   AddExtmap(GetAnswer(), 15, uri);
   Negotiate();
   ASSERT_TRUE(mSendAns.GetNegotiatedDetails());
@@ -514,7 +514,7 @@ TEST_F(JsepTrackTest, TwoByteExtIdDroppedFromSendWithoutExtmapAllowMixed) {
   GetOffer().GetAttributeList().RemoveAttribute(
       SdpAttribute::kExtmapAllowMixedAttribute);
   CreateAnswer();
-  const std::string uri = "urn:ietf:params:rtp-hdrext:toffset";
+  const nsLiteralCString uri = "urn:ietf:params:rtp-hdrext:toffset"_ns;
   AddExtmap(GetAnswer(), 15, uri);
   Negotiate();
   ASSERT_TRUE(mSendAns.GetNegotiatedDetails());
@@ -533,7 +533,7 @@ TEST_F(JsepTrackTest,
   GetOffer().GetAttributeList().RemoveAttribute(
       SdpAttribute::kExtmapAllowMixedAttribute);
   CreateAnswer();
-  const std::string uri = webrtc::RtpExtension::kDependencyDescriptorUri;
+  const nsLiteralCString uri(webrtc::RtpExtension::kDependencyDescriptorUri);
   AddExtmap(GetAnswer(), 5, uri);
   Negotiate();
   ASSERT_TRUE(mSendAns.GetNegotiatedDetails());
