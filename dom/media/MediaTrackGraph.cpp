@@ -183,6 +183,9 @@ MediaTrackGraphImpl::~MediaTrackGraphImpl() {
   MOZ_ASSERT(mTracks.IsEmpty() && mSuspendedTracks.IsEmpty(),
              "All tracks should have been destroyed by messages from the main "
              "thread");
+  MOZ_ASSERT(
+      mDirectMessages.IsEmpty(),
+      "All direct tasks should have been drained in the final iteration");
   LOG(LogLevel::Debug, ("MediaTrackGraph {} destroyed", fmt::ptr(this)));
   LOG(LogLevel::Debug, ("MediaTrackGraphImpl::~MediaTrackGraphImpl"));
 }
@@ -1251,14 +1254,7 @@ void MediaTrackGraphImpl::ProduceDataForTracksBlockByBlock(
 void MediaTrackGraphImpl::RunMessageAfterProcessing(
     already_AddRefed<nsIRunnable> aMessage) {
   MOZ_ASSERT(OnGraphThread());
-
-  if (mFrontMessageQueue.IsEmpty()) {
-    mFrontMessageQueue.AppendElement();
-  }
-
-  // Only one block is used for messages from the graph thread.
-  MOZ_ASSERT(mFrontMessageQueue.Length() == 1);
-  mFrontMessageQueue[0].mMessages.AppendElement(std::move(aMessage));
+  DispatchDirectTask(std::move(aMessage));
 }
 
 void MediaTrackGraphImpl::RunMessagesInQueue() {
@@ -1632,9 +1628,7 @@ auto MediaTrackGraphImpl::OneIterationImpl(
 
   ProcessChunkMetadata(oldProcessedTime);
 
-  // Process graph messages queued from RunMessageAfterProcessing() on this
-  // thread during the iteration.
-  RunMessagesInQueue();
+  DrainDirectTasks();
 
   if (!UpdateMainThreadState()) {
     if (Switching()) {
@@ -3597,8 +3591,9 @@ void MediaTrackGraph::ForceShutDown() {
   graph->ForceShutDown();
 }
 
-NS_IMPL_ISUPPORTS(MediaTrackGraphImpl, nsIMemoryReporter, nsIObserver,
-                  nsIThreadObserver, nsITimerCallback, nsINamed)
+NS_IMPL_ISUPPORTS(MediaTrackGraphImpl, nsIDirectTaskDispatcher,
+                  nsIMemoryReporter, nsIObserver, nsIThreadObserver,
+                  nsITimerCallback, nsINamed)
 
 NS_IMETHODIMP
 MediaTrackGraphImpl::CollectReports(nsIHandleReportCallback* aHandleReport,
@@ -4375,6 +4370,42 @@ MediaTrackGraphImpl::OnProcessNextEvent(nsIThreadInternal*, bool) {
 
 NS_IMETHODIMP
 MediaTrackGraphImpl::AfterProcessNextEvent(nsIThreadInternal*, bool) {
+  return NS_OK;
+}
+
+// nsIDirectTaskDispatcher methods
+
+NS_IMETHODIMP
+MediaTrackGraphImpl::DispatchDirectTask(already_AddRefed<nsIRunnable> aTask) {
+  MOZ_ASSERT(OnGraphThread());
+  nsCOMPtr task = aTask;
+  PROFILER_MARKER("MediaTrackGraphImpl::DispatchDirectTask", OTHER,
+                  {MarkerStack::Capture()}, FlowMarker,
+                  Flow::FromPointer(task.get()));
+  mDirectMessages.AppendElement(task.forget());
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+MediaTrackGraphImpl::DrainDirectTasks() {
+  MOZ_ASSERT(OnGraphThread());
+  // Run all tasks in mDirectMessages. This continues even if one direct task
+  // adds another.
+  for (size_t i = 0; i < mDirectMessages.Length(); ++i) {
+    nsCOMPtr<nsIRunnable> message = std::move(mDirectMessages[i]);
+    AUTO_PROFILE_FOLLOWING_RUNNABLE(message);
+    message->Run();
+  }
+  mDirectMessages.ClearAndRetainStorage();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+MediaTrackGraphImpl::HaveDirectTasks(bool* aResult) {
+  if (!OnGraphThread()) {
+    return NS_ERROR_FAILURE;
+  }
+  *aResult = !mDirectMessages.IsEmpty();
   return NS_OK;
 }
 }  // namespace mozilla

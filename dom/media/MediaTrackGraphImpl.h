@@ -7,7 +7,6 @@
 
 #include <atomic>
 
-#include "AsyncLogger.h"
 #include "AudioMixer.h"
 #include "DeviceInputTrack.h"
 #include "GraphDriver.h"
@@ -17,7 +16,7 @@
 #include "mozilla/Monitor.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/UniquePtr.h"
-#include "nsClassHashtable.h"
+#include "nsIDirectTaskDispatcher.h"
 #include "nsIMemoryReporter.h"
 #include "nsINamed.h"
 #include "nsIRunnable.h"
@@ -106,6 +105,7 @@ class MessageBlock {
  */
 class MediaTrackGraphImpl : public MediaTrackGraph,
                             public GraphInterface,
+                            public nsIDirectTaskDispatcher,
                             public nsIMemoryReporter,
                             public nsIObserver,
                             public nsIThreadObserver,
@@ -116,6 +116,7 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
   using ControlMessageWrapper = MediaTrack::ControlMessageWrapper;
 
   NS_DECL_THREADSAFE_ISUPPORTS
+  NS_DECL_NSIDIRECTTASKDISPATCHER
   NS_DECL_NSIMEMORYREPORTER
   NS_DECL_NSIOBSERVER
   NS_DECL_NSITHREADOBSERVER
@@ -869,6 +870,12 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * A list of batches of messages to process. Each batch is processed
    * as an atomic unit.
    */
+  /*
+   * Queue of direct messages added by the currently processed MessageBlock.
+   * Processed by the MTG thread at the end of an iteration.
+   * Accessed on graph thread only.
+   */
+  nsTArray<nsCOMPtr<nsIRunnable>> mDirectMessages;
   /*
    * Message queue processed by the MTG thread during an iteration.
    * Accessed on graph thread only.
