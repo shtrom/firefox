@@ -6159,10 +6159,17 @@ let Tabbrowser;
       // Invalidate hovered tab state tracking for this closing tab. The pointer
       // stays put while the tab goes away, so hand the hover over to the tab
       // moving into its place: no mouseover event is guaranteed to report it.
-      let wasHovered = aTab._hover;
+      // `_hover` alone isn't evidence that the pointer is still there, since no
+      // mouseout is delivered while a drag session is in progress or when the
+      // hovered tab's frame goes away, so check with the event state manager
+      // before handing a hover over: a hover the event state manager doesn't
+      // know about is one it will never send a mouseout to end.
+      let handOverHover = aTab._hover && this.tabContainer.matches(":hover");
       aTab._mouseleave();
-      if (wasHovered) {
-        this.#tabTakingPlaceOf(aTab)?._mouseenter();
+      if (handOverHover) {
+        this.#tabTakingPlaceOf(aTab)?._mouseenter({
+          withoutPointerEvent: true,
+        });
       }
 
       if (newTab) {
