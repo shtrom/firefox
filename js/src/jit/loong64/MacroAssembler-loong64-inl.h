@@ -731,6 +731,11 @@ void MacroAssembler::lshift64(Imm32 imm, Register64 dest) {
   as_slli_d(dest.reg, dest.reg, imm.value);
 }
 
+void MacroAssembler::lshift64(Imm32 imm, Register64 src, Register64 dest) {
+  MOZ_ASSERT(0 <= imm.value && imm.value < 64);
+  as_slli_d(dest.reg, src.reg, imm.value);
+}
+
 void MacroAssembler::lshiftPtr(Register shift, Register dest) {
   as_sll_d(dest, dest, shift);
 }
@@ -790,9 +795,20 @@ void MacroAssembler::rshift64(Imm32 imm, Register64 dest) {
   as_srli_d(dest.reg, dest.reg, imm.value);
 }
 
+void MacroAssembler::rshift64(Imm32 imm, Register64 src, Register64 dest) {
+  MOZ_ASSERT(0 <= imm.value && imm.value < 64);
+  as_srli_d(dest.reg, src.reg, imm.value);
+}
+
 void MacroAssembler::rshift64Arithmetic(Imm32 imm, Register64 dest) {
   MOZ_ASSERT(0 <= imm.value && imm.value < 64);
   as_srai_d(dest.reg, dest.reg, imm.value);
+}
+
+void MacroAssembler::rshift64Arithmetic(Imm32 imm, Register64 src,
+                                        Register64 dest) {
+  MOZ_ASSERT(0 <= imm.value && imm.value < 64);
+  as_srai_d(dest.reg, src.reg, imm.value);
 }
 
 void MacroAssembler::rshift64Arithmetic(Register shift, Register64 dest) {

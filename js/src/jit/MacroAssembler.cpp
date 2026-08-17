@@ -5547,13 +5547,11 @@ void MacroAssembler::randomDouble(Register rng, FloatRegister dest,
   load64(state0Addr, s1Reg);
 
   // s1 ^= s1 << 23;
-  move64(s1Reg, s0Reg);
-  lshift64(Imm32(23), s1Reg);
+  lshift64(Imm32(23), s1Reg, s0Reg);
   xor64(s0Reg, s1Reg);
 
   // s1 ^= s1 >> 17
-  move64(s1Reg, s0Reg);
-  rshift64(Imm32(17), s1Reg);
+  rshift64(Imm32(17), s1Reg, s0Reg);
   xor64(s0Reg, s1Reg);
 
   // const uint64_t s0 = mState[1];
@@ -10293,8 +10291,7 @@ void MacroAssembler::hashAndScrambleValue(ValueOperand value, Register result,
   // uint32_t v2 = static_cast<uint32_t>(static_cast<uint64_t>(aValue) >> 32);
 #ifdef JS_PUNBOX64
   auto r64 = Register64(temp);
-  move64(value.toRegister64(), r64);
-  rshift64Arithmetic(Imm32(32), r64);
+  rshift64Arithmetic(Imm32(32), value.toRegister64(), r64);
 #else
   move32(value.typeReg(), temp);
 #endif
@@ -11054,8 +11051,7 @@ void MacroAssembler::fuzzilliHashDouble(FloatRegister src, Register result,
 
 #  ifdef JS_PUNBOX64
   // Move the high word into |result|.
-  move64(r64, Register64(result));
-  rshift64(Imm32(32), Register64(result));
+  rshift64(Imm32(32), r64, Register64(result));
 #  endif
 
   // Add the high and low words of |r64|.
