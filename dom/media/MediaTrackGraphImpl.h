@@ -12,6 +12,7 @@
 #include "GraphDriver.h"
 #include "MediaEventSource.h"
 #include "MediaTrackGraph.h"
+#include "mozilla/AbstractThread.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/Monitor.h"
 #include "mozilla/TimeStamp.h"
@@ -20,6 +21,7 @@
 #include "nsIMemoryReporter.h"
 #include "nsINamed.h"
 #include "nsIRunnable.h"
+#include "nsISerialEventTarget.h"
 #include "nsIThreadInternal.h"
 #include "nsITimer.h"
 
@@ -89,11 +91,6 @@ class ControlMessage : public MediaTrack::ControlMessageInterface {
   MediaTrack* const mTrack;
 };
 
-class MessageBlock {
- public:
-  nsTArray<nsCOMPtr<nsIRunnable>> mMessages;
-};
-
 /**
  * The implementation of a media track graph. This class is private to this
  * file. It's not in the anonymous namespace because MediaTrack needs to
@@ -105,6 +102,7 @@ class MessageBlock {
  */
 class MediaTrackGraphImpl : public MediaTrackGraph,
                             public GraphInterface,
+                            public AbstractThread,
                             public nsIDirectTaskDispatcher,
                             public nsIMemoryReporter,
                             public nsIObserver,
@@ -133,12 +131,12 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    */
   explicit MediaTrackGraphImpl(uint64_t aWindowID, TrackRate aSampleRate,
                                CubebUtils::AudioDeviceID aOutputDeviceID,
-                               nsISerialEventTarget* aMainThread);
+                               AbstractThread* aMainThread);
 
   static MediaTrackGraphImpl* GetInstance(
       GraphDriverType aGraphDriverRequested, uint64_t aWindowID,
       TrackRate aSampleRate, CubebUtils::AudioDeviceID aPrimaryOutputDeviceID,
-      nsISerialEventTarget* aMainThread);
+      AbstractThread* aMainThread);
   static MediaTrackGraphImpl* GetInstanceIfExists(
       uint64_t aWindowID, TrackRate aSampleRate,
       CubebUtils::AudioDeviceID aPrimaryOutputDeviceID);
@@ -685,6 +683,23 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    */
   void InterruptJS();
 
+  // AbstractThread decls
+  [[nodiscard]] nsresult Dispatch(
+      already_AddRefed<nsIRunnable> aEvent,
+      DispatchReason aReason = NormalDispatch) override;
+  bool IsCurrentThreadIn() const override;
+  TaskDispatcher& TailDispatcher() override;
+  NS_IMETHOD RegisterShutdownTask(nsITargetShutdownTask* aTask) override;
+  NS_IMETHOD UnregisterShutdownTask(nsITargetShutdownTask* aTask) override;
+  NS_IMETHOD_(FeatureFlags) GetFeatures() override;
+
+ protected:
+  [[nodiscard]] nsresult QueueMessageForTailDispatch(
+      already_AddRefed<nsIRunnable> aEvent);
+  [[nodiscard]] nsresult TailDispatchMessage(
+      already_AddRefed<nsIRunnable> aEvent);
+
+ public:
   class TrackSet {
    public:
     class iterator {
@@ -749,8 +764,11 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    *
    * When this becomes zero, the graph is marked as forbidden to add more
    * tracks to. It will be shut down shortly after.
+   *
+   * This is atomic to allow off-main-thread assertions during dispatch.
+   * All writes are on main thread.
    */
-  size_t mMainThreadTrackCount = 0;
+  Atomic<size_t> mMainThreadTrackCount{0};
 
   /**
    * Main-thread view of the number of ports in this graph, to catch bugs.
@@ -758,8 +776,11 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * When this becomes zero, and mMainThreadTrackCount is 0, the graph is
    * marked as forbidden to add more control messages to. It will be shut down
    * shortly after.
+   *
+   * This is atomic to allow off-main-thread assertions during dispatch.
+   * All writes are on main thread.
    */
-  size_t mMainThreadPortCount = 0;
+  Atomic<size_t> mMainThreadPortCount{0};
 
   /**
    * Graphs own owning references to their driver, until shutdown. When a driver
@@ -871,7 +892,7 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * as an atomic unit.
    */
   /*
-   * Queue of direct messages added by the currently processed MessageBlock.
+   * Queue of direct messages added by the currently processed group task.
    * Processed by the MTG thread at the end of an iteration.
    * Accessed on graph thread only.
    */
@@ -880,14 +901,14 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * Message queue processed by the MTG thread during an iteration.
    * Accessed on graph thread only.
    */
-  nsTArray<MessageBlock> mFrontMessageQueue;
+  nsTArray<nsCOMPtr<nsIRunnable>> mFrontMessageQueue;
   /*
-   * Message queue in which the main thread appends messages.
+   * Message queue in which non-graph threads append messages.
    * Access guarded by mMonitor.
    */
-  nsTArray<MessageBlock> mBackMessageQueue MOZ_GUARDED_BY(mMonitor);
+  nsTArray<nsCOMPtr<nsIRunnable>> mBackMessageQueue MOZ_GUARDED_BY(mMonitor);
 
-  /* True if there will messages to process if we swap the message queues. */
+  /* True if there will be messages to process if we swap the message queues. */
   bool MessagesQueued() const MOZ_REQUIRES(mMonitor) {
     mMonitor.AssertCurrentThreadOwns();
     return !mBackMessageQueue.IsEmpty();
@@ -943,16 +964,6 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * the end of an iteration.  All other transitions occur on the main thread.
    */
   LifecycleState mLifecycleState MOZ_GUARDED_BY(mMonitor);
-  LifecycleState& LifecycleStateRef() MOZ_NO_THREAD_SAFETY_ANALYSIS {
-#if DEBUG
-    if (mGraphDriverRunning) {
-      mMonitor.AssertCurrentThreadOwns();
-    } else {
-      MOZ_ASSERT(NS_IsMainThread());
-    }
-#endif
-    return mLifecycleState;
-  }
   const LifecycleState& LifecycleStateRef() const
       MOZ_NO_THREAD_SAFETY_ANALYSIS {
 #if DEBUG
@@ -1034,7 +1045,7 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * blocking order.
    */
   bool mTrackOrderDirty;
-  const RefPtr<nsISerialEventTarget> mMainThread;
+  const RefPtr<AbstractThread> mMainThread;
 
   // used to limit graph shutdown time
   // Only accessed on the main thread.
@@ -1216,6 +1227,11 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * iteration. Graph thread only.
    */
   AudioMixer mMixer;
+  /**
+   * The task dispatcher that facilitates tail dispatch. Set during iterations.
+   * Graph thread only.
+   */
+  Maybe<TaskDispatcher&> mTaskDispatcher;
 };
 
 }  // namespace mozilla

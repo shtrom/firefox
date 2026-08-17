@@ -28,6 +28,7 @@ class TaskDispatcher;
  * the structures we might use here and provides a consistent interface.
  *
  * At present, the supported AbstractThread implementations are TaskQueue,
+ * MediaTrackGraph for running tasks on an audio thread,
  * AbstractThread::MainThread() and XPCOMThreadWrapper which can wrap any
  * nsThread.
  *
