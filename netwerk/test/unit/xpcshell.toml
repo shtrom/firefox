@@ -1848,6 +1848,7 @@ run-if = [
 ["test_trr_bench.js"]
 skip-if = [
   "verify",
+  "os == 'android'", # intermittent ADB port exhaustion
 ]
 run-sequentially = ["true"] # We want to check performance
 
