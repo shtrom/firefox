@@ -587,9 +587,9 @@
       }
 
       if (
-        gSharedTabWarning.willShowSharedTabWarning(val) ||
+        this.documentGlobal.gSharedTabWarning.willShowSharedTabWarning(val) ||
         this.document.documentElement.hasAttribute("window-modal-open") ||
-        (gNavToolbox.collapsed && !this._allowTabChange)
+        (this.documentGlobal.gNavToolbox.collapsed && !this._allowTabChange)
       ) {
         return;
       }
@@ -654,7 +654,7 @@
         );
       }
 
-      let tabArgument = gBrowserInit.getTabToAdopt();
+      let tabArgument = this.documentGlobal.gBrowserInit.getTabToAdopt();
 
       // If we have a tab argument with browser, we use its remoteType. Otherwise,
       // if e10s is disabled or there's a parent process opener (e.g. parent
@@ -699,7 +699,7 @@
           remoteType = E10SUtils.NOT_REMOTE;
         }
       } else {
-        let uriToLoad = gBrowserInit.uriToLoadPromise;
+        let uriToLoad = this.documentGlobal.gBrowserInit.uriToLoadPromise;
         if (uriToLoad && Array.isArray(uriToLoad)) {
           uriToLoad = uriToLoad[0]; // we only care about the first item
         }
@@ -738,7 +738,7 @@
       };
       let browser = this.createBrowser(createOptions);
       browser.setAttribute("primary", "true");
-      if (gBrowserAllowScriptsToCloseInitialTabs) {
+      if (this.documentGlobal.gBrowserAllowScriptsToCloseInitialTabs) {
         browser.setAttribute("allowscriptstoclose", "true");
       }
       browser.droppedLinkHandler = this._defaultDropLinkHandler;
@@ -753,7 +753,7 @@
         );
 
       if (AIWindow.isAIWindowActive(this.documentGlobal)) {
-        let uriToLoad = gBrowserInit.uriToLoadPromise;
+        let uriToLoad = this.documentGlobal.gBrowserInit.uriToLoadPromise;
         let firstURI = Array.isArray(uriToLoad) ? uriToLoad[0] : uriToLoad;
 
         if (!this._allowTransparentBrowser) {
@@ -938,8 +938,8 @@
         // Also reset DOS mitigations for the basic auth prompt on reload.
         delete tab.linkedBrowser.authPromptAbuseCounter;
       }
-      gIdentityHandler.hidePopup();
-      gPermissionPanel.hidePopup();
+      this.documentGlobal.gIdentityHandler.hidePopup();
+      this.documentGlobal.gPermissionPanel.hidePopup();
 
       if (this.document.hasValidTransientUserGestureActivation) {
         reloadFlags |= Ci.nsIWebNavigation.LOAD_FLAGS_USER_ACTIVATION;
@@ -1136,7 +1136,7 @@
 
       browser.parentNode.insertAdjacentElement("afterend", findBar);
 
-      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => this.documentGlobal.requestAnimationFrame(r));
       delete aTab._pendingFindBar;
       if (this.documentGlobal.closed || aTab.closing) {
         return null;
@@ -1155,7 +1155,10 @@
     }
 
     appendStatusPanel(browser = this.selectedBrowser) {
-      browser.insertAdjacentElement("afterend", StatusPanel.panel);
+      browser.insertAdjacentElement(
+        "afterend",
+        this.documentGlobal.StatusPanel.panel
+      );
     }
 
     _updateTabBarForPinnedTabs() {
@@ -1199,7 +1202,7 @@
      *   The context for the operation for telemetry purposes, defaults to an unknown context.
      */
     pinTab(aTab, { metricsContext = this.TabMetrics.UNKNOWN_CONTEXT } = {}) {
-      if (aTab.pinned || aTab == FirefoxViewHandler.tab) {
+      if (aTab.pinned || aTab == this.documentGlobal.FirefoxViewHandler.tab) {
         return;
       }
 
@@ -1301,14 +1304,15 @@
     getNotificationBox(aBrowser) {
       let browser = aBrowser || this.selectedBrowser;
       if (!browser._notificationBox) {
-        browser._notificationBox = new MozElements.NotificationBox(element => {
-          element.setAttribute("notificationside", "top");
-          element.setAttribute(
-            "name",
-            `tab-notification-box-${this.#nextNotificationBoxId++}`
-          );
-          this.#insertNotificationBox(browser, element);
-        }, this._notificationEnableDelay);
+        browser._notificationBox =
+          new this.documentGlobal.MozElements.NotificationBox(element => {
+            element.setAttribute("notificationside", "top");
+            element.setAttribute(
+              "name",
+              `tab-notification-box-${this.#nextNotificationBoxId++}`
+            );
+            this.#insertNotificationBox(browser, element);
+          }, this._notificationEnableDelay);
       }
       return browser._notificationBox;
     }
@@ -1376,7 +1380,9 @@
         throw new Error("aBrowser is required");
       }
       if (!aBrowser.tabDialogBox) {
-        aBrowser.tabDialogBox = new TabDialogBox(aBrowser);
+        aBrowser.tabDialogBox = new aBrowser.documentGlobal.TabDialogBox(
+          aBrowser
+        );
       }
       return aBrowser.tabDialogBox;
     }
@@ -1766,7 +1772,7 @@
       let oldBrowser = this.selectedBrowser;
       // Once the async switcher starts, it's unpredictable when it will touch
       // the address bar, thus we store its state immediately.
-      gURLBar?.saveSelectionStateForBrowser(oldBrowser);
+      this.documentGlobal.gURLBar?.saveSelectionStateForBrowser(oldBrowser);
 
       let newTab = this.getTabForBrowser(newBrowser);
 
@@ -1774,7 +1780,7 @@
       if (!aForceUpdate) {
         timerId = Glean.browserTabswitch.update.start();
 
-        if (gMultiProcessBrowser) {
+        if (this.documentGlobal.gMultiProcessBrowser) {
           this._asyncTabSwitching = true;
           this._getSwitcher().requestTab(newTab);
           this._asyncTabSwitching = false;
@@ -1798,7 +1804,7 @@
       }
       this.#lastRelatedTabMap = new WeakMap();
 
-      if (!gMultiProcessBrowser) {
+      if (!this.documentGlobal.gMultiProcessBrowser) {
         oldBrowser.removeAttribute("primary");
         oldBrowser.docShellIsActive = false;
         newBrowser.setAttribute("primary", "true");
@@ -1972,7 +1978,7 @@
           this.addToMultiSelectedTabs(oldTab);
         }
 
-        if (!gMultiProcessBrowser) {
+        if (!this.documentGlobal.gMultiProcessBrowser) {
           this._adjustFocusBeforeTabSwitch(oldTab, newTab);
           this._adjustFocusAfterTabSwitch(newTab);
         }
@@ -1982,13 +1988,13 @@
         // sync, notify it as if focus changed. Alternatively, if there is no
         // force update but the load context is not using remote tabs, there
         // can be a focus change due to the _adjustFocus above.
-        if (aForceUpdate || !gMultiProcessBrowser) {
-          gURLBar.afterTabSwitchFocusChange();
+        if (aForceUpdate || !this.documentGlobal.gMultiProcessBrowser) {
+          this.documentGlobal.gURLBar.afterTabSwitchFocusChange();
         }
       }
 
       this.#updateUserContextUIIndicator();
-      gPermissionPanel.updateSharingIndicator();
+      this.documentGlobal.gPermissionPanel.updateSharingIndicator();
 
       // Enable touch events to start a native dragging
       // session to allow the user to easily drag the selected tab.
@@ -1996,7 +2002,7 @@
       oldTab.removeAttribute("touchdownstartsdrag");
       newTab.setAttribute("touchdownstartsdrag", "true");
 
-      if (!gMultiProcessBrowser) {
+      if (!this.documentGlobal.gMultiProcessBrowser) {
         this.document.commandDispatcher.unlock();
 
         let event = new CustomEvent("TabSwitchDone", {
@@ -2078,7 +2084,8 @@
       let oldBrowser = oldTab.linkedBrowser;
       let newBrowser = newTab.linkedBrowser;
 
-      gURLBar.getBrowserState(oldBrowser).urlbarFocused = gURLBar.focused;
+      this.documentGlobal.gURLBar.getBrowserState(oldBrowser).urlbarFocused =
+        this.documentGlobal.gURLBar.focused;
 
       if (this._asyncTabSwitching) {
         newBrowser._userTypedValueAtBeforeTabSwitch = newBrowser.userTypedValue;
@@ -2096,7 +2103,7 @@
       if (activeEl == oldTab) {
         newTab.focus();
       } else if (
-        gMultiProcessBrowser &&
+        this.documentGlobal.gMultiProcessBrowser &&
         activeEl != newBrowser &&
         activeEl != newTab
       ) {
@@ -2105,8 +2112,9 @@
         // there now, we need to adjust focus further.
         let keepFocusOnUrlBar =
           newBrowser &&
-          gURLBar.getBrowserState(newBrowser).urlbarFocused &&
-          gURLBar.focused;
+          this.documentGlobal.gURLBar.getBrowserState(newBrowser)
+            .urlbarFocused &&
+          this.documentGlobal.gURLBar.focused;
         if (!keepFocusOnUrlBar) {
           // Clear focus so that _adjustFocusAfterTabSwitch can detect if
           // some element has been focused and respect that.
@@ -2130,7 +2138,9 @@
       // Focus the location bar if it was previously focused for that tab.
       // In full screen mode, only bother making the location bar visible
       // if the tab is a blank one.
-      if (gURLBar.getBrowserState(newBrowser).urlbarFocused) {
+      if (
+        this.documentGlobal.gURLBar.getBrowserState(newBrowser).urlbarFocused
+      ) {
         let selectURL = () => {
           if (this._asyncTabSwitching) {
             // Set _awaitingSetURI flag to suppress popup notification
@@ -2144,7 +2154,7 @@
             // by gURLBar.setURI(). To resolve it, we call gURLBar.select() after
             // finishing gURLBar.setURI().
             const currentActiveElement = this.document.activeElement;
-            gURLBar.inputField.addEventListener(
+            this.documentGlobal.gURLBar.inputField.addEventListener(
               "SetURI",
               () => {
                 delete newBrowser._awaitingSetURI;
@@ -2166,12 +2176,16 @@
                 if (currentActiveElement != this.document.activeElement) {
                   return;
                 }
-                gURLBar.restoreSelectionStateForBrowser(newBrowser);
+                this.documentGlobal.gURLBar.restoreSelectionStateForBrowser(
+                  newBrowser
+                );
               },
               { once: true }
             );
           } else {
-            gURLBar.restoreSelectionStateForBrowser(newBrowser);
+            this.documentGlobal.gURLBar.restoreSelectionStateForBrowser(
+              newBrowser
+            );
           }
         };
 
@@ -2199,18 +2213,18 @@
 
       // Focus the find bar if it was previously focused for that tab.
       if (
-        gFindBarInitialized &&
-        !gFindBar.hidden &&
+        this.documentGlobal.gFindBarInitialized &&
+        !this.documentGlobal.gFindBar.hidden &&
         this.selectedTab._findBarFocused
       ) {
-        gFindBar._findField.focus();
+        this.documentGlobal.gFindBar._findField.focus();
         return;
       }
 
       // Don't focus the content area if something has been focused after the
       // tab switch was initiated.
       if (
-        gMultiProcessBrowser &&
+        this.documentGlobal.gMultiProcessBrowser &&
         this.document.activeElement != this.document.body
       ) {
         return;
@@ -2220,7 +2234,7 @@
       let fm = Services.focus;
       let focusFlags = fm.FLAG_NOSCROLL;
 
-      if (!gMultiProcessBrowser) {
+      if (!this.documentGlobal.gMultiProcessBrowser) {
         let newFocusedElement = fm.getFocusedElementForWindow(
           this.documentGlobal.content,
           true,
@@ -2271,7 +2285,7 @@
       tab.removeAttribute("sharing");
       this._tabAttrModified(tab, ["sharing"]);
       if (aBrowser == this.selectedBrowser) {
-        gPermissionPanel.updateSharingIndicator();
+        this.documentGlobal.gPermissionPanel.updateSharingIndicator();
       }
     }
 
@@ -2300,7 +2314,7 @@
       }
 
       if (aBrowser == this.selectedBrowser) {
-        gPermissionPanel.updateSharingIndicator();
+        this.documentGlobal.gPermissionPanel.updateSharingIndicator();
       }
     }
 
@@ -2320,7 +2334,10 @@
 
     setInitialTabTitle(aTab, aTitle, aOptions = {}) {
       // Convert some non-content title (actually a url) to human readable title
-      if (!aOptions.isContentTitle && isBlankPageURL(aTitle)) {
+      if (
+        !aOptions.isContentTitle &&
+        this.documentGlobal.isBlankPageURL(aTitle)
+      ) {
         aTitle = this.tabContainer.emptyTabTitle;
       }
 
@@ -2394,7 +2411,7 @@
           }
         }
 
-        if (title && !isBlankPageURL(title)) {
+        if (title && !this.documentGlobal.isBlankPageURL(title)) {
           isURL = true;
           if (title.length <= 500 || !this.#dataURLRegEx.test(title)) {
             // Try to unescape not-ASCII URIs using the current character set.
@@ -2658,7 +2675,7 @@
 
       let shouldBeRemote = remoteType !== E10SUtils.NOT_REMOTE;
 
-      if (!gMultiProcessBrowser && shouldBeRemote) {
+      if (!this.documentGlobal.gMultiProcessBrowser && shouldBeRemote) {
         throw new Error(
           "Cannot switch to remote browser in a window " +
             "without the remote tabs load context."
@@ -2797,7 +2814,7 @@
     }
 
     updateBrowserRemotenessByURL(aBrowser, aURL, aOptions = {}) {
-      if (!gMultiProcessBrowser) {
+      if (!this.documentGlobal.gMultiProcessBrowser) {
         return this.updateBrowserRemoteness(aBrowser, {
           remoteType: E10SUtils.NOT_REMOTE,
         });
@@ -2848,7 +2865,7 @@
         b.setAttribute(attribute, defaultBrowserAttributes[attribute]);
       }
 
-      if (gMultiProcessBrowser || remoteType) {
+      if (this.documentGlobal.gMultiProcessBrowser || remoteType) {
         b.setAttribute("maychangeremoteness", "true");
       }
 
@@ -3304,12 +3321,15 @@
       Services.obs.notifyObservers(
         {
           wrappedJSObject: new Promise(resolve => {
-            this.selectedTab = this.addTrustedTab(BROWSER_NEW_TAB_URL, {
-              tabIndex: tab._tPos + 1,
-              userContextId: tab.userContextId,
-              tabGroup: tab.group,
-              focusUrlBar: true,
-            });
+            this.selectedTab = this.addTrustedTab(
+              this.documentGlobal.BROWSER_NEW_TAB_URL,
+              {
+                tabIndex: tab._tPos + 1,
+                userContextId: tab.userContextId,
+                tabGroup: tab.group,
+                focusUrlBar: true,
+              }
+            );
             resolve(this.selectedBrowser);
           }),
         },
@@ -3475,7 +3495,7 @@
         !pinned &&
         !this.tabContainer.verticalMode &&
         !this.tabContainer.overflowing &&
-        !gReduceMotion;
+        !this.documentGlobal.gReduceMotion;
 
       let uriInfo = this._determineURIToLoad(uriString, createLazyBrowser);
       let { uri, uriIsAboutBlank, lazyBrowserURI } = uriInfo;
@@ -3525,7 +3545,7 @@
         }));
 
         if (focusUrlBar) {
-          gURLBar.getBrowserState(b).urlbarFocused = true;
+          this.documentGlobal.gURLBar.getBrowserState(b).urlbarFocused = true;
         }
 
         // If the caller opts in, create a lazy browser.
@@ -3634,13 +3654,13 @@
         // With preloaded content though a single RAF happens too early. and
         // both the transition and the transitionend event don't happen.
         if (usingPreloadedContent) {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
+          this.documentGlobal.requestAnimationFrame(() => {
+            this.documentGlobal.requestAnimationFrame(() => {
               t.setAttribute("fadein", "true");
             });
           });
         } else {
-          requestAnimationFrame(() => {
+          this.documentGlobal.requestAnimationFrame(() => {
             t.setAttribute("fadein", "true");
           });
         }
@@ -3651,7 +3671,7 @@
         this.#notifyPinnedStatus(t);
       }
 
-      gSharedTabWarning.tabAdded(t);
+      this.documentGlobal.gSharedTabWarning.tabAdded(t);
 
       if (!inBackground) {
         this.selectedTab = t;
@@ -4245,7 +4265,7 @@
       }
 
       if (!noInitialLabel) {
-        if (isBlankPageURL(uriString)) {
+        if (this.documentGlobal.isBlankPageURL(uriString)) {
           t.setAttribute("label", this.tabContainer.emptyTabTitle);
         } else {
           // Set URL as label so that the tab isn't empty initially.
@@ -4283,7 +4303,7 @@
 
         // Call _handleNewTab asynchronously as it needs to know if the
         // new tab is selected.
-        setTimeout(
+        this.documentGlobal.setTimeout(
           function (tabContainer) {
             tabContainer._handleNewTab(t);
           },
@@ -4369,7 +4389,10 @@
         usingPreloadedContent = false;
       // If we open a new tab with the newtab URL in the default
       // userContext, check if there is a preloaded browser ready.
-      if (uriString == BROWSER_NEW_TAB_URL && !userContextId) {
+      if (
+        uriString == this.documentGlobal.BROWSER_NEW_TAB_URL &&
+        !userContextId
+      ) {
         b = NewTabPagePreloading.getPreloadedBrowser(this.documentGlobal);
         if (b) {
           usingPreloadedContent = true;
@@ -4443,7 +4466,11 @@
           let { URI_INHERITS_SECURITY_CONTEXT } = Ci.nsIProtocolHandler;
           // Unless we know for sure we're not inheriting principals,
           // force the about:blank viewer to have the right principal:
-          if (!uri || doGetProtocolFlags(uri) & URI_INHERITS_SECURITY_CONTEXT) {
+          if (
+            !uri ||
+            this.documentGlobal.doGetProtocolFlags(uri) &
+              URI_INHERITS_SECURITY_CONTEXT
+          ) {
             return true;
           }
         }
@@ -4466,7 +4493,10 @@
       ) {
         // pretend the user typed this so it'll be available till
         // the document successfully loads
-        if (uriString && !gInitialPages.includes(uriString)) {
+        if (
+          uriString &&
+          !this.documentGlobal.gInitialPages.includes(uriString)
+        ) {
           browser.userTypedValue = uriString;
         }
 
@@ -4738,7 +4768,7 @@
 
       if (tabs.length > 1 || !tabs[0].selected) {
         this._updateTabsAfterInsert();
-        TabBarVisibility.update();
+        this.documentGlobal.TabBarVisibility.update();
 
         for (let tab of tabs) {
           // If tabToSelect is a tab, we didn't reuse the selected tab.
@@ -4862,7 +4892,7 @@
       }
 
       // Our prompt to close this window is most important, so replace others.
-      gDialogBox.replaceDialogIfOpen();
+      this.documentGlobal.gDialogBox.replaceDialogIfOpen();
 
       // default to true: if it were false, we wouldn't get this far
       var warnOnClose = { value: true };
@@ -4975,7 +5005,9 @@
               ) + 1;
           } else if (previousTab.visible) {
             elementIndex = previousTab.elementIndex + 1;
-          } else if (previousTab == FirefoxViewHandler.tab) {
+          } else if (
+            previousTab == this.documentGlobal.FirefoxViewHandler.tab
+          ) {
             elementIndex = 0;
           }
 
@@ -5073,7 +5105,7 @@
         this._updateTabBarForPinnedTabs();
       }
 
-      TabBarVisibility.update();
+      this.documentGlobal.TabBarVisibility.update();
     }
 
     /**
@@ -5245,7 +5277,7 @@
       }
 
       this.removeTabs(tabs, options);
-      ConfirmationHint.show(
+      this.documentGlobal.ConfirmationHint.show(
         aConfirmationAnchor,
         "confirmation-hint-duplicate-tabs-closed",
         { l10nArgs: { tabCount: tabs.length } }
@@ -5856,7 +5888,7 @@
 
       if (
         !animate /* the caller didn't opt in */ ||
-        gReduceMotion ||
+        this.documentGlobal.gReduceMotion ||
         isLastTab ||
         aTab.pinned ||
         !isVisibleTab ||
@@ -5883,7 +5915,7 @@
       aTab.removeAttribute("fadein");
       aTab.removeAttribute("bursting");
 
-      setTimeout(
+      this.documentGlobal.setTimeout(
         function (tab, tabbrowser) {
           if (
             tab.container &&
@@ -6085,7 +6117,7 @@
       }
 
       if (newTab) {
-        this.addTrustedTab(BROWSER_NEW_TAB_URL, {
+        this.addTrustedTab(this.documentGlobal.BROWSER_NEW_TAB_URL, {
           skipAnimation: true,
           // In the event that insertAfterCurrent is set and the current tab is
           // inside a group that is being closed we want to avoid creating the
@@ -6093,7 +6125,7 @@
           tabIndex: 0,
         });
       } else {
-        TabBarVisibility.update();
+        this.documentGlobal.TabBarVisibility.update();
       }
 
       // Splice this tab out of any lines of succession before any events are
@@ -6138,7 +6170,7 @@
       notificationBox?._stack?.remove();
 
       if (aTab.linkedPanel) {
-        if (!adoptedByTab && !gMultiProcessBrowser) {
+        if (!adoptedByTab && !this.documentGlobal.gMultiProcessBrowser) {
           // Prevent this tab from showing further dialogs, since we're closing it
           browser.contentWindow.windowUtils.disableDialogs();
         }
@@ -6217,7 +6249,7 @@
         }
       } else if (!this.#windowIsClosing) {
         if (aNewTab) {
-          gURLBar.select();
+          this.documentGlobal.gURLBar.select();
         }
       }
 
@@ -6252,7 +6284,7 @@
         // update tab close buttons state
         this.tabContainer._updateCloseButtons();
 
-        setTimeout(
+        this.documentGlobal.setTimeout(
           function (tabs) {
             tabs._lastTabClosedByMouse = false;
           },
@@ -6310,7 +6342,7 @@
       }
 
       if (aCloseWindow) {
-        this.#windowIsClosing = closeWindow(
+        this.#windowIsClosing = this.documentGlobal.closeWindow(
           true,
           this.documentGlobal.warnAboutClosingWindow,
           "close-last-tab"
@@ -6402,29 +6434,34 @@
           // is visible, so as to not do this in private browsing mode or if the user
           // has removed the button from their toolbar (bug 1946432, bug 1989429)
           let firefoxViewAvailable =
-            FirefoxViewHandler.tab ||
-            FirefoxViewHandler.button?.checkVisibility({
+            this.documentGlobal.FirefoxViewHandler.tab ||
+            this.documentGlobal.FirefoxViewHandler.button?.checkVisibility({
               checkVisibilityCSS: true,
               visibilityProperty: true,
             });
           if (firefoxViewAvailable) {
-            FirefoxViewHandler.openTab("opentabs");
+            this.documentGlobal.FirefoxViewHandler.openTab("opentabs");
           } else {
-            this.selectedTab = this.addTrustedTab(BROWSER_NEW_TAB_URL, {
-              skipAnimation: true,
-            });
+            this.selectedTab = this.addTrustedTab(
+              this.documentGlobal.BROWSER_NEW_TAB_URL,
+              {
+                skipAnimation: true,
+              }
+            );
           }
         }
       }
       let memoryUsageBeforeUnload = await getTotalMemoryUsage();
-      let timeBeforeUnload = performance.now();
+      let timeBeforeUnload = this.documentGlobal.performance.now();
       let numberOfTabsUnloaded = 0;
       await Promise.all(tabs.map(tab => this.prepareDiscardBrowser(tab)));
 
       for (let tab of tabs) {
         numberOfTabsUnloaded += this.discardBrowser(tab, true) ? 1 : 0;
       }
-      let timeElapsed = Math.floor(performance.now() - timeBeforeUnload);
+      let timeElapsed = Math.floor(
+        this.documentGlobal.performance.now() - timeBeforeUnload
+      );
       Glean.browserEngagement.tabExplicitUnload.record({
         unload_selected_tab: unloadSelectedTab,
         all_tabs_unloaded: allTabsUnloaded,
@@ -6451,7 +6488,7 @@
       } // Do nothing
 
       if (event.button == 1) {
-        BrowserCommands.openTab({ event });
+        this.documentGlobal.BrowserCommands.openTab({ event });
         // Stop the propagation of the click event, to prevent the event from being
         // handled more than once.
         // E.g. see https://bugzilla.mozilla.org/show_bug.cgi?id=1657992#c4
@@ -6473,8 +6510,8 @@
       if (!aTab.selected) {
         return null;
       }
-      if (FirefoxViewHandler.tab) {
-        aExcludeTabs.push(FirefoxViewHandler.tab);
+      if (this.documentGlobal.FirefoxViewHandler.tab) {
+        aExcludeTabs.push(this.documentGlobal.FirefoxViewHandler.tab);
       }
 
       let excludeTabs = new Set(aExcludeTabs);
@@ -6569,7 +6606,10 @@
 
       // Do not allow transfering a useRemoteSubframes tab to a
       // non-useRemoteSubframes window and vice versa.
-      if (gFissionBrowser != aOtherTab.documentGlobal.gFissionBrowser) {
+      if (
+        this.documentGlobal.gFissionBrowser !=
+        aOtherTab.documentGlobal.gFissionBrowser
+      ) {
         return false;
       }
 
@@ -6926,8 +6966,8 @@
       SitePermissions.clearTemporaryBlockPermissions(browser);
       // Also reset DOS mitigations for the basic auth prompt on reload.
       delete browser.authPromptAbuseCounter;
-      gIdentityHandler.hidePopup();
-      gPermissionPanel.hidePopup();
+      this.documentGlobal.gIdentityHandler.hidePopup();
+      this.documentGlobal.gPermissionPanel.hidePopup();
       browser.reload();
     }
 
@@ -6966,7 +7006,7 @@
     }
 
     showTab(aTab) {
-      if (!aTab.hidden || aTab == FirefoxViewHandler.tab) {
+      if (!aTab.hidden || aTab == this.documentGlobal.FirefoxViewHandler.tab) {
         return;
       }
       aTab.removeAttribute("hidden");
@@ -7082,7 +7122,7 @@
 
       // Play the tab closing animation to give immediate feedback while
       // waiting for the new window to appear.
-      if (!gReduceMotion && this.isTab(aTab)) {
+      if (!this.documentGlobal.gReduceMotion && this.isTab(aTab)) {
         aTab.style.maxWidth = ""; // ensure that fade-out transition happens
         aTab.removeAttribute("fadein");
       }
@@ -7134,7 +7174,7 @@
 
       // Play the closing animation for all selected tabs to give
       // immediate feedback while waiting for the new window to appear.
-      if (!gReduceMotion) {
+      if (!this.documentGlobal.gReduceMotion) {
         for (let element of elements) {
           element.style.maxWidth = ""; // ensure that fade-out transition happens
           element.removeAttribute("fadein");
@@ -8355,7 +8395,7 @@
     }
 
     warmupTab(aTab) {
-      if (gMultiProcessBrowser) {
+      if (this.documentGlobal.gMultiProcessBrowser) {
         this._getSwitcher().warmupTab(aTab);
       }
     }
@@ -8557,7 +8597,11 @@
         return;
       }
 
-      switch (ShortcutUtils.getSystemActionForEvent(aEvent, { rtl: RTL_UI })) {
+      switch (
+        ShortcutUtils.getSystemActionForEvent(aEvent, {
+          rtl: this.documentGlobal.RTL_UI,
+        })
+      ) {
         case ShortcutUtils.TOGGLE_CARET_BROWSING:
           if (
             aEvent.defaultPrevented ||
@@ -8731,7 +8775,7 @@
       // Get the PIDs of the content process and remote subframe processes
       let [contentPid, ...framePids] = E10SUtils.getBrowserPids(
         tab.linkedBrowser,
-        gFissionBrowser
+        this.documentGlobal.gFissionBrowser
       );
       let pids = contentPid ? [contentPid] : [];
       return pids.concat(framePids.sort());
@@ -8995,7 +9039,7 @@
       this.documentGlobal.removeEventListener("activate", this);
       this.documentGlobal.removeEventListener("deactivate", this);
 
-      if (gMultiProcessBrowser) {
+      if (this.documentGlobal.gMultiProcessBrowser) {
         if (this._switcher) {
           this._switcher.destroy();
         }
@@ -9177,7 +9221,7 @@
           }
           event.target.userTypedValue = null;
           if (event.target == this.selectedBrowser) {
-            gURLBar.setURI();
+            this.documentGlobal.gURLBar.setURI();
           }
         },
         true
@@ -9456,7 +9500,9 @@
       if (this._tabContextMenuTranslated) {
         return;
       }
-      MozXULElement.insertFTLIfNeeded("browser/tabContextMenu.ftl");
+      this.documentGlobal.MozXULElement.insertFTLIfNeeded(
+        "browser/tabContextMenu.ftl"
+      );
       // Un-lazify the l10n-ids now that the FTL file has been inserted.
       this.document
         .getElementById("tabContextMenu")
