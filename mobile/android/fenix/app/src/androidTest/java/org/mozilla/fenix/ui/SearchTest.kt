@@ -318,6 +318,12 @@ class SearchTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1623441
+    @Converted(
+        replacedBy =
+            ["org.mozilla.fenix.ui.efficiency.tests.SearchTest#searchResultsOpenedInNewTabsGenerateSearchGroupsTest"],
+        bug = 2063072,
+        since = "2026-08",
+    )
     @Ignore("Failing: https://bugzilla.mozilla.org/show_bug.cgi?id=1930244")
     @SmokeTest
     @Test

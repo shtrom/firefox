@@ -6,13 +6,16 @@ package org.mozilla.fenix.ui.efficiency.tests
 
 import android.content.Context
 import android.hardware.camera2.CameraManager
+import mozilla.components.feature.contextmenu.R as contextMenuR
 import org.junit.Assume
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
+import org.mozilla.fenix.R
 import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.helpers.AppAndSystemHelper
+import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
 import org.mozilla.fenix.helpers.MockBrowserDataHelper
 import org.mozilla.fenix.helpers.SearchMockServerRule
 import org.mozilla.fenix.helpers.TestAssetHelper.getGenericAsset
@@ -23,10 +26,16 @@ import org.mozilla.fenix.ui.efficiency.selectors.HomeSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.SearchBarSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.ToolbarSelectors
 
-class SearchTest : BaseTest() {
+// Pocket is disabled class-wide to match the legacy SearchTest rule, which runs every test in this class
+// with isPocketEnabled = false. It matters for the search-group tests: with Pocket on, "Recently visited"
+// can sit below the fold, and mozVerify does not scroll — so a "group is displayed" assertion fails and, far
+// worse, a "group is gone" assertion passes for the wrong reason.
+class SearchTest : BaseTest(isPocketEnabled = false) {
 
+    private val queryString = "firefox"
     private val generalEnginesList = listOf("DuckDuckGo", "Google", "Bing")
     private val topicEnginesList = listOf("Wikipedia (en)")
+    private val openLinkInNewTab = getStringResource(contextMenuR.string.mozac_feature_contextmenu_open_link_in_new_tab)
 
     // Legacy SearchTest drives these URLs off SearchMockServerRule, whose dispatcher 404s everything
     // except searchResults.html. That is load-bearing for verifyTabsSearchWithOpenTabsTest: the tabs
@@ -229,5 +238,50 @@ class SearchTest : BaseTest() {
             // 2 search engine suggestions and 2 browser suggestions (1 history, 1 bookmark)
             .mozVerifyElementCount(SearchBarSelectors.SEARCH_SUGGESTION, 4)
             .mozVerifyNoneContainText(SearchBarSelectors.SEARCH_SUGGESTION, "test page 2")
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1623441
+    @SmokeTest
+    @Test
+    fun searchResultsOpenedInNewTabsGenerateSearchGroupsTest() {
+        val firstPageUrl = searchMockServerRule.server.getGenericAsset(1).url.toString()
+        val secondPageUrl = searchMockServerRule.server.getGenericAsset(2).url.toString()
+
+        MockBrowserDataHelper.setCustomSearchEngine(searchMockServerRule.server, "TestSearchEngine")
+
+        on.searchBar
+            .navigateToPage(forceNavigation = true)
+            .mozEnterText(queryString, SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+            .mozPressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+            .mozWaitUntilAbsent(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+
+        // The two links open tabs that never load: SearchDispatcher serves only searchResults.html and 404s
+        // the link targets. Only the URL is assertable, which is what the legacy test checks too.
+        on.browserPage.navigateToPage()
+        on.browserPage
+            .longClickPageObjectUntilContextMenu("Link 1", openLinkInNewTab)
+            .mozClick(BrowserPageSelectors.CONTEXT_MENU_ITEM(openLinkInNewTab))
+            .mozClick(BrowserPageSelectors.SNACKBAR_ACTION_BUTTON)
+        on.browserPage
+            .verifyUrl(firstPageUrl)
+            // Back out of the 404 tab to the results page. One press, as legacy does.
+            .mozPressBack()
+
+        on.browserPage
+            .longClickPageObjectUntilContextMenu("Link 2", openLinkInNewTab)
+            .mozClick(BrowserPageSelectors.CONTEXT_MENU_ITEM(openLinkInNewTab))
+            .mozClick(BrowserPageSelectors.SNACKBAR_ACTION_BUTTON)
+        on.browserPage.verifyUrl(secondPageUrl)
+
+        on.tabDrawer.navigateToPage().closeAllTabs()
+
+        // The group holds 3 URLs: the search-results origin plus the two links opened from it.
+        on.home
+            .navigateToPage()
+            .mozVerify(HomeSelectors.RECENTLY_VISITED_HEADER)
+            .mozVerifyElementHasSiblingWithText(
+                HomeSelectors.RECENTLY_VISITED_SEARCH_GROUP(queryString),
+                getStringResource(R.string.history_search_group_sites_1, 3),
+            )
     }
 }

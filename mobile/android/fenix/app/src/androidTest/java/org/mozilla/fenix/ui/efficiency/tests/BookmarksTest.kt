@@ -176,7 +176,7 @@ class BookmarksTest : BaseTest() {
             .navigateToPage(defaultWebPage.url.toString())
             .mozClick(HomeSelectors.MAIN_MENU_BUTTON)
             .mozClick(MainMenuSelectors.BOOKMARK_THIS_PAGE_BUTTON)
-            .mozClick(BrowserPageSelectors.SNACKBAR_EDIT_BUTTON)
+            .mozClick(BrowserPageSelectors.SNACKBAR_ACTION_BUTTON)
         on.bookmarks
             .mozClearAndEnterText("Bookmark title", BookmarksSelectors.EDIT_BOOKMARK_ITEM_TITLE_TEXT_FIELD)
             .mozClearAndEnterText(editedWebPage.url.toString(), BookmarksSelectors.EDIT_BOOKMARK_ITEM_URL_TEXT_FIELD)

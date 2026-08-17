@@ -988,6 +988,18 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         throw AssertionError("'${selector.description}' still present after $maxPresses back press(es)")
     }
 
+    // A single back press. mozPressBackUntilGone cannot stand in when the thing being left has no selector
+    // to poll — closing a 404 tab to return to the previous one, for instance — and "back until X is gone"
+    // would press again if the first press has not landed yet.
+    fun mozPressBack(): BasePage {
+        val rep = rep()
+        rep?.startCmd("press_back", "Pressing back...", 1)
+        mDevice.pressBack()
+        mDevice.waitForIdle()
+        rep?.endCmd(success = true, message = "Pressed back")
+        return this
+    }
+
     private fun waitForPresence(selector: Selector, timeout: Long, interval: Long = 200): Boolean {
         val deadline = System.currentTimeMillis() + timeout
         while (System.currentTimeMillis() < deadline) {
