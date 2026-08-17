@@ -1015,7 +1015,7 @@ void MediaTrackGraphImpl::DeviceChanged() {
   NS_DispatchBackgroundTask(NS_NewRunnableFunction(
       "MaxChannelCountUpdateOnBgThread", [self{std::move(self)}]() {
         uint32_t maxChannelCount = CubebUtils::MaxNumberOfChannels();
-        self->Dispatch(NS_NewRunnableFunction(
+        self->DispatchToMainThread(NS_NewRunnableFunction(
             "MaxChannelCountUpdateToMainThread",
             [self{self}, maxChannelCount]() {
               class MessageToGraph : public ControlMessage {
@@ -2143,7 +2143,8 @@ void MediaTrackGraphImpl::AppendMessage(
   EnsureRunInStableState();
 }
 
-void MediaTrackGraphImpl::Dispatch(already_AddRefed<nsIRunnable> aRunnable) {
+void MediaTrackGraphImpl::DispatchToMainThread(
+    already_AddRefed<nsIRunnable> aRunnable) {
   mMainThread->Dispatch(std::move(aRunnable));
 }
 
@@ -2645,7 +2646,7 @@ void MediaTrack::RunAfterPendingUpdates(
           // assume that there are no remaining
           // controlMessagesToRunDuringShutdown.
           MOZ_ASSERT(NS_IsMainThread());
-          GraphImpl()->Dispatch(runnable.forget());
+          GraphImpl()->DispatchToMainThread(runnable.forget());
         }
       });
 }
@@ -2709,7 +2710,7 @@ void MediaTrack::AddMainThreadListener(
   };
 
   nsCOMPtr<nsIRunnable> runnable = new NotifyRunnable(this);
-  GraphImpl()->Dispatch(runnable.forget());
+  GraphImpl()->DispatchToMainThread(runnable.forget());
 }
 
 void MediaTrack::AdvanceTimeVaryingValuesToCurrentTime(GraphTime aCurrentTime,
@@ -3867,7 +3868,7 @@ void MediaTrackGraphImpl::NotifyWhenPrimaryDeviceStarted(
             CurrentDriver()->ThreadRunning() &&
             !CurrentDriver()->AsAudioCallbackDriver()->OnFallback()) {
           // Avoid Resolve's locking on the graph thread by doing it on main.
-          Dispatch(NS_NewRunnableFunction(
+          DispatchToMainThread(NS_NewRunnableFunction(
               "MediaTrackGraphImpl::NotifyWhenPrimaryDeviceStarted::Resolver",
               [holder = std::move(holder)]() mutable {
                 holder.Resolve(true, __func__);
