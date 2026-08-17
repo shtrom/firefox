@@ -21,14 +21,14 @@ void EnumerateDefaultVideoCodecs(
     const OverrideRtxPreference aOverrideRtxPreference);
 
 void EnumerateDefaultVideoCodecs(
-    nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs,
+    nsTArray<UniquePtr<JsepCodecDescription>>* aSupportedCodecs,
     const JsepCodecPreferences& aPrefs);
 
 void EnumerateDefaultAudioCodecs(
     nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs);
 
 void EnumerateDefaultAudioCodecs(
-    nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs,
+    nsTArray<UniquePtr<JsepCodecDescription>>* aSupportedCodecs,
     const JsepCodecPreferences& aPrefs);
 
 class DefaultCodecPreferences final : public JsepCodecPreferences {
