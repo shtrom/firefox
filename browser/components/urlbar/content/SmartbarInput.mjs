@@ -80,10 +80,11 @@ const lazy = XPCOMUtils.declareLazy({
     service: "@mozilla.org/url-query-string-stripper;1",
     iid: Ci.nsIURLQueryStringStripper,
   },
-  logger: () => UrlbarShared.getLogger({ prefix: "SmartbarInput" }),
   getCurrentTabUrl:
     "moz-src:///browser/components/aiwindow/ui/modules/ChatUtils.sys.mjs",
 });
+
+const logger = () => UrlbarShared.getLogger({ prefix: "SmartbarInput" });
 
 const UNLIMITED_MAX_RESULTS = 99;
 const MAX_INPUT_LENGTH = 32000;
@@ -322,7 +323,7 @@ ${
     // get the main browser window.
     this.window = this.documentGlobal;
     if (!this.window.gBrowser) {
-      lazy.logger.debug(`gBrowser not available, get the browser window.`);
+      logger().debug(`gBrowser not available, get the browser window.`);
       this.window = window.browsingContext.topChromeWindow;
     }
 
@@ -880,16 +881,19 @@ ${
     }
   }
 
-  #lazy = XPCOMUtils.declareLazy({
-    valueFormatter: () => new lazy.UrlbarValueFormatter(this),
-    addSearchEngineHelper: () => new AddSearchEngineHelper(this),
-  });
+  #addSearchEngineHelper;
+
+  #valueFormatter;
 
   /**
    * Manages the Add Search Engine contextual menu entries.
    */
   get addSearchEngineHelper() {
-    return this.#lazy.addSearchEngineHelper;
+    return (this.#addSearchEngineHelper ??= new AddSearchEngineHelper(this));
+  }
+
+  #getValueFormatter() {
+    return (this.#valueFormatter ??= new lazy.UrlbarValueFormatter(this));
   }
 
   get sapName() {
@@ -1117,7 +1121,7 @@ ${
   formatValue() {
     // The editor may not exist if the toolbar is not visible.
     if (this.#isAddressbar && this.editor) {
-      this.#lazy.valueFormatter.update();
+      this.#getValueFormatter().update();
     }
   }
 
@@ -2293,7 +2297,7 @@ ${
    */
   pickElement(element, event) {
     let result = this.view.getResultFromElement(element);
-    lazy.logger.debug(
+    logger().debug(
       `pickElement ${element} with event ${event?.type}, result: ${result}`
     );
     if (!result) {
@@ -2716,7 +2720,7 @@ ${
             windowMode: this.windowMode,
           }
         )
-        .catch(e => lazy.logger.error(e));
+        .catch(e => logger().error(e));
     }
 
     this.controller.engagementEvent.record(event, {
@@ -4834,7 +4838,7 @@ ${
     // Only trim value if the directionality doesn't change to RTL and we're not
     // showing a strikeout https protocol.
     return this.controller.isTextDirectionRTL(trimmedValue) ||
-      this.#lazy.valueFormatter.willShowFormattedMixedContentProtocol(val)
+      this.#getValueFormatter().willShowFormattedMixedContentProtocol(val)
       ? val
       : trimmedValue;
   }
@@ -5320,7 +5324,7 @@ ${
             .filter(Boolean)
             .join("@");
         } catch (ex) {
-          lazy.logger.error("Should only try to untrim valid URLs");
+          logger().error("Should only try to untrim valid URLs");
         }
         if (!this.#selectedText.startsWith(prePathMinusPort)) {
           selectionStart += offset;
@@ -6058,7 +6062,7 @@ ${
   }
 
   _on_blur(event) {
-    lazy.logger.debug("Blur Event");
+    logger().debug("Blur Event");
     // We cannot count every blur events after a missed engagement as abandoment
     // because the user may have clicked on some view element that executes
     // a command causing a focus change. For example opening preferences from
@@ -6177,7 +6181,7 @@ ${
 
   _on_contextmenu(event) {
     if (!this.#isSmartbarMode) {
-      this.#lazy.addSearchEngineHelper.refreshContextMenu();
+      this.addSearchEngineHelper.refreshContextMenu();
     }
 
     // Context menu opened via keyboard shortcut.
@@ -6189,7 +6193,7 @@ ${
   }
 
   _on_focus(event) {
-    lazy.logger.debug("Focus Event");
+    logger().debug("Focus Event");
     if (!this._hideFocus) {
       this.toggleAttribute("focused", true);
     }
