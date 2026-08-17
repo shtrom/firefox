@@ -115,7 +115,7 @@ AddonUtilsInternal.prototype = {
               try {
                 addon.enable();
               } catch (e) {
-                this._log.error("Failed to enable the incoming theme", e);
+                log.error("Failed to enable the incoming theme", e);
               } finally {
                 // If something went wrong with enabling the theme, we don't have a good
                 // way to retry -- so we'll clear it rather than keeping the pref around
