@@ -6682,7 +6682,7 @@ let Tabbrowser;
       var remoteBrowser = aOtherTab.documentGlobal.gBrowser;
       var isPending = aOtherTab.hasAttribute("pending");
 
-      let otherTabListener = remoteBrowser._getTabProgressListener(aOtherTab);
+      let otherTabListener = remoteBrowser.#tabListeners.get(aOtherTab);
       let stateFlags = 0;
       if (otherTabListener) {
         stateFlags = otherTabListener._stateFlags;
@@ -6874,35 +6874,13 @@ let Tabbrowser;
       return true;
     }
 
-    // The progress listener and filter Maps are #-private, but tab swapping
-    // reaches across windows: each window evaluates this script separately, so
-    // another window's gBrowser is an instance of a different Tabbrowser class
-    // and its private fields can't be read directly. These thin accessors run
-    // in the owning window's realization, so callers can route through them
-    // (e.g. otherWindowGBrowser._getTabProgressListener(tab)). Creating the
-    // listener there also keeps it in the realm of the window it belongs to,
-    // so it can't keep another window alive.
-    _getTabProgressListener(aTab) {
-      return this.#tabListeners.get(aTab);
-    }
-
-    _getTabProgressFilter(aTab) {
-      return this.#tabFilters.get(aTab);
-    }
-
-    _createTabProgressListener(aTab, aBrowser) {
-      let listener = new TabProgressListener(aTab, aBrowser, false, false);
-      this.#tabListeners.set(aTab, listener);
-      return listener;
-    }
-
     swapBrowsers(aOurTab, aOtherTab) {
       let otherBrowser = aOtherTab.linkedBrowser;
       let otherTabBrowser = otherBrowser.getTabBrowser();
 
       // We aren't closing the other tab so, we also need to swap its tablisteners.
-      let filter = otherTabBrowser._getTabProgressFilter(aOtherTab);
-      let tabListener = otherTabBrowser._getTabProgressListener(aOtherTab);
+      let filter = otherTabBrowser.#tabFilters.get(aOtherTab);
+      let tabListener = otherTabBrowser.#tabListeners.get(aOtherTab);
       otherBrowser.webProgress.removeProgressListener(filter);
       filter.removeProgressListener(tabListener);
 
@@ -6910,10 +6888,13 @@ let Tabbrowser;
       this._swapBrowserDocShells(aOurTab, otherBrowser);
 
       // Restore the listeners for the swapped in tab.
-      tabListener = otherTabBrowser._createTabProgressListener(
+      tabListener = new TabProgressListener(
         aOtherTab,
-        otherBrowser
+        otherBrowser,
+        false,
+        false
       );
+      otherTabBrowser.#tabListeners.set(aOtherTab, tabListener);
 
       const notifyAll = Ci.nsIWebProgress.NOTIFY_ALL;
       filter.addProgressListener(tabListener, notifyAll);
