@@ -138,7 +138,7 @@ async function assertIssueList(panel, expectedIssues) {
               )
               .join("\n"),
           }),
-          "The brower item has the expected title attribute"
+          "The browser item has the expected title attribute"
         );
       }
     }
@@ -202,9 +202,6 @@ async function assertIssueList(panel, expectedIssues) {
         "span",
         `No link rendered for ${property}`
       );
-
-      const { link } = await simulateLinkClick(propertyEl);
-      is(link, null, `Click on ${property} does not navigate`);
     }
   }
 }

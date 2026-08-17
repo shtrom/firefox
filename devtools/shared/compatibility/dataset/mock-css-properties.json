@@ -285,6 +285,25 @@
       "tags": ["web-features:svg"]
     }
   },
+  "-moz-orient": {
+    "__compat": {
+      "status": {
+        "deprecated": false,
+        "experimental": false,
+        "standard_track": false
+      },
+      "support": {
+        "chrome": [{ "added": false }],
+        "chrome_android": [{ "added": false }],
+        "edge": [{ "added": false }],
+        "firefox": [{ "added": 6 }],
+        "firefox_android": [{ "added": 6 }],
+        "ie": [{ "added": false }],
+        "safari": [{ "added": false }],
+        "safari_ios": [{ "added": false }]
+      }
+    }
+  },
   "user-select": {
     "__compat": {
       "mdn_url": "https://developer.mozilla.org/docs/Web/CSS/Reference/Properties/user-select",
