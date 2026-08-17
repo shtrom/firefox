@@ -768,8 +768,10 @@ var gMainPane = {
     if (!(await FxAccounts.canConnectAccount())) {
       return;
     }
-    let url =
-      await FxAccounts.config.promiseConnectAccountURI("dev-edition-setup");
+    let url = await FxAccounts.config.promiseConnectAccountURI(
+      "sync",
+      "dev-edition-setup"
+    );
     let accountsTab = win.gBrowser.addWebTab(url);
     win.gBrowser.selectedTab = accountsTab;
   },

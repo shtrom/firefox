@@ -2423,7 +2423,10 @@ var gSync = {
     if (!(await FxAccounts.canConnectAccount())) {
       return;
     }
-    const url = await FxAccounts.config.promiseConnectAccountURI(entryPoint);
+    const url = await FxAccounts.config.promiseConnectAccountURI(
+      "sync",
+      entryPoint
+    );
     switchToTabHavingURI(url, true, {
       replaceQueryString: true,
       triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
@@ -2439,7 +2442,10 @@ var gSync = {
   },
 
   async openConnectAnotherDevice(entryPoint) {
-    const url = await FxAccounts.config.promiseConnectDeviceURI(entryPoint);
+    const url = await FxAccounts.config.promiseConnectDeviceURI(
+      "sync",
+      entryPoint
+    );
     openTrustedLinkIn(url, "tab");
   },
 
@@ -2510,6 +2516,7 @@ var gSync = {
       return;
     }
     const url = await FxAccounts.config.promiseConnectAccountURI(
+      "sync",
       entryPoint,
       extraParams
     );
@@ -3475,7 +3482,11 @@ var gSync = {
       this._getEntryPointForElement(sourceElement) === "fxa_app_menu"
         ? "send-tab-app-menu"
         : "send-tab-account-menu";
-    var url = await FxAccounts.config.promiseConnectAccountURI(entryPoint, {});
+    var url = await FxAccounts.config.promiseConnectAccountURI(
+      "sync",
+      entryPoint,
+      {}
+    );
     switchToTabHavingURI(url, true, {});
   },
 

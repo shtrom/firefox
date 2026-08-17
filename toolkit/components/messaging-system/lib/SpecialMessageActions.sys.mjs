@@ -520,10 +520,15 @@ export const SpecialMessageActions = {
     }
     // In practice, all FxA signin flows will have a "service", because that param dictates the
     // UI shown by FxA. But to be extra cautious, this code treats it as optional.
-    let neededService = data?.extraParams?.service;
+    let extraParams = data?.extraParams;
+    let neededService = extraParams?.service;
+    if (neededService) {
+      delete extraParams.service;
+    }
     const url = await lazy.FxAccounts.config.promiseConnectAccountURI(
+      neededService || "sync",
       data?.entrypoint || "activity-stream-firstrun",
-      data?.extraParams || {}
+      extraParams || {}
     );
 
     let window = browser.documentGlobal;
@@ -1016,7 +1021,12 @@ export const SpecialMessageActions = {
           break;
         }
         const data = action.data;
+        const service = data?.extraParams?.service;
+        if (service) {
+          delete data.extraParams.service;
+        }
         const url = await lazy.FxAccounts.config.promiseConnectAccountURI(
+          service || "sync",
           data && data.entrypoint,
           (data && data.extraParams) || {}
         );
