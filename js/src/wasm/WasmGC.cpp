@@ -18,6 +18,7 @@
 
 #include "wasm/WasmInstance.h"
 
+#include "wasm/WasmSummarizeInsn.h"
 #include "jit/MacroAssembler-inl.h"
 
 using namespace js;
@@ -407,56 +408,134 @@ void wasm::CheckWholeCellLastElementCache(MacroAssembler& masm,
 }
 
 #ifdef DEBUG
-bool wasm::IsPlausibleStackMapKey(const uint8_t* nextPC) {
+bool wasm::IsPlausibleStackMapKey(const uint8_t* base,
+                                  uint32_t stackmapOffset) {
+  // See block comment at the declaration of this function for explanation.
+  const uint8_t* nextPC = base + size_t(stackmapOffset);
+
+  // Most stackmaps are associated with call instructions.  Look backwards to
+  // see if that's plausible, while being aware of the limitations described in
+  // the abovementioned block comment, at least for targets with variable-length
+  // insn encodings (x86, x64, Arm-Thumb2 [which we don't generate],
+  // RiscV-compressed [which we don't currently generate]).
+
 #  if defined(JS_CODEGEN_X64) || defined(JS_CODEGEN_X86)
   const uint8_t* insn = nextPC;
-  return (insn[-2] == 0x0F && insn[-1] == 0x0B) ||           // ud2
-         (insn[-2] == 0xFF && (insn[-1] & 0xF8) == 0xD0) ||  // call *%r_
-         insn[-5] == 0xE8;                                   // call simm32
-
-#  elif defined(JS_CODEGEN_ARM)
-  const uint32_t* insn = (const uint32_t*)nextPC;
-  return ((uintptr_t(insn) & 3) == 0) &&            // must be ARM, not Thumb
-         (insn[-1] == 0xe7f000f0 ||                 // udf
-          (insn[-1] & 0xfffffff0) == 0xe12fff30 ||  // blx reg (ARM, enc A1)
-          (insn[-1] & 0x0f000000) == 0x0b000000);  // bl.cc simm24 (ARM, enc A1)
+  if ((insn[-2] == 0xFF && (insn[-1] & 0xF8) == 0xD0) ||  // call *%r_
+      insn[-5] == 0xE8) {                                 // call simm32
+    return true;
+  }
 
 #  elif defined(JS_CODEGEN_ARM64)
-  const uint32_t hltInsn = 0xd4a00000;
+  if ((uintptr_t(nextPC) & 3) != 0) {
+    return false;  // misaligned
+  }
   const uint32_t* insn = (const uint32_t*)nextPC;
-  return ((uintptr_t(insn) & 3) == 0) &&
-         (insn[-1] == hltInsn ||                    // hlt
-          (insn[-1] & 0xfffffc1f) == 0xd63f0000 ||  // blr reg
-          (insn[-1] & 0xfc000000) == 0x94000000);   // bl simm26
+  if (((insn[-1] & 0xfffffc1f) == 0xd63f0000) ||  // blr reg
+      ((insn[-1] & 0xfc000000) == 0x94000000)) {  // bl simm26
+    return true;
+  }
+
+#  elif defined(JS_CODEGEN_ARM)
+  if ((uintptr_t(nextPC) & 3) != 0) {
+    return false;  // misaligned or Thumb
+  }
+  const uint32_t* insn = (const uint32_t*)nextPC;
+  if (((insn[-1] & 0xfffffff0) == 0xe12fff30) ||  // blx reg (ARM, enc A1)
+      ((insn[-1] & 0x0f000000) == 0x0b000000)) {  // bl.cc simm24 (ARM, enc A1)
+    return true;
+  }
+
+#  elif defined(JS_CODEGEN_RISCV64)
+  if ((uintptr_t(nextPC) & 3) != 0) {
+    return false;  // misaligned
+  }
+  const uint32_t* insn = (const uint32_t*)nextPC;
+  if (((insn[-1] & kBaseOpcodeMask) == JALR) ||  // jalr
+      ((insn[-1] & kBaseOpcodeMask) == JAL) ||   // jal
+      ((insn[-2] & kBaseOpcodeMask) == JAL &&
+       insn[-1] == 0x00000013 /* addi zero, zero, 0 */)) {  // jal; nop
+    return true;
+  }
 
 #  elif defined(JS_CODEGEN_MIPS64)
-  // TODO (bug 1699696): Implement this.  As for the platforms above, we need to
-  // enumerate all code sequences that can precede the stackmap location.
+  // TODO (bug 1699696): Implement this.  As with the platforms above, we need
+  // to identify call instructions that we generate.
+  // FIXME (also for Loong64): this should be implemented properly.  Not doing
+  // so increases the likelyhood of the trap/stackmap machinery having
+  // undetected bugs on these targets.
   return true;
+
 #  elif defined(JS_CODEGEN_LOONG64)
   // TODO(loong64): Implement IsValidStackMapKey.
   return true;
-#  elif defined(JS_CODEGEN_RISCV64)
-  const uint32_t* insn = reinterpret_cast<const uint32_t*>(nextPC);
-  return (((uintptr_t(insn) & 3) == 0) &&
-          ((insn[-1] == 0x00006037 && insn[-2] == 0x00100073) ||  // break;
-           ((insn[-1] & kBaseOpcodeMask) == JALR) ||              // jalr
-           ((insn[-1] & kBaseOpcodeMask) == JAL) ||               // jal
-           ((insn[-2] & kBaseOpcodeMask) == JAL &&
-            insn[-1] == 0x00000013 /* addi zero, zero, 0 */) ||  // jal; nop
-           (insn[-1] == 0xc0035073)));  // "csrwi csr_cycle, 0x6";
+
 #  else
-  MOZ_CRASH("IsValidStackMapKey: requires implementation on this platform");
+  MOZ_CRASH(
+      "IsValidStackMapKey: call-instruction identification "
+      "requires implementation on this platform");
 #  endif
+
+  // It's not associated with a call instruction, so it must instead be
+  // associated with some instruction that can trap.  We can check that by using
+  // SummarizeTrapInstruction, and for that we need the start point of the
+  // instruction, but what we have to hand is the start point of the following
+  // instruction.  So the best we can do is to use SummarizeTrapInstruction to
+  // inspect up to one-instruction-length's worth of byte offsets before
+  // `nextPC`, to see if any of them is a trapping instruction of the right kind
+  // and length.
+
+  // The minimum and maximum instruction lengths we are looking for, with
+  // clamping so we don't back up into negative offset land.
+  uint32_t minLen =
+      std::min(stackmapOffset, FaultingCodeRange::minInsnLength());
+  uint32_t maxLen =
+      std::min(stackmapOffset, FaultingCodeRange::maxInsnLength());
+
+  uint32_t len = 0;
+  bool found = false;
+  SummarizeResult summary;
+
+  // Inspect instructions in `nextPC -minLen, -(minLen+1), .. -maxLen`, to see
+  // if any of them are a trapping instruction of the right kind.
+  for (len = minLen; len <= maxLen; len++) {
+    const uint8_t* maybeTrappingInsn = (uint8_t*)nextPC - len;
+    summary = SummarizeTrapInstruction(maybeTrappingInsn);
+    if (!summary.identified()) {
+      // Wasn't identified.  In effect, not found.
+      continue;
+    }
+    if (summary.length() != len) {
+      // Was identified, but is the wrong length.
+      continue;
+    }
+    // So we've found something plausible.
+    found = true;
+    MOZ_ASSERT(maybeTrappingInsn + len == nextPC);
+    break;
+  }
+
+  if (!found) {
+    // There's no mention of a trapping instruction that immediately precedes
+    // `nextPC`.  Give up.  Note that we can also get here if
+    // SummarizeTrapInstruction fails to identify a valid trapping insn, or
+    // fails to compute its length.  That would be a bug in
+    // SummarizeTrapInstruction, which should be fixed.
+    return false;
+  }
+
+  // The instruction was identified and has the right length.
+  MOZ_ASSERT(summary.kind() != TrapMachineInsn::INVALID);
+  return true;
 }
 #endif
 
 void StackMaps::checkInvariants(const uint8_t* base) const {
 #ifdef DEBUG
-  // Chech that each entry points from the stackmap structure points
-  // to a plausible instruction.
+  // Check that each entry in the stackmap hash table points to a plausible
+  // instruction.
   for (auto iter = codeOffsetToStackMap_.iter(); !iter.done(); iter.next()) {
-    MOZ_ASSERT(IsPlausibleStackMapKey(base + iter.get().key()),
+    MOZ_ASSERT(IsPlausibleStackMapKey(base, iter.get().key()),
                "wasm stackmap does not reference a valid insn");
   }
 #endif
