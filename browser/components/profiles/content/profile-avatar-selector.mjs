@@ -1014,7 +1014,7 @@ export class ProfileAvatarSelector extends MozLitElement {
         rel="stylesheet"
         href="chrome://browser/content/profiles/profile-avatar-selector.css"
       />
-      <dialog>
+      <dialog data-l10n-id="avatar-selector-dialog">
         <moz-card id="avatar-selector">
           <div id="content">
             <moz-segmented-control
