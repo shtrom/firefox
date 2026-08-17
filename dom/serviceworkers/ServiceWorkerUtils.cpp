@@ -106,7 +106,6 @@ bool ServiceWorkersStorageAllowedForGlobal(nsIGlobalObject* aGlobal) {
           (storageAllowed == StorageAccess::ePrivateBrowsing &&
            StaticPrefs::dom_serviceWorkers_privateBrowsing_enabled()) ||
           (ShouldPartitionStorage(storageAllowed) &&
-           StaticPrefs::privacy_partition_serviceWorkers() &&
            StoragePartitioningEnabled(storageAllowed, cookieJarSettings) &&
            (!principal->GetIsInPrivateBrowsing() ||
             StaticPrefs::dom_serviceWorkers_privateBrowsing_enabled())));
@@ -126,7 +125,6 @@ bool ServiceWorkersStorageAllowedForClient(
           (storageAllowed == StorageAccess::ePrivateBrowsing &&
            StaticPrefs::dom_serviceWorkers_privateBrowsing_enabled()) ||
           (ShouldPartitionStorage(storageAllowed) &&
-           StaticPrefs::privacy_partition_serviceWorkers() &&
            /* note: no call to StoragePartitioningEnabled here */
            (!info.IsPrivateBrowsing() ||
             StaticPrefs::dom_serviceWorkers_privateBrowsing_enabled())));
