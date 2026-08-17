@@ -1211,7 +1211,8 @@ void BrowserParent::HandleAccessKey(const WidgetKeyboardEvent& aEvent,
     // Note that we don't need to mark aEvent is posted to a remote process
     // because the event may be dispatched to it as normal keyboard event.
     // Therefore, we should use local copy to send it.
-    WidgetKeyboardEvent localEvent(aEvent);
+    WidgetKeyboardEvent localEvent(
+        aEvent);  // NOLINT(performance-unnecessary-copy-initialization)
     RequestingAccessKeyEventData::Set(localEvent);
     (void)SendHandleAccessKey(localEvent, aCharCodes);
   }
