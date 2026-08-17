@@ -175,7 +175,7 @@ class PeerConnectionImpl final
   struct RtpExtensionHeader {
     JsepMediaType mMediaType;
     SdpDirectionAttribute::Direction direction;
-    std::string extensionname;
+    nsCString extensionname;
   };
 
   JSObject* WrapObject(JSContext* aCx,
@@ -960,11 +960,6 @@ class PeerConnectionWrapper {
 };
 
 }  // namespace mozilla
-
-// RtpExtensionHeader holds a std::string, which is not memmovable, so relocate
-// it using its move constructor when stored in an nsTArray.
-MOZ_DECLARE_RELOCATE_USING_MOVE_CONSTRUCTOR(
-    mozilla::PeerConnectionImpl::RtpExtensionHeader)
 
 #undef NS_IMETHODIMP_TO_ERRORRESULT
 #undef NS_IMETHODIMP_TO_ERRORRESULT_RETREF

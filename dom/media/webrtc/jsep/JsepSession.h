@@ -109,16 +109,16 @@ class JsepSession {
                                       const std::vector<uint8_t>& value) = 0;
 
   virtual nsresult AddRtpExtension(
-      JsepMediaType mediaType, const std::string& extensionName,
+      JsepMediaType mediaType, const nsACString& extensionName,
       SdpDirectionAttribute::Direction direction) = 0;
   virtual nsresult AddAudioRtpExtension(
-      const std::string& extensionName,
+      const nsACString& extensionName,
       SdpDirectionAttribute::Direction direction) = 0;
   virtual nsresult AddVideoRtpExtension(
-      const std::string& extensionName,
+      const nsACString& extensionName,
       SdpDirectionAttribute::Direction direction) = 0;
   virtual nsresult AddAudioVideoRtpExtension(
-      const std::string& extensionName,
+      const nsACString& extensionName,
       SdpDirectionAttribute::Direction direction) = 0;
 
   virtual Span<UniquePtr<JsepCodecDescription>> Codecs() = 0;
