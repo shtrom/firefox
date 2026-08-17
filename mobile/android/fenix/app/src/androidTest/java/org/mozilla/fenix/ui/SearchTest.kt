@@ -486,6 +486,12 @@ class SearchTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1592269
+    @Converted(
+        replacedBy =
+            ["org.mozilla.fenix.ui.efficiency.tests.SearchTest#deleteIndividualHistoryItemsFromSearchGroupTest"],
+        bug = 2063080,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun deleteIndividualHistoryItemsFromSearchGroupTest() {

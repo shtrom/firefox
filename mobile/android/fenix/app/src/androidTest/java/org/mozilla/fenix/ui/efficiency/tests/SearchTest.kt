@@ -21,6 +21,7 @@ import org.mozilla.fenix.helpers.SearchMockServerRule
 import org.mozilla.fenix.helpers.TestAssetHelper.getGenericAsset
 import org.mozilla.fenix.helpers.TestHelper.appContext
 import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
+import org.mozilla.fenix.ui.efficiency.pageObjects.HistorySearchGroupPage
 import org.mozilla.fenix.ui.efficiency.selectors.BrowserPageSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.HistorySelectors
 import org.mozilla.fenix.ui.efficiency.selectors.HomeSelectors
@@ -40,6 +41,11 @@ class SearchTest : BaseTest(isPocketEnabled = false) {
     private val openLinkInNewTab = getStringResource(contextMenuR.string.mozac_feature_contextmenu_open_link_in_new_tab)
     private val openLinkInPrivateTab =
         getStringResource(contextMenuR.string.mozac_feature_contextmenu_open_link_in_private_tab)
+
+    // get() so it binds to the composeRule of the current retry attempt, which BaseTest re-creates. Not on
+    // PageContext by design — see HistorySearchGroupPage.
+    private val searchGroup
+        get() = HistorySearchGroupPage(composeRule)
 
     // Legacy SearchTest drives these URLs off SearchMockServerRule, whose dispatcher 404s everything
     // except searchResults.html. That is load-bearing for verifyTabsSearchWithOpenTabsTest: the tabs
@@ -341,5 +347,61 @@ class SearchTest : BaseTest(isPocketEnabled = false) {
             .mozVerifyElementAbsent(
                 HistorySelectors.HISTORY_ITEM_WITH_TEXT(getStringResource(R.string.history_search_group_sites_1, 3))
             )
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1592269
+    @SmokeTest
+    @Test
+    fun deleteIndividualHistoryItemsFromSearchGroupTest() {
+        val firstPageUrl = searchMockServerRule.server.getGenericAsset(1).url.toString()
+        val secondPageUrl = searchMockServerRule.server.getGenericAsset(2).url.toString()
+        val threePagesCaption = getStringResource(R.string.history_search_group_sites_1, 3)
+
+        MockBrowserDataHelper.setCustomSearchEngine(searchMockServerRule.server, "TestSearchEngine")
+
+        on.searchBar
+            .navigateToPage(forceNavigation = true)
+            .mozEnterText(queryString, SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+            .mozPressEnter(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+            .mozWaitUntilAbsent(SearchBarSelectors.TOOLBAR_IN_EDIT_MODE)
+
+        // Same group-building steps as searchResultsOpenedInNewTabsGenerateSearchGroupsTest, duplicated
+        // rather than shared because the legacy tests duplicate them too and are reviewed side by side.
+        on.browserPage.navigateToPage()
+        on.browserPage
+            .longClickPageObjectUntilContextMenu("Link 1", openLinkInNewTab)
+            .mozClick(BrowserPageSelectors.CONTEXT_MENU_ITEM(openLinkInNewTab))
+            .mozClick(BrowserPageSelectors.SNACKBAR_ACTION_BUTTON)
+        on.browserPage.verifyUrl(firstPageUrl).mozPressBack()
+
+        on.browserPage
+            .longClickPageObjectUntilContextMenu("Link 2", openLinkInNewTab)
+            .mozClick(BrowserPageSelectors.CONTEXT_MENU_ITEM(openLinkInNewTab))
+            .mozClick(BrowserPageSelectors.SNACKBAR_ACTION_BUTTON)
+        on.browserPage.verifyUrl(secondPageUrl)
+
+        on.tabDrawer.navigateToPage().closeAllTabs()
+
+        on.home
+            .navigateToPage()
+            .mozVerify(HomeSelectors.RECENTLY_VISITED_HEADER)
+            .mozVerifyElementHasSiblingWithText(
+                HomeSelectors.RECENTLY_VISITED_SEARCH_GROUP(queryString),
+                threePagesCaption,
+            )
+            .mozClick(HomeSelectors.RECENTLY_VISITED_SEARCH_GROUP(queryString))
+
+        // Two different delete paths, as legacy does: the per-row cross for the first item and multi-select
+        // for the second.
+        searchGroup
+            .verifyGroupIsOpen(queryString)
+            .deleteItemWithRowButton(firstPageUrl)
+            .deleteItemWithMultiSelectOverflow(secondPageUrl)
+            .exitToHomepage()
+
+        // Only the search-results origin is left, which is under the minimum group size, so the whole group
+        // disappears. mozWaitUntilAbsent and not mozVerifyElementAbsent: the homepage rebuilds asynchronously
+        // after the deletions, and legacy covers that with a 1s window wait before a single-shot check.
+        on.home.navigateToPage().mozWaitUntilAbsent(HomeSelectors.RECENTLY_VISITED_SEARCH_GROUP(queryString))
     }
 }
