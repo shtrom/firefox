@@ -58,6 +58,7 @@ Var RegHive
 Var SetAsDefault
 Var HadOldInstall
 Var InstallExisted
+Var ProfDirExisted
 Var DefaultInstDir
 Var IntroPhaseStart
 Var OptionsPhaseStart
@@ -295,6 +296,10 @@ Section "-InstallStartCleanup"
   ${EndIf}
 
   Call CheckIfInstallExisted
+
+  ; Set $ProfDirExisted; must run before any profile initialization
+  Call GetProfileDirExisted
+  Pop $ProfDirExisted
 
   ; Delete the app exe if present to prevent launching the app while we are
   ; installing.
@@ -1066,13 +1071,7 @@ Function WriteInstallationTelemetryData
 
   ; Check for top-level profile directory
   ; Note: This is the same check used to set $HadExistingProfile in stub.nsi
-  ${GetLocalAppDataFolder} $0
-  ${If} ${FileExists} "$0\Mozilla\Firefox"
-    StrCpy $1 "true"
-  ${Else}
-    StrCpy $1 "false"
-  ${EndIf}
-  ${JSONSet} "profdir_existed" /value $1
+  ${JSONSet} "profdir_existed" /value $ProfDirExisted
 
   ${GetParameters} $0
   ${GetOptions} $0 "/LaunchedFromStub" $1
@@ -1552,6 +1551,7 @@ Function .onInit
   StrCpy $SetAsDefault true
   StrCpy $HadOldInstall false
   StrCpy $InstallExisted ""
+  StrCpy $ProfDirExisted ""
   StrCpy $DefaultInstDir $INSTDIR
   StrCpy $IntroPhaseStart 0
   StrCpy $OptionsPhaseStart 0
