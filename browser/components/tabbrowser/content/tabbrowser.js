@@ -36,59 +36,6 @@
   /**
    * Updates the User Context UI indicators if the browser is in a non-default context
    */
-  function updateUserContextUIIndicator() {
-    function replaceContainerClass(classType, element, value) {
-      let prefix = "identity-" + classType + "-";
-      if (value && element.classList.contains(prefix + value)) {
-        return;
-      }
-      for (let className of element.classList) {
-        if (className.startsWith(prefix)) {
-          element.classList.remove(className);
-        }
-      }
-      if (value) {
-        element.classList.add(prefix + value);
-      }
-    }
-
-    let hbox = document.getElementById("userContext-icons");
-
-    let userContextId = gBrowser.selectedBrowser.getAttribute("usercontextid");
-    if (!userContextId) {
-      // The container-creation panel can temporarily reveal this indicator to
-      // use it as its anchor; don't hide it again while that panel is up.
-      let creationPanel = document.getElementById("containerCreation-panel");
-      if (creationPanel && creationPanel.state != "closed") {
-        return;
-      }
-      replaceContainerClass("color", hbox, "");
-      hbox.hidden = true;
-      return;
-    }
-
-    let identity =
-      ContextualIdentityService.getPublicIdentityFromId(userContextId);
-    if (!identity) {
-      replaceContainerClass("color", hbox, "");
-      hbox.hidden = true;
-      return;
-    }
-
-    replaceContainerClass("color", hbox, identity.color);
-
-    let label = ContextualIdentityService.getUserContextLabel(userContextId);
-    document.getElementById("userContext-label").textContent = label;
-    // Also set the container label as the tooltip so we can only show the icon
-    // in small windows.
-    hbox.setAttribute("tooltiptext", label);
-
-    let indicator = document.getElementById("userContext-indicator");
-    replaceContainerClass("icon", indicator, identity.icon);
-
-    hbox.hidden = false;
-  }
-
   async function getTotalMemoryUsage() {
     const procInfo = await ChromeUtils.requestProcInfo();
     let totalMemoryUsage = procInfo.memory;
@@ -149,7 +96,7 @@
       // Sync dialog cannot be used inside drop event handler.
       let answer = await tabbrowser.OpenInTabsUtils.promiseConfirmOpenInTabs(
         links.length,
-        window
+        tabbrowser.documentGlobal
       );
       if (!answer) {
         return;
@@ -159,7 +106,9 @@
     let urls = [];
     let postDatas = [];
     for (let link of links) {
-      let data = await UrlbarUtils.getShortcutOrURIAndPostData(link.url);
+      let data = await tabbrowser.UrlbarUtils.getShortcutOrURIAndPostData(
+        link.url
+      );
       urls.push(data.url);
       postDatas.push(data.postData);
     }
@@ -822,7 +771,7 @@
         tab.setAttribute("usercontextid", userContextId);
         ContextualIdentityService.setTabStyle(tab);
       }
-      updateUserContextUIIndicator();
+      this.#updateUserContextUIIndicator();
 
       this.#tabForBrowser.set(browser, tab);
 
@@ -844,6 +793,64 @@
         filter,
         Ci.nsIWebProgress.NOTIFY_ALL
       );
+    }
+
+    #updateUserContextUIIndicator() {
+      function replaceContainerClass(classType, element, value) {
+        let prefix = "identity-" + classType + "-";
+        if (value && element.classList.contains(prefix + value)) {
+          return;
+        }
+        for (let className of element.classList) {
+          if (className.startsWith(prefix)) {
+            element.classList.remove(className);
+          }
+        }
+        if (value) {
+          element.classList.add(prefix + value);
+        }
+      }
+
+      let hbox = this.ownerDocument.getElementById("userContext-icons");
+
+      let userContextId = this.selectedBrowser.getAttribute("usercontextid");
+      if (!userContextId) {
+        // The container-creation panel can temporarily reveal this indicator to
+        // use it as its anchor; don't hide it again while that panel is up.
+        let creationPanel = this.ownerDocument.getElementById(
+          "containerCreation-panel"
+        );
+        if (creationPanel && creationPanel.state != "closed") {
+          return;
+        }
+        replaceContainerClass("color", hbox, "");
+        hbox.hidden = true;
+        return;
+      }
+
+      let identity =
+        ContextualIdentityService.getPublicIdentityFromId(userContextId);
+      if (!identity) {
+        replaceContainerClass("color", hbox, "");
+        hbox.hidden = true;
+        return;
+      }
+
+      replaceContainerClass("color", hbox, identity.color);
+
+      let label = ContextualIdentityService.getUserContextLabel(userContextId);
+      this.ownerDocument.getElementById("userContext-label").textContent =
+        label;
+      // Also set the container label as the tooltip so we can only show the icon
+      // in small windows.
+      hbox.setAttribute("tooltiptext", label);
+
+      let indicator = this.ownerDocument.getElementById(
+        "userContext-indicator"
+      );
+      replaceContainerClass("icon", indicator, identity.icon);
+
+      hbox.hidden = false;
     }
 
     /**
@@ -1963,7 +1970,7 @@
         }
       }
 
-      updateUserContextUIIndicator();
+      this.#updateUserContextUIIndicator();
       gPermissionPanel.updateSharingIndicator();
 
       // Enable touch events to start a native dragging
@@ -3099,7 +3106,7 @@
       // We don't want to update the container icon and identifier if
       // this is not the selected browser.
       if (aTab.selected) {
-        updateUserContextUIIndicator();
+        this.#updateUserContextUIIndicator();
       }
 
       // Only fire this event if the tab is already in the DOM
@@ -9500,6 +9507,14 @@
       this._requestCount = aOrigRequestCount || 0;
     }
 
+    get #documentGlobal() {
+      return this._tab.documentGlobal;
+    }
+
+    get #tabbrowser() {
+      return this._tab.documentGlobal.gBrowser;
+    }
+
     destroy() {
       delete this._tab;
       delete this._browser;
@@ -9507,7 +9522,7 @@
 
     _callProgressListeners(...args) {
       args.unshift(this._browser);
-      return gBrowser._callProgressListeners.apply(gBrowser, args);
+      return this.#tabbrowser._callProgressListeners(...args);
     }
 
     _shouldShowProgress(aRequest) {
@@ -9564,7 +9579,7 @@
 
       if (this._totalProgress && this._tab.hasAttribute("busy")) {
         this._tab.setAttribute("progress", "true");
-        gBrowser._tabAttrModified(this._tab, ["progress"]);
+        this.#tabbrowser._tabAttrModified(this._tab, ["progress"]);
       }
 
       this._callProgressListeners("onProgressChange", [
@@ -9674,14 +9689,18 @@
                   originalLocation
                 ))
             ) {
-              gBrowser.setInitialTabTitle(this._tab, originalLocation.spec, {
-                isURL: true,
-              });
+              this.#tabbrowser.setInitialTabTitle(
+                this._tab,
+                originalLocation.spec,
+                {
+                  isURL: true,
+                }
+              );
 
               this._browser.browsingContext.nonWebControlledLoadingURI =
                 originalLocation;
-              if (this._tab.selected && !gBrowser.userTypedValue) {
-                gURLBar.setURI();
+              if (this._tab.selected && !this.#tabbrowser.userTypedValue) {
+                this.#documentGlobal.gURLBar.setURI();
               }
             }
           }
@@ -9698,12 +9717,12 @@
             aWebProgress.isTopLevel
           ) {
             this._tab.setAttribute("busy", "true");
-            gBrowser._tabAttrModified(this._tab, ["busy"]);
+            this.#tabbrowser._tabAttrModified(this._tab, ["busy"]);
             this._tab._notselectedsinceload = !this._tab.selected;
           }
 
           if (this._tab.selected) {
-            gBrowser._isBusy = true;
+            this.#tabbrowser._isBusy = true;
           }
         }
       } else if (aStateFlags & STATE_STOP && aStateFlags & STATE_IS_NETWORK) {
@@ -9722,7 +9741,7 @@
             aWebProgress.isTopLevel &&
             !aWebProgress.isLoadingDocument &&
             Components.isSuccessCode(aStatus) &&
-            !gBrowser.tabAnimationsInProgress &&
+            !this.#tabbrowser.tabAnimationsInProgress &&
             !gReduceMotion
           ) {
             if (this._tab._notselectedsinceload) {
@@ -9765,7 +9784,7 @@
               aStatus != Cr.NS_BINDING_CANCELLED_OLD_LOAD &&
               !isNavigating
             ) {
-              gURLBar.setURI();
+              this.#documentGlobal.gURLBar.setURI();
             }
           } else if (isSuccessful) {
             this._browser.urlbarChangeTracker.finishedLoad();
@@ -9789,7 +9808,7 @@
           // new tabs behavior is set to open a blank page.
           // This is a no-op unless this._browser.documentURI is in
           // FAVICON_DEFAULTS.
-          gBrowser.setDefaultIcon(this._tab, this._browser.documentURI);
+          this.#tabbrowser.setDefaultIcon(this._tab, this._browser.documentURI);
         }
 
         // For keyword URIs clear the user typed value since they will be changed into real URIs
@@ -9798,11 +9817,11 @@
         }
 
         if (this._tab.selected) {
-          gBrowser._isBusy = false;
+          this.#tabbrowser._isBusy = false;
         }
 
         if (modifiedAttrs.length) {
-          gBrowser._tabAttrModified(this._tab, modifiedAttrs);
+          this.#tabbrowser._tabAttrModified(this._tab, modifiedAttrs);
         }
       }
 
@@ -9880,16 +9899,18 @@
         // attribute here.
         if (isErrorPage && this._tab.hasAttribute("busy")) {
           this._tab.removeAttribute("busy");
-          gBrowser._tabAttrModified(this._tab, ["busy"]);
+          this.#tabbrowser._tabAttrModified(this._tab, ["busy"]);
         }
 
         if (!isSameDocument) {
           // If the browser was playing audio, we should remove the playing state.
           if (this._tab.hasAttribute("soundplaying")) {
-            clearTimeout(this._tab._soundPlayingAttrRemovalTimer);
+            this.#documentGlobal.clearTimeout(
+              this._tab._soundPlayingAttrRemovalTimer
+            );
             this._tab._soundPlayingAttrRemovalTimer = 0;
             this._tab.removeAttribute("soundplaying");
-            gBrowser._tabAttrModified(this._tab, ["soundplaying"]);
+            this.#tabbrowser._tabAttrModified(this._tab, ["soundplaying"]);
           }
 
           // If the browser was previously muted, we should restore the muted state.
@@ -9897,8 +9918,8 @@
             this._tab.linkedBrowser.browsingContext?.mediaController?.mute();
           }
 
-          if (gBrowser.isFindBarInitialized(this._tab)) {
-            let findBar = gBrowser.getCachedFindBar(this._tab);
+          if (this.#tabbrowser.isFindBarInitialized(this._tab)) {
+            let findBar = this.#tabbrowser.getCachedFindBar(this._tab);
 
             // Close the Find toolbar if we're in old-style TAF mode
             if (findBar.findMode != findBar.FIND_NORMAL) {
@@ -9911,7 +9932,7 @@
           // context, see https://bugzilla.mozilla.org/show_bug.cgi?id=585653
           // and https://github.com/whatwg/html/issues/2174
           if (!isReload) {
-            gBrowser.setTabTitle(this._tab);
+            this.#tabbrowser.setTabTitle(this._tab);
           }
 
           // Don't clear the favicon if this tab is in the pending
@@ -9932,7 +9953,7 @@
           }
 
           if (!isReload && aWebProgress.isLoadingDocument) {
-            let triggerer = gBrowser._getTriggeringPrincipalFromHistory(
+            let triggerer = this.#tabbrowser._getTriggeringPrincipalFromHistory(
               this._browser
             );
             // Typing a url, searching or clicking a bookmark will load a new
@@ -9941,7 +9962,7 @@
             if (triggerer && triggerer.isSystemPrincipal) {
               // Reset the related tab map so that the next tab opened will be related
               // to this new document and not to tabs opened by the previous one.
-              gBrowser.clearRelatedTabs();
+              this.#tabbrowser.clearRelatedTabs();
             }
           }
 
@@ -9952,10 +9973,10 @@
             this._browser.originalURI = aRequest.originalURI;
           }
 
-          if (!gBrowser._allowTransparentBrowser) {
+          if (!this.#tabbrowser._allowTransparentBrowser) {
             this._browser.toggleAttribute(
               "transparent",
-              AIWindow.isAIWindowActive(window) &&
+              AIWindow.isAIWindowActive(this.#documentGlobal) &&
                 AIWindow.isAIWindowContentPage(aLocation)
             );
           }
@@ -9964,20 +9985,20 @@
         let userContextId = this._browser.getAttribute("usercontextid") || 0;
         if (this._browser.registeredOpenURI) {
           let uri = this._browser.registeredOpenURI;
-          gBrowser.UrlbarProviderOpenTabs.unregisterOpenTab(
+          this.#tabbrowser.UrlbarProviderOpenTabs.unregisterOpenTab(
             uri.spec,
             userContextId,
             this._tab.group?.id,
-            PrivateBrowsingUtils.isWindowPrivate(window)
+            PrivateBrowsingUtils.isWindowPrivate(this.#documentGlobal)
           );
           delete this._browser.registeredOpenURI;
         }
         if (!isBlankPageURL(aLocation.spec)) {
-          gBrowser.UrlbarProviderOpenTabs.registerOpenTab(
+          this.#tabbrowser.UrlbarProviderOpenTabs.registerOpenTab(
             aLocation.spec,
             userContextId,
             this._tab.group?.id,
-            PrivateBrowsingUtils.isWindowPrivate(window)
+            PrivateBrowsingUtils.isWindowPrivate(this.#documentGlobal)
           );
           this._browser.registeredOpenURI = aLocation;
 
@@ -9989,11 +10010,13 @@
           }
         }
 
-        if (this._tab != gBrowser.selectedTab) {
-          let tabCacheIndex = gBrowser._tabLayerCache.indexOf(this._tab);
+        if (this._tab != this.#tabbrowser.selectedTab) {
+          let tabCacheIndex = this.#tabbrowser._tabLayerCache.indexOf(
+            this._tab
+          );
           if (tabCacheIndex != -1) {
-            gBrowser._tabLayerCache.splice(tabCacheIndex, 1);
-            gBrowser._getSwitcher().cleanUpTabAfterEviction(this._tab);
+            this.#tabbrowser._tabLayerCache.splice(tabCacheIndex, 1);
+            this.#tabbrowser._getSwitcher().cleanUpTabAfterEviction(this._tab);
           }
         }
       }
@@ -10085,7 +10108,7 @@
       loadURIOptions.loadFlags |= loadURIOptions.flags | LOAD_FLAGS_NONE;
       delete loadURIOptions.flags;
       loadURIOptions.hasValidUserGestureActivation ??=
-        document.hasValidTransientUserGestureActivation;
+        browser.ownerDocument.hasValidTransientUserGestureActivation;
     },
 
     _loadFlagsToFixupFlags(browser, loadFlags) {
@@ -10132,9 +10155,10 @@
       uriString,
       { loadFlags, globalHistoryOptions }
     ) {
+      let { SponsorProtection } = browser.getTabBrowser();
       if (globalHistoryOptions?.triggeringSponsoredURL) {
         if (globalHistoryOptions.triggeringSource == "newtab") {
-          gBrowser.SponsorProtection.addProtectedBrowser(browser);
+          SponsorProtection.addProtectedBrowser(browser);
         }
 
         try {
@@ -10158,7 +10182,7 @@
           );
         } catch (e) {}
       } else {
-        gBrowser.SponsorProtection.removeProtectedBrowser(browser);
+        SponsorProtection.removeProtectedBrowser(browser);
       }
 
       if (globalHistoryOptions?.triggeringSearchEngine) {
@@ -10232,218 +10256,3 @@
     },
   };
 } // end private scope for gBrowser
-
-var StatusPanel = {
-  // This is useful for debugging (set to `true` in the interesting state for
-  // the panel to remain in that state).
-  _frozen: false,
-
-  get panel() {
-    delete this.panel;
-    this.panel = document.getElementById("statuspanel");
-    this.panel.addEventListener(
-      "transitionend",
-      this._onTransitionEnd.bind(this)
-    );
-    this.panel.addEventListener(
-      "transitioncancel",
-      this._onTransitionEnd.bind(this)
-    );
-    return this.panel;
-  },
-
-  get isVisible() {
-    return !this.panel.hasAttribute("inactive");
-  },
-
-  update() {
-    if (BrowserHandler.kiosk || this._frozen) {
-      return;
-    }
-    let text;
-    let type;
-    let types = ["overLink"];
-    if (XULBrowserWindow.busyUI) {
-      types.push("status");
-    }
-    types.push("defaultStatus");
-    for (type of types) {
-      if ((text = XULBrowserWindow[type])) {
-        break;
-      }
-    }
-
-    // If it's a long data: URI that uses base64 encoding, truncate to
-    // a reasonable length rather than trying to display the entire thing.
-    // We can't shorten arbitrary URIs like this, as bidi etc might mean
-    // we need the trailing characters for display. But a base64-encoded
-    // data-URI is plain ASCII, so this is OK for status panel display.
-    // (See bug 1484071.)
-    let textCropped = false;
-    if (text.length > 500 && text.match(/^data:[^,]+;base64,/)) {
-      text = text.substring(0, 500) + "\u2026";
-      textCropped = true;
-    }
-
-    if (this._labelElement.value != text || (text && !this.isVisible)) {
-      this.panel.setAttribute("previoustype", this.panel.getAttribute("type"));
-      this.panel.setAttribute("type", type);
-
-      this._label = text;
-      this._labelElement.setAttribute(
-        "crop",
-        type == "overLink" && !textCropped ? "center" : "end"
-      );
-    }
-  },
-
-  get _labelElement() {
-    delete this._labelElement;
-    return (this._labelElement = document.getElementById("statuspanel-label"));
-  },
-
-  set _label(val) {
-    if (!this.isVisible) {
-      this.panel.removeAttribute("mirror");
-      this.panel.removeAttribute("sizelimit");
-    }
-
-    if (
-      this.panel.getAttribute("type") == "status" &&
-      this.panel.getAttribute("previoustype") == "status"
-    ) {
-      // Before updating the label, set the panel's current width as its
-      // min-width to let the panel grow but not shrink and prevent
-      // unnecessary flicker while loading pages. We only care about the
-      // panel's width once it has been painted, so we can do this
-      // without flushing layout.
-      this.panel.style.minWidth =
-        window.windowUtils.getBoundsWithoutFlushing(this.panel).width + "px";
-    } else {
-      this.panel.style.minWidth = "";
-    }
-
-    if (val) {
-      this._labelElement.value = val;
-      if (this.panel.hidden) {
-        this.panel.hidden = false;
-        // This ensures that the "inactive" attribute removal triggers a
-        // transition.
-        getComputedStyle(this.panel).display;
-      }
-      this.panel.removeAttribute("inactive");
-      MousePosTracker.addListener(this);
-    } else {
-      this.panel.setAttribute("inactive", "true");
-      MousePosTracker.removeListener(this);
-    }
-  },
-
-  _onTransitionEnd() {
-    if (!this.isVisible) {
-      this.panel.hidden = true;
-    }
-  },
-
-  getMouseTargetRect() {
-    let container = this.panel.parentNode;
-    let panelRect = window.windowUtils.getBoundsWithoutFlushing(this.panel);
-    let containerRect = window.windowUtils.getBoundsWithoutFlushing(container);
-
-    return {
-      top: panelRect.top,
-      bottom: panelRect.bottom,
-      left: RTL_UI ? containerRect.right - panelRect.width : containerRect.left,
-      right: RTL_UI
-        ? containerRect.right
-        : containerRect.left + panelRect.width,
-    };
-  },
-
-  onMouseEnter() {
-    this._mirror();
-  },
-
-  onMouseLeave() {
-    this._mirror();
-  },
-
-  _mirror() {
-    if (this._frozen) {
-      return;
-    }
-    if (this.panel.hasAttribute("mirror")) {
-      this.panel.removeAttribute("mirror");
-    } else {
-      this.panel.setAttribute("mirror", "true");
-    }
-
-    if (!this.panel.hasAttribute("sizelimit")) {
-      this.panel.setAttribute("sizelimit", "true");
-    }
-  },
-};
-
-var TabBarVisibility = {
-  _initialUpdateDone: false,
-
-  update(force = false) {
-    let isPopup = !window.toolbar.visible;
-    let isTaskbarTab = document.documentElement.hasAttribute("taskbartab");
-    let isSingleTabWindow = isPopup || isTaskbarTab;
-
-    let hasVerticalTabs =
-      !isSingleTabWindow &&
-      Services.prefs.getBoolPref("sidebar.verticalTabs", false);
-
-    // When `gBrowser` has not been initialized, we're opening a new window and
-    // assume only a single tab is loading.
-    let hasSingleTab = !gBrowser || gBrowser.visibleTabs.length == 1;
-
-    // To prevent tabs being lost, hiding the tabs toolbar should only work
-    // when only a single tab is visible or tabs are displayed elsewhere.
-    let hideTabsToolbar =
-      (isSingleTabWindow && hasSingleTab) || hasVerticalTabs;
-
-    // We only want a non-customized titlebar for popups. It should not be the
-    // case, but if a popup window contains more than one tab we re-enable
-    // titlebar customization and display tabs.
-    CustomTitlebar.allowedBy("non-popup", !(isPopup && hasSingleTab));
-
-    // Update the browser chrome.
-
-    let tabsToolbar = document.getElementById("TabsToolbar");
-    let navbar = document.getElementById("nav-bar");
-
-    gNavToolbox.toggleAttribute("tabs-hidden", hideTabsToolbar);
-    // Should the nav-bar look and function like a titlebar?
-    navbar.classList.toggle(
-      "browser-titlebar",
-      CustomTitlebar.enabled && hideTabsToolbar
-    );
-
-    if (
-      hideTabsToolbar == tabsToolbar.collapsed &&
-      !force &&
-      this._initialUpdateDone
-    ) {
-      // No further updates needed, `TabsToolbar` already matches the expected
-      // visibilty.
-      return;
-    }
-    this._initialUpdateDone = true;
-
-    tabsToolbar.collapsed = hideTabsToolbar;
-
-    // Stylize close menu items based on tab visibility. When a window will only
-    // ever have a single tab, only show the option to close the tab, and
-    // simplify the text since we don't need to disambiguate from closing the window.
-    document.getElementById("menu_closeWindow").hidden = hideTabsToolbar;
-    document.l10n.setAttributes(
-      document.getElementById("menu_close"),
-      hideTabsToolbar
-        ? "tabbrowser-menuitem-close"
-        : "tabbrowser-menuitem-close-tab"
-    );
-  },
-};

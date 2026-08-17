@@ -190,6 +190,16 @@ add_setup(async function () {
     ],
   });
 
+  // These tests drive hover with synthesized mouseover events, which set the
+  // hover target without moving the OS pointer. Any real mouse event that
+  // arrives afterwards resynchronises hover to wherever the pointer physically
+  // is and dismisses the preview, and merely showing the panel is enough to
+  // produce one. Drop input that the tests did not generate.
+  EventUtils.disableNonTestMouseEvents(true);
+  registerCleanupFunction(() => {
+    EventUtils.disableNonTestMouseEvents(false);
+  });
+
   await resetState();
   registerCleanupFunction(async function () {
     await resetState();

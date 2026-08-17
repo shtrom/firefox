@@ -12,7 +12,6 @@ const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarSearchOneOffs:
     "moz-src:///browser/components/urlbar/UrlbarSearchOneOffs.sys.mjs",
-  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
 // Query selector for selectable elements in results.
@@ -1935,7 +1934,7 @@ export class UrlbarView {
     noWrap.appendChild(titleSeparator);
     item._elements.set("titleSeparator", titleSeparator);
 
-    if (Services.prefs.getBoolPref("browser.nova.enabled", false)) {
+    if (UrlbarPrefs.get("browser.nova.enabled")) {
       let userContext = this.#createElement("span");
       userContext.classList.add(
         "urlbarView-user-context",
@@ -3664,7 +3663,7 @@ export class UrlbarView {
         : "urlbar-result-action-switch-tab",
     });
 
-    if (!Services.prefs.getBoolPref("browser.nova.enabled", false)) {
+    if (!UrlbarPrefs.get("browser.nova.enabled")) {
       this.#updateOtherActionChicletsProton(result, actionNode);
       return;
     }
@@ -4564,11 +4563,11 @@ export class UrlbarView {
       // as if it were hovered while the context menu is open.
       row.toggleAttribute("menu-trigger", true);
 
-      // Disable the context menu if the result does not return url.
-      let url = lazy.UrlbarUtils.getUrlFromResult(row.result, {
+      // Disable the context menu if the result does not return a load request.
+      let loadRequest = UrlbarShared.getLoadRequestFromResult(row.result, {
         element: row,
-      })?.url;
-      event.target.toggleAttribute("disabled", !url);
+      });
+      event.target.toggleAttribute("disabled", !loadRequest);
     } else if (
       event.target.id == "urlbarView-context-menu-open-in-container-tab-popup"
     ) {

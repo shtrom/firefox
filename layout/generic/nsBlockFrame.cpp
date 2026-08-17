@@ -5803,11 +5803,14 @@ bool nsBlockFrame::IsLastInlineLine(LineIterator aLine) {
 }
 
 bool nsBlockFrame::IsLastFormattedLine(LineIterator aLine) {
+  // Check if any later lines are non-empty/non-invisible
   for (LineIterator line = aLine.next(); line != LinesEnd(); ++line) {
     if (line->GetChildCount() > 0 && (line->IsBlock() || !line->IsPhantom())) {
       return false;
     }
   }
+
+  // Check if any continuations have non-empty/non-invisible lines
   nsBlockFrame* nextInFlow = (nsBlockFrame*)GetNextInFlow();
   while (nextInFlow) {
     for (const auto& line : nextInFlow->Lines()) {
@@ -5817,6 +5820,15 @@ bool nsBlockFrame::IsLastFormattedLine(LineIterator aLine) {
     }
     nextInFlow = (nsBlockFrame*)nextInFlow->GetNextInFlow();
   }
+
+  // Check if any child frames of this line have overflow frames
+  // that will be pulled into the next line when it is reflowed
+  for (nsIFrame* f : aLine->ChildFrames()) {
+    if (f->GetProperty(nsContainerFrame::OverflowProperty())) {
+      return false;
+    }
+  }
+
   return true;
 }
 

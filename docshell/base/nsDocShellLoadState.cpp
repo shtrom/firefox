@@ -30,6 +30,7 @@
 #include "mozilla/dom/NavigationUtils.h"
 #include "mozilla/dom/ProcessIsolation.h"
 #include "mozilla/dom/SessionHistoryEntry.h"
+#include "mozilla/dom/ServiceWorkerUtils.h"
 #include "mozilla/dom/nsHTTPSOnlyUtils.h"
 #include "mozilla/net/DocumentLoadListener.h"
 #include "mozilla/StaticPrefs_browser.h"
@@ -1487,6 +1488,16 @@ nsLoadFlags nsDocShellLoadState::CalculateChannelLoadFlags(
   // interception to occur. See step 12.1 of the SW HandleFetch algorithm.
   if (IsForceReloadType(loadType)) {
     loadFlags |= nsIChannel::LOAD_BYPASS_SERVICE_WORKER;
+  } else if (aBrowsingContext->IsTopContent()) {
+    // For the top-level site the uri to load determines whether service workers
+    // are blocked by policy.
+    if (dom::IsServiceWorkersDisabledByPolicy(mURI)) {
+      loadFlags |= nsIChannel::LOAD_BYPASS_SERVICE_WORKER;
+    }
+  } else if (aBrowsingContext->Top()->ServiceWorkersDisabledByPolicy()) {
+    // Otherwise use the state of the top-level site to determine whether
+    // service workers are blocked.
+    loadFlags |= nsIChannel::LOAD_BYPASS_SERVICE_WORKER;
   }
 
   return loadFlags;
@@ -1549,8 +1560,8 @@ const char* nsDocShellLoadState::ValidateWithOriginalState(
     return "HasSpeculativeListener";
   }
 
-  // FIXME: Consider calculating less information in the target process so that
-  // we can validate more properties more easily.
+  // FIXME: Consider calculating less information in the target process so
+  // that we can validate more properties more easily.
   // FIXME: Identify what other flags will not change when sent through a
   // content process.
 

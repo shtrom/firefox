@@ -868,6 +868,13 @@ skip-if = [
   "os == 'win' && msix",
 ]
 
+["test_happy_eyeballs_optimistic_dns.js"]
+run-sequentially = ["true"] # node server exceptions dont replay well
+skip-if = [
+  "os == 'android'",
+  "os == 'win' && msix",
+]
+
 ["test_happy_eyeballs_tcp_fallback.js"]
 run-sequentially = ["true"] # node server exceptions dont replay well
 skip-if = [
@@ -1848,6 +1855,7 @@ run-if = [
 ["test_trr_bench.js"]
 skip-if = [
   "verify",
+  "os == 'android'", # intermittent ADB port exhaustion
 ]
 run-sequentially = ["true"] # We want to check performance
 

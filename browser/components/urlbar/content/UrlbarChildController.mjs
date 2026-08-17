@@ -966,8 +966,6 @@ export class UrlbarChildController {
 
     /** @type {HTMLElement} */
     const switcher = this.input.querySelector(".searchmode-switcher");
-    // Set tabindex to be focusable.
-    switcher.setAttribute("tabindex", "-1");
     // Remove blur listener to avoid closing urlbar view panel.
     this.input.inputField.removeEventListener("blur", this.input);
     // Move the focus.
@@ -978,8 +976,6 @@ export class UrlbarChildController {
       "blur",
       /** @type {(e: FocusEvent) => void} */
       e => {
-        switcher.removeAttribute("tabindex");
-
         let relatedTarget = /** @type {HTMLElement} */ (e.relatedTarget);
         if (
           this.input.hasAttribute("focused") &&

@@ -12668,9 +12668,8 @@ bool nsDocShell::ServiceWorkerAllowedToControlWindow(nsIPrincipal* aPrincipal,
   StorageAccess storage =
       StorageAllowedForNewWindow(aPrincipal, aURI, parentInner);
 
-  // If the partitioned service worker is enabled, service worker is allowed to
-  // control the window if partition is enabled.
-  if (StaticPrefs::privacy_partition_serviceWorkers() && parentInner) {
+  // A service worker is allowed to control the window if partition is enabled.
+  if (parentInner) {
     RefPtr<Document> doc = parentInner->GetExtantDoc();
 
     if (doc && StoragePartitioningEnabled(storage, doc->CookieJarSettings())) {

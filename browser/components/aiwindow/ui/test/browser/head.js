@@ -806,9 +806,9 @@ async function stubLoadURL(browser, { captureURL = false } = {}) {
     if (capture) {
       content._stubLoadURLCalled = false;
       content._stubLoadedURL = null;
-      smartbar.controller.loadURL = ({ url }) => {
+      smartbar.controller.loadURL = ({ loadRequest }) => {
         content._stubLoadURLCalled = true;
-        content._stubLoadedURL = url;
+        content._stubLoadedURL = loadRequest.urlLoad?.url ?? null;
         return {};
       };
     } else {

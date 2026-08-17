@@ -8,7 +8,7 @@
  */
 
 /**
- * @import {URIFixupPrimitives} from "chrome://browser/content/urlbar/UrlbarShared.mjs"
+ * @import {UrlbarLoadRequest, URIFixupPrimitives} from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  * @import {Query} from "./UrlbarProvidersManager.sys.mjs"
  * @import {SearchEngine} from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import {SmartbarInput} from "chrome://browser/content/urlbar/SmartbarInput.mjs"
@@ -184,6 +184,22 @@ export var UrlbarUtils = {
   },
 
   /**
+   * Converts nsIInputStream to string. Throws unless the stream is a MIME
+   * stream wrapping a string stream, as built by `getPostDataStream` and by
+   * search engine submissions.
+   *
+   * @param {nsIInputStream} postData
+   *   The stream to unwrap.
+   * @returns {string}
+   *  The wrapped post data.
+   */
+  getPostDataString(postData) {
+    return postData
+      .QueryInterface(Ci.nsIMIMEInputStream)
+      .data.QueryInterface(Ci.nsISupportsCString).data;
+  },
+
+  /**
    * Returns the group for a result.
    *
    * @param {UrlbarResult} result
@@ -296,34 +312,44 @@ export var UrlbarUtils = {
    *   The element associated with the result that was selected or picked, if
    *   available. For results that have multiple selectable children, the URL
    *   may be taken from a child element rather than the result.
-   * @returns {object}
-   *   An object: `{ url, postData }`
+   * @returns {{url: ?string, postData: ?nsIInputStream}}
    *   `url` will be null if the result doesn't have a URL. `postData` will be
    *   null if the result doesn't have post data.
    */
   getUrlFromResult(result, { element = null } = {}) {
-    if (
-      result.payload.engine &&
-      (result.type == UrlbarShared.RESULT_TYPE.SEARCH ||
-        result.type == UrlbarShared.RESULT_TYPE.DYNAMIC)
-    ) {
-      let query =
-        element?.dataset.query ||
-        result.payload.suggestion ||
-        result.payload.query;
-      if (query) {
-        const engine = lazy.SearchService.getEngineByName(
-          result.payload.engine
-        );
-        let [url, postData] = this.getSearchQueryUrl(engine, query);
-        return { url, postData };
+    let loadRequest = UrlbarShared.getLoadRequestFromResult(result, {
+      element,
+    });
+    if (!loadRequest) {
+      return { url: null, postData: null };
+    }
+
+    return this.loadRequestToUrl(loadRequest);
+  },
+
+  /**
+   * Resolves a load request to the url and post data to load.
+   *
+   * @param {UrlbarLoadRequest} loadRequest
+   *   What to load.
+   * @returns {{url: ?string, postData: ?nsIInputStream}}
+   *   `url` will be null when the search engine wasn't found.
+   */
+  loadRequestToUrl(loadRequest) {
+    if (loadRequest.engineSearch) {
+      let { engineName, query } = loadRequest.engineSearch;
+      let engine = lazy.SearchService.getEngineByName(engineName);
+      if (!engine) {
+        return { url: null, postData: null };
       }
+      let [url, postData] = this.getSearchQueryUrl(engine, query);
+      return { url, postData };
     }
 
     return {
-      url: result.payload.url ?? null,
-      postData: result.payload.postData
-        ? this.getPostDataStream(result.payload.postData)
+      url: loadRequest.urlLoad.url,
+      postData: loadRequest.urlLoad.postData
+        ? this.getPostDataStream(loadRequest.urlLoad.postData)
         : null,
     };
   },

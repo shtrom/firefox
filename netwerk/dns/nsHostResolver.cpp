@@ -225,7 +225,7 @@ void nsHostResolver::ClearPendingQueue(
 // right now, so we need to mark them to get re-resolved on completion!
 
 void nsHostResolver::FlushCache(bool aTrrToo, bool aFlushEvictionQueue) {
-  mozilla::net::AutoResolverWriteLock dbLock(mDBLock);
+  mozilla::AutoWriteLock dbLock(mDBLock);
   MutexAutoLock queueLock(mQueue.mLock);
 
   if (aFlushEvictionQueue) {
@@ -266,7 +266,7 @@ void nsHostResolver::Shutdown() {
   nsTArray<PendingAbort> shutdownCallbacks;
 
   {
-    mozilla::net::AutoResolverWriteLock dbLock(mDBLock);
+    mozilla::AutoWriteLock dbLock(mDBLock);
     MutexAutoLock queueLock(mQueue.mLock);
 
     mShutdown = true;
@@ -320,7 +320,7 @@ nsresult nsHostResolver::GetHostRecord(
     const nsACString& host, const nsACString& aTrrServer, uint16_t type,
     nsIDNSService::DNSFlags flags, uint16_t af, bool pb,
     const nsCString& originSuffix, nsHostRecord** result) {
-  mozilla::net::AutoResolverWriteLock dbLock(mDBLock);
+  mozilla::AutoWriteLock dbLock(mDBLock);
   nsHostKey key(host, aTrrServer, type, flags, af, pb, originSuffix);
 
   RefPtr<nsHostRecord> rec =
@@ -490,12 +490,7 @@ nsresult nsHostResolver::ResolveHost(const nsACString& aHost,
   RefPtr<nsHostRecord> result;
   nsresult status = NS_OK, rv = NS_OK;
   {
-    MOZ_DIAGNOSTIC_ASSERT(!mDBLock.LockedForWritingByCurrentThread(),
-                          "Re-entered ResolveHost with mDBLock already held");
-    MOZ_DIAGNOSTIC_ASSERT(!mDBLock.LockedForReadingByCurrentThread(),
-                          "ResolveHost called with mDBLock held for reading");
-
-    mozilla::net::AutoResolverWriteLock dbLock(mDBLock);
+    mozilla::AutoWriteLock dbLock(mDBLock);
     MutexAutoLock queueLock(mQueue.mLock);
 
     if (mShutdown) {
@@ -866,7 +861,7 @@ void nsHostResolver::DetachCallback(
   RefPtr<nsResolveHostCallback> callback(aCallback);
 
   {
-    mozilla::net::AutoResolverWriteLock dbLock(mDBLock);
+    mozilla::AutoWriteLock dbLock(mDBLock);
     MutexAutoLock queueLock(mQueue.mLock);
 
     nsAutoCString originSuffix;
@@ -1460,7 +1455,7 @@ nsHostResolver::LookupStatus nsHostResolver::CompleteLookup(
   CallbackArray callbacks;
   LookupStatus result;
   {
-    AutoResolverWriteLock dbLock(mDBLock);
+    AutoWriteLock dbLock(mDBLock);
     MutexAutoLock queueLock(mQueue.mLock);
     result = CompleteLookupLocked(rec, status, aNewRRSet, pb, aOriginsuffix,
                                   aReason, aTRRRequest, callbacks);
@@ -1654,7 +1649,7 @@ nsHostResolver::LookupStatus nsHostResolver::CompleteLookupByType(
   CallbackArray callbacks;
   LookupStatus result;
   {
-    AutoResolverWriteLock dbLock(mDBLock);
+    AutoWriteLock dbLock(mDBLock);
     MutexAutoLock queueLock(mQueue.mLock);
     result = CompleteLookupByTypeLocked(rec, status, aResult, aReason, aTtl, pb,
                                         callbacks);
@@ -1767,7 +1762,7 @@ void nsHostResolver::CancelAsyncRequest(
   RefPtr<nsHostRecord> rec;
 
   {
-    mozilla::net::AutoResolverWriteLock dbLock(mDBLock);
+    mozilla::AutoWriteLock dbLock(mDBLock);
     MutexAutoLock queueLock(mQueue.mLock);
 
     nsAutoCString originSuffix;
@@ -1800,7 +1795,7 @@ void nsHostResolver::CancelAsyncRequest(
 }
 
 size_t nsHostResolver::SizeOfIncludingThis(MallocSizeOf mallocSizeOf) const {
-  mozilla::net::AutoResolverReadLock dbLock(mDBLock);
+  mozilla::AutoReadLock dbLock(mDBLock);
 
   size_t n = mallocSizeOf(this);
 
@@ -1919,7 +1914,7 @@ nsresult nsHostResolver::Create(nsHostResolver** result) {
 }
 
 void nsHostResolver::GetDNSCacheEntries(nsTArray<DNSCacheEntries>* args) {
-  mozilla::net::AutoResolverReadLock dbLock(mDBLock);
+  mozilla::AutoReadLock dbLock(mDBLock);
   for (const auto& recordEntry : mRecordDB) {
     // We don't pay attention to address literals, only resolved domains.
     // Also require a host.

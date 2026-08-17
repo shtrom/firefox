@@ -10122,6 +10122,14 @@
   mirror: always
   set_spidermonkey_pref: always
 
+# When true, causes wasm baseline to generate code that can be navigated by the
+# JS debugger.  This is mostly for testing only.
+- name: javascript.options.wasm_baseline_debug
+  type: bool
+  value: false
+  mirror: always
+  set_spidermonkey_pref: always
+
 # Support for pretenuring allocations based on their allocation site.
 - name: javascript.options.site_based_pretenuring
   type: bool
@@ -13705,6 +13713,13 @@
     value: true
     mirror: always
 
+  # Use MediaDataDecoder API for AV1 in WebRTC. This includes hardware
+  # acceleration for decoding.
+-   name: media.navigator.mediadatadecoder_av1_enabled
+    type: RelaxedAtomicBool
+    value: true
+    mirror: always
+
 #if defined(MOZ_WIDGET_GTK)
   # Use hardware acceleration for VP8 decoding on Linux.
 -   name: media.navigator.mediadatadecoder_vp8_hardware_enabled
@@ -15500,17 +15515,6 @@
 - name: network.dns.max_high_priority_threads
   type: RelaxedAtomicUint32
   value: 40
-  mirror: always
-
-# How long a single unchanging holder may keep nsHostResolver's DB lock while
-# another thread waits, before we treat the lock as wedged and crash, naming the
-# thread and code site holding it. The lock is normally held for microseconds.
-# The timer restarts whenever the holder changes, so slow-but-progressing
-# contention never trips this. Only has an effect in builds where
-# MOZ_DIAGNOSTIC_ASSERT is fatal. 0 disables the check.
-- name: network.dns.db_lock_timeout_ms
-  type: RelaxedAtomicUint32
-  value: 3000
   mirror: always
 
 - name: network.dns.max_any_priority_threads
@@ -18277,12 +18281,6 @@
 - name: privacy.partition.network_state.connection_with_proxy
   type: bool
   value: false
-  mirror: always
-
-# Partition the service workers unconditionally when dFPI is enabled.
-- name: privacy.partition.serviceWorkers
-  type: RelaxedAtomicBool
-  value: true
   mirror: always
 
 # Enables / disables the strip on share feature which strips query parameters

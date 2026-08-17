@@ -33,6 +33,30 @@ import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs"
  */
 
 /**
+ * @typedef {object} UrlLoad
+ *   A direct URL load.
+ * @property {string} url
+ *   The url to load.
+ * @property {?string} postData
+ *   The post data, or null for a GET.
+ */
+
+/**
+ * @typedef {object} EngineSearchLoad
+ *   A search to submit to an engine.
+ * @property {string} engineName
+ *   The name of the search engine.
+ * @property {string} query
+ *   The query.
+ */
+
+/**
+ * @typedef {{urlLoad: UrlLoad, engineSearch?: never} |
+ *           {engineSearch: EngineSearchLoad, urlLoad?: never}} UrlbarLoadRequest
+ *  Either a URL or an engine search.
+ */
+
+/**
  * @typedef {object} URIFixupPrimitives
  *   The parts of an `nsIURIFixupInfo` that survive the actor boundary, so a
  *   content-realm consumer never holds an XPCOM object. Produced by
@@ -467,10 +491,13 @@ export const UrlbarShared = {
    * @param {object} [options]
    * @param {string} [options.prefix]
    *   Prefix to use for the logged messages.
+   * @param {string} [options.maxLogLevelPref]
+   *   The pref holding the maximum log level. It has to be known to
+   *   `UrlbarPrefs`, which is how the logger reads it outside chrome.
    * @returns {Console}
    *   The console logger.
    */
-  getLogger({ prefix = "" } = {}) {
+  getLogger({ prefix = "", maxLogLevelPref = "browser.urlbar.loglevel" } = {}) {
     let logger = loggers.get(prefix);
     if (logger) {
       return logger;
@@ -478,12 +505,53 @@ export const UrlbarShared = {
 
     let fullPrefix = `URLBar${prefix ? " - " + prefix : ""}`;
     if (console.createInstance) {
-      logger = createLoggerChrome(fullPrefix);
+      logger = createLoggerChrome(fullPrefix, maxLogLevelPref);
     } else {
-      logger = createLoggerContent(fullPrefix);
+      logger = createLoggerContent(fullPrefix, maxLogLevelPref);
     }
     loggers.set(prefix, logger);
     return logger;
+  },
+
+  /**
+   * Extracts the URL from a result.
+   *
+   * @param {UrlbarResult} result
+   *   The result to extract from.
+   * @param {object} options
+   *   Options object.
+   * @param {HTMLElement} [options.element]
+   *   The element associated with the result that was selected or picked, if
+   *   available. For results that have multiple selectable children, the URL
+   *   may be taken from a child element rather than the result.
+   * @returns {?UrlbarLoadRequest}
+   *   Null if the result has nothing to load.
+   */
+  getLoadRequestFromResult(result, { element = null } = {}) {
+    if (
+      result.payload.engine &&
+      (result.type == UrlbarShared.RESULT_TYPE.SEARCH ||
+        result.type == UrlbarShared.RESULT_TYPE.DYNAMIC)
+    ) {
+      let query =
+        element?.dataset.query ||
+        result.payload.suggestion ||
+        result.payload.query;
+      if (query) {
+        return { engineSearch: { query, engineName: result.payload.engine } };
+      }
+    }
+
+    if (!result.payload.url) {
+      return null;
+    }
+
+    return {
+      urlLoad: {
+        url: result.payload.url,
+        postData: result.payload.postData ?? null,
+      },
+    };
   },
 
   /**
@@ -1464,13 +1532,11 @@ export const UrlbarShared = {
  * Create a logger that uses `console.createInstance`.
  *
  * @param {string} prefix
+ * @param {string} maxLogLevelPref
  * @returns {Console}
  */
-function createLoggerChrome(prefix) {
-  let logger = console.createInstance({
-    prefix,
-    maxLogLevelPref: "browser.urlbar.loglevel",
-  });
+function createLoggerChrome(prefix, maxLogLevelPref) {
+  let logger = console.createInstance({ prefix, maxLogLevelPref });
   // Casting from ConsoleInstance to Console. Note that it is technically not a
   // `Console` because it is missing the chrome-only property `createInstance`.
   return /** @type {Console} */ (/** @type {unknown} */ (logger));
@@ -1480,9 +1546,10 @@ function createLoggerChrome(prefix) {
  * Create a logger that uses the global `console`.
  *
  * @param {string} prefix
+ * @param {string} maxLogLevelPref
  * @returns {Console}
  */
-function createLoggerContent(prefix) {
+function createLoggerContent(prefix, maxLogLevelPref) {
   let tag = `[${prefix}]`;
   const LEVEL_NUMBERS = {
     all: 0,
@@ -1496,9 +1563,12 @@ function createLoggerContent(prefix) {
   };
   const LEVELS = ["debug", "log", "info", "trace", "warn", "error"];
 
+  // UrlbarPrefs names prefs in the `browser.urlbar.` branch relative to it.
+  let levelPref = maxLogLevelPref.replace(/^browser\.urlbar\./, "");
+
   let shouldLog = level => {
     let maxLevel =
-      LEVEL_NUMBERS[UrlbarPrefs.get("loglevel").toLowerCase()] ??
+      LEVEL_NUMBERS[UrlbarPrefs.get(levelPref).toLowerCase()] ??
       LEVEL_NUMBERS.warn;
     return maxLevel <= LEVEL_NUMBERS[level];
   };

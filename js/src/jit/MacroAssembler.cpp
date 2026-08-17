@@ -5547,13 +5547,11 @@ void MacroAssembler::randomDouble(Register rng, FloatRegister dest,
   load64(state0Addr, s1Reg);
 
   // s1 ^= s1 << 23;
-  move64(s1Reg, s0Reg);
-  lshift64(Imm32(23), s1Reg);
+  lshift64(Imm32(23), s1Reg, s0Reg);
   xor64(s0Reg, s1Reg);
 
   // s1 ^= s1 >> 17
-  move64(s1Reg, s0Reg);
-  rshift64(Imm32(17), s1Reg);
+  rshift64(Imm32(17), s1Reg, s0Reg);
   xor64(s0Reg, s1Reg);
 
   // const uint64_t s0 = mState[1];
@@ -6165,24 +6163,6 @@ uint8_t MacroAssembler::getByteAtOffset(size_t offset) const {
 #endif
 }
 
-// This is an InstructionBytes source that reads bytes from an assembler buffer.
-class InstructionBytesFromMasm : public wasm::InstructionBytes {
-  const MacroAssembler& masm_;
-  uint32_t baseOffset_ = 0;
-
- public:
-  explicit InstructionBytesFromMasm(const MacroAssembler& masm,
-                                    uint32_t baseOffset)
-      : masm_(masm), baseOffset_(baseOffset) {
-    MOZ_ASSERT(baseOffset < masm.readableSize());
-  }
-  bool isU32aligned() const override { return (baseOffset_ & 3) == 0; }
-  uint8_t get(size_t offset) const override {
-    MOZ_ASSERT(offset < 16);
-    return masm_.getByteAtOffset(baseOffset_ + offset);
-  }
-};
-
 mozilla::Atomic<uint32_t> ctr(0);
 void MacroAssembler::appendAndVerify(wasm::Trap trap,
                                      wasm::TrapMachineInsn insn,
@@ -6193,8 +6173,8 @@ void MacroAssembler::appendAndVerify(wasm::Trap trap,
   // length `fcr.length()` and kind `insn`.  Ask SummarizeTrapInstruction
   // to look at it and check it agrees.
   if (!oom() && fcr.isValid()) {
-    InstructionBytesFromMasm insnSource(*this, fcr.offset());
-    wasm::SummarizeResult summary = SummarizeTrapInstruction(insnSource);
+    wasm::SummarizeResult summary =
+        wasm::SummarizeTrapInstruction(*this, fcr.offset());
     // The instruction must be identifiable
     MOZ_ASSERT(summary.identified());
     // .. and have the correct kind and length
@@ -10311,8 +10291,7 @@ void MacroAssembler::hashAndScrambleValue(ValueOperand value, Register result,
   // uint32_t v2 = static_cast<uint32_t>(static_cast<uint64_t>(aValue) >> 32);
 #ifdef JS_PUNBOX64
   auto r64 = Register64(temp);
-  move64(value.toRegister64(), r64);
-  rshift64Arithmetic(Imm32(32), r64);
+  rshift64Arithmetic(Imm32(32), value.toRegister64(), r64);
 #else
   move32(value.typeReg(), temp);
 #endif
@@ -11072,8 +11051,7 @@ void MacroAssembler::fuzzilliHashDouble(FloatRegister src, Register result,
 
 #  ifdef JS_PUNBOX64
   // Move the high word into |result|.
-  move64(r64, Register64(result));
-  rshift64(Imm32(32), Register64(result));
+  rshift64(Imm32(32), r64, Register64(result));
 #  endif
 
   // Add the high and low words of |r64|.

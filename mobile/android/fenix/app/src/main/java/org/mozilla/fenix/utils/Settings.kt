@@ -2377,6 +2377,13 @@ class Settings(
             default = -1L,
         )
 
+    /** The completion timestamp of the fifth day of continuous onboarding. */
+    var fifthDayOnboardingCompletedTimestamp by
+        longPreference(
+            key = appContext.getPreferenceKey(R.string.pref_key_continuous_onboarding_day_five_completed_timestamp),
+            default = -1L,
+        )
+
     /** The completion timestamp of the seventh day of continuous onboarding. */
     var seventhDayOnboardingCompletedTimestamp by
         longPreference(

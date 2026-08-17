@@ -259,6 +259,9 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   // for mdn suggestions.
   ["mdn.showLessFrequentlyCount", 0],
 
+  // The maximum number of tab mentions the Smartbar suggests.
+  ["mentions.maxResults", 5],
+
   // Comma-separated list of client variants to send to Merino
   ["merino.clientVariants", ""],
 
@@ -469,6 +472,11 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   // Allow searchmode to be persisted as the user navigates the
   // search host.
   ["scotchBonnet.persistSearchMode", false],
+
+  // Whether the search button declines to be the target of the toolbar tab
+  // stop in front of the input. The shipping default is set in firefox.js,
+  // where it's enabled on Nightly only.
+  ["searchModeSwitcher.skipTabStop", false],
 
   // Feature gate pref for search restrict keywords being shown in the urlbar.
   ["searchRestrictKeywords.featureGate", false],
@@ -769,7 +777,11 @@ const PREF_OTHER_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   ["browser.search.suggest.enabled", true],
   ["browser.search.suggest.enabled.private", false],
   ["browser.search.widget.new", true],
+  ["browser.settings-redesign.enabled", true],
+  ["browser.smartwindow.agent.enabled", false],
+  ["browser.smartwindow.smartbarMentions.loglevel", "Error"],
   ["keyword.enabled", true],
+  ["privacy.query_stripping.strip_on_share.enabled", true],
   ["security.insecure_connection_text.enabled", true],
   [TelemetryReportingPolicy.TOU_ACCEPTED_DATE_PREF, 0],
   ["ui.popup.disable_autohide", false],

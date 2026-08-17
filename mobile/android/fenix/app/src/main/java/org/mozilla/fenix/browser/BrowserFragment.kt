@@ -44,7 +44,6 @@ import mozilla.components.lib.shake.detectShakes
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import mozilla.components.support.ktx.kotlin.isContentUrl
-import mozilla.components.support.utils.DefaultDateTimeProvider
 import org.mozilla.fenix.GleanMetrics.Translations
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.store.BrowserScreenAction.ReaderModeStatusUpdated
@@ -72,7 +71,6 @@ import org.mozilla.fenix.ext.navigateSafe
 import org.mozilla.fenix.ext.requireComponents
 import org.mozilla.fenix.ext.runIfFragmentIsAttached
 import org.mozilla.fenix.home.HomeFragment
-import org.mozilla.fenix.ipprotection.store.IPProtectionOnboardingPrompt
 import org.mozilla.fenix.ipprotection.store.Surface as IPProtectionSurface
 import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.onboarding.OnboardingFragmentDirections
@@ -91,7 +89,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
     private val openInAppOnboardingObserver = ViewBoundFeatureWrapper<OpenInAppOnboardingObserver>()
     private val translationsBinding = ViewBoundFeatureWrapper<TranslationsBinding>()
     private val translationsBannerIntegration = ViewBoundFeatureWrapper<TranslationsBannerIntegration>()
-    private val ipProtectionOnboardingPrompt = ViewBoundFeatureWrapper<IPProtectionOnboardingPrompt>()
     private val continuousOnboardingFeature = ViewBoundFeatureWrapper<ContinuousOnboardingFeature>()
     private var qrScanFenixFeature: ViewBoundFeatureWrapper<QrScanFenixFeature>? =
         ViewBoundFeatureWrapper<QrScanFenixFeature>()
@@ -161,7 +158,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
 
         initBrowserToolbarComposableUpdates(view)
         initTranslationsUpdates(context = context, rootView = view)
-        initIPProtectionOnboarding(context, view)
         initContinuousOnboardingFeature()
 
         thumbnailsFeature.set(
@@ -322,25 +318,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
         }
     }
 
-    private fun initIPProtectionOnboarding(context: Context, rootView: View) {
-        ipProtectionOnboardingPrompt.set(
-            feature =
-                IPProtectionOnboardingPrompt(
-                    repository = context.components.ipProtectionPromptRepository,
-                    timeProvider = DefaultDateTimeProvider(),
-                    store = context.components.ipProtection.store,
-                    onShowOnboarding = {
-                        findNavController()
-                            .navigate(
-                                BrowserFragmentDirections.actionGlobalIpProtectionDialog(IPProtectionSurface.BROWSER)
-                            )
-                    },
-                ),
-            owner = this,
-            view = rootView,
-        )
-    }
-
     private fun initContinuousOnboardingFeature() {
         ContinuousOnboardingFeature.register(
             fragment = this,
@@ -356,6 +333,10 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
                                 entrypoint = FenixFxAEntryPoint.NewUserOnboarding
                             ),
                     )
+            },
+            navigateToIpProtection = {
+                findNavController()
+                    .navigate(BrowserFragmentDirections.actionGlobalIpProtectionDialog(IPProtectionSurface.BROWSER))
             },
         )
     }
