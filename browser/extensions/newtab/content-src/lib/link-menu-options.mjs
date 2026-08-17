@@ -479,7 +479,7 @@ export const LinkMenuOptions = {
         data: {
           card_type: site.card_type,
           position: site.position,
-          reporting_url: site.shim.report,
+          reporting_url: site.shim?.report,
           url: site.url,
         },
       }),
