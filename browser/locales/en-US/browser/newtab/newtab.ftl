@@ -1130,16 +1130,6 @@ newtab-widget-timer-celebration-message-focus = Need a break?
 # Message shown inside the Timer widget after a break session ends.
 newtab-widget-timer-celebration-message-break = Ready to focus?
 
-# Strings for daily briefing card
-
-# The title displays above a set of top news headlines.
-newtab-daily-briefing-card-title = Top Headlines
-newtab-daily-briefing-card-menu-dismiss = Dismiss
-
-# Variables:
-#   $minutes (number) - Time since the feed has been refreshed
-newtab-daily-briefing-card-timestamp = Updated { $minutes }m ago
-
 newtab-widget-message-title = Stay focused with lists and a built-in timer
 # to-dos stands for "things to do".
 newtab-widget-message-copy = From quick reminders to daily to-dos, focus sessions to stretch breaks — stay on task and on time.
