@@ -17,14 +17,13 @@ using namespace TelemetryTestHelpers;
 class NimbusTelemetryFixture : public TelemetryTestFixture {};
 
 TEST_F(NimbusTelemetryFixture, NimbusFeaturesTelemetry) {
-  constexpr auto prefName = "nimbus.syncdatastore.testFeature"_ns;
+  constexpr auto prefName = "nimbus.syncdatastore.foo"_ns;
   constexpr auto prefValue =
       R"({"slug":"experiment-slug","branch":{"slug":"branch-slug"}})";
   AutoJSContextWithGlobal cx(mCleanGlobal);
   (void)mTelemetry->ClearEvents();
 
-  ASSERT_EQ(NimbusFeatures::RecordExposureEvent("testFeature"_ns),
-            NS_ERROR_UNEXPECTED)
+  ASSERT_EQ(NimbusFeatures::RecordExposureEvent("foo"_ns), NS_ERROR_UNEXPECTED)
       << "Should fail because not enrolled in experiment";
   // Set the experiment info for `foo`
   Preferences::SetCString(prefName.get(), prefValue);
