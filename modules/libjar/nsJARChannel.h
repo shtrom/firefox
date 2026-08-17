@@ -26,6 +26,7 @@
 #include "mozilla/Logging.h"
 
 class nsJARInputThunk;
+class nsJARProtocolHandler;
 class nsInputStreamPump;
 
 //-----------------------------------------------------------------------------
@@ -73,6 +74,7 @@ class nsJARChannel final : public nsIJARChannel,
   mozilla::Atomic<bool, mozilla::ReleaseAcquire> mCanceled{false};
   bool mOnDataCalled = false;
 
+  RefPtr<nsJARProtocolHandler> mJarHandler;
   nsCOMPtr<nsIJARURI> mJarURI;
   nsCOMPtr<nsIURI> mOriginalURI;
   nsCOMPtr<nsISupports> mOwner;

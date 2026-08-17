@@ -160,6 +160,8 @@ nsJARInputThunk::IsNonBlocking(bool* nonBlocking) {
 
 nsJARChannel::nsJARChannel() {
   LOG(("nsJARChannel::nsJARChannel [this=%p]\n", this));
+  // hold an owning reference to the jar handler
+  mJarHandler = gJarHandler;
 }
 
 nsJARChannel::~nsJARChannel() {
@@ -370,11 +372,6 @@ nsresult nsJARChannel::OpenLocalFile() {
 
   nsresult rv;
 
-  nsCOMPtr<nsIZipReaderCache> jarCache = nsJARProtocolHandler::GetJarCache();
-  if (NS_WARN_IF(!jarCache)) {
-    return NS_ERROR_ILLEGAL_DURING_SHUTDOWN;
-  }
-
   // Set mLoadGroup and mOpened before AsyncOpen return, and set back if
   // if failed when callback.
   if (mLoadGroup) {
@@ -384,11 +381,16 @@ nsresult nsJARChannel::OpenLocalFile() {
 
   if (mPreCachedJarReader || !mEnableOMT) {
     RefPtr<nsJARInputThunk> input;
-    rv = CreateJarInput(jarCache, getter_AddRefs(input));
+    rv = CreateJarInput(gJarHandler->JarCache(), getter_AddRefs(input));
     if (NS_WARN_IF(NS_FAILED(rv))) {
       return OnOpenLocalFileComplete(rv, true);
     }
     return ContinueOpenLocalFile(input, true);
+  }
+
+  nsCOMPtr<nsIZipReaderCache> jarCache = gJarHandler->JarCache();
+  if (NS_WARN_IF(!jarCache)) {
+    return NS_ERROR_UNEXPECTED;
   }
 
   nsCOMPtr<nsIFile> clonedFile;
@@ -760,8 +762,8 @@ bool nsJARChannel::GetContentTypeGuess(nsACString& aResult) const {
   if (!ext) {
     return false;
   }
-  nsCOMPtr<nsIMIMEService> mimeServ = nsJARProtocolHandler::GetMimeService();
-  if (NS_WARN_IF(!mimeServ)) {
+  nsIMIMEService* mimeServ = gJarHandler->MimeService();
+  if (!mimeServ) {
     return false;
   }
   mimeServ->GetTypeFromExtension(nsDependentCString(ext), aResult);
@@ -1136,14 +1138,8 @@ nsJARChannel::Open(nsIInputStream** aStream) {
     return NS_ERROR_NOT_IMPLEMENTED;
   }
 
-  nsCOMPtr<nsIZipReaderCache> jarCache = nsJARProtocolHandler::GetJarCache();
-  if (NS_WARN_IF(!jarCache)) {
-    rv = NS_ERROR_ILLEGAL_DURING_SHUTDOWN;
-    return rv;
-  }
-
   RefPtr<nsJARInputThunk> input;
-  rv = CreateJarInput(jarCache, getter_AddRefs(input));
+  rv = CreateJarInput(gJarHandler->JarCache(), getter_AddRefs(input));
   if (NS_FAILED(rv)) return rv;
 
   input.forget(aStream);
@@ -1263,10 +1259,17 @@ nsJARChannel::EnsureCached(bool* aIsCached) {
   rv = innerFileURL->GetFile(getter_AddRefs(jarFile));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIZipReaderCache> jarCache = nsJARProtocolHandler::GetJarCache();
-  if (NS_WARN_IF(!jarCache)) {
-    return NS_ERROR_ILLEGAL_DURING_SHUTDOWN;
-  }
+  nsCOMPtr<nsIIOService> ioService = do_GetIOService(&rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIProtocolHandler> handler;
+  rv = ioService->GetProtocolHandler("jar", getter_AddRefs(handler));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  auto jarHandler = static_cast<nsJARProtocolHandler*>(handler.get());
+  MOZ_ASSERT(jarHandler);
+
+  nsIZipReaderCache* jarCache = jarHandler->JarCache();
 
   rv = jarCache->GetZipIfCached(jarFile, getter_AddRefs(mPreCachedJarReader));
   if (rv == NS_ERROR_CACHE_KEY_NOT_FOUND) {
@@ -1285,13 +1288,8 @@ nsJARChannel::GetZipEntry(nsIZipEntry** aZipEntry) {
 
   if (!mJarFile) return NS_ERROR_NOT_AVAILABLE;
 
-  nsCOMPtr<nsIZipReaderCache> jarCache = nsJARProtocolHandler::GetJarCache();
-  if (NS_WARN_IF(!jarCache)) {
-    return NS_ERROR_ILLEGAL_DURING_SHUTDOWN;
-  }
-
   nsCOMPtr<nsIZipReader> reader;
-  rv = jarCache->GetZip(mJarFile, getter_AddRefs(reader));
+  rv = gJarHandler->JarCache()->GetZip(mJarFile, getter_AddRefs(reader));
   if (NS_FAILED(rv)) return rv;
 
   return reader->GetEntry(mJarEntry, aZipEntry);

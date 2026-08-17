@@ -23,9 +23,6 @@ class nsJARProtocolHandler final : public nsIProtocolHandler,
 
   static already_AddRefed<nsJARProtocolHandler> GetSingleton();
 
-  static already_AddRefed<nsIZipReaderCache> GetJarCache();
-  static already_AddRefed<nsIMIMEService> GetMimeService();
-
   nsresult Init();
 
   // returns non addref'ed pointer.
