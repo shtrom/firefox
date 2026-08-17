@@ -4,6 +4,33 @@
 
 {
   // start private scope for Tabbrowser
+  const lazy = {};
+
+  ChromeUtils.defineESModuleGetters(lazy, {
+    AIWindow:
+      "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+    AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
+    BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
+    BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
+    ContextualIdentityService:
+      "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
+    E10SUtils: "resource://gre/modules/E10SUtils.sys.mjs",
+    NewTabPagePreloading:
+      "moz-src:///browser/components/tabbrowser/NewTabPagePreloading.sys.mjs",
+    PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+    PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
+    ReducedProtectionNotification:
+      "resource:///modules/ReducedProtectionNotification.sys.mjs",
+    SelectableProfileService:
+      "resource:///modules/profiles/SelectableProfileService.sys.mjs",
+    SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
+    ShortcutUtils: "resource://gre/modules/ShortcutUtils.sys.mjs",
+    SitePermissions: "resource:///modules/SitePermissions.sys.mjs",
+    TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
+    XPCOMUtils: "resource://gre/modules/XPCOMUtils.sys.mjs",
+    webrtcUI: "resource:///modules/webrtcUI.sys.mjs",
+  });
+
   /**
    * A set of known icons to use for internal pages. These are hardcoded so we can
    * start loading them faster than FaviconLoader would normally find them.
@@ -182,68 +209,68 @@
           true
         );
       });
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_shouldExposeContentTitle",
         "privacy.exposeContentTitleInWindow",
         true
       );
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_shouldExposeContentTitlePbm",
         "privacy.exposeContentTitleInWindow.pbm",
         true
       );
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_showTabCardPreview",
         "browser.tabs.hoverPreview.enabled",
         true
       );
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_allowTransparentBrowser",
         "browser.tabs.allow_transparent_browser",
         false
       );
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_tabGroupsEnabled",
         "browser.tabs.groups.enabled",
         false
       );
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_tabNotesEnabled",
         "browser.tabs.notes.enabled",
         false
       );
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "showPidAndActiveness",
         "browser.tabs.tooltipsShowPidAndActiveness",
         false
       );
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_unloadTabInContextMenu",
         "browser.tabs.unloadTabInContextMenu",
         false
       );
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_notificationEnableDelay",
         "security.notification_enable_delay",
         500
       );
-      XPCOMUtils.defineLazyPreferenceGetter(
+      lazy.XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_remoteSVGIconDecoding",
         "browser.tabs.remoteSVGIconDecoding",
         false
       );
 
-      if (AppConstants.MOZ_CRASHREPORTER) {
+      if (lazy.AppConstants.MOZ_CRASHREPORTER) {
         ChromeUtils.defineESModuleGetters(this, {
           TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
         });
@@ -696,7 +723,7 @@
             remoteTypeOptions
           );
         } else {
-          remoteType = E10SUtils.NOT_REMOTE;
+          remoteType = lazy.E10SUtils.NOT_REMOTE;
         }
       } else {
         let uriToLoad = this.documentGlobal.gBrowserInit.uriToLoadPromise;
@@ -725,7 +752,7 @@
 
           // In this case we default to the privileged about process as that's
           // the best guess we can make, and we'll likely need it eventually.
-          remoteType = E10SUtils.PRIVILEGEDABOUT_REMOTE_TYPE;
+          remoteType = lazy.E10SUtils.PRIVILEGEDABOUT_REMOTE_TYPE;
         }
       }
 
@@ -752,7 +779,7 @@
           browser
         );
 
-      if (AIWindow.isAIWindowActive(this.documentGlobal)) {
+      if (lazy.AIWindow.isAIWindowActive(this.documentGlobal)) {
         let uriToLoad = this.documentGlobal.gBrowserInit.uriToLoadPromise;
         let firstURI = Array.isArray(uriToLoad) ? uriToLoad[0] : uriToLoad;
 
@@ -764,7 +791,7 @@
             "transparent",
             !firstURI ||
               typeof firstURI != "string" ||
-              AIWindow.isAIWindowContentPage(Services.io.newURI(firstURI))
+              lazy.AIWindow.isAIWindowContentPage(Services.io.newURI(firstURI))
           );
         }
       }
@@ -785,7 +812,7 @@
 
       if (userContextId) {
         tab.setAttribute("usercontextid", userContextId);
-        ContextualIdentityService.setTabStyle(tab);
+        lazy.ContextualIdentityService.setTabStyle(tab);
       }
       this.#updateUserContextUIIndicator();
 
@@ -845,7 +872,7 @@
       }
 
       let identity =
-        ContextualIdentityService.getPublicIdentityFromId(userContextId);
+        lazy.ContextualIdentityService.getPublicIdentityFromId(userContextId);
       if (!identity) {
         replaceContainerClass("color", hbox, "");
         hbox.hidden = true;
@@ -854,7 +881,8 @@
 
       replaceContainerClass("color", hbox, identity.color);
 
-      let label = ContextualIdentityService.getUserContextLabel(userContextId);
+      let label =
+        lazy.ContextualIdentityService.getUserContextLabel(userContextId);
       this.document.getElementById("userContext-label").textContent = label;
       // Also set the container label as the tooltip so we can only show the icon
       // in small windows.
@@ -934,7 +962,7 @@
       // This is done here because we only want to reset
       // permissions on user reload.
       for (const tab of unchangedRemoteness) {
-        SitePermissions.clearTemporaryBlockPermissions(tab.linkedBrowser);
+        lazy.SitePermissions.clearTemporaryBlockPermissions(tab.linkedBrowser);
         // Also reset DOS mitigations for the basic auth prompt on reload.
         delete tab.linkedBrowser.authPromptAbuseCounter;
       }
@@ -946,7 +974,7 @@
       }
 
       for (const tab of unchangedRemoteness) {
-        ReducedProtectionNotification.markUserReload(tab.linkedBrowser);
+        lazy.ReducedProtectionNotification.markUserReload(tab.linkedBrowser);
         reloadBrowser(tab, this);
       }
 
@@ -1083,7 +1111,7 @@
           .getAttribute("modifiers")
           .replace(
             /accel/i,
-            AppConstants.platform == "macosx" ? "meta" : "control"
+            lazy.AppConstants.platform == "macosx" ? "meta" : "control"
           );
         sharedData.set("Findbar:Shortcut", {
           key: keyEl.getAttribute("key"),
@@ -1553,7 +1581,7 @@
           description: aDescription,
           previewImageURL: aPreviewImage,
         };
-        PlacesUtils.history.update(pageInfo).catch(console.error);
+        lazy.PlacesUtils.history.update(pageInfo).catch(console.error);
       }
       if (tab) {
         tab.description = aDescription;
@@ -1642,7 +1670,7 @@
       }
 
       let containerLabel = this.#taskbarTab.userContextId
-        ? ContextualIdentityService.getUserContextLabel(
+        ? lazy.ContextualIdentityService.getUserContextLabel(
             this.#taskbarTab.userContextId
           )
         : "";
@@ -1668,7 +1696,7 @@
       let title = "";
       if (
         !this._shouldExposeContentTitle ||
-        (PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal) &&
+        (lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal) &&
           !this._shouldExposeContentTitlePbm)
       ) {
         return title;
@@ -1723,9 +1751,9 @@
         docElement.getAttribute("privatebrowsingmode") == "temporary";
 
       let profileIdentifier =
-        SelectableProfileService?.isEnabled &&
-        SelectableProfileService.getCachedProfileCount() > 1 &&
-        SelectableProfileService.currentProfile?.name.replace(/\0/g, "");
+        lazy.SelectableProfileService?.isEnabled &&
+        lazy.SelectableProfileService.getCachedProfileCount() > 1 &&
+        lazy.SelectableProfileService.currentProfile?.name.replace(/\0/g, "");
       // Note that empty/falsy bits get filtered below.
 
       let taskbarTabTitle = this.#determineTaskbarTabTitle(profileIdentifier);
@@ -1735,7 +1763,7 @@
       // title. We'll add the brand name and private window suffix for all other
       // platforms below.
       if (
-        AppConstants.platform == "macosx" &&
+        lazy.AppConstants.platform == "macosx" &&
         contentTitle &&
         isTemporaryPrivateWindow
       ) {
@@ -1747,7 +1775,7 @@
       // content title; elsewhere, the brand becomes a suffix in the title bar.
       if (
         !taskbarTabTitle &&
-        (!contentTitle || AppConstants.platform != "macosx")
+        (!contentTitle || lazy.AppConstants.platform != "macosx")
       ) {
         parts.push(
           this.#cachedTitleInfo[
@@ -1886,7 +1914,7 @@
         newTab.updateLastAccessed();
         oldTab.updateLastAccessed();
         // if this is the foreground window, update the last-seen timestamps.
-        if (this.documentGlobal == BrowserWindowTracker.getTopWindow()) {
+        if (this.documentGlobal == lazy.BrowserWindowTracker.getTopWindow()) {
           newTab.updateLastSeenActive();
           oldTab.updateLastSeenActive();
         }
@@ -2673,7 +2701,7 @@
         throw new Error("Remote type must be set!");
       }
 
-      let shouldBeRemote = remoteType !== E10SUtils.NOT_REMOTE;
+      let shouldBeRemote = remoteType !== lazy.E10SUtils.NOT_REMOTE;
 
       if (!this.documentGlobal.gMultiProcessBrowser && shouldBeRemote) {
         throw new Error(
@@ -2816,7 +2844,7 @@
     updateBrowserRemotenessByURL(aBrowser, aURL, aOptions = {}) {
       if (!this.documentGlobal.gMultiProcessBrowser) {
         return this.updateBrowserRemoteness(aBrowser, {
-          remoteType: E10SUtils.NOT_REMOTE,
+          remoteType: lazy.E10SUtils.NOT_REMOTE,
         });
       }
 
@@ -2921,7 +2949,7 @@
       }
 
       if (
-        AIWindow.isAIWindowActive(this.documentGlobal) ||
+        lazy.AIWindow.isAIWindowActive(this.documentGlobal) ||
         this._allowTransparentBrowser
       ) {
         b.setAttribute("transparent", "true");
@@ -2967,7 +2995,7 @@
             getter = () => aTab.hasAttribute("muted");
             break;
           case "contentTitle":
-            getter = () => SessionStore.getLazyTabValue(aTab, "title");
+            getter = () => lazy.SessionStore.getLazyTabValue(aTab, "title");
             break;
           case "currentURI":
             getter = () => {
@@ -2976,7 +3004,7 @@
                 return browser._cachedCurrentURI;
               }
               let url =
-                SessionStore.getLazyTabValue(aTab, "url") || "about:blank";
+                lazy.SessionStore.getLazyTabValue(aTab, "url") || "about:blank";
               return (browser._cachedCurrentURI = Services.io.newURI(url));
             };
             break;
@@ -3017,7 +3045,7 @@
           case "remoteType":
             getter = () => {
               let url =
-                SessionStore.getLazyTabValue(aTab, "url") || "about:blank";
+                lazy.SessionStore.getLazyTabValue(aTab, "url") || "about:blank";
               return ChromeUtils.predictRemoteTypeForURI(url, {
                 window: this.documentGlobal,
                 userContextId: aTab.getAttribute("usercontextid"),
@@ -3026,11 +3054,11 @@
             break;
           case "userTypedValue":
           case "userTypedClear":
-            getter = () => SessionStore.getLazyTabValue(aTab, name);
+            getter = () => lazy.SessionStore.getLazyTabValue(aTab, name);
             break;
           default:
             getter = () => {
-              if (AppConstants.NIGHTLY_BUILD) {
+              if (lazy.AppConstants.NIGHTLY_BUILD) {
                 let message = `[bug 1345098] Lazy browser prematurely inserted via '${name}' property access:\n`;
                 Services.console.logStringMessage(message + new Error().stack);
               }
@@ -3038,7 +3066,7 @@
               return browser[name];
             };
             setter = value => {
-              if (AppConstants.NIGHTLY_BUILD) {
+              if (lazy.AppConstants.NIGHTLY_BUILD) {
                 let message = `[bug 1345098] Lazy browser prematurely inserted via '${name}' property access:\n`;
                 Services.console.logStringMessage(message + new Error().stack);
               }
@@ -3219,7 +3247,7 @@
 
       // Reset sharing state.
       this.resetBrowserSharing(browser);
-      webrtcUI.forgetStreamsFromBrowserContext(browser.browsingContext);
+      lazy.webrtcUI.forgetStreamsFromBrowserContext(browser.browsingContext);
 
       // Abort any dialogs since the browser is about to be discarded.
       let tabDialogBox = this.getTabDialogBox(browser);
@@ -3234,7 +3262,7 @@
         usingPreloadedContent: false,
       };
 
-      SessionStore.resetBrowserToLazyState(aTab);
+      lazy.SessionStore.resetBrowserToLazyState(aTab);
       // Indicate that this tab was explicitly unloaded (i.e. not
       // from a session restore) in case we want to style that
       // differently.
@@ -3559,7 +3587,7 @@
               lazyBrowserURI.spec,
               t.userContextId,
               tabGroup?.id,
-              PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
+              lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
             );
             b.registeredOpenURI = lazyBrowserURI;
           }
@@ -3568,13 +3596,13 @@
           // will have to do this work itself later, when the tabs have been
           // inserted.
           if (insertTab) {
-            SessionStore.setTabState(t, {
+            lazy.SessionStore.setTabState(t, {
               entries: [
                 {
                   url: lazyBrowserURI?.spec || "about:blank",
                   title: lazyTabTitle,
                   triggeringPrincipal_base64:
-                    E10SUtils.serializePrincipal(triggeringPrincipal),
+                    lazy.E10SUtils.serializePrincipal(triggeringPrincipal),
                 },
               ],
               // Make sure to store the userContextId associated to the lazy tab
@@ -3705,7 +3733,7 @@
         throw new Error("Unexpected id type: " + typeof id);
       }
       if (!id) {
-        id = SessionStore.getNextSplitViewId();
+        id = lazy.SessionStore.getNextSplitViewId();
       }
       let splitview = this.document.createXULElement("tab-split-view-wrapper", {
         is: "tab-split-view-wrapper",
@@ -3987,11 +4015,11 @@
         // Process permit unload handlers and allow user cancel
         let cancel = await this.runBeforeUnloadForTabs(group.tabs);
         if (cancel) {
-          if (SessionStore.getSavedTabGroup(group.id)) {
+          if (lazy.SessionStore.getSavedTabGroup(group.id)) {
             // If this group is currently saved, it's being removed as part of a
             // save & close operation. We need to forget the saved group
             // if the close is canceled.
-            SessionStore.forgetSavedTabGroup(group.id);
+            lazy.SessionStore.forgetSavedTabGroup(group.id);
           }
           return;
         }
@@ -4187,8 +4215,8 @@
      *   tabs appear first. Defaults to false.
      */
     getAllTabGroups({ sortByLastSeenActive = false } = {}) {
-      let groups = BrowserWindowTracker.getOrderedWindows({
-        private: PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal),
+      let groups = lazy.BrowserWindowTracker.getOrderedWindows({
+        private: lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal),
       }).reduce(
         (acc, thisWindow) => acc.concat(thisWindow.gBrowser.tabGroups),
         []
@@ -4202,8 +4230,8 @@
     }
 
     getTabGroupById(id) {
-      for (const win of BrowserWindowTracker.getOrderedWindows({
-        private: PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal),
+      for (const win of lazy.BrowserWindowTracker.getOrderedWindows({
+        private: lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal),
       })) {
         for (const group of win.gBrowser.tabGroups) {
           if (group.id === id) {
@@ -4278,7 +4306,7 @@
 
       if (userContextId) {
         t.setAttribute("usercontextid", userContextId);
-        ContextualIdentityService.setTabStyle(t);
+        lazy.ContextualIdentityService.setTabStyle(t);
       }
 
       if (skipBackgroundNotify) {
@@ -4378,7 +4406,7 @@
       }
 
       let remoteType = forceNotRemote
-        ? E10SUtils.NOT_REMOTE
+        ? lazy.E10SUtils.NOT_REMOTE
         : ChromeUtils.predictRemoteTypeForURI(uriString, {
             window: this.documentGlobal,
             userContextId,
@@ -4393,7 +4421,7 @@
         uriString == this.documentGlobal.BROWSER_NEW_TAB_URL &&
         !userContextId
       ) {
-        b = NewTabPagePreloading.getPreloadedBrowser(this.documentGlobal);
+        b = lazy.NewTabPagePreloading.getPreloadedBrowser(this.documentGlobal);
         if (b) {
           usingPreloadedContent = true;
         }
@@ -4616,7 +4644,7 @@
         if (
           select &&
           this.selectedTab.userContextId == userContextId &&
-          !SessionStore.isTabRestoring(this.selectedTab) &&
+          !lazy.SessionStore.isTabRestoring(this.selectedTab) &&
           !this.tabContainer.verticalMode
         ) {
           tabWasReused = true;
@@ -4752,7 +4780,7 @@
         event.initEvent("TabHide", true, false);
         tab.dispatchEvent(event);
         if (hiddenBy) {
-          SessionStore.setCustomTabValue(tab, "hiddenBy", hiddenBy);
+          lazy.SessionStore.setCustomTabValue(tab, "hiddenBy", hiddenBy);
         }
       }
 
@@ -5677,7 +5705,7 @@
       }
 
       if (!skipSessionStore) {
-        SessionStore.resetLastClosedTabCount(this.documentGlobal);
+        lazy.SessionStore.resetLastClosedTabCount(this.documentGlobal);
       }
       this.#clearMultiSelectionLocked = true;
 
@@ -6191,7 +6219,7 @@
           browser.registeredOpenURI.spec,
           userContextId,
           aTab.group?.id,
-          PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
+          lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
         );
         delete browser.registeredOpenURI;
       }
@@ -6598,8 +6626,8 @@
       // Do not allow transfering a private tab to a non-private window
       // and vice versa.
       if (
-        PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal) !=
-        PrivateBrowsingUtils.isWindowPrivate(aOtherTab.documentGlobal)
+        lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal) !=
+        lazy.PrivateBrowsingUtils.isWindowPrivate(aOtherTab.documentGlobal)
       ) {
         return false;
       }
@@ -6704,7 +6732,7 @@
         aOurTab.setAttribute("sharing", aOtherTab.getAttribute("sharing"));
         modifiedAttrs.push("sharing");
         ourBrowser._sharingState = otherBrowser._sharingState;
-        webrtcUI.swapBrowserForNotification(otherBrowser, ourBrowser);
+        lazy.webrtcUI.swapBrowserForNotification(otherBrowser, ourBrowser);
       }
       if (aOtherTab.hasAttribute("pictureinpicture")) {
         aOurTab.toggleAttribute("pictureinpicture", true);
@@ -6739,7 +6767,10 @@
         // (TabHide, TabPinned, TabUnpinned, "muted" attribute changes, etc.).
         aOurTab.initializingTab = true;
         delete ourBrowser._cachedCurrentURI;
-        SessionStore.setTabState(aOurTab, SessionStore.getTabState(aOtherTab));
+        lazy.SessionStore.setTabState(
+          aOurTab,
+          lazy.SessionStore.getTabState(aOtherTab)
+        );
         delete aOurTab.initializingTab;
 
         // Make sure to unregister any open URIs.
@@ -6762,7 +6793,7 @@
         this._swapBrowserDocShells(aOurTab, otherBrowser, stateFlags);
       }
 
-      SitePermissions.copyTemporaryPermissions(
+      lazy.SitePermissions.copyTemporaryPermissions(
         srcBrowserId,
         otherBrowser,
         ourBrowser
@@ -6775,7 +6806,7 @@
           otherBrowser.registeredOpenURI.spec,
           userContextId,
           aOtherTab.group?.id,
-          PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
+          lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
         );
         delete otherBrowser.registeredOpenURI;
       }
@@ -6963,7 +6994,7 @@
       let browser = this.getBrowserForTab(aTab);
       // Reset temporary permissions on the current tab. This is done here
       // because we only want to reset permissions on user reload.
-      SitePermissions.clearTemporaryBlockPermissions(browser);
+      lazy.SitePermissions.clearTemporaryBlockPermissions(browser);
       // Also reset DOS mitigations for the basic auth prompt on reload.
       delete browser.authPromptAbuseCounter;
       this.documentGlobal.gIdentityHandler.hidePopup();
@@ -7020,7 +7051,7 @@
       let event = this.document.createEvent("Events");
       event.initEvent("TabShow", true, false);
       aTab.dispatchEvent(event);
-      SessionStore.deleteCustomTabValue(aTab, "hiddenBy");
+      lazy.SessionStore.deleteCustomTabValue(aTab, "hiddenBy");
 
       // Treat split view as one unit. Showing one of its tabs shows
       // the whole view. This prevents invisible tabs from appearing in the
@@ -7062,7 +7093,7 @@
       event.initEvent("TabHide", true, false);
       aTab.dispatchEvent(event);
       if (aSource) {
-        SessionStore.setCustomTabValue(aTab, "hiddenBy", aSource);
+        lazy.SessionStore.setCustomTabValue(aTab, "hiddenBy", aSource);
       }
 
       // Treat split view as one unit. Hiding one of its tabs hides the whole
@@ -7130,8 +7161,8 @@
       // tell a new window to take the "dropped" tab
       let args = Cc["@mozilla.org/array;1"].createInstance(Ci.nsIMutableArray);
       args.appendElement(aTab.splitview ?? aTab);
-      return BrowserWindowTracker.openWindow({
-        private: PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal),
+      return lazy.BrowserWindowTracker.openWindow({
+        private: lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal),
         features: Object.entries(aOptions)
           .map(([key, value]) => `${key}=${value}`)
           .join(","),
@@ -7985,7 +8016,7 @@
      *          The new index of the tab
      */
     duplicateTab(aTab, aRestoreTabImmediately, aOptions) {
-      let newTab = SessionStore.duplicateTab(
+      let newTab = lazy.SessionStore.duplicateTab(
         this.documentGlobal,
         aTab,
         0,
@@ -8445,7 +8476,7 @@
       }
 
       // We only want to request reply if this is an actual action.
-      const action = ShortcutUtils.getSystemActionForEvent(aEvent);
+      const action = lazy.ShortcutUtils.getSystemActionForEvent(aEvent);
       if (
         action != null &&
         this.KeyboardLockUtils.mustWaitForKeyboardLockRequestedReply(aEvent)
@@ -8456,10 +8487,10 @@
       // Don't check if the event was already consumed because tab
       // navigation should always work for better user experience.
       switch (action) {
-        case ShortcutUtils.TOGGLE_CARET_BROWSING:
+        case lazy.ShortcutUtils.TOGGLE_CARET_BROWSING:
           this._maybeRequestReplyFromRemoteContent(aEvent);
           return;
-        case ShortcutUtils.MOVE_TAB_BACKWARD:
+        case lazy.ShortcutUtils.MOVE_TAB_BACKWARD:
           this.moveTabBackward({
             metricsContext: this.TabMetrics.userTriggeredContext(
               this.TabMetrics.METRIC_SOURCE.KEYBOARD
@@ -8467,7 +8498,7 @@
           });
           aEvent.preventDefault();
           return;
-        case ShortcutUtils.MOVE_TAB_FORWARD:
+        case lazy.ShortcutUtils.MOVE_TAB_FORWARD:
           this.moveTabForward({
             metricsContext: this.TabMetrics.userTriggeredContext(
               this.TabMetrics.METRIC_SOURCE.KEYBOARD
@@ -8475,8 +8506,8 @@
           });
           aEvent.preventDefault();
           return;
-        case ShortcutUtils.MOVE_TAB_TO_START:
-        case ShortcutUtils.MOVE_TAB_TO_END: {
+        case lazy.ShortcutUtils.MOVE_TAB_TO_START:
+        case lazy.ShortcutUtils.MOVE_TAB_TO_END: {
           let userIsInputtingText =
             this.documentGlobal.windowUtils.IMEStatus !=
             Ci.nsIDOMWindowUtils.IME_STATUS_DISABLED;
@@ -8484,8 +8515,8 @@
             return;
           }
           if (
-            ShortcutUtils.getSystemActionForEvent(aEvent) ==
-            ShortcutUtils.MOVE_TAB_TO_START
+            lazy.ShortcutUtils.getSystemActionForEvent(aEvent) ==
+            lazy.ShortcutUtils.MOVE_TAB_TO_START
           ) {
             this.moveTabToStart();
           } else {
@@ -8494,7 +8525,7 @@
           aEvent.preventDefault();
           return;
         }
-        case ShortcutUtils.CLOSE_TAB:
+        case lazy.ShortcutUtils.CLOSE_TAB:
           if (this.multiSelectedTabsCount) {
             this.removeMultiSelectedTabs({
               metricsContext: this.TabMetrics.userTriggeredContext(
@@ -8598,11 +8629,11 @@
       }
 
       switch (
-        ShortcutUtils.getSystemActionForEvent(aEvent, {
+        lazy.ShortcutUtils.getSystemActionForEvent(aEvent, {
           rtl: this.documentGlobal.RTL_UI,
         })
       ) {
-        case ShortcutUtils.TOGGLE_CARET_BROWSING:
+        case lazy.ShortcutUtils.TOGGLE_CARET_BROWSING:
           if (
             aEvent.defaultPrevented ||
             this._maybeRequestReplyFromRemoteContent(aEvent)
@@ -8612,8 +8643,8 @@
           this.#toggleCaretBrowsing();
           break;
 
-        case ShortcutUtils.NEXT_TAB:
-          if (AppConstants.platform == "macosx") {
+        case lazy.ShortcutUtils.NEXT_TAB:
+          if (lazy.AppConstants.platform == "macosx") {
             this.tabContainer.advanceSelectedTab(
               DIRECTION_FORWARD,
               true,
@@ -8622,8 +8653,8 @@
             aEvent.preventDefault();
           }
           break;
-        case ShortcutUtils.PREVIOUS_TAB:
-          if (AppConstants.platform == "macosx") {
+        case lazy.ShortcutUtils.PREVIOUS_TAB:
+          if (lazy.AppConstants.platform == "macosx") {
             this.tabContainer.advanceSelectedTab(
               DIRECTION_BACKWARD,
               true,
@@ -8676,13 +8707,13 @@
           uri.spec,
           tab.userContextId,
           null,
-          PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
+          lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
         );
         this.UrlbarProviderOpenTabs.registerOpenTab(
           uri.spec,
           tab.userContextId,
           tab.group?.id,
-          PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
+          lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
         );
       }
     }
@@ -8699,13 +8730,13 @@
           uri.spec,
           tab.userContextId,
           originalGroup.id,
-          PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
+          lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
         );
         this.UrlbarProviderOpenTabs.registerOpenTab(
           uri.spec,
           tab.userContextId,
           null,
-          PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
+          lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
         );
       }
     }
@@ -8773,7 +8804,7 @@
       }
 
       // Get the PIDs of the content process and remote subframe processes
-      let [contentPid, ...framePids] = E10SUtils.getBrowserPids(
+      let [contentPid, ...framePids] = lazy.E10SUtils.getBrowserPids(
         tab.linkedBrowser,
         this.documentGlobal.gFissionBrowser
       );
@@ -8818,7 +8849,7 @@
 
       // Add a line to the tooltip with additional tab context (e.g. container
       let containerName = tab.userContextId
-        ? ContextualIdentityService.getUserContextLabel(tab.userContextId)
+        ? lazy.ContextualIdentityService.getUserContextLabel(tab.userContextId)
         : "";
       let tabGroupName = this.#isFirstOrLastInTabGroup(tab)
         ? tab.group.name ||
@@ -8889,7 +8920,7 @@
             ? "tabbrowser-unmute-tab-audio-tooltip"
             : "tabbrowser-mute-tab-audio-tooltip";
           const keyElem = this.document.getElementById("key_toggleMute");
-          l10nArgs.shortcut = ShortcutUtils.prettifyShortcut(keyElem);
+          l10nArgs.shortcut = lazy.ShortcutUtils.prettifyShortcut(keyElem);
         } else if (tab.hasAttribute("activemedia-blocked")) {
           l10nId = "tabbrowser-unblock-tab-audio-tooltip";
         } else {
@@ -8926,7 +8957,7 @@
           let identity = aSubject.wrappedJSObject;
           for (let tab of this.tabs) {
             if (tab.getAttribute("usercontextid") == identity.userContextId) {
-              ContextualIdentityService.setTabStyle(tab);
+              lazy.ContextualIdentityService.setTabStyle(tab);
             }
           }
           break;
@@ -9006,7 +9037,7 @@
             browser.registeredOpenURI.spec,
             userContextId,
             tab.group?.id,
-            PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
+            lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
           );
           delete browser.registeredOpenURI;
         }
@@ -9029,7 +9060,7 @@
       this.document.removeEventListener("keydown", this, {
         mozSystemGroup: true,
       });
-      if (AppConstants.platform == "macosx") {
+      if (lazy.AppConstants.platform == "macosx") {
         this.document.removeEventListener("keypress", this, {
           mozSystemGroup: true,
         });
@@ -9235,14 +9266,14 @@
         let browser = event.originalTarget;
 
         if (!event.isTopFrame) {
-          TabCrashHandler.onSubFrameCrash(browser, event.childID);
+          lazy.TabCrashHandler.onSubFrameCrash(browser, event.childID);
           return;
         }
 
         // Preloaded browsers do not actually have any tabs. If one crashes,
         // it should be released and removed.
         if (browser === this.preloadedBrowser) {
-          NewTabPagePreloading.removePreloadedBrowser(this.documentGlobal);
+          lazy.NewTabPagePreloading.removePreloadedBrowser(this.documentGlobal);
           return;
         }
 
@@ -9253,12 +9284,12 @@
         let tab = this.getTabForBrowser(browser);
 
         if (this.selectedBrowser == browser) {
-          TabCrashHandler.onSelectedBrowserCrash(
+          lazy.TabCrashHandler.onSelectedBrowserCrash(
             browser,
             isRestartRequiredCrash
           );
         } else {
-          TabCrashHandler.onBackgroundBrowserCrash(
+          lazy.TabCrashHandler.onBackgroundBrowserCrash(
             browser,
             isRestartRequiredCrash
           );
@@ -9340,11 +9371,11 @@
           return;
         }
 
-        SitePermissions.setForPrincipal(
+        lazy.SitePermissions.setForPrincipal(
           browser.contentPrincipal,
           "autoplay-media",
-          SitePermissions.BLOCK,
-          SitePermissions.SCOPE_GLOBAL,
+          lazy.SitePermissions.BLOCK,
+          lazy.SitePermissions.SCOPE_GLOBAL,
           browser
         );
       });
@@ -9756,7 +9787,9 @@
           if (
             !(
               originalLocation &&
-              gInitialPages.includes(originalLocation.spec) &&
+              this.#documentGlobal.gInitialPages.includes(
+                originalLocation.spec
+              ) &&
               originalLocation != "about:blank" &&
               this._browser.initialPageLoadedFromUserAction !=
                 originalLocation.spec &&
@@ -9785,7 +9818,7 @@
             if (
               this._browser.browsingContext.sessionHistory?.count === 0 &&
               (this._browser.initiatedFromNonWebControlled ||
-                BrowserUIUtils.checkEmptyPageOrigin(
+                lazy.BrowserUIUtils.checkEmptyPageOrigin(
                   this._browser,
                   originalLocation
                 ))
@@ -9843,7 +9876,7 @@
             !aWebProgress.isLoadingDocument &&
             Components.isSuccessCode(aStatus) &&
             !this.#tabbrowser.tabAnimationsInProgress &&
-            !gReduceMotion
+            !this.#documentGlobal.gReduceMotion
           ) {
             if (this._tab._notselectedsinceload) {
               this._tab.setAttribute("notselectedsinceload", "true");
@@ -10069,7 +10102,7 @@
 
           if (
             aRequest instanceof Ci.nsIChannel &&
-            !isBlankPageURL(aRequest.originalURI.spec)
+            !this.#documentGlobal.isBlankPageURL(aRequest.originalURI.spec)
           ) {
             this._browser.originalURI = aRequest.originalURI;
           }
@@ -10077,8 +10110,8 @@
           if (!this.#tabbrowser._allowTransparentBrowser) {
             this._browser.toggleAttribute(
               "transparent",
-              AIWindow.isAIWindowActive(this.#documentGlobal) &&
-                AIWindow.isAIWindowContentPage(aLocation)
+              lazy.AIWindow.isAIWindowActive(this.#documentGlobal) &&
+                lazy.AIWindow.isAIWindowContentPage(aLocation)
             );
           }
         }
@@ -10090,16 +10123,16 @@
             uri.spec,
             userContextId,
             this._tab.group?.id,
-            PrivateBrowsingUtils.isWindowPrivate(this.#documentGlobal)
+            lazy.PrivateBrowsingUtils.isWindowPrivate(this.#documentGlobal)
           );
           delete this._browser.registeredOpenURI;
         }
-        if (!isBlankPageURL(aLocation.spec)) {
+        if (!this.#documentGlobal.isBlankPageURL(aLocation.spec)) {
           this.#tabbrowser.UrlbarProviderOpenTabs.registerOpenTab(
             aLocation.spec,
             userContextId,
             this._tab.group?.id,
-            PrivateBrowsingUtils.isWindowPrivate(this.#documentGlobal)
+            lazy.PrivateBrowsingUtils.isWindowPrivate(this.#documentGlobal)
           );
           this._browser.registeredOpenURI = aLocation;
 
@@ -10221,7 +10254,7 @@
       if (loadFlags & LOAD_FLAGS_FIXUP_SCHEME_TYPOS) {
         fixupFlags |= Ci.nsIURIFixup.FIXUP_FLAG_FIX_SCHEME_TYPOS;
       }
-      if (PrivateBrowsingUtils.isBrowserPrivate(browser)) {
+      if (lazy.PrivateBrowsingUtils.isBrowserPrivate(browser)) {
         fixupFlags |= Ci.nsIURIFixup.FIXUP_FLAG_PRIVATE_CONTEXT;
       }
       return fixupFlags;
