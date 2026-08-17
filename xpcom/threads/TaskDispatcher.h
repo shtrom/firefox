@@ -208,10 +208,10 @@ class AutoTaskDispatcher : public TaskDispatcher {
     nsTArray<nsCOMPtr<nsIRunnable>> mRegularTasks;
   };
 
-  class TaskGroupRunnable : public Runnable {
+  class TaskGroupRunnable : public CancelableRunnable {
    public:
     explicit TaskGroupRunnable(UniquePtr<PerThreadTaskGroup>&& aTasks)
-        : Runnable("AutoTaskDispatcher::TaskGroupRunnable"),
+        : CancelableRunnable("AutoTaskDispatcher::TaskGroupRunnable"),
           mTasks(std::move(aTasks)) {}
 
     NS_IMETHOD Run() override {
@@ -238,12 +238,49 @@ class AutoTaskDispatcher : public TaskDispatcher {
       return NS_OK;
     }
 
+    nsresult Cancel() override {
+      nsTArray<nsCOMPtr<nsIRunnable>> stateChangeTasks =
+          std::move(mTasks->mStateChangeTasks);
+      nsTArray<nsCOMPtr<nsIRunnable>> regularTasks =
+          std::move(mTasks->mRegularTasks);
+
+      for (auto& task : stateChangeTasks) {
+        CancelTask(task);
+        task = nullptr;
+      }
+
+      // Mimic Run() here as a task could have run something on Cancel() or
+      // OnDiscard().
+      MaybeDrainDirectTasks();
+
+      for (auto& task : regularTasks) {
+        CancelTask(task);
+        task = nullptr;
+
+        // Mimic Run() here as a task could have run something on Cancel() or
+        // OnDiscard().
+        MaybeDrainDirectTasks();
+      }
+
+      return NS_OK;
+    }
+
    private:
     void MaybeDrainDirectTasks() {
       AbstractThread* currentThread = AbstractThread::GetCurrent();
       if (currentThread && currentThread->MightHaveTailTasks()) {
         currentThread->TailDispatcher().DrainDirectTasks();
       }
+    }
+
+    nsresult CancelTask(nsIRunnable* aTask) {
+      if (nsCOMPtr<nsIDiscardableRunnable> discardable =
+              do_QueryInterface(aTask)) {
+        discardable->OnDiscard();
+        return NS_OK;
+      }
+
+      return NS_OK;
     }
 
     UniquePtr<PerThreadTaskGroup> mTasks;
