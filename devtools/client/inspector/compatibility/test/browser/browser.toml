@@ -31,6 +31,9 @@ support-files = [
 
 ["browser_compatibility_issue-node.js"]
 
+["browser_compatibility_live-data.js"]
+tags = "devtools devtools-compat-data"
+
 ["browser_compatibility_settings.js"]
 
 ["browser_compatibility_throbber.js"]

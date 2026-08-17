@@ -3,4 +3,7 @@ tags = "devtools"
 head = "head.js"
 firefox-appdir = "browser"
 
+["test_mdn-compatibility-live-data.js"]
+tags = "devtools devtools-compat-data"
+
 ["test_mdn-compatibility.js"]
