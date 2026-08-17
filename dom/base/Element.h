@@ -1800,7 +1800,7 @@ class Element : public FragmentOrElement {
   // https://dom.spec.whatwg.org/#element-custom-element-registry
   CustomElementRegistry* GetCustomElementRegistry();
   void SetCustomElementRegistry(CustomElementRegistry* aCustomElementRegistry);
-  void SetKeepCustomElementRegistryNull();
+  void SetNullCustomElementRegistry();
   static void TraverseCustomElementRegistry(
       Element* aElement, nsCycleCollectionTraversalCallback& aCb);
   static void UnlinkCustomElementRegistry(Element* aElement);

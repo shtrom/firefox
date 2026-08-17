@@ -701,7 +701,7 @@ nsIContent* nsHtml5TreeOperation::CreateHTMLElement(
               customElementRegistry.value()) {
         element->SetCustomElementRegistry(registry);
       } else {
-        element->SetKeepCustomElementRegistryNull();
+        element->SetNullCustomElementRegistry();
       }
     }
 

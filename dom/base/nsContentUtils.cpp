@@ -12211,7 +12211,7 @@ nsresult nsContentUtils::NewXULOrHTMLElement(
       if (registry) {
         (*aResult)->SetCustomElementRegistry(registry);
       } else {
-        (*aResult)->SetKeepCustomElementRegistryNull();
+        (*aResult)->SetNullCustomElementRegistry();
       }
     } else {
       Document* doc = (*aResult)->OwnerDoc();
@@ -12343,7 +12343,7 @@ nsresult nsContentUtils::NewXULOrHTMLElement(
                     aCustomElementRegistry.ref()) {
               (*aResult)->SetCustomElementRegistry(registry);
             } else {
-              (*aResult)->SetKeepCustomElementRegistryNull();
+              (*aResult)->SetNullCustomElementRegistry();
             }
           }
         }
