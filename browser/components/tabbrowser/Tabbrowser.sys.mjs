@@ -2,35 +2,42 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
+import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
+
+const lazy = {};
+
+ChromeUtils.defineESModuleGetters(lazy, {
+  AIWindow:
+    "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+  BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
+  BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
+  ContextualIdentityService:
+    "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
+  E10SUtils: "resource://gre/modules/E10SUtils.sys.mjs",
+  NewTabPagePreloading:
+    "moz-src:///browser/components/tabbrowser/NewTabPagePreloading.sys.mjs",
+  PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
+  ReducedProtectionNotification:
+    "resource:///modules/ReducedProtectionNotification.sys.mjs",
+  SelectableProfileService:
+    "resource:///modules/profiles/SelectableProfileService.sys.mjs",
+  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
+  ShortcutUtils: "resource://gre/modules/ShortcutUtils.sys.mjs",
+  SitePermissions: "resource:///modules/SitePermissions.sys.mjs",
+  TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
+  webrtcUI: "resource:///modules/webrtcUI.sys.mjs",
+});
+
+let Tabbrowser;
+
+// A module's top level is private already, so this block serves no scope. It only
+// holds the file's indentation, at the price of a level of nesting and lines that
+// wrap earlier than they need to. Dropping it would dedent the file, prettier
+// would re-join the lines that then fit in 80 columns, and their blame would go
+// with them — a cost we may yet decide is worth paying.
 {
-  // start private scope for Tabbrowser
-  const lazy = {};
-
-  ChromeUtils.defineESModuleGetters(lazy, {
-    AIWindow:
-      "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
-    AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
-    BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
-    BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
-    ContextualIdentityService:
-      "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
-    E10SUtils: "resource://gre/modules/E10SUtils.sys.mjs",
-    NewTabPagePreloading:
-      "moz-src:///browser/components/tabbrowser/NewTabPagePreloading.sys.mjs",
-    PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
-    PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
-    ReducedProtectionNotification:
-      "resource:///modules/ReducedProtectionNotification.sys.mjs",
-    SelectableProfileService:
-      "resource:///modules/profiles/SelectableProfileService.sys.mjs",
-    SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
-    ShortcutUtils: "resource://gre/modules/ShortcutUtils.sys.mjs",
-    SitePermissions: "resource:///modules/SitePermissions.sys.mjs",
-    TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
-    XPCOMUtils: "resource://gre/modules/XPCOMUtils.sys.mjs",
-    webrtcUI: "resource:///modules/webrtcUI.sys.mjs",
-  });
-
   /**
    * A set of known icons to use for internal pages. These are hardcoded so we can
    * start loading them faster than FaviconLoader would normally find them.
@@ -152,9 +159,9 @@
     }
   }
 
-  window.Tabbrowser = class {
+  Tabbrowser = class {
     static create(window) {
-      window.gBrowser = new window.Tabbrowser();
+      window.gBrowser = new Tabbrowser(window);
       window.gBrowser.init();
     }
 
@@ -174,6 +181,9 @@
       this.splitViewCommandSet =
         this.document.getElementById("splitViewCommands");
 
+      // Defined on the instance, not on `lazy`, because callers reach these
+      // as `gBrowser.TabMetrics` and friends.
+      // eslint-disable-next-line mozilla/lazy-getter-object-name
       ChromeUtils.defineESModuleGetters(this, {
         ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
         AsyncTabSwitcher:
@@ -209,68 +219,69 @@
           true
         );
       });
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_shouldExposeContentTitle",
         "privacy.exposeContentTitleInWindow",
         true
       );
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_shouldExposeContentTitlePbm",
         "privacy.exposeContentTitleInWindow.pbm",
         true
       );
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_showTabCardPreview",
         "browser.tabs.hoverPreview.enabled",
         true
       );
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_allowTransparentBrowser",
         "browser.tabs.allow_transparent_browser",
         false
       );
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_tabGroupsEnabled",
         "browser.tabs.groups.enabled",
         false
       );
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_tabNotesEnabled",
         "browser.tabs.notes.enabled",
         false
       );
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "showPidAndActiveness",
         "browser.tabs.tooltipsShowPidAndActiveness",
         false
       );
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_unloadTabInContextMenu",
         "browser.tabs.unloadTabInContextMenu",
         false
       );
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_notificationEnableDelay",
         "security.notification_enable_delay",
         500
       );
-      lazy.XPCOMUtils.defineLazyPreferenceGetter(
+      XPCOMUtils.defineLazyPreferenceGetter(
         this,
         "_remoteSVGIconDecoding",
         "browser.tabs.remoteSVGIconDecoding",
         false
       );
 
-      if (lazy.AppConstants.MOZ_CRASHREPORTER) {
+      if (AppConstants.MOZ_CRASHREPORTER) {
+        // eslint-disable-next-line mozilla/lazy-getter-object-name
         ChromeUtils.defineESModuleGetters(this, {
           TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
         });
@@ -330,14 +341,19 @@
       this._initialized = true;
     }
 
-    documentGlobal = window;
+    documentGlobal;
 
-    document = window.document;
+    document;
 
     // `ownerDocument` stays available to consumers outside this module, which
     // are updated separately.
     get ownerDocument() {
       return this.document;
+    }
+
+    constructor(window) {
+      this.documentGlobal = window;
+      this.document = window.document;
     }
 
     closingTabsEnum = {
@@ -1111,7 +1127,7 @@
           .getAttribute("modifiers")
           .replace(
             /accel/i,
-            lazy.AppConstants.platform == "macosx" ? "meta" : "control"
+            AppConstants.platform == "macosx" ? "meta" : "control"
           );
         sharedData.set("Findbar:Shortcut", {
           key: keyEl.getAttribute("key"),
@@ -1766,7 +1782,7 @@
       // title. We'll add the brand name and private window suffix for all other
       // platforms below.
       if (
-        lazy.AppConstants.platform == "macosx" &&
+        AppConstants.platform == "macosx" &&
         contentTitle &&
         isTemporaryPrivateWindow
       ) {
@@ -1778,7 +1794,7 @@
       // content title; elsewhere, the brand becomes a suffix in the title bar.
       if (
         !taskbarTabTitle &&
-        (!contentTitle || lazy.AppConstants.platform != "macosx")
+        (!contentTitle || AppConstants.platform != "macosx")
       ) {
         parts.push(
           this.#cachedTitleInfo[
@@ -3061,7 +3077,7 @@
             break;
           default:
             getter = () => {
-              if (lazy.AppConstants.NIGHTLY_BUILD) {
+              if (AppConstants.NIGHTLY_BUILD) {
                 let message = `[bug 1345098] Lazy browser prematurely inserted via '${name}' property access:\n`;
                 Services.console.logStringMessage(message + new Error().stack);
               }
@@ -3069,7 +3085,7 @@
               return browser[name];
             };
             setter = value => {
-              if (lazy.AppConstants.NIGHTLY_BUILD) {
+              if (AppConstants.NIGHTLY_BUILD) {
                 let message = `[bug 1345098] Lazy browser prematurely inserted via '${name}' property access:\n`;
                 Services.console.logStringMessage(message + new Error().stack);
               }
@@ -3087,8 +3103,6 @@
     }
 
     _insertBrowser(aTab, aInsertedOnTabCreation) {
-      "use strict";
-
       // If browser is already inserted or window is closed don't do anything.
       if (aTab.linkedPanel || this.documentGlobal.closed) {
         return;
@@ -3241,7 +3255,6 @@
     }
 
     discardBrowser(aTab, aForceDiscard) {
-      "use strict";
       let browser = aTab.linkedBrowser;
 
       if (!this._mayDiscardBrowser(aTab, aForceDiscard)) {
@@ -8659,7 +8672,7 @@
           break;
 
         case lazy.ShortcutUtils.NEXT_TAB:
-          if (lazy.AppConstants.platform == "macosx") {
+          if (AppConstants.platform == "macosx") {
             this.tabContainer.advanceSelectedTab(
               DIRECTION_FORWARD,
               true,
@@ -8669,7 +8682,7 @@
           }
           break;
         case lazy.ShortcutUtils.PREVIOUS_TAB:
-          if (lazy.AppConstants.platform == "macosx") {
+          if (AppConstants.platform == "macosx") {
             this.tabContainer.advanceSelectedTab(
               DIRECTION_BACKWARD,
               true,
@@ -9075,7 +9088,7 @@
       this.document.removeEventListener("keydown", this, {
         mozSystemGroup: true,
       });
-      if (lazy.AppConstants.platform == "macosx") {
+      if (AppConstants.platform == "macosx") {
         this.document.removeEventListener("keypress", this, {
           mozSystemGroup: true,
         });
@@ -10404,4 +10417,6 @@
       }
     },
   };
-} // end private scope for gBrowser
+} // end of the indentation-preserving block
+
+export { Tabbrowser };
