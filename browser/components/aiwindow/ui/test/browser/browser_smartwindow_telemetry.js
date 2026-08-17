@@ -329,6 +329,11 @@ add_task(async function test_chat_storage_metric() {
     "moz-src:///browser/components/aiwindow/ui/modules/ChatStore.sys.mjs"
   );
 
+  // ChatStore is a persistent singleton whose #lastRecordedSize guard survives
+  // testResetFOG(). Prior tests can leave the DB file grown to a size the next
+  // write reuses without changing, which would suppress the chat_storage emit
+  // and hang this test. Start from a clean DB so the write always changes size.
+  await ChatStore.destroyDatabase();
   Services.fog.testResetFOG();
   let conversation;
   try {
