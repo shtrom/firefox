@@ -77,7 +77,7 @@ JsepSessionImpl::JsepSessionImpl(const JsepSessionImpl& aOrig)
       mSdpHelper(&mLastError),
       mParser(MakeUnique<HybridSdpParser>()) {
   for (const auto& codec : aOrig.mSupportedCodecs) {
-    mSupportedCodecs.emplace_back(codec->Clone());
+    mSupportedCodecs.EmplaceBack(codec->Clone());
   }
 }
 
@@ -2286,11 +2286,11 @@ nsresult JsepSessionImpl::SetupIds() {
 }
 
 void JsepSessionImpl::SetDefaultCodecs(
-    const std::vector<UniquePtr<JsepCodecDescription>>& aPreferredCodecs) {
-  mSupportedCodecs.clear();
+    const nsTArray<UniquePtr<JsepCodecDescription>>& aPreferredCodecs) {
+  mSupportedCodecs.Clear();
 
   for (const auto& codec : aPreferredCodecs) {
-    mSupportedCodecs.emplace_back(codec->Clone());
+    mSupportedCodecs.EmplaceBack(codec->Clone());
   }
 }
 

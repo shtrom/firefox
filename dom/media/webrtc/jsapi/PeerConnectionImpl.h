@@ -579,11 +579,11 @@ class PeerConnectionImpl final
   bool LongTermStatsIsDisabled() const { return mDisableLongTermStats; }
 
   static void GetDefaultVideoCodecs(
-      std::vector<UniquePtr<JsepCodecDescription>>& aSupportedCodecs,
+      nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs,
       const OverrideRtxPreference aOverrideRtxPreference);
 
   static void GetDefaultAudioCodecs(
-      std::vector<UniquePtr<JsepCodecDescription>>& aSupportedCodecs);
+      nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs);
 
   static void GetDefaultRtpExtensions(
       std::vector<RtpExtensionHeader>& aRtpExtensions);
@@ -592,7 +592,7 @@ class PeerConnectionImpl final
                               dom::Nullable<dom::RTCRtpCapabilities>& aResult,
                               sdp::Direction aDirection);
   static void SetupPreferredCodecs(
-      std::vector<UniquePtr<JsepCodecDescription>>& aPreferredCodecs);
+      nsTArray<UniquePtr<JsepCodecDescription>>& aPreferredCodecs);
 
   static void SetupPreferredRtpExtensions(
       std::vector<RtpExtensionHeader>& aPreferredheaders);

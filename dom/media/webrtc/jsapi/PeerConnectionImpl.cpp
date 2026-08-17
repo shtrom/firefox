@@ -525,7 +525,7 @@ nsresult PeerConnectionImpl::Initialize(PeerConnectionObserver& aObserver,
     return res;
   }
 
-  std::vector<UniquePtr<JsepCodecDescription>> preferredCodecs;
+  AutoTArray<UniquePtr<JsepCodecDescription>, 16> preferredCodecs;
   SetupPreferredCodecs(preferredCodecs);
   mJsepSession->SetDefaultCodecs(preferredCodecs);
 
@@ -2115,24 +2115,14 @@ void PeerConnectionImpl::SendWarningToConsole(const nsCString& aWarning) {
 }
 
 void PeerConnectionImpl::GetDefaultVideoCodecs(
-    std::vector<UniquePtr<JsepCodecDescription>>& aSupportedCodecs,
+    nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs,
     const OverrideRtxPreference aOverrideRtxPreference) {
-  nsTArray<UniquePtr<JsepCodecDescription>> codecs;
-  EnumerateDefaultVideoCodecs(codecs, aOverrideRtxPreference);
-  aSupportedCodecs.reserve(codecs.Length());
-  for (auto& codec : codecs) {
-    aSupportedCodecs.emplace_back(std::move(codec));
-  }
+  EnumerateDefaultVideoCodecs(aSupportedCodecs, aOverrideRtxPreference);
 }
 
 void PeerConnectionImpl::GetDefaultAudioCodecs(
-    std::vector<UniquePtr<JsepCodecDescription>>& aSupportedCodecs) {
-  nsTArray<UniquePtr<JsepCodecDescription>> codecs;
-  EnumerateDefaultAudioCodecs(codecs);
-  aSupportedCodecs.reserve(codecs.Length());
-  for (auto& codec : codecs) {
-    aSupportedCodecs.emplace_back(std::move(codec));
-  }
+    nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs) {
+  EnumerateDefaultAudioCodecs(aSupportedCodecs);
 }
 
 void PeerConnectionImpl::GetDefaultRtpExtensions(
@@ -2179,7 +2169,7 @@ void PeerConnectionImpl::GetDefaultRtpExtensions(
 void PeerConnectionImpl::GetCapabilities(
     const nsAString& aKind, dom::Nullable<dom::RTCRtpCapabilities>& aResult,
     sdp::Direction aDirection) {
-  std::vector<UniquePtr<JsepCodecDescription>> codecs;
+  AutoTArray<UniquePtr<JsepCodecDescription>, 16> codecs;
   std::vector<RtpExtensionHeader> headers;
   auto mediaType = JsepMediaType::kNone;
 
@@ -2251,7 +2241,7 @@ void PeerConnectionImpl::GetCapabilities(
 }
 
 void PeerConnectionImpl::SetupPreferredCodecs(
-    std::vector<UniquePtr<JsepCodecDescription>>& aPreferredCodecs) {
+    nsTArray<UniquePtr<JsepCodecDescription>>& aPreferredCodecs) {
   GetDefaultVideoCodecs(aPreferredCodecs, OverrideRtxPreference::NoOverride);
   GetDefaultAudioCodecs(aPreferredCodecs);
 }
