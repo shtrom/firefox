@@ -898,13 +898,9 @@ already_AddRefed<Promise> RTCRtpSender::SetParameters(
     // list of implemented send codecs for transceiver's kind.
     AutoTArray<UniquePtr<JsepCodecDescription>, 16> codecs;
     if (mTransceiver->IsVideo()) {
-      auto useRtx =
-          Preferences::GetBool("media.peerconnection.video.use_rtx", false)
-              ? OverrideRtxPreference::OverrideWithEnabled
-              : OverrideRtxPreference::OverrideWithDisabled;
-      PeerConnectionImpl::GetDefaultVideoCodecs(codecs, useRtx);
+      EnumerateDefaultVideoCodecs(&codecs, mPc->mPrefs);
     } else {
-      PeerConnectionImpl::GetDefaultAudioCodecs(codecs);
+      EnumerateDefaultAudioCodecs(&codecs, mPc->mPrefs);
     }
     choosableCodecs = toDomCodecParametersList(codecs);
   }

@@ -31,7 +31,6 @@
 #include "mozilla/IceServerParser.h"
 #include "mozilla/IntegerPrintfMacros.h"
 #include "mozilla/Sprintf.h"
-#include "mozilla/StaticPrefs_media.h"
 #include "mozilla/glean/DomMediaWebrtcMetrics.h"
 #include "mozilla/media/MediaUtils.h"
 #include "nsEffectiveTLDService.h"
@@ -350,8 +349,7 @@ bool IsPrivateBrowsing(nsPIDOMWindowInner* aWindow) {
   return loadContext && loadContext->UsePrivateBrowsing();
 }
 
-static void RecordCodecTelemetry() {
-  const auto prefs = PeerConnectionImpl::GetDefaultCodecPreferences();
+static void RecordCodecTelemetry(const JsepCodecPreferences& aPrefs) {
   if (WebrtcVideoConduit::HasH264Hardware()) {
     glean::webrtc::has_h264_hardware
         .EnumGet(glean::webrtc::HasH264HardwareLabel::eTrue)
@@ -360,15 +358,15 @@ static void RecordCodecTelemetry() {
 
   glean::webrtc::software_h264_enabled
       .EnumGet(static_cast<glean::webrtc::SoftwareH264EnabledLabel>(
-          prefs.SoftwareH264Enabled()))
+          aPrefs.SoftwareH264Enabled()))
       .Add();
   glean::webrtc::hardware_h264_enabled
       .EnumGet(static_cast<glean::webrtc::HardwareH264EnabledLabel>(
-          prefs.HardwareH264Enabled()))
+          aPrefs.HardwareH264Enabled()))
       .Add();
   glean::webrtc::h264_enabled
       .EnumGet(
-          static_cast<glean::webrtc::H264EnabledLabel>(prefs.H264Enabled()))
+          static_cast<glean::webrtc::H264EnabledLabel>(aPrefs.H264Enabled()))
       .Add();
 }
 
@@ -548,10 +546,11 @@ nsresult PeerConnectionImpl::Initialize(PeerConnectionObserver& aObserver,
   }
 
   AutoTArray<UniquePtr<JsepCodecDescription>, 16> preferredCodecs;
-  SetupPreferredCodecs(preferredCodecs);
+  EnumerateDefaultVideoCodecs(&preferredCodecs, mPrefs);
+  EnumerateDefaultAudioCodecs(&preferredCodecs, mPrefs);
   mJsepSession->SetDefaultCodecs(preferredCodecs);
 
-  RecordCodecTelemetry();
+  RecordCodecTelemetry(mPrefs);
 
   // We use this to sort the list of codecs once everything is configured
   CompareCodecPriority comparator;
@@ -559,7 +558,7 @@ nsresult PeerConnectionImpl::Initialize(PeerConnectionObserver& aObserver,
   mJsepSession->SortCodecs(comparator);
 
   std::vector<RtpExtensionHeader> preferredHeaders;
-  SetupPreferredRtpExtensions(preferredHeaders);
+  GetDefaultRtpExtensions(mPrefs, preferredHeaders);
 
   for (const auto& header : preferredHeaders) {
     mJsepSession->AddRtpExtension(header.mMediaType, header.extensionname,
@@ -2116,18 +2115,8 @@ void PeerConnectionImpl::SendWarningToConsole(const nsCString& aWarning) {
                                             "WebRTC"_ns, mWindow->WindowID());
 }
 
-void PeerConnectionImpl::GetDefaultVideoCodecs(
-    nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs,
-    const OverrideRtxPreference aOverrideRtxPreference) {
-  EnumerateDefaultVideoCodecs(aSupportedCodecs, aOverrideRtxPreference);
-}
-
-void PeerConnectionImpl::GetDefaultAudioCodecs(
-    nsTArray<UniquePtr<JsepCodecDescription>>& aSupportedCodecs) {
-  EnumerateDefaultAudioCodecs(aSupportedCodecs);
-}
-
 void PeerConnectionImpl::GetDefaultRtpExtensions(
+    const JsepCodecPreferences& aPrefs,
     std::vector<RtpExtensionHeader>& aRtpExtensions) {
   RtpExtensionHeader audioLevel = {JsepMediaType::kAudio,
                                    SdpDirectionAttribute::Direction::kSendrecv,
@@ -2159,18 +2148,28 @@ void PeerConnectionImpl::GetDefaultRtpExtensions(
       webrtc::RtpExtension::kPlayoutDelayUri};
   aRtpExtensions.push_back(std::move(playoutDelay));
 
-  RtpExtensionHeader transportSequenceNumber = {
-      GetDefaultCodecPreferences().UseAudioTransportCC()
-          ? JsepMediaType::kAudioVideo
-          : JsepMediaType::kVideo,
-      SdpDirectionAttribute::Direction::kSendrecv,
-      webrtc::RtpExtension::kTransportSequenceNumberUri};
-  aRtpExtensions.push_back(std::move(transportSequenceNumber));
+  JsepMediaType transportSequenceNumberMediaType = JsepMediaType::kNone;
+  if (aPrefs.UseAudioTransportCC() && aPrefs.UseTransportCC()) {
+    transportSequenceNumberMediaType = JsepMediaType::kAudioVideo;
+  } else if (aPrefs.UseAudioTransportCC()) {
+    transportSequenceNumberMediaType = JsepMediaType::kAudio;
+  } else if (aPrefs.UseTransportCC()) {
+    transportSequenceNumberMediaType = JsepMediaType::kVideo;
+  }
+  if (transportSequenceNumberMediaType != JsepMediaType::kNone) {
+    RtpExtensionHeader transportSequenceNumber = {
+        transportSequenceNumberMediaType,
+        SdpDirectionAttribute::Direction::kSendrecv,
+        webrtc::RtpExtension::kTransportSequenceNumberUri};
+    aRtpExtensions.push_back(std::move(transportSequenceNumber));
+  }
 }
 
+/* static */
 void PeerConnectionImpl::GetCapabilities(
     const nsAString& aKind, dom::Nullable<dom::RTCRtpCapabilities>& aResult,
     sdp::Direction aDirection) {
+  DefaultCodecPreferences prefs;
   AutoTArray<UniquePtr<JsepCodecDescription>, 16> codecs;
   std::vector<RtpExtensionHeader> headers;
   auto mediaType = JsepMediaType::kNone;
@@ -2180,16 +2179,16 @@ void PeerConnectionImpl::GetCapabilities(
     // RTX is supported by default, so I am not sure if that was necessary.
     // When it has been explicitly disabled by pref, is there a point in
     // forcing it here?
-    GetDefaultVideoCodecs(codecs, OverrideRtxPreference::NoOverride);
+    EnumerateDefaultVideoCodecs(&codecs, prefs);
     mediaType = JsepMediaType::kVideo;
   } else if (aKind.EqualsASCII("audio")) {
-    GetDefaultAudioCodecs(codecs);
+    EnumerateDefaultAudioCodecs(&codecs, prefs);
     mediaType = JsepMediaType::kAudio;
   } else {
     return;
   }
 
-  GetDefaultRtpExtensions(headers);
+  GetDefaultRtpExtensions(prefs, headers);
 
   bool haveAddedRtx = false;
 
@@ -2239,28 +2238,6 @@ void PeerConnectionImpl::GetCapabilities(
         mozalloc_handle_oom(0);
       }
     }
-  }
-}
-
-void PeerConnectionImpl::SetupPreferredCodecs(
-    nsTArray<UniquePtr<JsepCodecDescription>>& aPreferredCodecs) {
-  GetDefaultVideoCodecs(aPreferredCodecs, OverrideRtxPreference::NoOverride);
-  GetDefaultAudioCodecs(aPreferredCodecs);
-}
-
-void PeerConnectionImpl::SetupPreferredRtpExtensions(
-    std::vector<RtpExtensionHeader>& aPreferredheaders) {
-  GetDefaultRtpExtensions(aPreferredheaders);
-
-  if (!Preferences::GetBool("media.navigator.video.use_transport_cc", false)) {
-    aPreferredheaders.erase(
-        std::remove_if(
-            aPreferredheaders.begin(), aPreferredheaders.end(),
-            [&](const RtpExtensionHeader& header) {
-              return header.extensionname ==
-                     webrtc::RtpExtension::kTransportSequenceNumberUri;
-            }),
-        aPreferredheaders.end());
   }
 }
 
