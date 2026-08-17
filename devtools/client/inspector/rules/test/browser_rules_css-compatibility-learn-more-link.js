@@ -43,13 +43,11 @@ const TEST_DATA_INITIAL = [
 ];
 
 add_task(async function () {
+  // This test relies on the mock dataset, see
+  // devtools/shared/compatibility/dataset/mock-css-properties.json
+  await setMockCompatibilityDataset();
   await addTab("data:text/html;charset=utf-8," + encodeURIComponent(TEST_URI));
   const { inspector, view } = await openRuleView();
-
-  // If the test fail because the properties used are no longer in the dataset, or they
-  // now have mdn/spec url although we expected them not to, uncomment the next line
-  // to get all the properties in the dataset that don't have a MDN url.
-  // logCssCompatDataPropertiesWithoutMDNUrl()
 
   await runCSSCompatibilityTests(view, inspector, TEST_DATA_INITIAL);
 });

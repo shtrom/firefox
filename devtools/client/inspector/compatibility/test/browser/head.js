@@ -18,7 +18,19 @@ const {
   toCamelCase,
 } = require("resource://devtools/client/inspector/compatibility/utils/cases.js");
 
-async function openCompatibilityView() {
+/**
+ * Open the compatibility view.
+ *
+ * @param {object} options
+ * @param {boolean} options.mockDataset
+ *        Set to false to run against the live MDN compatibility data instead of the mock
+ *        dataset. Only meant for the smoke test checking the live data.
+ */
+async function openCompatibilityView({ mockDataset = true } = {}) {
+  if (mockDataset) {
+    await setMockCompatibilityDataset();
+  }
+
   info("Open the compatibility view");
   const { inspector } = await openInspectorSidebarTab("compatibilityview");
   await Promise.all([
