@@ -85,6 +85,17 @@ object SearchBarSelectors {
             groups = listOf(),
         )
 
+    // A group header in the awesomebar, keyed by its text ("TestSearchEngine search", "Firefox Suggest").
+    // Text is the only handle the header exposes; it carries no tag and no content description.
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun SUGGESTIONS_HEADER(headerText: String = "") =
+        Selector(
+            strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+            value = headerText,
+            description = "'$headerText' suggestions header",
+            groups = listOf(),
+        )
+
     val FIREFOX_SUGGEST_HEADER =
         Selector(
             strategy = SelectorStrategy.COMPOSE_BY_TEXT,
@@ -148,6 +159,7 @@ object SearchBarSelectors {
             AWESOMEBAR_SUGGESTION,
             SEARCH_BAR_PLACEHOLDER,
             SEARCH_SHORTCUT(),
+            SUGGESTIONS_HEADER(),
             FIREFOX_SUGGEST_HEADER,
             SEARCH_SUGGESTION,
             SEARCH_SUGGESTION_WITH_TEXT(),

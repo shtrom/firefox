@@ -998,6 +998,12 @@ class SearchTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2230212
+    @Converted(
+        replacedBy =
+            ["org.mozilla.fenix.ui.efficiency.tests.SearchTest#searchHistoryNotRememberedInPrivateBrowsingTest"],
+        bug = 2063066,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun searchHistoryNotRememberedInPrivateBrowsingTest() {
