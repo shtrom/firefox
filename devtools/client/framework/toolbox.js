@@ -4738,6 +4738,7 @@ class Toolbox extends EventEmitter {
 
     // Instead view the stylesheet in the debugger since the pref is enabled
     if (Services.prefs.getBoolPref(DEVTOOLS_STYLESHEETS_IN_DEBUGGER)) {
+      Glean.devtoolsDebuggerStylesheets.linksOpenedInDebuggerCount.add(1);
       return viewSource.viewSourceInDebugger(this, url, line, column, null);
     }
 
@@ -4767,6 +4768,7 @@ class Toolbox extends EventEmitter {
 
     // Instead view the stylesheet in the debugger since the pref is enabled
     if (Services.prefs.getBoolPref(DEVTOOLS_STYLESHEETS_IN_DEBUGGER)) {
+      Glean.devtoolsDebuggerStylesheets.linksOpenedInDebuggerCount.add(1);
       return viewSource.viewSourceInDebugger(
         this,
         stylesheetResource.href,
