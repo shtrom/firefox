@@ -349,6 +349,27 @@ bool IsPrivateBrowsing(nsPIDOMWindowInner* aWindow) {
   return loadContext && loadContext->UsePrivateBrowsing();
 }
 
+static void RecordCodecTelemetry(const JsepCodecPreferences& aPrefs) {
+  if (WebrtcVideoConduit::HasH264Hardware()) {
+    glean::webrtc::has_h264_hardware
+        .EnumGet(glean::webrtc::HasH264HardwareLabel::eTrue)
+        .Add();
+  }
+
+  glean::webrtc::software_h264_enabled
+      .EnumGet(static_cast<glean::webrtc::SoftwareH264EnabledLabel>(
+          aPrefs.SoftwareH264Enabled()))
+      .Add();
+  glean::webrtc::hardware_h264_enabled
+      .EnumGet(static_cast<glean::webrtc::HardwareH264EnabledLabel>(
+          aPrefs.HardwareH264Enabled()))
+      .Add();
+  glean::webrtc::h264_enabled
+      .EnumGet(
+          static_cast<glean::webrtc::H264EnabledLabel>(aPrefs.H264Enabled()))
+      .Add();
+}
+
 PeerConnectionImpl::PeerConnectionImpl(const GlobalObject* aGlobal)
     : mTimeCard(MOZ_LOG_TEST(logModuleInfo, LogLevel::Error) ? create_timecard()
                                                              : nullptr),
@@ -529,6 +550,8 @@ nsresult PeerConnectionImpl::Initialize(PeerConnectionObserver& aObserver,
   EnumerateDefaultAudioCodecs(&preferredCodecs, mPrefs);
   mJsepSession->SetDefaultCodecs(preferredCodecs);
 
+  RecordCodecTelemetry(mPrefs);
+
   // We use this to sort the list of codecs once everything is configured
   CompareCodecPriority comparator;
   // Sort by priority
@@ -640,27 +663,6 @@ RefPtr<DtlsIdentity> PeerConnectionImpl::Identity() const {
   PC_AUTO_ENTER_API_CALL_NO_CHECK();
   MOZ_ASSERT(mCertificate);
   return mCertificate->CreateDtlsIdentity();
-}
-
-void RecordCodecTelemetry(const JsepCodecPreferences& aPrefs) {
-  if (WebrtcVideoConduit::HasH264Hardware()) {
-    glean::webrtc::has_h264_hardware
-        .EnumGet(glean::webrtc::HasH264HardwareLabel::eTrue)
-        .Add();
-  }
-
-  glean::webrtc::software_h264_enabled
-      .EnumGet(static_cast<glean::webrtc::SoftwareH264EnabledLabel>(
-          aPrefs.SoftwareH264Enabled()))
-      .Add();
-  glean::webrtc::hardware_h264_enabled
-      .EnumGet(static_cast<glean::webrtc::HardwareH264EnabledLabel>(
-          aPrefs.HardwareH264Enabled()))
-      .Add();
-  glean::webrtc::h264_enabled
-      .EnumGet(
-          static_cast<glean::webrtc::H264EnabledLabel>(aPrefs.H264Enabled()))
-      .Add();
 }
 
 // Data channels won't work without a window, so in order for the C++ unit
