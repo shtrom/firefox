@@ -48,7 +48,7 @@ class JsepSessionCopyableStuff {
   size_t mTransportIdCounter = 0;
   std::vector<JsepExtmapMediaType> mRtpExtensions;
   std::set<uint16_t> mExtmapEntriesEverUsed;
-  std::map<uint16_t, nsCString> mExtmapEntriesEverNegotiated;
+  std::map<uint16_t, std::string> mExtmapEntriesEverNegotiated;
   std::string mDefaultRemoteStreamId;
   std::string mCNAME;
   // Used to prevent duplicate local SSRCs. Not used to prevent local/remote or
@@ -96,25 +96,25 @@ class JsepSessionImpl : public JsepSession, public JsepSessionCopyableStuff {
       const nsACString& algorithm, const std::vector<uint8_t>& value) override;
 
   virtual nsresult AddRtpExtension(
-      JsepMediaType mediaType, const nsACString& extensionName,
+      JsepMediaType mediaType, const std::string& extensionName,
       SdpDirectionAttribute::Direction direction) override;
   virtual nsresult AddAudioRtpExtension(
-      const nsACString& extensionName,
+      const std::string& extensionName,
       SdpDirectionAttribute::Direction direction =
           SdpDirectionAttribute::Direction::kSendrecv) override;
 
   virtual nsresult AddVideoRtpExtension(
-      const nsACString& extensionName,
+      const std::string& extensionName,
       SdpDirectionAttribute::Direction direction =
           SdpDirectionAttribute::Direction::kSendrecv) override;
 
   virtual nsresult AddAudioVideoRtpExtension(
-      const nsACString& extensionName,
+      const std::string& extensionName,
       SdpDirectionAttribute::Direction direction =
           SdpDirectionAttribute::Direction::kSendrecv) override;
 
-  virtual Span<UniquePtr<JsepCodecDescription>> Codecs() override {
-    return Span(mSupportedCodecs);
+  virtual std::vector<UniquePtr<JsepCodecDescription>>& Codecs() override {
+    return mSupportedCodecs;
   }
 
   virtual Result CreateOffer(const JsepOfferOptions& options,
@@ -181,8 +181,9 @@ class JsepSessionImpl : public JsepSession, public JsepSessionCopyableStuff {
 
   virtual bool CheckNegotiationNeeded() const override;
 
-  virtual void SetDefaultCodecs(const nsTArray<UniquePtr<JsepCodecDescription>>&
-                                    aPreferredCodecs) override;
+  virtual void SetDefaultCodecs(
+      const std::vector<UniquePtr<JsepCodecDescription>>& aPreferredCodecs)
+      override;
 
  private:
   friend class JsepSessionTest;
@@ -280,7 +281,7 @@ class JsepSessionImpl : public JsepSession, public JsepSessionCopyableStuff {
   UniquePtr<Sdp> mCurrentRemoteDescription;
   UniquePtr<Sdp> mPendingLocalDescription;
   UniquePtr<Sdp> mPendingRemoteDescription;
-  nsTArray<UniquePtr<JsepCodecDescription>> mSupportedCodecs;
+  std::vector<UniquePtr<JsepCodecDescription>> mSupportedCodecs;
   SdpHelper mSdpHelper;
   UniquePtr<SdpParser> mParser;
 };

@@ -15,7 +15,6 @@
 #include "mozilla/UniquePtr.h"
 #include "mozilla/dom/PeerConnectionObserverEnumsBinding.h"
 #include "nsError.h"
-#include "nsTArray.h"
 #include "sdp/Sdp.h"
 
 namespace mozilla {
@@ -109,24 +108,29 @@ class JsepSession {
                                       const std::vector<uint8_t>& value) = 0;
 
   virtual nsresult AddRtpExtension(
-      JsepMediaType mediaType, const nsACString& extensionName,
+      JsepMediaType mediaType, const std::string& extensionName,
       SdpDirectionAttribute::Direction direction) = 0;
   virtual nsresult AddAudioRtpExtension(
-      const nsACString& extensionName,
+      const std::string& extensionName,
       SdpDirectionAttribute::Direction direction) = 0;
   virtual nsresult AddVideoRtpExtension(
-      const nsACString& extensionName,
+      const std::string& extensionName,
       SdpDirectionAttribute::Direction direction) = 0;
   virtual nsresult AddAudioVideoRtpExtension(
-      const nsACString& extensionName,
+      const std::string& extensionName,
       SdpDirectionAttribute::Direction direction) = 0;
 
-  virtual Span<UniquePtr<JsepCodecDescription>> Codecs() = 0;
+  // Kinda gross to be locking down the data structure type like this, but
+  // returning by value is problematic due to the lack of stl move semantics in
+  // our build config, since we can't use UniquePtr in the container. The
+  // alternative is writing a raft of accessor functions that allow arbitrary
+  // manipulation (which will be unwieldy), or allowing functors to be injected
+  // that manipulate the data structure (still pretty unwieldy).
+  virtual std::vector<UniquePtr<JsepCodecDescription>>& Codecs() = 0;
 
   template <class UnaryFunction>
   void ForEachCodec(UnaryFunction& function) {
-    Span codecs = Codecs();
-    std::for_each(codecs.begin(), codecs.end(), function);
+    std::for_each(Codecs().begin(), Codecs().end(), function);
     for (auto& transceiver : GetTransceivers()) {
       transceiver.mSendTrack.ForEachCodec(function);
       transceiver.mRecvTrack.ForEachCodec(function);
@@ -135,8 +139,7 @@ class JsepSession {
 
   template <class BinaryPredicate>
   void SortCodecs(BinaryPredicate& sorter) {
-    Span codecs = Codecs();
-    std::stable_sort(codecs.begin(), codecs.end(), sorter);
+    std::stable_sort(Codecs().begin(), Codecs().end(), sorter);
     for (auto& transceiver : GetTransceivers()) {
       transceiver.mSendTrack.SortCodecs(sorter);
       transceiver.mRecvTrack.SortCodecs(sorter);
@@ -309,7 +312,7 @@ class JsepSession {
   }
 
   virtual void SetDefaultCodecs(
-      const nsTArray<UniquePtr<JsepCodecDescription>>& aPreferredCodecs) = 0;
+      const std::vector<UniquePtr<JsepCodecDescription>>& aPreferredCodecs) = 0;
 
   // See Bug 1642419, this can be removed when all sites are working with RTX.
   void SetRtxIsAllowed(bool aRtxIsAllowed) { mRtxIsAllowed = aRtxIsAllowed; }

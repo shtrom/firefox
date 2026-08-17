@@ -77,7 +77,7 @@ JsepSessionImpl::JsepSessionImpl(const JsepSessionImpl& aOrig)
       mSdpHelper(&mLastError),
       mParser(MakeUnique<HybridSdpParser>()) {
   for (const auto& codec : aOrig.mSupportedCodecs) {
-    mSupportedCodecs.EmplaceBack(codec->Clone());
+    mSupportedCodecs.emplace_back(codec->Clone());
   }
 }
 
@@ -209,7 +209,7 @@ nsresult JsepSessionImpl::AddDtlsFingerprint(
 }
 
 nsresult JsepSessionImpl::AddRtpExtension(
-    JsepMediaType mediaType, const nsACString& extensionName,
+    JsepMediaType mediaType, const std::string& extensionName,
     SdpDirectionAttribute::Direction direction) {
   mLastError.clear();
 
@@ -233,27 +233,26 @@ nsresult JsepSessionImpl::AddRtpExtension(
       mediaType,
       {freeEntry, direction,
        // do we want to specify direction?
-       direction != SdpDirectionAttribute::kSendrecv, nsCString(extensionName),
-       ""_ns}};
+       direction != SdpDirectionAttribute::kSendrecv, extensionName, ""}};
 
   mRtpExtensions.push_back(std::move(extMediaType));
   return NS_OK;
 }
 
 nsresult JsepSessionImpl::AddAudioRtpExtension(
-    const nsACString& extensionName,
+    const std::string& extensionName,
     SdpDirectionAttribute::Direction direction) {
   return AddRtpExtension(JsepMediaType::kAudio, extensionName, direction);
 }
 
 nsresult JsepSessionImpl::AddVideoRtpExtension(
-    const nsACString& extensionName,
+    const std::string& extensionName,
     SdpDirectionAttribute::Direction direction) {
   return AddRtpExtension(JsepMediaType::kVideo, extensionName, direction);
 }
 
 nsresult JsepSessionImpl::AddAudioVideoRtpExtension(
-    const nsACString& extensionName,
+    const std::string& extensionName,
     SdpDirectionAttribute::Direction direction) {
   return AddRtpExtension(JsepMediaType::kAudioVideo, extensionName, direction);
 }
@@ -478,22 +477,20 @@ std::vector<SdpExtmapAttributeList::Extmap> JsepSessionImpl::GetRtpExtensions(
       if (includes_send && StaticPrefs::media_peerconnection_video_use_dd() &&
           msection.GetAttributeList().HasAttribute(
               SdpAttribute::kSimulcastAttribute)) {
-        AddVideoRtpExtension(
-            nsLiteralCString(webrtc::RtpExtension::kDependencyDescriptorUri),
-            SdpDirectionAttribute::kSendonly);
+        AddVideoRtpExtension(webrtc::RtpExtension::kDependencyDescriptorUri,
+                             SdpDirectionAttribute::kSendonly);
       }
       if (msection.GetAttributeList().HasAttribute(
               SdpAttribute::kRidAttribute)) {
         // We need RID support
         // TODO: Would it be worth checking that the direction is sane?
-        AddVideoRtpExtension(nsLiteralCString(webrtc::RtpExtension::kRidUri),
+        AddVideoRtpExtension(webrtc::RtpExtension::kRidUri,
                              SdpDirectionAttribute::kSendonly);
 
         if (mRtxIsAllowed &&
             Preferences::GetBool("media.peerconnection.video.use_rtx", false)) {
-          AddVideoRtpExtension(
-              nsLiteralCString(webrtc::RtpExtension::kRepairedRidUri),
-              SdpDirectionAttribute::kSendonly);
+          AddVideoRtpExtension(webrtc::RtpExtension::kRepairedRidUri,
+                               SdpDirectionAttribute::kSendonly);
         }
       }
       break;
@@ -2289,11 +2286,11 @@ nsresult JsepSessionImpl::SetupIds() {
 }
 
 void JsepSessionImpl::SetDefaultCodecs(
-    const nsTArray<UniquePtr<JsepCodecDescription>>& aPreferredCodecs) {
-  mSupportedCodecs.Clear();
+    const std::vector<UniquePtr<JsepCodecDescription>>& aPreferredCodecs) {
+  mSupportedCodecs.clear();
 
   for (const auto& codec : aPreferredCodecs) {
-    mSupportedCodecs.EmplaceBack(codec->Clone());
+    mSupportedCodecs.emplace_back(codec->Clone());
   }
 }
 

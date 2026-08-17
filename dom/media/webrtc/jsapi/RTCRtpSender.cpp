@@ -821,7 +821,7 @@ already_AddRefed<Promise> RTCRtpSender::SetParameters(
   // Coverts a list of JsepCodecDescription to a list of
   // dom::RTCRtpCodecParameters
   auto toDomCodecParametersList =
-      [](const nsTArray<UniquePtr<JsepCodecDescription>>& aJsepCodec)
+      [](const std::vector<UniquePtr<JsepCodecDescription>>& aJsepCodec)
       -> dom::Sequence<RTCRtpCodecParameters> {
     dom::Sequence<RTCRtpCodecParameters> codecs;
     for (const auto& codec : aJsepCodec) {
@@ -896,11 +896,15 @@ already_AddRefed<Promise> RTCRtpSender::SetParameters(
   if (choosableCodecs.Length() == 0) {
     // If choosableCodecs is still an empty list, set choosableCodecs to the
     // list of implemented send codecs for transceiver's kind.
-    AutoTArray<UniquePtr<JsepCodecDescription>, 16> codecs;
+    std::vector<UniquePtr<JsepCodecDescription>> codecs;
     if (mTransceiver->IsVideo()) {
-      EnumerateDefaultVideoCodecs(&codecs, mPc->mPrefs);
+      auto useRtx =
+          Preferences::GetBool("media.peerconnection.video.use_rtx", false)
+              ? OverrideRtxPreference::OverrideWithEnabled
+              : OverrideRtxPreference::OverrideWithDisabled;
+      PeerConnectionImpl::GetDefaultVideoCodecs(codecs, useRtx);
     } else {
-      EnumerateDefaultAudioCodecs(&codecs, mPc->mPrefs);
+      PeerConnectionImpl::GetDefaultAudioCodecs(codecs);
     }
     choosableCodecs = toDomCodecParametersList(codecs);
   }

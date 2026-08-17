@@ -903,8 +903,7 @@ void SipccSdpAttributeList::LoadExtmap(sdp_t* sdp, const uint16_t level,
     }
 
     extmaps->PushEntry(extmap->id, dir, extmap->media_direction_specified,
-                       nsDependentCString(extmap->uri),
-                       nsDependentCString(extmap->extension_attributes));
+                       extmap->uri, extmap->extension_attributes);
   }
 
   if (!extmaps->mExtmaps.empty()) {

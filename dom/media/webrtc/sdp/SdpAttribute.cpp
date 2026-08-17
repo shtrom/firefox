@@ -90,7 +90,7 @@ void SdpExtmapAttributeList::Serialize(std::ostream& os) const {
       os << "/" << i->direction;
     }
     os << " " << i->extensionname;
-    if (i->extensionattributes.Length()) {
+    if (i->extensionattributes.length()) {
       os << " " << i->extensionattributes;
     }
     os << CRLF;
