@@ -534,8 +534,8 @@ nsresult PeerConnectionImpl::Initialize(PeerConnectionObserver& aObserver,
   // Sort by priority
   mJsepSession->SortCodecs(comparator);
 
-  std::vector<RtpExtensionHeader> preferredHeaders;
-  GetDefaultRtpExtensions(mPrefs, preferredHeaders);
+  AutoTArray<RtpExtensionHeader, 16> preferredHeaders;
+  GetDefaultRtpExtensions(mPrefs, &preferredHeaders);
 
   for (const auto& header : preferredHeaders) {
     mJsepSession->AddRtpExtension(header.mMediaType, header.extensionname,
@@ -2115,36 +2115,37 @@ void PeerConnectionImpl::SendWarningToConsole(const nsCString& aWarning) {
 
 void PeerConnectionImpl::GetDefaultRtpExtensions(
     const JsepCodecPreferences& aPrefs,
-    std::vector<RtpExtensionHeader>& aRtpExtensions) {
+    nsTArray<RtpExtensionHeader>* aRtpExtensions) {
+  MOZ_ASSERT(aRtpExtensions);
   RtpExtensionHeader audioLevel = {JsepMediaType::kAudio,
                                    SdpDirectionAttribute::Direction::kSendrecv,
                                    webrtc::RtpExtension::kAudioLevelUri};
-  aRtpExtensions.push_back(std::move(audioLevel));
+  aRtpExtensions->AppendElement(std::move(audioLevel));
 
   RtpExtensionHeader csrcAudioLevels = {
       JsepMediaType::kAudio, SdpDirectionAttribute::Direction::kRecvonly,
       webrtc::RtpExtension::kCsrcAudioLevelsUri};
-  aRtpExtensions.push_back(std::move(csrcAudioLevels));
+  aRtpExtensions->AppendElement(std::move(csrcAudioLevels));
 
   RtpExtensionHeader mid = {JsepMediaType::kAudioVideo,
                             SdpDirectionAttribute::Direction::kSendrecv,
                             webrtc::RtpExtension::kMidUri};
-  aRtpExtensions.push_back(std::move(mid));
+  aRtpExtensions->AppendElement(std::move(mid));
 
   RtpExtensionHeader absSendTime = {JsepMediaType::kVideo,
                                     SdpDirectionAttribute::Direction::kSendrecv,
                                     webrtc::RtpExtension::kAbsSendTimeUri};
-  aRtpExtensions.push_back(std::move(absSendTime));
+  aRtpExtensions->AppendElement(std::move(absSendTime));
 
   RtpExtensionHeader timestampOffset = {
       JsepMediaType::kVideo, SdpDirectionAttribute::Direction::kSendrecv,
       webrtc::RtpExtension::kTimestampOffsetUri};
-  aRtpExtensions.push_back(std::move(timestampOffset));
+  aRtpExtensions->AppendElement(std::move(timestampOffset));
 
   RtpExtensionHeader playoutDelay = {
       JsepMediaType::kVideo, SdpDirectionAttribute::Direction::kRecvonly,
       webrtc::RtpExtension::kPlayoutDelayUri};
-  aRtpExtensions.push_back(std::move(playoutDelay));
+  aRtpExtensions->AppendElement(std::move(playoutDelay));
 
   JsepMediaType transportSequenceNumberMediaType = JsepMediaType::kNone;
   if (aPrefs.UseAudioTransportCC() && aPrefs.UseTransportCC()) {
@@ -2159,7 +2160,7 @@ void PeerConnectionImpl::GetDefaultRtpExtensions(
         transportSequenceNumberMediaType,
         SdpDirectionAttribute::Direction::kSendrecv,
         webrtc::RtpExtension::kTransportSequenceNumberUri};
-    aRtpExtensions.push_back(std::move(transportSequenceNumber));
+    aRtpExtensions->AppendElement(std::move(transportSequenceNumber));
   }
 }
 
@@ -2169,7 +2170,7 @@ void PeerConnectionImpl::GetCapabilities(
     sdp::Direction aDirection) {
   DefaultCodecPreferences prefs;
   AutoTArray<UniquePtr<JsepCodecDescription>, 16> codecs;
-  std::vector<RtpExtensionHeader> headers;
+  AutoTArray<RtpExtensionHeader, 16> headers;
   auto mediaType = JsepMediaType::kNone;
 
   if (aKind.EqualsASCII("video")) {
@@ -2186,7 +2187,7 @@ void PeerConnectionImpl::GetCapabilities(
     return;
   }
 
-  GetDefaultRtpExtensions(prefs, headers);
+  GetDefaultRtpExtensions(prefs, &headers);
 
   bool haveAddedRtx = false;
 
