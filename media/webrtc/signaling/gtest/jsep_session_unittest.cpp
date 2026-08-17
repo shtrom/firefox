@@ -96,8 +96,8 @@ class JsepSessionTest : public JsepSessionTestBase,
     mSessionOff->SetDefaultCodecs(preferredCodecs);
     mSessionAns->SetDefaultCodecs(preferredCodecs);
 
-    std::vector<PeerConnectionImpl::RtpExtensionHeader> preferredHeaders;
-    PeerConnectionImpl::GetDefaultRtpExtensions(prefs, preferredHeaders);
+    AutoTArray<PeerConnectionImpl::RtpExtensionHeader, 16> preferredHeaders;
+    PeerConnectionImpl::GetDefaultRtpExtensions(prefs, &preferredHeaders);
 
     for (const auto& header : preferredHeaders) {
       mSessionOff->AddRtpExtension(header.mMediaType, header.extensionname,

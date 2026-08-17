@@ -575,7 +575,7 @@ class PeerConnectionImpl final
 
   static void GetDefaultRtpExtensions(
       const JsepCodecPreferences& aPrefs,
-      std::vector<RtpExtensionHeader>& aRtpExtensions);
+      nsTArray<RtpExtensionHeader>* aRtpExtensions);
 
   static void GetCapabilities(const nsAString& aKind,
                               dom::Nullable<dom::RTCRtpCapabilities>& aResult,
@@ -960,6 +960,11 @@ class PeerConnectionWrapper {
 };
 
 }  // namespace mozilla
+
+// RtpExtensionHeader holds a std::string, which is not memmovable, so relocate
+// it using its move constructor when stored in an nsTArray.
+MOZ_DECLARE_RELOCATE_USING_MOVE_CONSTRUCTOR(
+    mozilla::PeerConnectionImpl::RtpExtensionHeader)
 
 #undef NS_IMETHODIMP_TO_ERRORRESULT
 #undef NS_IMETHODIMP_TO_ERRORRESULT_RETREF
