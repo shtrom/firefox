@@ -92,7 +92,7 @@ class ControlMessage : public MediaTrack::ControlMessageInterface {
 
 class MessageBlock {
  public:
-  nsTArray<UniquePtr<MediaTrack::ControlMessageInterface>> mMessages;
+  nsTArray<nsCOMPtr<nsIRunnable>> mMessages;
 };
 
 /**
@@ -113,6 +113,7 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
                             public nsINamed {
  public:
   using ControlMessageInterface = MediaTrack::ControlMessageInterface;
+  using ControlMessageWrapper = MediaTrack::ControlMessageWrapper;
 
   NS_DECL_THREADSAFE_ISUPPORTS
   NS_DECL_NSIMEMORYREPORTER
@@ -372,7 +373,7 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * Schedules |aMessage| to run after processing, at a time when graph state
    * can be changed.  Graph thread.
    */
-  void RunMessageAfterProcessing(UniquePtr<ControlMessageInterface> aMessage);
+  void RunMessageAfterProcessing(already_AddRefed<nsIRunnable> aMessage);
 
   /* From the main thread, ask the MTG to resolve the returned promise when
    * the device specified has started.
@@ -1003,7 +1004,7 @@ class MediaTrackGraphImpl : public MediaTrackGraph,
    * immediately because we want all messages between stable states to be
    * processed as an atomic batch.
    */
-  nsTArray<UniquePtr<ControlMessageInterface>> mCurrentTaskMessageQueue;
+  nsTArray<nsCOMPtr<nsIRunnable>> mCurrentTaskMessageQueue;
   /**
    * True from when RunInStableState sets mLifecycleState to LIFECYCLE_RUNNING,
    * until RunInStableState has determined that mLifecycleState is >

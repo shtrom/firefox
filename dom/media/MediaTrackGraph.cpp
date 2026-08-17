@@ -1249,7 +1249,7 @@ void MediaTrackGraphImpl::ProduceDataForTracksBlockByBlock(
 }
 
 void MediaTrackGraphImpl::RunMessageAfterProcessing(
-    UniquePtr<ControlMessageInterface> aMessage) {
+    already_AddRefed<nsIRunnable> aMessage) {
   MOZ_ASSERT(OnGraphThread());
 
   if (mFrontMessageQueue.IsEmpty()) {
@@ -1268,12 +1268,12 @@ void MediaTrackGraphImpl::RunMessagesInQueue() {
   // batch corresponding to an event loop task). This isolates the performance
   // of different scripts to some extent.
   for (uint32_t i = 0; i < mFrontMessageQueue.Length(); ++i) {
-    nsTArray<UniquePtr<ControlMessageInterface>>& messages =
-        mFrontMessageQueue[i].mMessages;
+    nsTArray<nsCOMPtr<nsIRunnable>>& messages = mFrontMessageQueue[i].mMessages;
 
-    for (uint32_t j = 0; j < messages.Length(); ++j) {
+    for (const auto& message : messages) {
       TRACE("ControlMessage::Run");
-      messages[j]->Run();
+      AUTO_PROFILE_FOLLOWING_RUNNABLE(message);
+      message->Run();
     }
   }
   mFrontMessageQueue.Clear();
@@ -1949,11 +1949,10 @@ void MediaTrackGraphImpl::RunInStableState(bool aSourceIsMTG) {
   MOZ_ASSERT(NS_IsMainThread(), "Must be called on main thread");
 
   nsTArray<nsCOMPtr<nsIRunnable>> runnables;
-  // When we're doing a forced shutdown, pending control messages may be
-  // run on the main thread via RunDuringShutdown. Those messages must
+  // When we're doing a forced shutdown, pending runnables may be
+  // run on the main thread opt-in through OnDiscard. Those runnables must
   // run without the graph monitor being held. So, we collect them here.
-  nsTArray<UniquePtr<ControlMessageInterface>>
-      controlMessagesToRunDuringShutdown;
+  nsTArray<nsCOMPtr<nsIRunnable>> runnablesToRunDuringShutdown;
 
   {
     MonitorAutoLock lock(mMonitor);
@@ -2044,8 +2043,7 @@ void MediaTrackGraphImpl::RunInStableState(bool aSourceIsMTG) {
       // held.
       for (uint32_t i = 0; i < mBackMessageQueue.Length(); ++i) {
         MessageBlock& mb = mBackMessageQueue[i];
-        controlMessagesToRunDuringShutdown.AppendElements(
-            std::move(mb.mMessages));
+        runnablesToRunDuringShutdown.AppendElements(std::move(mb.mMessages));
       }
       mBackMessageQueue.Clear();
       MOZ_ASSERT(mCurrentTaskMessageQueue.IsEmpty());
@@ -2064,8 +2062,10 @@ void MediaTrackGraphImpl::RunInStableState(bool aSourceIsMTG) {
     mPostedRunInStableState = false;
   }
 
-  for (uint32_t i = 0; i < controlMessagesToRunDuringShutdown.Length(); ++i) {
-    controlMessagesToRunDuringShutdown[i]->RunDuringShutdown();
+  for (const auto& runnable : runnablesToRunDuringShutdown) {
+    nsCOMPtr<nsIDiscardableRunnable> discardable = do_QueryInterface(runnable);
+    MOZ_ASSERT(discardable, "MediaTrackGraph runnables must be discardable");
+    discardable->OnDiscard();
   }
 
 #ifdef DEBUG
@@ -2141,7 +2141,11 @@ void MediaTrackGraphImpl::AppendMessage(
     return;
   }
 
-  mCurrentTaskMessageQueue.AppendElement(std::move(aMessage));
+  nsCOMPtr<nsIRunnable> runnable =
+      MakeAndAddRef<ControlMessageWrapper>(std::move(aMessage));
+  MOZ_ASSERT(nsCOMPtr<nsIDiscardableRunnable>(do_QueryInterface(runnable)),
+             "MediaTrackGraph runnables must be discardable");
+  mCurrentTaskMessageQueue.AppendElement(runnable.forget());
   EnsureRunInStableState();
 }
 
@@ -2760,7 +2764,7 @@ void MediaTrack::QueueMessage(UniquePtr<ControlMessageInterface> aMessage) {
 }
 
 void MediaTrack::RunMessageAfterProcessing(
-    UniquePtr<ControlMessageInterface> aMessage) {
+    already_AddRefed<nsIRunnable> aMessage) {
   AssertOnGraphThread();
   GraphImpl()->RunMessageAfterProcessing(std::move(aMessage));
 }
