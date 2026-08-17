@@ -21,13 +21,6 @@ import { InstallButton } from "./InstallButton";
 import { SubmenuButton } from "./SubmenuButton";
 
 const DEFAULT_AUTO_ADVANCE_MS = 20000;
-const CORNER_IMAGE_POSITIONS = new Set([
-  "bottom-left",
-  "bottom-right",
-  "top-left",
-  "top-right",
-]);
-const DEFAULT_CORNER_IMAGE_POSITION = "bottom-right";
 
 export const MultiStageProtonScreen = props => {
   const {
@@ -554,31 +547,6 @@ export class ProtonScreen extends React.PureComponent {
     );
   }
 
-  renderCornerImage() {
-    const cornerImage = this.props.content.corner_image;
-    const position = CORNER_IMAGE_POSITIONS.has(cornerImage.position)
-      ? cornerImage.position
-      : DEFAULT_CORNER_IMAGE_POSITION;
-
-    return (
-      <div className={"corner-image-container"}>
-        {this.renderPicture({
-          imageURL: cornerImage.imageURL,
-          darkModeImageURL: cornerImage.darkModeImageURL,
-          reducedMotionImageURL: cornerImage.reducedMotionImageURL,
-          darkModeReducedMotionImageURL:
-            cornerImage.darkModeReducedMotionImageURL,
-          height: cornerImage.height,
-          width: cornerImage.width,
-          marginBlock: cornerImage.marginBlock,
-          marginInline: cornerImage.marginInline,
-          style: cornerImage.style,
-          className: `corner-image ${position}`,
-        })}
-      </div>
-    );
-  }
-
   renderLanguageSwitcher() {
     return this.props.content.languageSwitcher ? (
       <LanguageSwitcher
@@ -931,23 +899,10 @@ export class ProtonScreen extends React.PureComponent {
       isWideScreen,
     } = this.props;
     const includeNoodles = content.has_noodles;
-    const isCenterLargeFullscreen =
-      content.position === "center-large" && !!content.fullscreen;
-    const includeCornerImage =
-      !!content.corner_image && isCenterLargeFullscreen;
-    const secondaryCTATop = content.secondary_button_top ? (
-      <SecondaryCTA
-        content={content}
-        handleAction={this.props.handleAction}
-        position="top"
-      />
-    ) : null;
     const hasZapBorder = content.zap_border;
     const hasZapShadow = content.zap_shadow;
     // The default screen position is "center"
-    const isCenterPosition =
-      ["center", "center-large"].includes(content.position) ||
-      !content.position;
+    const isCenterPosition = content.position === "center" || !content.position;
     const hideStepsIndicator =
       autoAdvance ||
       content?.video_container ||
@@ -996,7 +951,6 @@ export class ProtonScreen extends React.PureComponent {
         }}
         no-rdm={content.no_rdm ? "" : null}
       >
-        {includeCornerImage ? this.renderCornerImage() : null}
         {isCenterPosition ? null : this.renderSecondarySection(content)}
         <div
           className={`section-main ${
@@ -1017,7 +971,13 @@ export class ProtonScreen extends React.PureComponent {
             ])
           }
         >
-          {isCenterLargeFullscreen ? null : secondaryCTATop}
+          {content.secondary_button_top ? (
+            <SecondaryCTA
+              content={content}
+              handleAction={this.props.handleAction}
+              position="top"
+            />
+          ) : null}
           {includeNoodles ? this.renderNoodles() : null}
           {content.more_button ? this.renderMoreButton() : null}
           {content.dismiss_button && !content.reverse_split
@@ -1042,7 +1002,6 @@ export class ProtonScreen extends React.PureComponent {
                 : null,
             }}
           >
-            {isCenterLargeFullscreen ? secondaryCTATop : null}
             {isCenterPosition && this.hasAnimatedContent(content)
               ? this.renderAnimationPlayPauseButton()
               : null}
