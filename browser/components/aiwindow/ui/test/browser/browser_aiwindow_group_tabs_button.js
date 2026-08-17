@@ -32,6 +32,7 @@ function fakeTwoGroupManager() {
     async getPredictedLabelForGroup() {
       return "Test Group";
     },
+    async preloadAllModels() {},
   };
 }
 
@@ -132,6 +133,7 @@ add_setup(async function setup() {
   const originalManager = AutoTabGroupingSuggestions._manager;
   registerCleanupFunction(() => {
     AutoTabGroupingSuggestions._manager = originalManager;
+    AutoTabGroupingSuggestions._preloadPromise = null;
   });
 });
 
@@ -140,6 +142,7 @@ describe("Auto Tab Grouping toolbar button", () => {
 
   beforeEach(() => {
     AutoTabGroupingSuggestions._manager = fakeTwoGroupManager();
+    AutoTabGroupingSuggestions._preloadPromise = null;
     Services.fog.testResetFOG();
   });
 
@@ -236,6 +239,136 @@ describe("Auto Tab Grouping toolbar button", () => {
       win = await openAIWindow();
       await navigateToContent(win);
       await assertButtonHiddenOnContent(win, "on-device ML is disabled");
+    });
+  });
+
+  describe("model preloading", () => {
+    let preloadStub;
+
+    afterEach(() => {
+      preloadStub?.restore();
+      preloadStub = null;
+    });
+
+    it("preloads when a Smart Window shows the button", async () => {
+      await SpecialPowers.pushPrefEnv({
+        set: [["browser.smartwindow.autoTabGrouping.enabled", true]],
+      });
+      preloadStub = sinon.stub(AutoTabGroupingSuggestions, "preloadModels");
+
+      win = await openAIWindow();
+
+      Assert.ok(
+        preloadStub.calledOnce,
+        "Opening a Smart Window preloads the models once"
+      );
+    });
+
+    it("preloads when a window switches to Smart Window", async () => {
+      await SpecialPowers.pushPrefEnv({
+        set: [["browser.smartwindow.autoTabGrouping.enabled", true]],
+      });
+      preloadStub = sinon.stub(AutoTabGroupingSuggestions, "preloadModels");
+
+      win = await BrowserTestUtils.openNewBrowserWindow();
+      Assert.ok(
+        preloadStub.notCalled,
+        "A classic window does not preload the models"
+      );
+
+      AIWindow.toggleAIWindow(win, true);
+      Assert.ok(
+        preloadStub.calledOnce,
+        "Switching to Smart Window preloads the models once"
+      );
+    });
+
+    it("does not preload while the button stays hidden", async () => {
+      await SpecialPowers.pushPrefEnv({
+        set: [["browser.smartwindow.autoTabGrouping.enabled", false]],
+      });
+      preloadStub = sinon.stub(AutoTabGroupingSuggestions, "preloadModels");
+
+      win = await openAIWindow();
+
+      Assert.ok(
+        preloadStub.notCalled,
+        "The models are not preloaded while the feature pref is off"
+      );
+    });
+
+    it("does not download while the preload pref is off", async () => {
+      await SpecialPowers.pushPrefEnv({
+        set: [
+          ["browser.smartwindow.autoTabGrouping.enabled", true],
+          ["browser.smartwindow.autoTabGrouping.preloadModels", false],
+        ],
+      });
+
+      let preloads = 0;
+      AutoTabGroupingSuggestions._manager = {
+        ...fakeTwoGroupManager(),
+        async preloadAllModels() {
+          preloads++;
+        },
+      };
+
+      await AutoTabGroupingSuggestions.preloadModels();
+
+      Assert.equal(
+        preloads,
+        0,
+        "The models are not fetched while the preload pref is off"
+      );
+    });
+
+    it("shares one download across repeated preloads", async () => {
+      await SpecialPowers.pushPrefEnv({
+        set: [
+          ["browser.smartwindow.autoTabGrouping.enabled", true],
+          ["browser.smartwindow.autoTabGrouping.preloadModels", true],
+        ],
+      });
+
+      let preloads = 0;
+      AutoTabGroupingSuggestions._manager = {
+        ...fakeTwoGroupManager(),
+        async preloadAllModels() {
+          preloads++;
+        },
+      };
+
+      await AutoTabGroupingSuggestions.preloadModels();
+      await AutoTabGroupingSuggestions.preloadModels();
+
+      Assert.equal(preloads, 1, "The second preload reuses the first download");
+    });
+
+    it("does not preload again after a failed download", async () => {
+      await SpecialPowers.pushPrefEnv({
+        set: [
+          ["browser.smartwindow.autoTabGrouping.enabled", true],
+          ["browser.smartwindow.autoTabGrouping.preloadModels", true],
+        ],
+      });
+
+      let preloads = 0;
+      AutoTabGroupingSuggestions._manager = {
+        ...fakeTwoGroupManager(),
+        async preloadAllModels() {
+          preloads++;
+          throw new Error("Preload failed");
+        },
+      };
+
+      await AutoTabGroupingSuggestions.preloadModels();
+      await AutoTabGroupingSuggestions.preloadModels();
+
+      Assert.equal(
+        preloads,
+        1,
+        "A failed download is not retried on the next preload"
+      );
     });
   });
 
@@ -1227,11 +1360,9 @@ describe("Auto Tab Grouping toolbar button", () => {
       });
 
       AutoTabGroupingSuggestions._manager = {
+        ...fakeTwoGroupManager(),
         generateClusters() {
           return new Promise(() => {});
-        },
-        async getPredictedLabelForGroup() {
-          return "Test Group";
         },
       };
 
@@ -1313,18 +1444,12 @@ describe("Auto Tab Grouping toolbar button", () => {
       const clustersReady = new Promise(resolve => {
         releaseClusters = resolve;
       });
+      const fakeManager = fakeTwoGroupManager();
       AutoTabGroupingSuggestions._manager = {
+        ...fakeManager,
         async generateClusters(tabList) {
           await clustersReady;
-          return {
-            clusterRepresentations: [
-              { tabs: tabList.slice(0, 2), cohesion: 0.9 },
-              { tabs: tabList.slice(2, 4), cohesion: 0.9 },
-            ],
-          };
-        },
-        async getPredictedLabelForGroup() {
-          return "Test Group";
+          return fakeManager.generateClusters(tabList);
         },
       };
 
