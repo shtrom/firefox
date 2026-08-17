@@ -4,6 +4,7 @@
 
 import { getLinkMenuOptions } from "content-src/lib/link-menu-options";
 import { PanelListItems } from "content-src/components/LinkMenu/PanelListItems";
+import { subscribePanelListToggle } from "content-src/lib/panel-list-utils";
 import { actionCreators as ac } from "common/Actions.mjs";
 import React from "react";
 import { connect } from "react-redux";
@@ -20,13 +21,14 @@ export class _DSLinkMenu extends React.PureComponent {
     // The panel-list is persistent (paired to its moz-button via menuId).
     // Mirror its open/close into the card's active state via its shown/hidden
     // events (replacing the ContextMenuButton onUpdate / LinkMenu onShow calls).
-    this.panelListRef.current?.addEventListener("shown", this.onMenuShown);
-    this.panelListRef.current?.addEventListener("hidden", this.onMenuHidden);
+    this.teardownMenuEvents = subscribePanelListToggle(
+      this.panelListRef.current,
+      { onShown: this.onMenuShown, onHidden: this.onMenuHidden }
+    );
   }
 
   componentWillUnmount() {
-    this.panelListRef.current?.removeEventListener("shown", this.onMenuShown);
-    this.panelListRef.current?.removeEventListener("hidden", this.onMenuHidden);
+    this.teardownMenuEvents?.();
   }
 
   onMenuShown() {

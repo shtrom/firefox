@@ -2,10 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef } from "react";
 import { actionCreators as ac } from "common/Actions.mjs";
 import { getLinkMenuOptions } from "content-src/lib/link-menu-options";
 import { PanelListItems } from "content-src/components/LinkMenu/PanelListItems";
+import { usePanelListIsOpen } from "content-src/lib/panel-list-utils";
 
 /**
  * A context menu for blocking, following and unfollowing sections.
@@ -34,22 +35,8 @@ export function SectionContextMenu({
   SECTIONS_CONTEXT_MENU_OPTIONS.push("Separator");
   SECTIONS_CONTEXT_MENU_OPTIONS.push("SectionLearnMore");
 
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const panelListRef = useRef(null);
-
-  // The panel-list handles its own open/close via the moz-button menuId pairing
-  // below.
-  useEffect(() => {
-    const panelList = panelListRef.current;
-    const handleShown = () => setContextMenuOpen(true);
-    const handleHidden = () => setContextMenuOpen(false);
-    panelList.addEventListener("shown", handleShown);
-    panelList.addEventListener("hidden", handleHidden);
-    return () => {
-      panelList.removeEventListener("shown", handleShown);
-      panelList.removeEventListener("hidden", handleHidden);
-    };
-  }, []);
+  const contextMenuOpen = usePanelListIsOpen(panelListRef);
 
   const menuId = `section-context-menu-${sectionKey ?? index}`;
 

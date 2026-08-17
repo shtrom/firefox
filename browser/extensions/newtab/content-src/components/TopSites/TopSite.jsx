@@ -19,6 +19,7 @@ import { TopSitesHoverCard } from "content-src/components/TopSitesHoverCard/TopS
 import { TopSiteWebNotification } from "content-src/components/TopSiteWebNotification/TopSiteWebNotification";
 import { getLinkMenuOptions } from "content-src/lib/link-menu-options";
 import { PanelListItems } from "content-src/components/LinkMenu/PanelListItems";
+import { subscribePanelListToggle } from "content-src/lib/panel-list-utils";
 import { ImpressionStats } from "../DiscoveryStreamImpressionStats/ImpressionStats";
 import React from "react";
 import { ScreenshotUtils } from "content-src/lib/screenshot-utils";
@@ -474,8 +475,10 @@ export class TopSite extends React.PureComponent {
     // The panel-list is persistent, so mirror its open/close state into the
     // tile's active flag via panel-list's shown/hidden events (replacing
     // ContextMenuButton's onUpdate callback).
-    this.panelListRef.current?.addEventListener("shown", this.onMenuShown);
-    this.panelListRef.current?.addEventListener("hidden", this.onMenuHidden);
+    this.teardownMenuEvents = subscribePanelListToggle(
+      this.panelListRef.current,
+      { onShown: this.onMenuShown, onHidden: this.onMenuHidden }
+    );
 
     // Register the trigger as the panel-list's popover invoker. panel-list is a
     // popover="auto", so without this the platform treats a click on the
@@ -492,8 +495,7 @@ export class TopSite extends React.PureComponent {
   }
 
   componentWillUnmount() {
-    this.panelListRef.current?.removeEventListener("shown", this.onMenuShown);
-    this.panelListRef.current?.removeEventListener("hidden", this.onMenuHidden);
+    this.teardownMenuEvents?.();
   }
 
   onMenuShown() {

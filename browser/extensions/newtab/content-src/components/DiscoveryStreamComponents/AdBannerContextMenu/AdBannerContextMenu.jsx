@@ -2,11 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef } from "react";
 import { useSelector } from "react-redux";
 import { actionCreators as ac } from "common/Actions.mjs";
 import { getLinkMenuOptions } from "content-src/lib/link-menu-options";
 import { PanelListItems } from "content-src/components/LinkMenu/PanelListItems";
+import { usePanelListIsOpen } from "content-src/lib/panel-list-utils";
 
 /**
  * A context menu for IAB banners (e.g. billboard, leaderboard).
@@ -48,46 +49,14 @@ export function AdBannerContextMenu({
     })
   );
 
-  const [contextMenuClassNames, setContextMenuClassNames] =
-    useState("ads-context-menu");
-
-  /**
-   * Toggles the style fix for context menu hover/active styles.
-   * This allows us to have unobtrusive, transparent button background by default,
-   * yet flip it over to semi-transparent grey when the menu is visible.
-   *
-   * @param contextMenuOpen
-   */
-  const toggleContextMenuStyleSwitch = contextMenuOpen => {
-    if (contextMenuOpen) {
-      setContextMenuClassNames("ads-context-menu context-menu-open");
-    } else {
-      setContextMenuClassNames("ads-context-menu");
-    }
-  };
-
   const panelListRef = useRef(null);
-
-  // panel-list handles its own open/close via the moz-button menuId
-  // pairing below. This just mirrors that state into the hover/active
-  // style fix and the toggleActive callback.
-  useEffect(() => {
-    const panelList = panelListRef.current;
-    const handleShown = () => {
-      toggleContextMenuStyleSwitch(true);
-      toggleActive(true);
-    };
-    const handleHidden = () => {
-      toggleContextMenuStyleSwitch(false);
-      toggleActive(false);
-    };
-    panelList.addEventListener("shown", handleShown);
-    panelList.addEventListener("hidden", handleHidden);
-    return () => {
-      panelList.removeEventListener("shown", handleShown);
-      panelList.removeEventListener("hidden", handleHidden);
-    };
-  }, [toggleActive]);
+  const contextMenuOpen = usePanelListIsOpen(panelListRef, {
+    onShown: () => toggleActive(true),
+    onHidden: () => toggleActive(false),
+  });
+  const contextMenuClassNames = `ads-context-menu${
+    contextMenuOpen ? " context-menu-open" : ""
+  }`;
 
   const menuId = `ad-banner-context-menu-${position}`;
 
