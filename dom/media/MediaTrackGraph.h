@@ -1354,7 +1354,7 @@ class MediaTrack::ControlMessageWithNoShutdown
     : public ControlMessageInterface {
  public:
   explicit ControlMessageWithNoShutdown(Function&& aFunction)
-      : mFunction(std::forward<Function>(aFunction)) {}
+      : mFunction(std::move(aFunction)) {}
 
   void Run() override {
     static_assert(std::is_void_v<decltype(mFunction())>,
@@ -1371,13 +1371,14 @@ template <typename Function>
 class MediaTrack::ControlOrShutdownMessage : public ControlMessageInterface {
  public:
   explicit ControlOrShutdownMessage(Function&& aFunction)
-      : mFunction(std::forward<Function>(aFunction)) {}
+      : mFunction(std::move(aFunction)) {}
 
   void Run() override {
     static_assert(std::is_void_v<decltype(mFunction(IsInShutdown()))>,
                   "The lambda must return void!");
     mFunction(IsInShutdown::No);
   }
+
   void RunDuringShutdown() override { mFunction(IsInShutdown::Yes); }
 
  private:
