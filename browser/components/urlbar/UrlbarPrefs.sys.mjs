@@ -779,6 +779,7 @@ const PREF_OTHER_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   ["browser.search.widget.new", true],
   ["browser.settings-redesign.enabled", true],
   ["browser.smartwindow.agent.enabled", false],
+  ["browser.smartwindow.smartbarMentions.loglevel", "Error"],
   ["keyword.enabled", true],
   ["privacy.query_stripping.strip_on_share.enabled", true],
   ["security.insecure_connection_text.enabled", true],

@@ -13,17 +13,22 @@
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 
-const { XPCOMUtils } = ChromeUtils.importESModule(
-  "resource://gre/modules/XPCOMUtils.sys.mjs"
-);
+const lazy = {};
 
-const lazy = XPCOMUtils.declareLazy({
+ChromeUtils.defineESModuleGetters(lazy, {
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   OpenSearchManager:
     "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
-  SearchModeSwitcherL10n: () => new Localization(["browser/browser.ftl"]),
 });
+
+/** @type {Localization} */
+let l10n;
+
+function getL10n() {
+  l10n ??= new Localization(["browser/browser.ftl"]);
+  return l10n;
+}
 
 // Default icon used for engines that do not have icons loaded.
 const DEFAULT_ENGINE_ICON =
@@ -586,9 +591,7 @@ export class SearchModeSwitcher {
 
   async #getSearchModeLabel(source) {
     let mode = UrlbarShared.LOCAL_SEARCH_MODES.find(m => m.source == source);
-    let [str] = await lazy.SearchModeSwitcherL10n.formatMessages([
-      { id: mode.uiLabel },
-    ]);
+    let [str] = await getL10n().formatMessages([{ id: mode.uiLabel }]);
     return str.value;
   }
 

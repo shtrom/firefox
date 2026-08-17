@@ -6,6 +6,7 @@ import { MultilineEditor } from "chrome://browser/content/multilineeditor/multil
 import { createMentionsPlugin } from "chrome://browser/content/multilineeditor/plugins/MentionsPlugin.mjs";
 import { createCommandsPlugin } from "chrome://browser/content/multilineeditor/plugins/CommandsPlugin.mjs";
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
+import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 
 /**
  * @import {SmartbarInput} from "chrome://browser/content/urlbar/SmartbarInput.mjs"
@@ -26,12 +27,11 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/urlbar/SmartbarMentionsPanelSearch.sys.mjs",
 });
 
-ChromeUtils.defineLazyGetter(lazy, "log", function () {
-  return console.createInstance({
+const logger = () =>
+  UrlbarShared.getLogger({
     prefix: "SmartbarMentionsPanel",
     maxLogLevelPref: "browser.smartwindow.smartbarMentions.loglevel",
   });
-});
 
 // Debounce delay for the mention suggestions query.
 const MENTION_QUERY_DEBOUNCE_MS = 150;
@@ -170,7 +170,7 @@ function getMentionSuggestions(mentionSearch, searchString) {
       totalCount: deduplicated.length,
     };
   } catch (e) {
-    lazy.log.error("Error querying tabs:", e);
+    logger().error("Error querying tabs:", e);
     return { groups: [], totalCount: 0 };
   }
 }
