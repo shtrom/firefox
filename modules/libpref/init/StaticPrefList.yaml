@@ -13705,13 +13705,6 @@
     value: true
     mirror: always
 
-  # Use MediaDataDecoder API for AV1 in WebRTC. This includes hardware
-  # acceleration for decoding.
--   name: media.navigator.mediadatadecoder_av1_enabled
-    type: RelaxedAtomicBool
-    value: true
-    mirror: always
-
 #if defined(MOZ_WIDGET_GTK)
   # Use hardware acceleration for VP8 decoding on Linux.
 -   name: media.navigator.mediadatadecoder_vp8_hardware_enabled
