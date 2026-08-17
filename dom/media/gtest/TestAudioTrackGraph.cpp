@@ -186,10 +186,24 @@ class MockProcessedMediaTrack : public ProcessedMediaTrack {
                            GraphTime aFrom, GraphTime aTo, uint32_t aFlags) {
           segment->AppendNullData(aTo - aFrom);
         });
+    ON_CALL(*this, AddListenerImpl)
+        .WillByDefault(
+            [self = MOZ_KnownLive(this)](
+                already_AddRefed<MediaTrackListener> aListener) mutable {
+              self->MediaTrack::AddListenerImpl(std::move(aListener));
+            });
+    ON_CALL(*this, RemoveListenerImpl)
+        .WillByDefault([self = MOZ_KnownLive(this)](
+                           MediaTrackListener* aListener) mutable {
+          self->MediaTrack::RemoveListenerImpl(aListener);
+        });
   }
 
   MOCK_METHOD(void, ProcessInput,
               (GraphTime aFrom, GraphTime aTo, uint32_t aFlags), (override));
+  MOCK_METHOD(void, AddListenerImpl, (already_AddRefed<MediaTrackListener>),
+              (override));
+  MOCK_METHOD(void, RemoveListenerImpl, (MediaTrackListener*), (override));
 
   uint32_t NumberOfChannels() const override { return 2; };
 };
@@ -3332,6 +3346,7 @@ TEST_WithTailDispatch(TestAudioTrackGraph, EmptyProcessingInterval) {
   MockFunction<void(const char* name)> checkpoint;
   {
     InSequence s;
+    EXPECT_CALL(*processedTrack, AddListenerImpl).Times(1);
     EXPECT_CALL(*processedTrack, ProcessInput).Times(AtLeast(1));
     EXPECT_CALL(checkpoint, Call(StrEq("before single iteration")));
     EXPECT_CALL(*processedTrack, ProcessInput).Times(1);
@@ -3411,6 +3426,8 @@ TEST_WithTailDispatch(TestAudioTrackGraph, DefaultOutputDeviceIDTracking) {
   const Result<cubeb_input_processing_params, int> notSupportedResult(
       Err(CUBEB_ERROR_NOT_SUPPORTED));
 
+  EXPECT_CALL(*processedTrack, AddListenerImpl).Times(1);
+  EXPECT_CALL(*processedTrack, RemoveListenerImpl).Times(1);
   EXPECT_CALL(*processedTrack, ProcessInput).Times(AtLeast(1));
   EXPECT_CALL(*dataListener, RequestedInputChannelCount)
       .WillRepeatedly(Return(2));
