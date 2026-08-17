@@ -142,6 +142,81 @@ addPdfStructTreeTest(
   { chrome: true, topLevel: true }
 );
 
+// A headers attribute naming only a column header retains implicit row headers.
+addPdfStructTreeTest(
+  "testTableExplicitHeaders",
+  `
+<table>
+  <tr><th>c1</th><th id="ch">c2</th></tr>
+  <tr><th>r1</th><td headers="ch">d</td></tr>
+</table>
+  `,
+  [
+    {
+      role: "Root",
+      children: [
+        {
+          role: "Document",
+          children: [
+            {
+              role: "Table",
+              children: [
+                {
+                  role: "TR",
+                  children: [
+                    {
+                      role: "TH",
+                      children: [
+                        { role: "NonStruct", children: [{ content: ["c1"] }] },
+                      ],
+                      scope: "Column",
+                    },
+                    {
+                      role: "TH",
+                      children: [
+                        {
+                          role: "NonStruct",
+                          children: [{ content: [" ", "c2"] }],
+                        },
+                      ],
+                      structId: "id1",
+                      scope: "Column",
+                    },
+                  ],
+                },
+                {
+                  role: "TR",
+                  children: [
+                    {
+                      role: "TH",
+                      children: [
+                        { role: "NonStruct", children: [{ content: ["r1"] }] },
+                      ],
+                      structId: "id2",
+                      scope: "Row",
+                    },
+                    {
+                      role: "TD",
+                      children: [
+                        {
+                          role: "NonStruct",
+                          children: [{ content: [" ", "d"] }],
+                        },
+                      ],
+                      headers: ["id1", "id2"],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  { chrome: true, topLevel: true }
+);
+
 addPdfStructTreeTest(
   "testIframe",
   `<h1>inside</h1>`,
