@@ -33,6 +33,30 @@ import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs"
  */
 
 /**
+ * @typedef {object} UrlLoad
+ *   A direct URL load.
+ * @property {string} url
+ *   The url to load.
+ * @property {?string} postData
+ *   The post data, or null for a GET.
+ */
+
+/**
+ * @typedef {object} EngineSearchLoad
+ *   A search to submit to an engine.
+ * @property {string} engineName
+ *   The name of the search engine.
+ * @property {string} query
+ *   The query.
+ */
+
+/**
+ * @typedef {{urlLoad: UrlLoad, engineSearch?: never} |
+ *           {engineSearch: EngineSearchLoad, urlLoad?: never}} UrlbarLoadRequest
+ *  Either a URL or an engine search.
+ */
+
+/**
  * @typedef {object} URIFixupPrimitives
  *   The parts of an `nsIURIFixupInfo` that survive the actor boundary, so a
  *   content-realm consumer never holds an XPCOM object. Produced by
@@ -487,6 +511,47 @@ export const UrlbarShared = {
     }
     loggers.set(prefix, logger);
     return logger;
+  },
+
+  /**
+   * Extracts the URL from a result.
+   *
+   * @param {UrlbarResult} result
+   *   The result to extract from.
+   * @param {object} options
+   *   Options object.
+   * @param {HTMLElement} [options.element]
+   *   The element associated with the result that was selected or picked, if
+   *   available. For results that have multiple selectable children, the URL
+   *   may be taken from a child element rather than the result.
+   * @returns {?UrlbarLoadRequest}
+   *   Null if the result has nothing to load.
+   */
+  getLoadRequestFromResult(result, { element = null } = {}) {
+    if (
+      result.payload.engine &&
+      (result.type == UrlbarShared.RESULT_TYPE.SEARCH ||
+        result.type == UrlbarShared.RESULT_TYPE.DYNAMIC)
+    ) {
+      let query =
+        element?.dataset.query ||
+        result.payload.suggestion ||
+        result.payload.query;
+      if (query) {
+        return { engineSearch: { query, engineName: result.payload.engine } };
+      }
+    }
+
+    if (!result.payload.url) {
+      return null;
+    }
+
+    return {
+      urlLoad: {
+        url: result.payload.url,
+        postData: result.payload.postData ?? null,
+      },
+    };
   },
 
   /**

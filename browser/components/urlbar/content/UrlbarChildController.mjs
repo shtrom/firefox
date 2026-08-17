@@ -1039,4 +1039,9 @@ export class UrlbarChildController {
   markEngineAsUsed(engineId) {
     this.#parentController.markEngineAsUsed(engineId);
   }
+
+  /** @type {typeof UrlbarParentController.prototype.getEngineSubmission} */
+  getEngineSubmission(opts) {
+    return this.#parentController.getEngineSubmission(opts);
+  }
 }

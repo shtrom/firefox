@@ -886,6 +886,23 @@ export class UrlbarParentController {
   }
 
   /**
+   *
+   * @param {object} opts
+   * @param {string} opts.engineName
+   * @param {string} opts.query
+   * @returns {Promise<{url: string, postData: nsIInputStream}>}
+   *   Rejects when the engine is not found.
+   */
+  async getEngineSubmission({ engineName, query }) {
+    let engine = lazy.SearchService.getEngineByName(engineName);
+    if (!engine) {
+      throw new Error("Engine not found");
+    }
+    let { uri, postData } = engine.getSubmission(query);
+    return { url: uri.spec, postData };
+  }
+
+  /**
    * Tries to initialize a speculative connection on a result.
    * Speculative connections are only supported for a subset of all the results.
    *

@@ -48,6 +48,7 @@ const { AppConstants } = ChromeUtils.importESModule(
  * @import { AIWindow } from "moz-src:///browser/components/aiwindow/ui/components/ai-window/ai-window.mjs"
  * @import { SmartwindowSmartbarGlow } from "moz-src:///browser/components/aiwindow/ui/components/smartwindow-smartbar-glow/smartwindow-smartbar-glow.mjs"
  * @import { WindowMode } from "moz-src:///browser/components/urlbar/content/UrlbarInputBase.mjs"
+ * @import { UrlbarLoadRequest } from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  */
 
 /**
@@ -2430,10 +2431,9 @@ ${
       return;
     }
 
-    let { url, postData } = resultUrl
-      ? { url: resultUrl, postData: null }
-      : lazy.UrlbarUtils.getUrlFromResult(result, { element });
-    openParams.postData = postData;
+    let loadRequest = resultUrl
+      ? { urlLoad: { url: resultUrl, postData: null } }
+      : UrlbarShared.getLoadRequestFromResult(result, { element });
     let isSplitViewActive = this.window.gBrowser.selectedTab.splitview;
 
     switch (result.type) {
@@ -2461,7 +2461,7 @@ ${
             UrlbarPrefs.get("browser.fixup.dns_first_for_single_words") &&
             UrlbarShared.looksLikeSingleWordHost(originalUntrimmedValue)
           ) {
-            url = originalUntrimmedValue;
+            loadRequest.urlLoad.url = originalUntrimmedValue;
           }
           // Annotate if the untrimmed value contained a scheme, to later potentially
           // be upgraded by schemeless HTTPS-First.
@@ -2508,7 +2508,7 @@ ${
         });
 
         this.controller.switchToTab({
-          url,
+          url: result.payload.url,
           searchString,
           userContextId: result.payload.userContext?.id,
           tabGroup: result.payload.tabGroup,
@@ -2585,7 +2585,7 @@ ${
         break;
       }
       case UrlbarShared.RESULT_TYPE.TIP: {
-        if (url) {
+        if (loadRequest) {
           break;
         }
         this.handleRevert();
@@ -2601,8 +2601,8 @@ ${
         return;
       }
       case UrlbarShared.RESULT_TYPE.DYNAMIC: {
-        if (!url) {
-          // If we're not loading a URL, the engagement is done. First revert
+        if (!loadRequest) {
+          // If we're not loading anything, the engagement is done. First revert
           // and then record the engagement since providers expect the urlbar to
           // be reverted when they're notified of the engagement, but before
           // reverting, copy the search mode since it's nulled on revert.
@@ -2681,12 +2681,13 @@ ${
       }
     }
 
-    if (!url) {
-      throw new Error(`Invalid url for result ${JSON.stringify(result)}`);
+    if (!loadRequest) {
+      throw new Error(`No load request for result ${JSON.stringify(result)}`);
     }
 
-    // Record input history but only in non-private windows.
-    if (!this.isPrivate) {
+    // Record input history but only in non-private windows and for url loads.
+    if (!this.isPrivate && loadRequest.urlLoad) {
+      let url = loadRequest.urlLoad.url;
       let input;
       if (!result.heuristic) {
         input = this._lastSearchString;
@@ -2753,7 +2754,7 @@ ${
       this.#dispatchSmartbarCommitEvent(event, this.untrimmedValue, action);
     }
     this.#loadURL({
-      url,
+      loadRequest,
       event,
       where,
       params: openParams,
@@ -5045,11 +5046,31 @@ ${
    */
 
   /**
+   * @param {UrlbarLoadRequest} loadRequest
+   * @returns {Promise<{url:string, postData: ?nsIInputStream}>}
+   */
+  async #loadRequestToUrl(loadRequest) {
+    if (loadRequest.engineSearch) {
+      return await this.controller.getEngineSubmission(
+        loadRequest.engineSearch
+      );
+    }
+
+    return {
+      url: loadRequest.urlLoad.url,
+      postData: loadRequest.urlLoad.postData
+        ? lazy.UrlbarUtils.getPostDataStream(loadRequest.urlLoad.postData)
+        : null,
+    };
+  }
+
+  /**
    * Loads the url in the appropriate place.
    *
    * @param {object} options
-   * @param {string} options.url
+   * @param {string} [options.url]
    *   The URL to open.
+   * @param {UrlbarLoadRequest} [options.loadRequest]
    * @param {Event} options.event
    *   The event that triggered to load the url.
    * @param {string} options.where
@@ -5065,12 +5086,43 @@ ${
    */
   async #loadURL({
     url,
+    loadRequest,
     event,
     where,
     params,
     resultDetails = null,
     browserId = null,
   }) {
+    let keyDownEnterDeferred;
+    if (
+      this._keyDownEnterDeferred &&
+      event?.keyCode === KeyEvent.DOM_VK_RETURN &&
+      where === "current"
+    ) {
+      // In this case, we move the focus to the browser that loads the content
+      // upon key up the enter key.
+      // To do it, send avoidBrowserFocus flag to openTrustedLinkIn() to avoid
+      // focusing on the browser in the function. And also, set loadedContent
+      // flag that whether the content is loaded in the current tab by this enter
+      // key. The load resolves the deferred with the loaded browser's id, which
+      // key up hands to the parent to focus.
+      params.avoidBrowserFocus = true;
+      this._keyDownEnterDeferred.loadedContent = true;
+      keyDownEnterDeferred = this._keyDownEnterDeferred;
+    }
+
+    if (loadRequest) {
+      let urlAndPostData;
+      try {
+        urlAndPostData = await this.#loadRequestToUrl(loadRequest);
+      } catch (ex) {
+        keyDownEnterDeferred?.reject(ex);
+        throw ex;
+      }
+      url = urlAndPostData.url;
+      params.postData = urlAndPostData.postData;
+    }
+
     let userTypedValue;
     if (this.#isAddressbar && where == "current") {
       // Make sure URL is formatted properly (don't show punycode).
@@ -5093,24 +5145,6 @@ ${
       params.indicateErrorPageLoad = true;
       params.allowPinnedTabHostChange = true;
       params.allowPopups = url.startsWith("javascript:");
-    }
-
-    let keyDownEnterDeferred;
-    if (
-      this._keyDownEnterDeferred &&
-      event?.keyCode === KeyEvent.DOM_VK_RETURN &&
-      where === "current"
-    ) {
-      // In this case, we move the focus to the browser that loads the content
-      // upon key up the enter key.
-      // To do it, send avoidBrowserFocus flag to openTrustedLinkIn() to avoid
-      // focusing on the browser in the function. And also, set loadedContent
-      // flag that whether the content is loaded in the current tab by this enter
-      // key. The load resolves the deferred with the loaded browser's id, which
-      // key up hands to the parent to focus.
-      params.avoidBrowserFocus = true;
-      this._keyDownEnterDeferred.loadedContent = true;
-      keyDownEnterDeferred = this._keyDownEnterDeferred;
     }
 
     // Ensure the window gets the `private` feature if the current window

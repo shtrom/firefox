@@ -302,30 +302,29 @@ export var UrlbarUtils = {
    *   null if the result doesn't have post data.
    */
   getUrlFromResult(result, { element = null } = {}) {
-    if (
-      result.payload.engine &&
-      (result.type == UrlbarShared.RESULT_TYPE.SEARCH ||
-        result.type == UrlbarShared.RESULT_TYPE.DYNAMIC)
-    ) {
-      let query =
-        element?.dataset.query ||
-        result.payload.suggestion ||
-        result.payload.query;
-      if (query) {
-        const engine = lazy.SearchService.getEngineByName(
-          result.payload.engine
-        );
-        let [url, postData] = this.getSearchQueryUrl(engine, query);
-        return { url, postData };
-      }
+    let loadRequest = UrlbarShared.getLoadRequestFromResult(result, {
+      element,
+    });
+    if (loadRequest?.engineSearch) {
+      const engine = lazy.SearchService.getEngineByName(
+        loadRequest.engineSearch.engineName
+      );
+      let [url, postData] = this.getSearchQueryUrl(
+        engine,
+        loadRequest.engineSearch.query
+      );
+      return { url, postData };
+    }
+    if (loadRequest?.urlLoad) {
+      return {
+        url: loadRequest.urlLoad.url,
+        postData: loadRequest.urlLoad.postData
+          ? this.getPostDataStream(loadRequest.urlLoad.postData)
+          : null,
+      };
     }
 
-    return {
-      url: result.payload.url ?? null,
-      postData: result.payload.postData
-        ? this.getPostDataStream(result.payload.postData)
-        : null,
-    };
+    return { url: null, postData: null };
   },
 
   /**
