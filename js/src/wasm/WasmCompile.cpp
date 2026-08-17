@@ -278,8 +278,8 @@ SharedCompileArgs CompileArgs::build(JSContext* cx,
   // enable it when a developer actually cares: when the debugger tab is open.
   // Or when --setpref=wasm_baseline_debug=true is given to the shell and
   // we have baseline available.
-  bool debug = (cx->realm() && cx->realm()->debuggerObservesWasm()) ||
-               forceDebug;
+  bool debug =
+      (cx->realm() && cx->realm()->debuggerObservesWasm()) || forceDebug;
 
   bool forceTiering =
       cx->options().testWasmAwaitTier2() || JitOptions.wasmDelayTier2;

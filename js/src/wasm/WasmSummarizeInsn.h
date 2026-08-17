@@ -6,6 +6,7 @@
 #define wasm_WasmSummarizeInsn_h
 
 #include "mozilla/Assertions.h"
+
 #include "jit/MacroAssembler.h"
 #include "wasm/WasmCodegenTypes.h"  // TrapMachineInsn
 
