@@ -1974,6 +1974,11 @@ class AccessibilityTest : BaseSessionTest() {
         val firstListFirstItem = createNodeInfo(firstList.getChildId(0))
         assertThat("Item has collectionItemInfo", firstListFirstItem.collectionItemInfo, notNullValue())
         assertThat("Item has correct rowIndex", firstListFirstItem.collectionItemInfo.rowIndex, equalTo(0))
+        assertThat(
+            "List item has a role description",
+            firstListFirstItem.extras.getCharSequence("AccessibilityNodeInfo.roleDescription")!!.toString(),
+            equalTo("list item"),
+        )
 
         val secondList = createNodeInfo(rootNode.getChildId(1))
         assertThat("Second list has 1 child", secondList.childCount, equalTo(1))
