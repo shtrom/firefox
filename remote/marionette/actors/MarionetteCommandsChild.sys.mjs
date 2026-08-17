@@ -601,8 +601,10 @@ export class MarionetteCommandsChild extends JSWindowActorChild {
       rect = new DOMRect(
         win.pageXOffset,
         win.pageYOffset,
-        win.innerWidth,
-        win.innerHeight
+        // Bug 2055445 made system calls to innerWidth/innerHeight return non-rounded
+        // values. So round them up again to keep the behavior the same as it was before.
+        Math.round(win.innerWidth),
+        Math.round(win.innerHeight)
       );
     }
 
