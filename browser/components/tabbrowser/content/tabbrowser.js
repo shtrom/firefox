@@ -1212,11 +1212,14 @@
         { tabCount: 1 }
       );
 
-      let event = new CustomEvent(aTab.pinned ? "TabPinned" : "TabUnpinned", {
-        bubbles: true,
-        cancelable: false,
-        detail: { metricsContext },
-      });
+      let event = new this.documentGlobal.CustomEvent(
+        aTab.pinned ? "TabPinned" : "TabUnpinned",
+        {
+          bubbles: true,
+          cancelable: false,
+          detail: { metricsContext },
+        }
+      );
       aTab.dispatchEvent(event);
     }
 
@@ -1982,7 +1985,7 @@
       // Focus is suppressed in the event that the main browser window is minimized - focusing a tab would restore the window
       if (!this.#previewMode) {
         // We've selected the new tab, so go ahead and notify listeners.
-        let event = new CustomEvent("TabSelect", {
+        let event = new this.documentGlobal.CustomEvent("TabSelect", {
           bubbles: true,
           cancelable: false,
           detail: {
@@ -2033,7 +2036,7 @@
       if (!this.documentGlobal.gMultiProcessBrowser) {
         this.document.commandDispatcher.unlock();
 
-        let event = new CustomEvent("TabSwitchDone", {
+        let event = new this.documentGlobal.CustomEvent("TabSwitchDone", {
           bubbles: true,
           cancelable: true,
         });
@@ -2291,7 +2294,7 @@
         return;
       }
 
-      let event = new CustomEvent("TabAttrModified", {
+      let event = new this.documentGlobal.CustomEvent("TabAttrModified", {
         bubbles: true,
         cancelable: false,
         detail: {
@@ -3187,7 +3190,7 @@
       // Only fire this event if the tab is already in the DOM
       // and will be handled by a listener.
       if (aTab.isConnected) {
-        var evt = new CustomEvent("TabBrowserInserted", {
+        var evt = new this.documentGlobal.CustomEvent("TabBrowserInserted", {
           bubbles: true,
           detail: { insertedOnTabCreation: aInsertedOnTabCreation },
         });
@@ -3312,7 +3315,9 @@
 
       this._createLazyBrowser(aTab);
 
-      let evt = new CustomEvent("TabBrowserDiscarded", { bubbles: true });
+      let evt = new this.documentGlobal.CustomEvent("TabBrowserDiscarded", {
+        bubbles: true,
+      });
       aTab.dispatchEvent(evt);
       return true;
     }
@@ -3818,7 +3823,7 @@
       }
 
       this.tabContainer.dispatchEvent(
-        new CustomEvent("SplitViewCreated", {
+        new this.documentGlobal.CustomEvent("SplitViewCreated", {
           bubbles: true,
         })
       );
@@ -3977,7 +3982,7 @@
 
       if (metricsContext.isUserTriggered) {
         group.dispatchEvent(
-          new CustomEvent("TabGroupCreateByUser", {
+          new this.documentGlobal.CustomEvent("TabGroupCreateByUser", {
             bubbles: true,
             detail: { metricsContext },
           })
@@ -4036,7 +4041,7 @@
       // This needs to be fired before tabs are removed because session store
       // needs to respond to this while tabs are still part of the group
       group.dispatchEvent(
-        new CustomEvent("TabGroupRemoveRequested", {
+        new this.documentGlobal.CustomEvent("TabGroupRemoveRequested", {
           bubbles: true,
           detail: {
             skipSessionStore: options.skipSessionStore,
@@ -4119,7 +4124,7 @@
       if (noOtherTabsInWindow) {
         for (let element of group.tabs) {
           group.dispatchEvent(
-            new CustomEvent("TabUngrouped", {
+            new this.documentGlobal.CustomEvent("TabUngrouped", {
               bubbles: true,
               detail: element,
             })
@@ -4810,10 +4815,13 @@
             // Fire a TabBrowserInserted event on all tabs that have a connected,
             // real browser, except for reused selected tabs.
             if (tab.linkedPanel) {
-              var evt = new CustomEvent("TabBrowserInserted", {
-                bubbles: true,
-                detail: { insertedOnTabCreation: true },
-              });
+              var evt = new this.documentGlobal.CustomEvent(
+                "TabBrowserInserted",
+                {
+                  bubbles: true,
+                  detail: { insertedOnTabCreation: true },
+                }
+              );
               tab.dispatchEvent(evt);
             }
           }
@@ -5143,7 +5151,7 @@
      */
     _fireTabOpen(tab, eventDetail) {
       delete tab.initializingTab;
-      let evt = new CustomEvent("TabOpen", {
+      let evt = new this.documentGlobal.CustomEvent("TabOpen", {
         bubbles: true,
         detail: eventDetail || {},
       });
@@ -6165,7 +6173,7 @@
       // Dispatch a notification.
       // We dispatch it before any teardown so that event listeners can
       // inspect the tab that's about to close.
-      let evt = new CustomEvent("TabClose", {
+      let evt = new this.documentGlobal.CustomEvent("TabClose", {
         bubbles: true,
         detail: {
           adoptedBy: adoptedByTab,
@@ -6738,9 +6746,12 @@
         aOurTab.toggleAttribute("pictureinpicture", true);
         modifiedAttrs.push("pictureinpicture");
 
-        let event = new CustomEvent("TabSwapPictureInPicture", {
-          detail: aOurTab,
-        });
+        let event = new this.documentGlobal.CustomEvent(
+          "TabSwapPictureInPicture",
+          {
+            detail: aOurTab,
+          }
+        );
         aOtherTab.dispatchEvent(event);
       }
 
@@ -7750,7 +7761,7 @@
 
       if (changedPosition || changedTabGroup || changedSplitView) {
         tab.dispatchEvent(
-          new CustomEvent("TabMove", {
+          new this.documentGlobal.CustomEvent("TabMove", {
             bubbles: true,
             detail: {
               previousTabState,
@@ -7836,7 +7847,9 @@
         this.isTabGroup(element) &&
         previousTabStates[0].tabIndex != currentFirst.tabIndex
       ) {
-        let event = new CustomEvent("TabGroupMoved", { bubbles: true });
+        let event = new this.documentGlobal.CustomEvent("TabGroupMoved", {
+          bubbles: true,
+        });
         element.dispatchEvent(event);
       }
     }
@@ -8337,7 +8350,9 @@
         this.#multiSelectChangeAdditions.clear();
         this.#multiSelectChangeRemovals.clear();
         this.dispatchEvent(
-          new CustomEvent("TabMultiSelect", { bubbles: true })
+          new this.documentGlobal.CustomEvent("TabMultiSelect", {
+            bubbles: true,
+          })
         );
       }
     }
