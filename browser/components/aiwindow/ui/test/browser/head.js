@@ -26,8 +26,10 @@ ChromeUtils.defineESModuleGetters(this, {
     "moz-src:///browser/components/urlbar/SmartbarMentionsPanelSearch.sys.mjs",
   PlacesTestUtils: "resource://testing-common/PlacesTestUtils.sys.mjs",
   Region: "resource://gre/modules/Region.sys.mjs",
-  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
-  SessionWindowUI: "resource:///modules/sessionstore/SessionWindowUI.sys.mjs",
+  SessionStore:
+    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
+  SessionWindowUI:
+    "moz-src:///browser/components/sessionstore/SessionWindowUI.sys.mjs",
   sinon: "resource://testing-common/Sinon.sys.mjs",
 });
 
