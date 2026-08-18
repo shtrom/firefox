@@ -13,14 +13,16 @@
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 
-const lazy = {};
+const lazy = typeof ChromeUtils != "undefined" ? {} : null;
 
-ChromeUtils.defineESModuleGetters(lazy, {
-  BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
-  OpenSearchManager:
-    "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
-  SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
-});
+if (lazy) {
+  ChromeUtils.defineESModuleGetters(lazy, {
+    BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
+    OpenSearchManager:
+      "moz-src:///browser/components/search/OpenSearchManager.sys.mjs",
+    SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
+  });
+}
 
 /** @type {Localization} */
 let l10n;

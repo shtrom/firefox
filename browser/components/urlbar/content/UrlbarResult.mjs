@@ -15,13 +15,15 @@
 
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 
-const lazy = {};
+const lazy = typeof ChromeUtils != "undefined" ? {} : null;
 
-ChromeUtils.defineESModuleGetters(lazy, {
-  JsonSchemaValidator:
-    "resource://gre/modules/components-utils/JsonSchemaValidator.sys.mjs",
-  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
-});
+if (lazy) {
+  ChromeUtils.defineESModuleGetters(lazy, {
+    JsonSchemaValidator:
+      "resource://gre/modules/components-utils/JsonSchemaValidator.sys.mjs",
+    UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+  });
+}
 
 /**
  * @typedef UrlbarAutofillData

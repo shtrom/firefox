@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const { XPCOMUtils } = ChromeUtils.importESModule(
-  "resource://gre/modules/XPCOMUtils.sys.mjs"
-);
-
 import { SearchModeSwitcher } from "chrome://browser/content/urlbar/SearchModeSwitcher.mjs";
 import { UrlbarChildController } from "chrome://browser/content/urlbar/UrlbarChildController.mjs";
 import { UrlbarEventBufferer } from "chrome://browser/content/urlbar/UrlbarEventBufferer.mjs";
@@ -47,39 +43,48 @@ import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
  *   The untrimmed value including the protocol.
  */
 
-const lazy = XPCOMUtils.declareLazy({
-  AIWindow:
-    "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
-  BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
-  CustomizableUI:
-    "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
-  ExtensionSearchHandler:
-    "resource://gre/modules/ExtensionSearchHandler.sys.mjs",
-  ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
-  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
-  QuickSuggest: "moz-src:///browser/components/urlbar/QuickSuggest.sys.mjs",
-  ReaderMode: "moz-src:///toolkit/components/reader/ReaderMode.sys.mjs",
-  SharingUtils: "moz-src:///browser/components/sharing/SharingUtils.sys.mjs",
-  SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
-  UrlbarTokenizer:
-    "moz-src:///browser/components/urlbar/UrlbarTokenizer.sys.mjs",
-  UrlbarSearchUtils:
-    "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
-  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
-  UrlbarValueFormatter:
-    "moz-src:///browser/components/urlbar/UrlbarValueFormatter.sys.mjs",
-  UrlbarSearchTermsPersistence:
-    "moz-src:///browser/components/urlbar/UrlbarSearchTermsPersistence.sys.mjs",
-  UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
-  ClipboardHelper: {
-    service: "@mozilla.org/widget/clipboardhelper;1",
-    iid: Ci.nsIClipboardHelper,
-  },
-  QueryStringStripper: {
-    service: "@mozilla.org/url-query-string-stripper;1",
-    iid: Ci.nsIURLQueryStringStripper,
-  },
-});
+const lazy = typeof ChromeUtils != "undefined" ? {} : null;
+
+if (lazy) {
+  const { XPCOMUtils } = ChromeUtils.importESModule(
+    "resource://gre/modules/XPCOMUtils.sys.mjs"
+  );
+  ChromeUtils.defineESModuleGetters(lazy, {
+    AIWindow:
+      "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+    BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
+    CustomizableUI:
+      "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
+    ExtensionSearchHandler:
+      "resource://gre/modules/ExtensionSearchHandler.sys.mjs",
+    ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
+    PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
+    QuickSuggest: "moz-src:///browser/components/urlbar/QuickSuggest.sys.mjs",
+    ReaderMode: "moz-src:///toolkit/components/reader/ReaderMode.sys.mjs",
+    SharingUtils: "moz-src:///browser/components/sharing/SharingUtils.sys.mjs",
+    SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
+    UrlbarTokenizer:
+      "moz-src:///browser/components/urlbar/UrlbarTokenizer.sys.mjs",
+    UrlbarSearchUtils:
+      "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
+    UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+    UrlbarValueFormatter:
+      "moz-src:///browser/components/urlbar/UrlbarValueFormatter.sys.mjs",
+    UrlbarSearchTermsPersistence:
+      "moz-src:///browser/components/urlbar/UrlbarSearchTermsPersistence.sys.mjs",
+    UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
+  });
+  XPCOMUtils.defineLazyServiceGetters(lazy, {
+    ClipboardHelper: [
+      "@mozilla.org/widget/clipboardhelper;1",
+      Ci.nsIClipboardHelper,
+    ],
+    QueryStringStripper: [
+      "@mozilla.org/url-query-string-stripper;1",
+      Ci.nsIURLQueryStringStripper,
+    ],
+  });
+}
 
 const logger = () => UrlbarShared.getLogger({ prefix: "Input" });
 

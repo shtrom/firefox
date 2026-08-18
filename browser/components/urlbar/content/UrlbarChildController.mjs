@@ -8,12 +8,14 @@ import { UrlbarParentControllerProxy } from "chrome://browser/content/urlbar/Url
 import { getPlatform } from "chrome://browser/content/urlbar/UrlbarContentUtils.mjs";
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 
-const lazy = {};
+const lazy = typeof ChromeUtils != "undefined" ? {} : null;
 
-ChromeUtils.defineESModuleGetters(lazy, {
-  UrlbarParentController:
-    "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs",
-});
+if (lazy) {
+  ChromeUtils.defineESModuleGetters(lazy, {
+    UrlbarParentController:
+      "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs",
+  });
+}
 
 /**
  * @import {URIFixupPrimitives} from "chrome://browser/content/urlbar/UrlbarShared.mjs"
