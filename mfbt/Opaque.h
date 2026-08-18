@@ -27,8 +27,11 @@ class Opaque final {
   Opaque() = default;
   explicit Opaque(T aValue) : mValue(aValue) {}
 
-  bool operator==(const Opaque& aOther) const = default;
-  bool operator!=(const Opaque& aOther) const = default;
+  bool operator==(const Opaque& aOther) const {
+    return mValue == aOther.mValue;
+  }
+
+  bool operator!=(const Opaque& aOther) const { return !(*this == aOther); }
 };
 
 }  // namespace mozilla
