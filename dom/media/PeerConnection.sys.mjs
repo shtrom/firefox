@@ -363,6 +363,17 @@ export class RTCPeerConnection {
         );
       }
 
+      // alwaysNegotiateDataChannels must match
+      if (
+        rtcConfig.alwaysNegotiateDataChannels !=
+        this._config.alwaysNegotiateDataChannels
+      ) {
+        throw new this._win.DOMException(
+          "Cannot change alwaysNegotiateDataChannels with setConfiguration",
+          "InvalidModificationError"
+        );
+      }
+
       // peerIdentity must match
       if (
         rtcConfig.peerIdentity &&
