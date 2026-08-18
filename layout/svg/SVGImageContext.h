@@ -113,8 +113,6 @@ class SVGImageContext {
            mLinkParameters == aOther.mLinkParameters;
   }
 
-  bool operator!=(const SVGImageContext&) const = default;
-
   PLDHashNumber Hash() const {
     PLDHashNumber hash = 0;
     if (mContextPaint) {

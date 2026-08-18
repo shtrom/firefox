@@ -42,7 +42,6 @@ class nsStyleAutoArray {
            mFirstElement == aOther.mFirstElement &&
            mOtherElements == aOther.mOtherElements;
   }
-  bool operator!=(const nsStyleAutoArray&) const = default;
 
   size_t Length() const { return mOtherElements.Length() + 1; }
   const T& operator[](size_t aIndex) const {

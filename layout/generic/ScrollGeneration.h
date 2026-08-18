@@ -39,7 +39,6 @@ struct ScrollGeneration final {
 
   bool operator<(const ScrollGeneration<Tag>& aOther) const;
   bool operator==(const ScrollGeneration<Tag>& aOther) const;
-  bool operator!=(const ScrollGeneration<Tag>& aOther) const;
 
   friend std::ostream& operator<< <>(std::ostream& aStream,
                                      const ScrollGeneration<Tag>& aGen);
