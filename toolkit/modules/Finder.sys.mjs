@@ -342,17 +342,13 @@ Finder.prototype = {
   },
 
   async highlight(aHighlight, aWord, aLinksOnly, aUseSubFrames = true) {
-    let result = await this.highlighter.highlight(
+    return this.highlighter.highlight(
       aHighlight,
       aWord,
       aLinksOnly,
       false,
       aUseSubFrames
     );
-    if (aHighlight && !this.iterator.running) {
-      this.highlighter.updateScrollMarks();
-    }
-    return result;
   },
 
   async updateHighlightAndMatchCount(aArgs) {
