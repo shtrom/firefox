@@ -247,23 +247,26 @@ pub extern "C" fn skrifa_font_get_metrics(
     result.max_ascent = metrics.ascent;
     result.max_descent = metrics.descent;
     result.external_leading = metrics.leading;
+
+    // We return 0.0 for these metrics if unavailable; gfxFont::SanitizeMetrics
+    // will fix them up to reasonable defaults.
     if let Some(underline) = metrics.underline {
         result.underline_offset = underline.offset;
         result.underline_size = underline.thickness;
     } else {
-        result.underline_offset = f32::NAN;
-        result.underline_size = f32::NAN;
+        result.underline_offset = 0.0;
+        result.underline_size = 0.0;
     }
     if let Some(strikeout) = metrics.strikeout {
         result.strikeout_offset = strikeout.offset;
         result.strikeout_size = strikeout.thickness;
     } else {
-        result.strikeout_offset = f32::NAN;
-        result.strikeout_size = f32::NAN;
+        result.strikeout_offset = 0.0;
+        result.strikeout_size = 0.0;
     }
-    // Returning NAN here tells Gecko to use fallback heuristics.
-    result.x_height = metrics.x_height.unwrap_or(f32::NAN);
-    result.cap_height = metrics.cap_height.unwrap_or(f32::NAN);
+    result.x_height = metrics.x_height.unwrap_or(0.0);
+    result.cap_height = metrics.cap_height.unwrap_or(0.0);
+
     // Bounding box, or f32::NAN if unknown.
     if let Some(bounds) = metrics.bounds {
         result.x_min = bounds.x_min;
