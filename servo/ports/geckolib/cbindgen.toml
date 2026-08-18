@@ -48,7 +48,9 @@ include = ["style", "app_units", "cssparser", "style_traits", "servo_arc"]
 [struct]
 associated_constants_in_body = true
 derive_eq = true
-derive_neq = true
+# Since C++20, `a != b` is rewritten as `!(a == b)` when no viable operator!= is
+# found, so a derived operator!= is redundant.
+derive_neq = false
 
 [defines]
 # These will actually never be defined, but is handy to avoid cbindgen
