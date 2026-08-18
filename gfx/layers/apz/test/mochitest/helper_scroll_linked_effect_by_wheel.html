@@ -16,8 +16,9 @@ body {
   height: 800px;
   background-color: #cc00cc;
   top: 0;
-  left: 0;
-  right: 0;
+  /* Crop out the rounded corner rendering issue filed in bug 2061338 */
+  left: 16px;
+  right: 16px;
 }
 </style>
 <div id="target"></div>
