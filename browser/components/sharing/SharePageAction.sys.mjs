@@ -16,6 +16,7 @@ const ENABLED_PREF = "browser.urlbar.share-button.enabled";
 const BUTTON_ID = "share-button";
 const PANEL_ID = "share-panel";
 const TEMPLATE_ID = "template-share-panel";
+const QR_CODE_BUTTON_ID = "share-panel-qr-code";
 
 XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
@@ -96,6 +97,10 @@ class SharePageActionClass {
         );
         break;
       }
+      case QR_CODE_BUTTON_ID: {
+        this.#showQRCode(panel);
+        break;
+      }
       default: {
         return;
       }
@@ -123,6 +128,23 @@ class SharePageActionClass {
     lazy.SharingUtils.copyLink(panel);
 
     return "confirmation-hint-link-copied";
+  }
+
+  /**
+   * Open the QR code panel for a given url
+   *
+   * @param {Element} panel The share panel
+   */
+  #showQRCode(panel) {
+    let { urlToShare } = lazy.SharingUtils.getLinkToShare(panel);
+    if (!urlToShare) {
+      return;
+    }
+
+    let window = panel.documentGlobal;
+    let browser = panel.contextBrowserToShare?.get();
+
+    lazy.SharingUtils.showQRCodePanel(window, browser, urlToShare);
   }
 
   /**
