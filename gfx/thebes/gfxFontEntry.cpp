@@ -456,6 +456,18 @@ size_t gfxFontEntry::FontTableBlob::SizeOfExcludingThis(
 }
 
 hb_blob_t* gfxFontEntry::GetFontTable(uint32_t aTag) {
+#if MOZ_FONTATIONS
+  if (auto* skf = GetSkrifaFont()) {
+    SkrifaFontTable table = skrifa_font_get_table(skf, aTag);
+    if (!table.length) {
+      return nullptr;
+    }
+    return hb_blob_create(reinterpret_cast<const char*>(table.data),
+                          table.length, HB_MEMORY_MODE_READONLY, nullptr,
+                          nullptr);
+  }
+#endif
+
   auto* cache = GetFontTableCache(true);
   MOZ_ASSERT(cache, "missing or incomplete GetFontTable override?");
   if (!cache) {
