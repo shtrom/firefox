@@ -69,7 +69,6 @@ class ShortTermURISpecCache : public Runnable {
 bool ErrorReporter::sInitialized = false;
 
 static nsIConsoleService* sConsoleService;
-static nsIFactory* sScriptErrorFactory;
 static nsIStringBundle* sStringBundle;
 static ShortTermURISpecCache* sSpecCache;
 
@@ -81,11 +80,6 @@ void ErrorReporter::InitGlobals() {
 
   nsCOMPtr<nsIConsoleService> cs = do_GetService(NS_CONSOLESERVICE_CONTRACTID);
   if (!cs) {
-    return;
-  }
-
-  nsCOMPtr<nsIFactory> sf = do_GetClassObject(NS_SCRIPTERROR_CONTRACTID);
-  if (!sf) {
     return;
   }
 
@@ -102,7 +96,6 @@ void ErrorReporter::InitGlobals() {
   }
 
   cs.forget(&sConsoleService);
-  sf.forget(&sScriptErrorFactory);
   sb.forget(&sStringBundle);
 }
 
@@ -112,7 +105,6 @@ namespace css {
 /* static */
 void ErrorReporter::ReleaseGlobals() {
   NS_IF_RELEASE(sConsoleService);
-  NS_IF_RELEASE(sScriptErrorFactory);
   NS_IF_RELEASE(sStringBundle);
   NS_IF_RELEASE(sSpecCache);
 }
@@ -222,8 +214,7 @@ void ErrorReporter::OutputError(const nsACString& aSelectors,
   }
 
   nsresult rv;
-  nsCOMPtr<nsIScriptError> errorObject =
-      do_CreateInstance(sScriptErrorFactory, &rv);
+  nsCOMPtr<nsIScriptError> errorObject = components::ScriptError::Create(&rv);
 
   if (NS_SUCCEEDED(rv)) {
     // It is safe to used InitWithSanitizedSource because fileName is
