@@ -27,6 +27,13 @@ class HWInferenceParent final : public PHWInferenceParent {
   mozilla::ipc::IPCResult RecvIsModelAvailable(
       nsCString&& aTask, nsCString&& aId, IsModelAvailableResolver&& aResolver);
 
+  mozilla::ipc::IPCResult RecvIsModelInstalled(
+      nsCString&& aTask, nsCString&& aId, IsModelInstalledResolver&& aResolver);
+
+  mozilla::ipc::IPCResult RecvInstallModel(
+      nsCString&& aTask, nsCString&& aId, uint64_t aInnerWindowId,
+      const dom::ContentParentId& aContentId, InstallModelResolver&& aResolver);
+
   ipc::UtilityActorName GetActorName() {
     return ipc::UtilityActorName::HwInference;
   }
