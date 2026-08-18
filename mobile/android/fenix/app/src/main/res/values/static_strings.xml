@@ -412,4 +412,7 @@
 
     <!--  Firefox brand name  -->
     <string name="app_name_firefox" tools:ignore="BrandUsage">Firefox</string>
+
+    <!--  Proper name for the Wrexham wallpaper section title. As it is a brand name we do not want it translated.-->
+    <string name="wallpaper_wrexham_title" translatable="false">Wrexham A.F.C.</string>
 </resources>
