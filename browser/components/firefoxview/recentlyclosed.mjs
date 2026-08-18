@@ -18,8 +18,7 @@ import "chrome://browser/content/firefoxview/fxview-tab-list.mjs";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
-  SessionStore:
-    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
+  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
   AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
 });
 

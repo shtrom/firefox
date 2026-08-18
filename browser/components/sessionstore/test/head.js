@@ -18,23 +18,23 @@ const HTTPSROOT = ROOT.replace(
 );
 
 const { SessionSaver } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/SessionSaver.sys.mjs"
+  "resource:///modules/sessionstore/SessionSaver.sys.mjs"
 );
 const { SessionFile } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/SessionFile.sys.mjs"
+  "resource:///modules/sessionstore/SessionFile.sys.mjs"
 );
 const { TabState } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/TabState.sys.mjs"
+  "resource:///modules/sessionstore/TabState.sys.mjs"
 );
 const { TabStateFlusher } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
+  "resource:///modules/sessionstore/TabStateFlusher.sys.mjs"
 );
 const { SessionStoreTestUtils } = ChromeUtils.importESModule(
   "resource://testing-common/SessionStoreTestUtils.sys.mjs"
 );
 
 const { PageWireframes } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/PageWireframes.sys.mjs"
+  "resource:///modules/sessionstore/PageWireframes.sys.mjs"
 );
 
 const ss = SessionStore;

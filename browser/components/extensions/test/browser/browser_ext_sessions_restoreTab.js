@@ -1,8 +1,7 @@
 "use strict";
 
 ChromeUtils.defineESModuleGetters(this, {
-  SessionStore:
-    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
+  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
 });
 
 /**

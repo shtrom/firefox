@@ -8,7 +8,7 @@ MARIONETTE_MANIFESTS += ["test/marionette/manifest.toml"]
 
 JAR_MANIFESTS += ["jar.mn"]
 
-MOZ_SRC_FILES += [
+EXTRA_JS_MODULES.sessionstore = [
     "GlobalState.sys.mjs",
     "PageWireframes.sys.mjs",
     "RecentlyClosedTabsAndWindowsMenuUtils.sys.mjs",

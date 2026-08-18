@@ -8,8 +8,7 @@ let lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   CommonDialog: "resource://gre/modules/CommonDialog.sys.mjs",
-  SessionStartup:
-    "moz-src:///browser/components/sessionstore/SessionStartup.sys.mjs",
+  SessionStartup: "resource:///modules/sessionstore/SessionStartup.sys.mjs",
 });
 
 export var DefaultBrowserCheck = {
