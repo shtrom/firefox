@@ -119,7 +119,7 @@ class SharingUtilsCls {
     return item;
   }
 
-  async showQRCodePanel(win, browser, url) {
+  async #showQRCodePanel(win, browser, url) {
     let tab = win.gBrowser.getTabForBrowser(browser);
     if (tab && win.gBrowser.selectedTab !== tab) {
       let wait = null;
@@ -139,8 +139,6 @@ class SharingUtilsCls {
     if (!tab || !tab.linkedBrowser || tab.closing) {
       return;
     }
-
-    Glean.qrcode.opened.add(1);
 
     let qrCodeDataURI = null;
     try {
@@ -345,7 +343,8 @@ class SharingUtilsCls {
       let { urlToShare: url } = this.getLinkToShare(node);
       let browser = node.contextBrowserToShare?.get();
       if (url && browser) {
-        this.showQRCodePanel(node.documentGlobal, browser, url);
+        Glean.qrcode.opened.add(1);
+        this.#showQRCodePanel(node.documentGlobal, browser, url);
       }
     } else if (event.target.classList.contains("share-more-button")) {
       this.openMacSharePreferences();
