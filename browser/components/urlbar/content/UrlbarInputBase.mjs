@@ -5,7 +5,10 @@
 import { SearchModeSwitcher } from "chrome://browser/content/urlbar/SearchModeSwitcher.mjs";
 import { UrlbarChildController } from "chrome://browser/content/urlbar/UrlbarChildController.mjs";
 import { UrlbarEventBufferer } from "chrome://browser/content/urlbar/UrlbarEventBufferer.mjs";
-import { getPlatform } from "chrome://browser/content/urlbar/UrlbarContentUtils.mjs";
+import {
+  getPlatform,
+  isWindowPrivate,
+} from "chrome://browser/content/urlbar/UrlbarContentUtils.mjs";
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 import { UrlbarQueryContext } from "chrome://browser/content/urlbar/UrlbarQueryContext.mjs";
 import { UrlbarView } from "chrome://browser/content/urlbar/UrlbarView.mjs";
@@ -58,7 +61,6 @@ if (lazy) {
     ExtensionSearchHandler:
       "resource://gre/modules/ExtensionSearchHandler.sys.mjs",
     ExtensionUtils: "resource://gre/modules/ExtensionUtils.sys.mjs",
-    PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
     QuickSuggest: "moz-src:///browser/components/urlbar/QuickSuggest.sys.mjs",
     ReaderMode: "moz-src:///toolkit/components/reader/ReaderMode.sys.mjs",
     SharingUtils: "moz-src:///browser/components/sharing/SharingUtils.sys.mjs",
@@ -260,9 +262,9 @@ ${
   constructor() {
     super();
 
-    this.window = this.documentGlobal;
+    this.window = window;
     this.document = this.window.document;
-    this.isPrivate = lazy.PrivateBrowsingUtils.isWindowPrivate(this.window);
+    this.isPrivate = isWindowPrivate(this.window);
 
     UrlbarPrefs.addObserver(this);
     window.addEventListener("unload", () => {

@@ -8,6 +8,7 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
+  PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
@@ -154,6 +155,9 @@ export class UrlbarChild extends JSWindowActorChild {
         unEscapeURIForUI: uri => this.unEscapeURIForUI(uri),
         getSupportUrl: topic => this.getSupportUrl(topic),
         getPlatform: () => this.getPlatform(),
+        isWindowPrivate: lazy.PrivateBrowsingUtils.isContentWindowPrivate(
+          this.contentWindow
+        ),
         isTextDirectionRTL: (value, window) =>
           this.isTextDirectionRTL(value, window),
         getPref: name => Cu.cloneInto(lazy.UrlbarPrefs.get(name), win),

@@ -34,3 +34,19 @@ export function getPlatform() {
   }
   return platform;
 }
+
+/**
+ * Whether a window is private.
+ *
+ * @param {Window} win
+ *   The window to check.
+ * @returns {boolean}
+ */
+export function isWindowPrivate(win) {
+  if (typeof ChromeUtils != "undefined") {
+    return ChromeUtils.importESModule(
+      "resource://gre/modules/PrivateBrowsingUtils.sys.mjs"
+    ).PrivateBrowsingUtils.isWindowPrivate(win);
+  }
+  return win.UrlbarActorPort.isWindowPrivate;
+}
