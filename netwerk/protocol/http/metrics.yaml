@@ -1554,6 +1554,7 @@ opaque.response.blocking:
       The number of times we run the JS validator.
     bugs:
       - https://bugzil.la/1804638
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzil.la/1804638
     notification_emails:
@@ -1566,6 +1567,7 @@ opaque.response.blocking:
       The number of loads of cross origin opaque resources.
     bugs:
       - https://bugzil.la/1804638
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzil.la/1804638
     notification_emails:
@@ -1586,6 +1588,7 @@ orb:
       - failure
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1804638
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1804638
     notification_emails:
@@ -1605,6 +1608,7 @@ orb:
       - failure
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1804638
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1804638
     notification_emails:
@@ -1620,6 +1624,7 @@ orb:
       - "true"
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1812051
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1812051
     notification_emails:
@@ -1630,9 +1635,6 @@ orb:
     type: labeled_counter
     description: >
       The reason of why this request was blocked by ORB
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram ORB_BLOCK_REASON.
     labels:
       - MIME_NEVER_SNIFFED
       - RESP_206_BLCLISTED
@@ -1647,6 +1649,7 @@ orb:
       - JS_VALIDATION_FAILED
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1833216
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1833216
     notification_emails:
@@ -1658,9 +1661,6 @@ orb:
     type: labeled_counter
     description: >
       The initiator of this ORB blocked request.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram ORB_BLOCK_INITIATOR.
     labels:
       - INVALID
       - OTHER
@@ -1688,6 +1688,7 @@ orb:
       - TEXT
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1833216
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1833216
     notification_emails:
@@ -2341,9 +2342,6 @@ http:
       is from ...?  (serviceworker_load, worker_load, importSript_load,
       script_load). Whether the script load is of ...?  (same_origin,
       CORS_origin, cross_origin)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram SCRIPT_BLOCK_INCORRECT_MIME_3.
     labels:
       - unknown
       - javaScript
@@ -2373,6 +2371,7 @@ http:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1399990
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1510225
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1581559
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1288361
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1299267
@@ -2382,7 +2381,6 @@ http:
     notification_emails:
       - ckerschbaumer@mozilla.com
     expires: never
-    telemetry_mirror: h#SCRIPT_BLOCK_INCORRECT_MIME_3
 
   echconfig_success_rate:
     type: labeled_counter
