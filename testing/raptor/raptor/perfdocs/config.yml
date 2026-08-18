@@ -191,6 +191,7 @@ suites:
             media-capabilities: ""
             motionmark-1-3: ""
             motionmark-htmlsuite-1-3: ""
+            speedometer-experimental: "Runs the experimental Speedometer workloads from a branch of a Speedometer fork on selected desktop platforms."
             speedometer2: ""
             speedometer3: ""
             stylebench: ""
