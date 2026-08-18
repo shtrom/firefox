@@ -73,6 +73,7 @@ data:
     treeherder:
         symbol: vendor(data)
     members:
+        - mozglue/misc/decimal/moz.yaml
         - parser/expat/moz.yaml
         - third_party/msgpack/moz.yaml
         - third_party/skv/moz.yaml
