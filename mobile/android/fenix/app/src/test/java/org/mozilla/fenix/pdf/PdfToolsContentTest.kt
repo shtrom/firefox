@@ -7,11 +7,13 @@ package org.mozilla.fenix.pdf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.browser.state.state.createTab
 import mozilla.components.browser.state.store.BrowserStore
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,6 +26,8 @@ class PdfToolsContentTest {
 
     private val tabId = "1"
 
+    private val clicked = mutableListOf<String>()
+
     private val browserStore =
         BrowserStore(
             BrowserState(
@@ -35,7 +39,11 @@ class PdfToolsContentTest {
     private fun setTestContent(isLargeWindow: Boolean) {
         composeTestRule.setContent {
             FirefoxTheme(theme = Theme.Light) {
-                PdfToolsContent(browserStore = browserStore, isLargeWindow = isLargeWindow)
+                PdfToolsContent(
+                    browserStore = browserStore,
+                    isLargeWindow = isLargeWindow,
+                    onDownloadClick = { clicked.add("download") },
+                )
             }
         }
     }
@@ -93,5 +101,16 @@ class PdfToolsContentTest {
         enterPdfViewer()
 
         composeTestRule.onNodeWithTag(PdfToolsTestTag.SIGN_BUTTON).assertIsDisplayed()
+    }
+
+    @Test
+    fun `WHEN the download button is tapped THEN the download callback is invoked`() {
+        setTestContent(isLargeWindow = false)
+
+        enterPdfViewer()
+
+        composeTestRule.onNodeWithTag(PdfToolsTestTag.DOWNLOAD_BUTTON).performClick()
+
+        assertEquals(listOf("download"), clicked)
     }
 }

@@ -16672,3 +16672,21 @@ native_share_sheet:
     metadata:
       tags:
         - Sharing
+
+pdf_viewer:
+  download_tapped:
+    type: event
+    description: |
+      A user tapped the download button in the PDF viewer tools.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2054916
+    data_reviews:
+      - https://phabricator.services.mozilla.com/D319233
+    notification_emails:
+      - android-probes@mozilla.com
+    data_sensitivity:
+      - interaction
+    expires: never
+    metadata:
+      tags:
+        - Download
