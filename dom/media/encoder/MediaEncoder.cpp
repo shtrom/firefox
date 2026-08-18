@@ -406,8 +406,7 @@ MediaEncoder::MediaEncoder(
     UniquePtr<VideoTrackEncoder> aVideoEncoder,
     UniquePtr<MediaQueue<EncodedFrame>> aEncodedAudioQueue,
     UniquePtr<MediaQueue<EncodedFrame>> aEncodedVideoQueue,
-    TrackRate aTrackRate, const nsAString& aMimeType, uint64_t aMaxMemory,
-    TimeDuration aTimeslice)
+    const nsAString& aMimeType, uint64_t aMaxMemory, TimeDuration aTimeslice)
     : mMainThread(GetMainThreadSerialEventTarget()),
       mEncoderThread(std::move(aEncoderThread)),
       mDriftCompensator(std::move(aDriftCompensator)),
@@ -704,8 +703,8 @@ already_AddRefed<MediaEncoder> MediaEncoder::CreateEncoder(
   RefPtr<MediaEncoder> encoder = new MediaEncoder(
       std::move(aEncoderThread), std::move(driftCompensator), std::move(writer),
       std::move(audioEncoder), std::move(videoEncoder),
-      std::move(encodedAudioQueue), std::move(encodedVideoQueue), aTrackRate,
-      aMimeType, aMaxMemory, aTimeslice);
+      std::move(encodedAudioQueue), std::move(encodedVideoQueue), aMimeType,
+      aMaxMemory, aTimeslice);
 
   encoder->RegisterListeners();
 

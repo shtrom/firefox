@@ -119,8 +119,8 @@ class MediaEncoder {
                UniquePtr<VideoTrackEncoder> aVideoEncoder,
                UniquePtr<MediaQueue<EncodedFrame>> aEncodedAudioQueue,
                UniquePtr<MediaQueue<EncodedFrame>> aEncodedVideoQueue,
-               TrackRate aTrackRate, const nsAString& aMIMEType,
-               uint64_t aMaxMemory, TimeDuration aTimeslice);
+               const nsAString& aMIMEType, uint64_t aMaxMemory,
+               TimeDuration aTimeslice);
 
  public:
   /**
