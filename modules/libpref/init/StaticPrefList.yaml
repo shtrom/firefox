@@ -8995,7 +8995,7 @@
 # intermediate image before the downscaling filter.
 - name: image.jpeg.dct-scaling.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: true
   mirror: always
 
 # Minimum remaining scale factor to leave for the downscaling filter (Lanczos3)
