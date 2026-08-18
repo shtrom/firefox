@@ -1513,7 +1513,7 @@ export class TelemetryEvent {
     }
 
     this._startEventInfo = {
-      timeStamp: event.timeStamp || ChromeUtils.now(),
+      timeStamp: event.timeStamp,
       interactionType:
         interactionType ||
         lazy.UrlbarTelemetryUtils.startInteractionType(event, searchString),

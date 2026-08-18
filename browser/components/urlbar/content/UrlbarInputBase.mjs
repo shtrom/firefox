@@ -3332,16 +3332,18 @@ ${
     return result.payload.providesSearchMode;
   }
 
-  _observer = {
-    observe: this.observe,
-    QueryInterface: ChromeUtils.generateQI([
-      "nsIObserver",
-      "nsISupportsWeakReference",
-    ]),
-  };
+  // The observer service holds this weakly, so it has to outlive _addObservers.
+  _observer;
 
   _addObservers() {
     if (!this._observersAdded) {
+      this._observer = {
+        observe: this.observe,
+        QueryInterface: ChromeUtils.generateQI([
+          "nsIObserver",
+          "nsISupportsWeakReference",
+        ]),
+      };
       Services.obs.addObserver(this._observer, "ai-window-state-changed", true);
       this.controller.engineStore.addObserver(this.onSearchEngineUpdate);
       this._observersAdded = true;
