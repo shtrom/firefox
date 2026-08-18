@@ -1799,6 +1799,56 @@ const BASE_MESSAGES = () => [
     targeting: "doesAppNeedPrivatePin",
   },
   {
+    id: "PB_NEWTAB_RELAY_PROMO",
+    template: "pb_newtab",
+    type: "default",
+    groups: ["pbNewtab"],
+    content: {
+      promoEnabled: true,
+      promoType: "RELAY",
+      promoHeader: "fluent:about-private-browsing-relay-promo-header",
+      promoImageLarge: "chrome://browser/content/assets/relay-promo.svg",
+      promoLinkText: "fluent:about-private-browsing-relay-promo-link-text",
+      promoLinkType: "button",
+      promoSectionStyle: "below-search",
+      promoTitle: "fluent:about-private-browsing-relay-promo-title",
+      promoTitleEnabled: true,
+      promoButton: {
+        action: {
+          type: "MULTI_ACTION",
+          data: {
+            actions: [
+              {
+                type: "OPEN_URL",
+                data: {
+                  args: "https://relay.firefox.com/",
+                  where: "tabshifted",
+                },
+              },
+              {
+                type: "BLOCK_MESSAGE",
+                data: {
+                  id: "PB_NEWTAB_RELAY_PROMO",
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+    priority: 3,
+    frequency: {
+      custom: [
+        {
+          cap: 1,
+          period: 86400000,
+        },
+      ],
+      lifetime: 12,
+    },
+    targeting: "'browser.privateWindowRedesign.enabled'|preferenceValue",
+  },
+  {
     id: "INFOBAR_LAUNCH_ON_LOGIN",
     groups: ["cfr"],
     template: "infobar",
