@@ -487,8 +487,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP page channel, time from connection cache read start to cache read end.
-      Corresponds to Legacy histogram HTTP_PAGE_CACHE_READ_TIME_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -517,8 +515,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP page channel, time from connection open to cache read end.
-      Corresponds to Legacy histogram HTTP_PAGE_COMPLETE_LOAD_CACHED_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -533,8 +529,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP page channel, time from connection open to the last byte received.
-      Corresponds to Legacy histogram HTTP_PAGE_COMPLETE_LOAD_NET_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -737,8 +731,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP page channel, time for positive cache validation
-      Corresponds to Legacy histogram HTTP_PAGE_REVALIDATION in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -804,8 +796,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel, time from connection cache read start to cache read end.
-      Corresponds to Legacy histogram HTTP_SUB_CACHE_READ_TIME_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -820,8 +810,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel, time from connection open to complete load (cache read end/until the last byte received)
-      Corresponds to Legacy histogram HTTP_SUB_COMPLETE_LOAD_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -836,8 +824,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel, time from connection open to cache read end.
-      Corresponds to Legacy histogram HTTP_SUB_COMPLETE_LOAD_CACHED_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -852,8 +838,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel, time from connection open to the last byte received.
-      Corresponds to Legacy histogram HTTP_SUB_COMPLETE_LOAD_NET_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -869,8 +853,6 @@ network:
     description: >
       In the HTTP subitem channel, time from connection open to the DNS request
       being issued.
-      Corresponds to Legacy histogram HTTP_SUB_DNS_ISSUE_TIME in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -886,8 +868,6 @@ network:
     description: >
       In the HTTP subitem channel, time from the DNS request being issued to
       the response.
-      Corresponds to Legacy histogram HTTP_SUB_DNS_LOOKUP_TIME in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -902,8 +882,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel, time from connection open to cache read start.
-      Corresponds to Legacy histogram HTTP_SUB_OPEN_TO_FIRST_FROM_CACHE_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -932,8 +910,6 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel, time for positive cache validation
-      Corresponds to Legacy histogram HTTP_SUB_REVALIDATION in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -977,8 +953,6 @@ network:
     description: >
       In the HTTP subitem channel, time from after the TCP SYN packet is
       received to the secure connection is established and ready for HTTP.
-      Corresponds to Legacy histogram HTTP_SUB_TLS_HANDSHAKE in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=772589
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
@@ -995,8 +969,6 @@ network:
     description: >
       In the HTTP subitem channel, time from the TCP SYN packet is received to
       the connection is established and ready for HTTP.
-      Corresponds to Legacy histogram HTTP_SUB_TCP_CONNECTION_2 in Desktop
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=772589
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
@@ -1093,7 +1065,6 @@ network:
       In the HTTP page channel, time from after the TCP SYN packet is
       received to the secure connection is established and ready for HTTP.
       Corresponds to Legacy histogram HTTP_PAGE_TLS_HANDSHAKE in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=772589
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077
@@ -1337,10 +1308,7 @@ network:
     type: custom_distribution
     description: >
       Collect the content policy when the resource is non-local and suspended by
-      back pressure (0-44 from nsContentPolicyType in nsIContentPolicy.idl).
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram NETWORK_BACK_PRESSURE_SUSPENSION_CP_TYPE.
+      back pressure (0-44 from nsContentPolicyType in nsIContentPolicy.idl).3
     range_min: 0
     range_max: 64
     bucket_count: 65
@@ -1366,9 +1334,6 @@ network:
     type: timing_distribution
     description: >
       The delay caused by the e10s back pressure suspension(ms)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram NETWORK_BACK_PRESSURE_SUSPENSION_DELAY_TIME_MS.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1498434
@@ -1434,8 +1399,6 @@ networking:
     type: boolean
     description: >
       True if HTTP3 is enabled at the start of a session.
-      This metric was generated to correspond to the Legacy Telemetry
-      scalar networking.http3_enabled.
     bugs:
       - https://bugzil.la/1652104
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -1452,8 +1415,6 @@ networking:
       bit 0: network.dns.upgrade_with_https_rr is enabled or not.
       bit 1: network.dns.use_https_rr_as_altsvc is enabled or not.
       bit 2: network.dns.echconfig.enabled is enabled or not.
-      This metric was generated to correspond to the Legacy Telemetry
-      scalar networking.https_rr_prefs_usage.
     bugs:
       - https://bugzil.la/1686421
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -1470,8 +1431,6 @@ networking:
     description: >
       Number of times we cycled the TRR connection during a subsession.
       Keyed by TRR provider URL.
-      This metric was generated to correspond to the Legacy Telemetry
-      scalar networking.trr_connection_cycle_count.
     bugs:
       - https://bugzil.la/1737198
       - https://bugzilla.mozilla.org/show_bug.cgi?id=2037081
@@ -1479,7 +1438,6 @@ networking:
       - https://bugzil.la/1737198
     notification_emails:
       - necko@mozilla.com
-      - nhnt11@mozilla.com
     expires: never
 
   data_transferred_v3_kb:
@@ -1744,9 +1702,6 @@ spdy:
     type: custom_distribution
     description: >
       SPDY: Streams concurrent active per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram SPDY_PARALLEL_STREAMS.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -1763,9 +1718,6 @@ spdy:
     type: custom_distribution
     description: >
       SPDY: Streams created per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram SPDY_REQUEST_PER_CONN_3.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -1785,9 +1737,6 @@ spdy:
     type: custom_distribution
     description: >
       SPDY: Streams received per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram SPDY_SERVER_INITIATED_STREAMS.
     range_min: 1
     range_max: 100000
     bucket_count: 100
@@ -1800,18 +1749,10 @@ spdy:
       - necko@mozilla.com
     expires: never
 
-
-
-
-
-
   kbread_per_conn:
     type: memory_distribution
     description: >
       SPDY: KB read per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram SPDY_KBREAD_PER_CONN2.
     memory_unit: kilobyte
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1520260
@@ -1825,9 +1766,6 @@ spdy:
     type: custom_distribution
     description: >
       H2: Settings Max Streams parameter
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram SPDY_SETTINGS_MAX_STREAMS.
     range_min: 1
     range_max: 5000
     bucket_count: 100
@@ -1844,9 +1782,6 @@ spdy:
     type: custom_distribution
     description: >
       H2: goaway reason client sent from rfc 7540. 31 is none sent.
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram SPDY_GOAWAY_LOCAL.
     range_min: 0
     range_max: 32
     bucket_count: 33
@@ -1863,9 +1798,6 @@ spdy:
     type: custom_distribution
     description: >
       H2: goaway reason from peer from rfc 7540. 31 is none received.
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram SPDY_GOAWAY_PEER.
     range_min: 0
     range_max: 32
     bucket_count: 33
@@ -1882,9 +1814,6 @@ spdy:
     type: memory_distribution
     description: >
       Size of continued H2 headers in bytes.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram SPDY_CONTINUED_HEADERS.
     memory_unit: byte
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1324855
@@ -1900,9 +1829,6 @@ http:
     type: timing_distribution
     description: >
       HTTP subitem channel: Page start -> subitem open() (ms)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP_SUBITEM_OPEN_LATENCY_TIME.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1935420
@@ -1918,9 +1844,6 @@ http:
     description: >
       HTTP subitem channel: Page start -> first byte received for subitem reply
       (ms)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP_SUBITEM_FIRST_BYTE_LATENCY_TIME.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1935420
@@ -1935,9 +1858,6 @@ http:
     type: custom_distribution
     description: >
       HTTP: Requests per page (count)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP_REQUEST_PER_PAGE.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -1955,9 +1875,6 @@ http:
     type: custom_distribution
     description: >
       HTTP: Requests serviced from cache (%)
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram HTTP_REQUEST_PER_PAGE_FROM_CACHE.
     range_min: 0
     range_max: 101
     bucket_count: 102
@@ -1975,9 +1892,6 @@ http:
     type: custom_distribution
     description: >
       HTTP: requests per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP_REQUEST_PER_CONN.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -1994,9 +1908,6 @@ http:
     type: memory_distribution
     description: >
       HTTP: KB read per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP_KBREAD_PER_CONN2.
     memory_unit: kilobyte
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1520260
@@ -2084,9 +1995,6 @@ http:
     type: custom_distribution
     description: >
       HTTP: Protocol Version Used on Response from nsHttp.h
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram HTTP_RESPONSE_VERSION.
     range_min: 0
     range_max: 48
     bucket_count: 49
@@ -2105,9 +2013,6 @@ http:
     description: >
       Channel Disposition: 0=Cancel, 1=Disk, 2=NetOK, 3=NetEarlyFail,
       4=NetlateFail, +8 for HTTPS
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram HTTP_CHANNEL_DISPOSITION.
     range_min: 0
     range_max: 16
     bucket_count: 17
@@ -2144,9 +2049,6 @@ http:
     description: >
       Successfully started HTTP channels for page loading when TRR is enabled;
       Keyed by TRR domain
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram HTTP_CHANNEL_PAGE_ONSTART_SUCCESS_TRR3.
     range_min: 0
     range_max: 16
     bucket_count: 17
@@ -2166,9 +2068,6 @@ http:
     description: >
       Successfully started HTTP channels for resource loading when TRR is
       enabled; Keyed by TRR domain
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram HTTP_CHANNEL_SUB_ONSTART_SUCCESS_TRR3.
     range_min: 0
     range_max: 16
     bucket_count: 17
@@ -2187,9 +2086,6 @@ http:
     type: labeled_counter
     description: >
       Fraction of sockets that used a nsConnectionEntry with history - size 300.
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram HTTP_CONNECTION_ENTRY_CACHE_HIT_1.
     labels:
       - "false"
       - "true"
@@ -2206,9 +2102,6 @@ http:
     type: custom_distribution
     description: >
       encoding removed: 0=unknown, 1=gzip, 2=deflate, 3=brotli, 4=zstd
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram HTTP_CONTENT_ENCODING.
     range_min: 0
     range_max: 6
     bucket_count: 7
@@ -2227,9 +2120,6 @@ http:
     description: >
       When echConfig is enabled, number of times a transaction is retried
       because of SSL_ERROR_ECH_RETRY_WITH_ECH
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram TRANSACTION_ECH_RETRY_WITH_ECH_COUNT.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -2249,9 +2139,6 @@ http:
     description: >
       When echConfig is enabled, number of times a transaction is retried
       because of SSL_ERROR_ECH_RETRY_WITHOUT_ECH
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram TRANSACTION_ECH_RETRY_WITHOUT_ECH_COUNT.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -2271,9 +2158,6 @@ http:
     description: >
       When echConfig is enabled, number of times a transaction is retried
       because of SSL_ERROR_ECH_FAILED
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram TRANSACTION_ECH_RETRY_ECH_FAILED_COUNT.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -2293,9 +2177,6 @@ http:
     description: >
       When echConfig is enabled, number of times a transaction is retried
       because of other error
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram TRANSACTION_ECH_RETRY_OTHERS_COUNT.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -2314,9 +2195,6 @@ http:
     type: timing_distribution
     description: >
       Time from submission to dispatch of HTTP transaction (ms)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram TRANSACTION_WAIT_TIME_HTTP.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1605099
@@ -2330,9 +2208,6 @@ http:
     type: timing_distribution
     description: >
       Time from submission to dispatch of SPDY transaction (ms)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram TRANSACTION_WAIT_TIME_SPDY.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1605099
@@ -2346,9 +2221,6 @@ http:
     type: timing_distribution
     description: >
       Time from submission to dispatch of HTTP/3 transaction (ms)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram TRANSACTION_WAIT_TIME_HTTP3.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1605099
@@ -2363,9 +2235,6 @@ http:
     description: >
       Sending TLS early data was possible: 0 - not possible, 1 - possible but
       not used, 2 - possible and used.
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram TLS_EARLY_DATA_NEGOTIATED.
     range_min: 0
     range_max: 3
     bucket_count: 4
@@ -2411,9 +2280,6 @@ http:
     description: >
       Whether an HTTP/2 session failed because the peer did not handshake
       properly
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram HTTP2_FAIL_BEFORE_SETTINGS.
     labels:
       - "false"
       - "true"
@@ -2445,9 +2311,6 @@ http:
     type: custom_distribution
     description: >
       I want to be tracked, I do NOT want to be tracked, DNT unset
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram DNT_USAGE.
     range_min: 0
     range_max: 3
     bucket_count: 4
@@ -2465,9 +2328,6 @@ http:
     type: custom_distribution
     description: >
       Record at which stage an HTTPSSVC record is received
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram DNS_HTTPSSVC_RECORD_RECEIVING_STAGE.
     range_min: 0
     range_max: 50
     bucket_count: 51
@@ -2538,9 +2398,6 @@ http:
     type: labeled_counter
     description: >
       TLS handshake with and without EchConfig success rate.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram ECHCONFIG_SUCCESS_RATE.
     labels:
       - EchConfigSucceeded
       - EchConfigFailed
@@ -2559,9 +2416,6 @@ http:
     type: dual_labeled_counter
     description: >
       HTTP Cache v2 hit/miss stats keyed by content type.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram HTTP_CACHE_DISPOSITION_3.
     dual_labels:
       key:
         description: Keys of the keyed categorical legacy telemetry histogram
@@ -2669,9 +2523,6 @@ http3:
     type: labeled_custom_distribution
     description: >
       Success / Fail Rates for HTTP3 Keyed by ECH Usage
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram HTTP3_ECH_OUTCOME.
     range_min: 0
     range_max: 32
     bucket_count: 33
@@ -2696,9 +2547,6 @@ http3:
     description: >
       Error code when http3 connection is closed. Look at Http3Session for more
       details.
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram HTTP3_CONNECTION_CLOSE_CODE_3.
     range_min: 0
     range_max: 100
     bucket_count: 101
@@ -2723,9 +2571,6 @@ http3:
     description: >
       Time difference between setting timer value and actually firing the timer
       for calling neqo
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_TIMER_DELAYED.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1655566
@@ -2739,9 +2584,6 @@ http3:
     type: custom_distribution
     description: >
       HTTP3: Streams created per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_REQUEST_PER_CONN.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -2760,9 +2602,6 @@ http3:
     description: >
       HTTP3: number of times a connection is blocked by maximum allowed number
       of parallel streams per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_BLOCKED_BY_STREAM_LIMIT_PER_CONN.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -2781,9 +2620,6 @@ http3:
     description: >
       HTTP3: number of transactions that are blocked by maximum allowed number
       of parallel streams per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_TRANS_BLOCKED_BY_STREAM_LIMIT_PER_CONN.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -2802,10 +2638,6 @@ http3:
     description: >
       HTTP3: number of times streams are blocked by the flow control while
       sending data per connection
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram
-      HTTP3_TRANS_SENDING_BLOCKED_BY_FLOW_CONTROL_PER_CONN.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -2823,10 +2655,7 @@ http3:
     type: custom_distribution
     description: >
       HTTP3: number of times when a stream is blocked by the flow control while
-      sendnig data.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_SENDING_BLOCKED_BY_FLOW_CONTROL_PER_TRANS.
+      sending data.
     range_min: 1
     range_max: 1000
     bucket_count: 50
@@ -2863,9 +2692,6 @@ http3:
     description: >
       HTTP3: spurious retransmissions ratio (spurios_retransmission / packet
       sent * 10000).
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_LATE_ACK_RATIO.
     range_min: 1
     range_max: 2000
     bucket_count: 100
@@ -2886,9 +2712,6 @@ http3:
     type: labeled_custom_distribution
     description: >
       HTTP3: the number of spurious retransmissions.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_LATE_ACK.
     range_min: 1
     range_max: 10000
     bucket_count: 100
@@ -2910,9 +2733,6 @@ http3:
     type: labeled_custom_distribution
     description: >
       HTTP3: the number of PTOs.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_COUNTS_PTO.
     range_min: 1
     range_max: 5000
     bucket_count: 100
@@ -2930,9 +2750,6 @@ http3:
     type: custom_distribution
     description: >
       HTTP3: the number of dropped datagrams.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_DROP_DGRAMS.
     range_min: 1
     range_max: 5000
     bucket_count: 100
@@ -2952,9 +2769,6 @@ http3:
     description: >
       HTTP3: the number of saved datagrams that are waiting for keys to be
       available.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_SAVED_DGRAMS.
     range_min: 1
     range_max: 5000
     bucket_count: 100
@@ -2973,9 +2787,6 @@ http3:
     type: labeled_custom_distribution
     description: >
       HTTP3: the number of received/sent packets.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_RECEIVED_SENT_DGRAMS.
     range_min: 1
     range_max: 100000
     bucket_count: 100
