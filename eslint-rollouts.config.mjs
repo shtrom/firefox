@@ -182,7 +182,7 @@ export default [
       "browser/components/migration/SafariProfileMigrator.sys.mjs",
       "browser/components/places/content/places-tree.js",
       "browser/components/places/content/treeView.js",
-      "browser/components/tabbrowser/content/tabbrowser.js",
+      "browser/components/tabbrowser/Tabbrowser.sys.mjs",
       "browser/extensions/webcompat/**",
       "browser/modules/BackgroundTask_*.sys.mjs",
       "browser/themes/BuiltInThemes.sys.mjs",

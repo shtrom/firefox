@@ -416,10 +416,7 @@ class Components(
         DefaultFenixSettingsIndexer(
             context = context,
             additionalProviders =
-                settingsSearchProviders(
-                    summarizationFeatureConfiguration = core.summarizeFeatureSettings,
-                    isFirefoxLabsEnabled = { settings.enableFirefoxLabs },
-                ),
+                settingsSearchProviders(summarizationFeatureConfiguration = core.summarizeFeatureSettings),
         )
     }
 

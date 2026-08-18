@@ -988,20 +988,6 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "discoverystream.dailyBrief.sectionId",
-    {
-      title: "sectionId for the Daily brief section",
-      value: "top_stories_section",
-    },
-  ],
-  [
-    "discoverystream.dailyBrief.enabled",
-    {
-      title: "Boolean flag to enable daily briefing",
-      value: false,
-    },
-  ],
-  [
     "discoverystream.sections.ordering",
     {
       title: "Name of the sections ordering to render from Remote Settings",

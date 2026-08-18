@@ -118,7 +118,7 @@ export const MODEL_FEATURES = Object.freeze({
   REAL_TIME_CONTEXT_DATE: "real-time-context-date",
   REAL_TIME_CONTEXT_TAB: "real-time-context-tab",
   REAL_TIME_CONTEXT_MENTIONS: "real-time-context-mentions",
-  MEMORIES_RELEVANT_CONTEXT: "memories-relevant-context",
+  MEMORIES_CONTEXT: "memories-context",
   // agents
   AGENT_MONITOR: "agent-monitor",
   // search agent
@@ -185,7 +185,7 @@ export const FEATURE_MAJOR_VERSIONS = Object.freeze({
   // memories usage feature versions
   [MODEL_FEATURES.MEMORIES_MESSAGE_CLASSIFICATION_SYSTEM]: 1,
   [MODEL_FEATURES.MEMORIES_MESSAGE_CLASSIFICATION_USER]: 1,
-  [MODEL_FEATURES.MEMORIES_RELEVANT_CONTEXT]: 2,
+  [MODEL_FEATURES.MEMORIES_CONTEXT]: 1,
   // real-time-context fragments
   [MODEL_FEATURES.REAL_TIME_CONTEXT_DATE]: 1,
   [MODEL_FEATURES.REAL_TIME_CONTEXT_TAB]: 1,

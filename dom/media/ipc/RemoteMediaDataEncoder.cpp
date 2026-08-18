@@ -66,6 +66,11 @@ RemoteMediaDataEncoder::Construct() {
       [self = RefPtr{this}](MediaResult aResult) {
         LOGD("[{}] Construct resolved code={}", fmt::ptr(self.get()),
              aResult.Description());
+        if (NS_FAILED(aResult.Code())) {
+          self->mConstructPromise.RejectIfExists(aResult, __func__);
+          self->mInitPromise.RejectIfExists(aResult, __func__);
+          return;
+        }
         self->mHasConstructed = true;
         self->mConstructPromise.Resolve(self, __func__);
         if (!self->mInitPromise.IsEmpty()) {

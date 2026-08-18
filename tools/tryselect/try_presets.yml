@@ -64,6 +64,7 @@ android-fenix:
         - "'signing-apk-fenix-android-test-debug"
         - "'test-apk-fenix-debug"
         - "'ui-test-apk-fenix-arm-debug"
+        - "'ui-test-apk-fenix-tae-arm-debug"
         - "^source-test 'fenix"
         - "'generate-baseline-profile-firebase-fenix-simulation"
 
@@ -81,6 +82,7 @@ android-frontend:
         - "'signing-apk-fenix-android-test-debug"
         - "'test-apk-fenix-debug"
         - "'ui-test-apk-fenix-arm-debug"
+        - "'ui-test-apk-fenix-tae-arm-debug"
         - "'build-apk-focus-debug"
         - "'signing-apk-focus-debug"
         - "'build-apk-focus-android-test-debug"
@@ -121,6 +123,7 @@ android-fullstack:
         - "'signing-apk-fenix-android-test-debug"
         - "'test-apk-fenix-debug"
         - "'ui-test-apk-fenix-arm-debug"
+        - "'ui-test-apk-fenix-tae-arm-debug"
         - "'build-apk-focus-debug"
         - "'signing-apk-focus-debug"
         - "'build-apk-focus-android-test-debug"

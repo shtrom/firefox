@@ -1000,7 +1000,7 @@
       "x-category": "Startup",
       "x-compatibility": {
         "firefox": { "version_added": "154" },
-        "firefox_esr": { "version_added": false },
+        "firefox_esr": { "version_added": "153.1" },
         "firefox_enterprise": { "version_added": "154" }
       },
       "description": "Control whether the user can set Firefox as the default browser. If set to false, the default browser check is disabled and the controls for setting Firefox as the default browser are removed from the preferences.",

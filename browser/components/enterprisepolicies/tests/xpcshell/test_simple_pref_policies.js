@@ -198,6 +198,8 @@ const POLICIES_TESTS = [
       "xpinstall.enabled": false,
       "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons": false,
       "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features": false,
+      "extensions.getAddons.showPane": false,
+      "extensions.htmlaboutaddons.recommendations.enabled": false,
     },
   },
 

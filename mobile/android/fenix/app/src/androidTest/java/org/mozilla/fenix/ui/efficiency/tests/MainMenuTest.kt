@@ -125,7 +125,7 @@ class MainMenuTest : BaseTest(isPageLoadTranslationsPromptEnabled = false) {
             .navigateToPage(testPage.url.toString())
             .mozClick(HomeSelectors.MAIN_MENU_BUTTON_UIAUTOMATOR)
             .mozClick(MainMenuSelectors.BOOKMARK_THIS_PAGE_BUTTON)
-            .mozClick(BrowserPageSelectors.SNACKBAR_EDIT_BUTTON)
+            .mozClick(BrowserPageSelectors.SNACKBAR_ACTION_BUTTON)
         on.bookmarks.mozVerifyElementsByGroup("bookmarkEdit").mozClick(BookmarksSelectors.DELETE_BOOKMARK_BUTTON)
         on.browserPage.mozClick(HomeSelectors.MAIN_MENU_BUTTON_UIAUTOMATOR)
         on.mainMenu.mozVerifyElementsByGroup("bookmarkActions")

@@ -8611,11 +8611,6 @@ void HTMLMediaElement::MarkAsTainted() {
   }
 }
 
-bool HasDebuggerOrTabsPrivilege(JSContext* aCx, JSObject* aObj) {
-  return nsContentUtils::CallerHasPermission(aCx, nsGkAtoms::debugger) ||
-         nsContentUtils::CallerHasPermission(aCx, nsGkAtoms::tabs);
-}
-
 already_AddRefed<Promise> HTMLMediaElement::SetSinkId(const nsAString& aSinkId,
                                                       ErrorResult& aRv) {
   LOG(LogLevel::Info, ("{}, setSinkId({})", fmt::ptr(this),

@@ -4703,6 +4703,10 @@ TabDialogBox.prototype.QueryInterface = ChromeUtils.generateQI([
   "nsISupportsWeakReference",
 ]);
 
+// A class declaration is a lexical binding, not a window property, so callers
+// outside this window's scripts can't reach it without this.
+window.TabDialogBox = TabDialogBox;
+
 // Handle window-modal prompts that we want to display with the same style as
 // tab-modal prompts.
 var gDialogBox = {

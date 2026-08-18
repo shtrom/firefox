@@ -2535,13 +2535,6 @@ class Settings(
             default = { FxNimbus.features.adsClientForStories.value().enabled },
         )
 
-    /** Indicates if Firefox Labs is enabled. */
-    var enableFirefoxLabs by
-        booleanPreference(
-            key = appContext.getPreferenceKey(R.string.pref_key_enable_firefox_labs),
-            default = FeatureFlags.FIREFOX_LABS,
-        )
-
     /** Indicates if the top sites pager layout is enabled. */
     var topSitesPager by
         booleanPreference(

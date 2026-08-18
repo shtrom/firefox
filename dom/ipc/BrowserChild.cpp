@@ -2414,7 +2414,8 @@ void BrowserChild::RequestEditCommands(NativeKeyBindingsType aType,
 
   // Don't send aEvent to the parent process directly because it'll be marked
   // as posted to remote process.
-  WidgetKeyboardEvent localEvent(aEvent);
+  WidgetKeyboardEvent localEvent(
+      aEvent);  // NOLINT(performance-unnecessary-copy-initialization)
   SendRequestNativeKeyBindings(aType, localEvent, &aCommands);
 }
 

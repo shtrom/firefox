@@ -1089,6 +1089,18 @@ export let ProfileDataUpgrader = {
       }
     }
 
+    if (existingDataVersion < 181) {
+      // Bug 2058359 - Re-enable "update service" setting for auto-disabled installations
+      if (
+        AppConstants.MOZ_MAINTENANCE_SERVICE &&
+        Services.prefs.prefHasUserValue("app.update.service.enabled") &&
+        !Services.prefs.getBoolPref("app.update.service.enabled", true)
+      ) {
+        Services.prefs.clearUserPref("app.update.service.enabled");
+        Glean.update.autoReenableStagedUpdates.record();
+      }
+    }
+
     // Update the migration version.
     Services.prefs.setIntPref("browser.migration.version", newVersion);
   },

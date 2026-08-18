@@ -483,11 +483,6 @@ gfxFontconfigFontEntry::~gfxFontconfigFontEntry() {
     auto* face = mFTFace.exchange(nullptr);
     NS_IF_RELEASE(face);
   }
-#ifdef MOZ_FONTATIONS
-  if (mozilla::gfx::SkrifaFontRef* font = mSkrifaFontFace) {
-    skrifa_font_delete(font);
-  }
-#endif
 }
 
 gfxFontconfigFontEntry::AutoHBFace gfxFontconfigFontEntry::GetHBFace() {
@@ -1116,16 +1111,7 @@ void gfxFontconfigFontEntry::InitSkrifaFont(FcPattern* aPattern) {
   const uint8_t* data = static_cast<const uint8_t*>(file.Data());
   const size_t size = file.Size();
   if (SkrifaFontRef* font = skrifa_font_new_from_index(data, size, index)) {
-    // If another thread came in and initialized the font face ahead of us,
-    // just delete the face this thread constructed.
-    if (mSkrifaFontFace.compareExchange(nullptr, font)) {
-      // If we won the race, store our file data to back the font.
-      mSkrifaFontFile = std::move(file);
-    } else {
-      // We lost the race, delete the font we just constructed and let the
-      // file mapping be destroyed normally.
-      skrifa_font_delete(font);
-    }
+    SetSkrifaFont(font, std::move(file));
   }
 }
 #endif

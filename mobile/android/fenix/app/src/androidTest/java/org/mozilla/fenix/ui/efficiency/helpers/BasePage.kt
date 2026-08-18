@@ -351,6 +351,40 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         )
     }
 
+    /**
+     * Assert [selector] stays absent for the whole of [timeout], failing the moment it appears.
+     *
+     * Not the same as [mozVerifyElementAbsent] (a single instantaneous probe) or [mozWaitUntilAbsent] (waits for
+     * something to go away). This is "must not show up", and it is sometimes load-bearing rather than defensive: a
+     * screen that navigates away and bounces straight back looks absent-then-present, which only a sustained check can
+     * tell apart from absent.
+     */
+    fun mozVerifyElementStaysAbsent(
+        selector: Selector,
+        timeout: Long = TestAssetHelper.waitingTimeShort,
+        interval: Long = 200,
+    ): BasePage {
+        val rep = rep()
+        rep?.startCmd(
+            safeId("verify_stays_absent", selector.description),
+            "Verifying '${selector.description}' stays absent for ${timeout}ms...",
+            1,
+        )
+        val deadline = System.currentTimeMillis() + timeout
+        while (System.currentTimeMillis() < deadline) {
+            if (mozVerifyElement(selector, applyPreconditions = false)) {
+                rep?.endCmd(success = false, message = "'${selector.description}' appeared before ${timeout}ms elapsed")
+                ScreenDump.dump(composeRule, "mozVerifyElementStaysAbsent failed: ${selector.description}")
+                throw AssertionError(
+                    "'${selector.description}' was expected to stay absent but appeared within ${timeout}ms"
+                )
+            }
+            SystemClock.sleep(interval)
+        }
+        rep?.endCmd(success = true, message = "'${selector.description}' stayed absent for ${timeout}ms")
+        return this
+    }
+
     fun mozVerify(selector: Selector, timeout: Long = 5_000, interval: Long = 500): BasePage {
         val rep = rep()
         rep?.startCmd(safeId("verify", selector.description), "Verifying '${selector.description}' is present...", 1)
@@ -409,6 +443,12 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         if (handled) composeRule.waitForIdle()
         return handled
     }
+
+    /**
+     * Is [selector] on screen right now? A probe, not an assertion: it never throws and never waits, so it can drive
+     * control flow (e.g. "press back until the app screen is showing again").
+     */
+    fun mozIsElementPresent(selector: Selector): Boolean = mozVerifyElement(selector, applyPreconditions = false)
 
     /**
      * True while a soft-keyboard (IME) window is on screen. Reads the accessibility window list rather than shelling
@@ -518,6 +558,46 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
         result.assertAll(hasText(text).not())
         rep?.endCmd(success = true, message = "No '${selector.description}' contains text '$text'")
         return this
+    }
+
+    // Polls until the match count settles on [count] rather than sampling once: lists that are still being
+    // populated pass through the expected count on their way to a larger one.
+    fun mozVerifyElementCount(
+        selector: Selector,
+        count: Int,
+        timeout: Long = TestAssetHelper.waitingTime,
+        interval: Long = 500,
+    ): BasePage {
+        val rep = rep()
+        rep?.startCmd(
+            safeId("verify_element_count", selector.description),
+            "Verifying there are exactly $count '${selector.description}' elements...",
+            1,
+        )
+        closeSoftKeyboard()
+        val deadline = System.currentTimeMillis() + timeout
+        var actual = -1
+        while (System.currentTimeMillis() < deadline) {
+            val elements = mozGetAllElements(selector)
+            if (elements == null) {
+                rep?.endCmd(success = false, message = "Selector strategy '${selector.strategy}' not supported")
+                throw AssertionError("Selector strategy '${selector.strategy}' not supported by mozVerifyElementCount")
+            }
+            actual = elements.fetchSemanticsNodes().size
+            if (actual == count) {
+                rep?.endCmd(success = true, message = "Found exactly $count '${selector.description}'")
+                return this
+            }
+            SystemClock.sleep(interval)
+        }
+        rep?.endCmd(
+            success = false,
+            message = "Expected $count '${selector.description}' but found $actual after ${timeout}ms",
+        )
+        ScreenDump.dump(composeRule, "mozVerifyElementCount failed: ${selector.description}")
+        throw AssertionError(
+            "Expected exactly $count '${selector.description}' elements but found $actual after ${timeout}ms"
+        )
     }
 
     // ------------------------------------------------------------
@@ -946,6 +1026,54 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
             message = "'${selector.description}' still present after $maxPresses back press(es)",
         )
         throw AssertionError("'${selector.description}' still present after $maxPresses back press(es)")
+    }
+
+    // A single back press. mozPressBackUntilGone cannot stand in when the thing being left has no selector
+    // to poll — closing a 404 tab to return to the previous one, for instance — and "back until X is gone"
+    // would press again if the first press has not landed yet.
+    fun mozPressBack(): BasePage {
+        val rep = rep()
+        rep?.startCmd("press_back", "Pressing back...", 1)
+        mDevice.pressBack()
+        mDevice.waitForIdle()
+        rep?.endCmd(success = true, message = "Pressed back")
+        return this
+    }
+
+    /**
+     * Press back until [selector] is showing, up to [maxPresses] times.
+     *
+     * The counterpart to [mozPressBackUntilGone], for backing out of an unknown number of screens: how deep you are can
+     * depend on whether a dialog or a fragment intercepted an earlier step, and a fixed number of presses either
+     * overshoots (backgrounding the app) or stops short.
+     */
+    fun mozPressBackUntilPresent(selector: Selector, maxPresses: Int = 5): BasePage {
+        val rep = rep()
+        rep?.startCmd(
+            safeId("press_back_until_present", selector.description),
+            "Pressing back until '${selector.description}' is showing...",
+            1,
+        )
+
+        repeat(maxPresses) { attempt ->
+            if (mozVerifyElement(selector, applyPreconditions = false)) {
+                rep?.endCmd(success = true, message = "'${selector.description}' showing after $attempt back press(es)")
+                return this
+            }
+            mDevice.pressBack()
+            mDevice.waitForIdle()
+        }
+
+        if (mozVerifyElement(selector, applyPreconditions = false)) {
+            rep?.endCmd(success = true, message = "'${selector.description}' showing after $maxPresses back press(es)")
+            return this
+        }
+        rep?.endCmd(
+            success = false,
+            message = "'${selector.description}' never appeared after $maxPresses back press(es)",
+        )
+        ScreenDump.dump(composeRule, "mozPressBackUntilPresent failed: ${selector.description}")
+        throw AssertionError("'${selector.description}' did not appear after $maxPresses back press(es)")
     }
 
     private fun waitForPresence(selector: Selector, timeout: Long, interval: Long = 200): Boolean {
@@ -1875,6 +2003,16 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
                 val obj = mDevice.findObject(By.descContains(selector.value))
                 if (obj == null) {
                     Log.i("mozGetElement", "UIObject2 not found for descContains: ${selector.value}")
+                    null
+                } else {
+                    obj
+                }
+            }
+
+            SelectorStrategy.UIAUTOMATOR2_BY_RAW_RES -> {
+                val obj = mDevice.findObject(By.res(selector.value))
+                if (obj == null) {
+                    Log.i("mozGetElement", "UIObject2 not found for raw res: ${selector.value}")
                     null
                 } else {
                     obj

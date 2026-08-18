@@ -35,6 +35,11 @@
 #include "nsTArray.h"
 #include "nscore.h"
 
+#ifdef MOZ_FONTATIONS
+#  include "mozilla/MemoryMappedFile.h"
+#  include "mozilla/gfx/fontations_glue_generated.h"
+#endif
+
 class FontInfoData;
 class gfxContext;
 class gfxFont;
@@ -735,6 +740,11 @@ class gfxFontEntry {
   };
 
   std::atomic<SpaceFeatures> mHasSpaceFeatures;
+#ifdef MOZ_FONTATIONS
+  const mozilla::gfx::SkrifaFontRef* GetSkrifaFontFace() const {
+    return mSkrifaFontFace;
+  }
+#endif
 
  protected:
   friend class gfxPlatformFontList;
@@ -781,6 +791,13 @@ class gfxFontEntry {
   // of the gfxFontEntry based on shared Face and Family records.
   void InitializeFrom(mozilla::fontlist::Face* aFace,
                       const mozilla::fontlist::Family* aFamily);
+
+#ifdef MOZ_FONTATIONS
+  void SetSkrifaFont(mozilla::gfx::SkrifaFontRef* aSkrifaFont,
+                     mozilla::MemoryMappedFile&& aSkrifaFontFile);
+  mozilla::Atomic<mozilla::gfx::SkrifaFontRef*> mSkrifaFontFace;
+  mozilla::MemoryMappedFile mSkrifaFontFile;
+#endif
 
   // Shaper-specific face objects, shared by all instantiations of the same
   // physical font, regardless of size.

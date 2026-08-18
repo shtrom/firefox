@@ -3941,8 +3941,15 @@ void CodeGenerator::visitGoto(LGoto* lir) {
   // CodeGenerator is (indirectly) a child class of CodeGeneratorShared.
   //
   // See CodeGeneratorShared::jumpToBlock(MBasicBlock*) as reference.
-  uint32_t numMoveGroupsCloned = 0;
+
+  // If we can fall through to the target, don't bother cloning MoveGroups
+  // because this would turn the fallthrough into an explicit jump.
   MBasicBlock* target = lir->target();
+  if (isNextBlock(target->lir())) {
+    return;
+  }
+
+  uint32_t numMoveGroupsCloned = 0;
   while (true) {
     LBlock* targetLBlock = target->lir();
     LBlock* nextLBlock = targetLBlock->isMoveGroupsThenGoto();

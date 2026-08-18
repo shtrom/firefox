@@ -626,6 +626,9 @@ void DocumentLoadListener::TryActivateFromPrefetch(nsIURI* aURI) {
     mTiming->SetWasActivatedFromNavigationalPrefetch();
   }
 
+  nsCOMPtr<nsILoadInfo> loadInfo = mChannel->LoadInfo();
+  loadInfo->SetActivatedFromNavigationalPrefetch(true);
+
   LOG_SPECRULES(
       ("DocumentLoadListener::TryActivateFromPrefetch: [%p] activated from "
        "prefetch cache for rec=%p",

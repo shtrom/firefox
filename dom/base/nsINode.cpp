@@ -4261,11 +4261,11 @@ already_AddRefed<nsINode> nsINode::CloneAndAdopt(
           cloneElem->SetCustomElementRegistry(registry);
         } else if (elem->GetCustomElementRegistryState() ==
                    CustomElementRegistryState::Null) {
-          cloneElem->SetKeepCustomElementRegistryNull();
+          cloneElem->SetNullCustomElementRegistry();
         } else if (cloneElem->OwnerDoc()->HasScopedCustomElementRegistry()) {
           // Keep the clone from inheriting the destination document's scoped
           // registry; a global-registry element must not resolve to it.
-          cloneElem->SetKeepCustomElementRegistryNull();
+          cloneElem->SetNullCustomElementRegistry();
         }
       }
 

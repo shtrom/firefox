@@ -21,7 +21,6 @@ import React from "react";
 // Pref Constants
 const PREF_AD_SIZE_MEDIUM_RECTANGLE = "newtabAdSize.mediumRectangle";
 const PREF_AD_SIZE_BILLBOARD = "newtabAdSize.billboard";
-const PREF_AD_SIZE_LEADERBOARD = "newtabAdSize.leaderboard";
 const PREF_SECTIONS_ENABLED = "discoverystream.sections.enabled";
 const PREF_SPOC_PLACEMENTS = "discoverystream.placements.spocs";
 const PREF_SPOC_COUNTS = "discoverystream.placements.spocs.counts";
@@ -382,11 +381,6 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
         this.props.dispatch(ac.SetPref(PREF_AD_SIZE_BILLBOARD, pressed));
 
         break;
-      case "newtab_leaderboard":
-        // Update boolean pref for billboard ad size
-        this.props.dispatch(ac.SetPref(PREF_AD_SIZE_LEADERBOARD, pressed));
-
-        break;
       case "newtab_rectangle":
         // Update boolean pref for mediumRectangle (MREC) ad size
         this.props.dispatch(ac.SetPref(PREF_AD_SIZE_MEDIUM_RECTANGLE, pressed));
@@ -410,11 +404,7 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
           .filter(item => item) || [];
 
       // Confirm that the IAB type will have a count value of "1"
-      const supportIABAdTypes = [
-        "newtab_leaderboard",
-        "newtab_rectangle",
-        "newtab_billboard",
-      ];
+      const supportIABAdTypes = ["newtab_rectangle", "newtab_billboard"];
       let countValue;
       if (supportIABAdTypes.includes(id)) {
         countValue = "1"; // Default count value for all IAB ad types
@@ -458,19 +448,15 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
           ac.SetPref(PREF_CONTEXTUAL_BANNER_PLACEMENTS, "newtab_billboard")
         );
         this.props.dispatch(ac.SetPref(PREF_CONTEXTUAL_BANNER_COUNTS, "1"));
-      } else if (
-        PREF_AD_SIZE_LEADERBOARD &&
-        placements.includes("newtab_leaderboard")
-      ) {
-        this.props.dispatch(
-          ac.SetPref(PREF_CONTEXTUAL_BANNER_PLACEMENTS, "newtab_leaderboard")
-        );
-        this.props.dispatch(ac.SetPref(PREF_CONTEXTUAL_BANNER_COUNTS, "1"));
       } else {
         this.props.dispatch(ac.SetPref(PREF_CONTEXTUAL_BANNER_PLACEMENTS, ""));
         this.props.dispatch(ac.SetPref(PREF_CONTEXTUAL_BANNER_COUNTS, ""));
       }
     }
+
+    // The layout is cached, so the new placements only take effect once the
+    // cache is rebuilt.
+    this.refreshCache();
   }
 
   handleSectionsToggle(e) {
@@ -1150,14 +1136,11 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
     const mediumRectangleEnabled =
       this.props.otherPrefs[PREF_AD_SIZE_MEDIUM_RECTANGLE];
     const billboardsEnabled = this.props.otherPrefs[PREF_AD_SIZE_BILLBOARD];
-    const leaderboardEnabled = this.props.otherPrefs[PREF_AD_SIZE_LEADERBOARD];
     const spocPlacements = this.props.otherPrefs[PREF_SPOC_PLACEMENTS];
     const mediumRectangleEnabledPressed =
       mediumRectangleEnabled && spocPlacements.includes("newtab_rectangle");
     const billboardPressed =
       billboardsEnabled && spocPlacements.includes("newtab_billboard");
-    const leaderboardPressed =
-      leaderboardEnabled && spocPlacements.includes("newtab_leaderboard");
 
     const widgetsSystemEnabled =
       this.props.otherPrefs[PREF_WIDGETS_SYSTEM_ENABLED];
@@ -1198,14 +1181,6 @@ export class DiscoveryStreamAdminUI extends React.PureComponent {
         </details>
         <details className="details-section">
           <summary>IAB Banner Ad Sizes</summary>
-          <div className="toggle-wrapper">
-            <moz-toggle
-              id="newtab_leaderboard"
-              pressed={leaderboardPressed || null}
-              ontoggle={this.toggleIABBanners}
-              label="Enable IAB Leaderboard"
-            />
-          </div>
           <div className="toggle-wrapper">
             <moz-toggle
               id="newtab_billboard"

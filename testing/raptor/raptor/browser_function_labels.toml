@@ -302,6 +302,7 @@ name = "Notify images"
 funcPrefixes = [
   "mozilla::image::AsyncNotifyRunnable::Run",
   "mozilla::image::RasterImage::NotifyDecodeComplete", # https://share.firefox.dev/4bv05oi
+  "blink::ImageLoader::DoUpdateFromElement", # https://share.firefox.dev/45tUk8F
 ]
 
 [[labels]]

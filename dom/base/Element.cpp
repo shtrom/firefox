@@ -584,7 +584,7 @@ void Element::SetCustomElementRegistry(
   }
 }
 
-void Element::SetKeepCustomElementRegistryNull() {
+void Element::SetNullCustomElementRegistry() {
   MOZ_ASSERT(StaticPrefs::dom_scoped_custom_element_registries_enabled());
   MOZ_ASSERT(!HasCustomElementRegistry(),
              "We shouldn't set a custom element registry without clearing "

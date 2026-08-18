@@ -35,7 +35,7 @@ category browser-window-before-initial-xul-layout chrome://browser/content/brows
 # The two categories below are specific to Tabbrowser creation. For consumers that need to initialize during
 # 'DOMContentLoaded', use 'browser-window-domcontentloaded' instead.
 category browser-window-domcontentloaded-before-tabbrowser resource:///modules/BrowserDOMWindow.sys.mjs BrowserDOMWindow.setupInWindow
-category browser-window-domcontentloaded-tabbrowser chrome://browser/content/tabbrowser/tabbrowser.js Tabbrowser.create
+category browser-window-domcontentloaded-tabbrowser moz-src:///browser/components/tabbrowser/Tabbrowser.sys.mjs Tabbrowser.create
 
 category browser-window-domcontentloaded resource:///modules/BrowserWindowTracker.sys.mjs BrowserWindowTracker.track
 category browser-window-domcontentloaded moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs CustomizableUI.handleNewBrowserWindow
@@ -141,7 +141,7 @@ category browser-window-unload-delayed-startup chrome://browser/content/customiz
 
 # The category below is specific to Tabbrowser destruction. For consumers that need to uninitialize during
 # window unload, use 'browser-window-unload' instead.
-category browser-window-unload-tabbrowser chrome://browser/content/tabbrowser/tabbrowser.js Tabbrowser.destroy
+category browser-window-unload-tabbrowser moz-src:///browser/components/tabbrowser/Tabbrowser.sys.mjs Tabbrowser.destroy
 
 category browser-window-final-unload resource:///modules/BrowserDOMWindow.sys.mjs BrowserDOMWindow.teardownInWindow
 

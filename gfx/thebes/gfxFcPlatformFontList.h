@@ -128,8 +128,6 @@ class gfxFontconfigFontEntry final : public gfxFT2FontEntryBase {
 
 #ifdef MOZ_FONTATIONS
   void InitSkrifaFont(FcPattern* aPattern);
-  mozilla::Atomic<mozilla::gfx::SkrifaFontRef*> mSkrifaFontFace;
-  mozilla::MemoryMappedFile mSkrifaFontFile;
 #endif
 
   // FTFace - initialized when needed. Once mFTFaceInitialized is true,

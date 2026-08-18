@@ -9,10 +9,13 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.test.uiautomator.UiSelector
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_SEARCH_BOX
 import org.junit.Assert.assertTrue
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
+import org.mozilla.fenix.helpers.TestHelper.mDevice
+import org.mozilla.fenix.helpers.TestHelper.packageName
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.helpers.SelectorStrategy
@@ -123,5 +126,21 @@ class SearchBarComponent(composeRule: AndroidComposeTestRule<HomeActivityIntentT
             getOrNull(SemanticsProperties.EditableText)?.let { editableText -> add(editableText.text) }
         }
         return normalizeWhitespace(textParts.joinToString(" "))
+    }
+
+    /**
+     * Assert the QR scanner opened, accepting either the view finder or the camera-error view.
+     *
+     * The OR is deliberate and carried over from the legacy robot: on a device or emulator with no usable camera the
+     * app shows an error instead of a view finder, and the test still means "the scanner was launched". mozVerify*
+     * cannot express alternation, hence the direct UIAutomator check.
+     */
+    fun verifyScannerOpen(): SearchBarComponent {
+        assertTrue(
+            "Neither the QR view finder nor the camera error view was displayed",
+            mDevice.findObject(UiSelector().resourceId("$packageName:id/view_finder")).waitForExists(waitingTime) ||
+                mDevice.findObject(UiSelector().resourceId("$packageName:id/camera_error")).exists(),
+        )
+        return this
     }
 }

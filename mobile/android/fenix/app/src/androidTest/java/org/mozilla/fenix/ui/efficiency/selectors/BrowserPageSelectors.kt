@@ -45,11 +45,14 @@ object BrowserPageSelectors {
             groups = listOf(),
         )
 
-    val SNACKBAR_EDIT_BUTTON =
+    // The snackbar's single action button. The tag is generic and the label varies with the snackbar
+    // ("Edit", "SWITCH", "UNDO"), which is why the legacy helper matches the tag OR the label rather than
+    // both. Named for the element, not for one of its labels.
+    val SNACKBAR_ACTION_BUTTON =
         Selector(
             strategy = SelectorStrategy.COMPOSE_BY_TAG,
             value = SNACKBAR_BUTTON_TEST_TAG,
-            description = "Snackbar Edit button",
+            description = "Snackbar action button",
             groups = listOf("snackbar"),
         )
 
@@ -130,6 +133,31 @@ object BrowserPageSelectors {
             strategy = SelectorStrategy.UIAUTOMATOR2_BY_TEXT,
             value = item,
             description = "Text selection context menu item '$item'",
+            groups = listOf(),
+        )
+
+    // A link in web content, keyed on its exact text like the legacy MatcherHelper.itemWithText. Exact and
+    // not CONTAINS on purpose: PAGE_CONTENT(text) above cannot tell "Link 1" from "Link 10", and the
+    // search-group tests long-press "Link 1" and "Link 2" on the same page.
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun PAGE_LINK(linkText: String = "") =
+        Selector(
+            strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT,
+            value = linkText,
+            description = "'$linkText' link in web content",
+            groups = listOf(),
+        )
+
+    // An item in the web-content long-press context menu ("Open link in new tab", "Open link in private
+    // tab"). UiObject2 rather than UiObject, matching the legacy By.text: these items open a tab without
+    // necessarily updating the window, and UiObject's clickAndSync reports a slow-but-successful click as a
+    // failure.
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun CONTEXT_MENU_ITEM(itemText: String = "") =
+        Selector(
+            strategy = SelectorStrategy.UIAUTOMATOR2_BY_TEXT,
+            value = itemText,
+            description = "'$itemText' context menu item",
             groups = listOf(),
         )
 
@@ -466,7 +494,6 @@ object BrowserPageSelectors {
             SAVE_LOGIN_PROMPT_CONFIRM_BUTTON,
             SELECT_ADDRESS_HEADER,
             SET_COOKIES_WEB_BUTTON,
-            SNACKBAR_EDIT_BUTTON,
             STAY_IN_FIREFOX_PROMPT_BUTTON,
             SUBMIT_LOGIN_BUTTON,
             TEXT_SELECTION_CONTEXT_MENU_ITEM(),
@@ -488,5 +515,6 @@ object BrowserPageSelectors {
             TRANSLATION_SHEET_TRANSLATE_FROM,
             TRANSLATION_SHEET_TRANSLATE_TO,
             USERNAME_WEB_FIELD,
+            SNACKBAR_ACTION_BUTTON,
         )
 }

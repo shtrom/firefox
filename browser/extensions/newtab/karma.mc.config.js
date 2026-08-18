@@ -428,13 +428,6 @@ module.exports = function (config) {
                 lines: 84,
                 functions: 83,
               },
-            "content-src/components/DiscoveryStreamComponents/BriefingCard/BriefingCard.jsx":
-              {
-                statements: 92.31,
-                branches: 66.67,
-                functions: 90,
-                lines: 94.59,
-              },
             /**
              * PromoCard currently has no functionality and is a placeholder component
              */
@@ -520,6 +513,22 @@ module.exports = function (config) {
             },
             // Coverage for this component lives in Jest (test/jest/content-src/components/Widgets/MoveSubmenu.test.jsx)
             "content-src/components/Widgets/MoveSubmenu.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            // Coverage for this component lives in Jest (test/jest/content-src/components/PanelListItems.test.jsx)
+            "content-src/components/LinkMenu/PanelListItems.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            // Coverage for this component lives in Jest (test/jest/content-src/components/ContextMenu/ContextMenuButton.test.jsx).
+            // The karma suite only reached it through the topsites and story-card
+            // menu tests, which this stack moves to panel-list.
+            "content-src/components/ContextMenu/ContextMenuButton.jsx": {
               statements: 0,
               lines: 0,
               functions: 0,
@@ -797,6 +806,13 @@ module.exports = function (config) {
               branches: 0,
             },
             "content-src/lib/useReorderFlip.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            // Coverage for this module lives in Jest (test/jest/content-src/lib/panel-list-utils.test.jsx)
+            "content-src/lib/panel-list-utils.jsx": {
               statements: 0,
               lines: 0,
               functions: 0,

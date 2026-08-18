@@ -567,7 +567,6 @@ export class EditProfileCard extends MozLitElement {
       </div>
       <div class="avatar-selector-parent">
         <profile-avatar-selector
-          hidden
           value=${this.profile.avatar}
         ></profile-avatar-selector>
       </div>

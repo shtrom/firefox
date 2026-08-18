@@ -8,7 +8,7 @@ At this point, `<xul:tabbrowser>` DOM element doesn't exist anymore, but we ment
 
 ## gBrowser
 
-`gBrowser` is a JavaScript object defined in {searchfox}`tabbrowser.js <browser/components/tabbrowser/content/tabbrowser.js>`, that manages tabs, and the underlying infrastructure for switching tabs, adding tabs, removing tabs, knowing about tab switches, etc. `gBrowser` is available in the browser window scope and you get only one `gBrowser` per browser window.
+{searchfox}`Tabbrowser.sys.mjs <browser/components/tabbrowser/Tabbrowser.sys.mjs>` defines `Tabbrowser`, a single class shared by every window. Each window instantiates it during startup and exposes the instance in the window scope as `gBrowser`, which manages tabs, and the underlying infrastructure for switching tabs, adding tabs, removing tabs, knowing about tab switches, etc.
 
 ### What does the name gBrowser stand for?
 
@@ -22,7 +22,7 @@ What does the *browser* in `gBrowser` stand for? *browser* is an element that kn
 
 Historically each Firefox window had one `<xul:tabbrowser>`, that could be accessed using the `gBrowser` variable. It could contain multiple tabs each of which was associated with one `<xul:browser>`.
 
-Although the `<xul:tabbrowser>` DOM element was removed, you can still interact with all the browser's tabs using the `gBrowser` global. The `gBrowser` global is still defined in a file called {searchfox}`tabbrowser.js <browser/components/tabbrowser/content/tabbrowser.js>` for the same historical reasons.
+Although the `<xul:tabbrowser>` DOM element was removed, you can still interact with all the browser's tabs using the `gBrowser` global.
 
 ```{toctree}
 :maxdepth: 1

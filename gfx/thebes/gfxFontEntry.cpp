@@ -99,6 +99,12 @@ gfxFontEntry::~gfxFontEntry() {
   gfxCharacterMap* cmap = mCharacterMap.exchange(nullptr);
   NS_IF_RELEASE(cmap);
 
+#ifdef MOZ_FONTATIONS
+  if (SkrifaFontRef* font = mSkrifaFontFace) {
+    skrifa_font_delete(font);
+  }
+#endif
+
   // By the time the entry is destroyed, all font instances that were
   // using it should already have been deleted, and so any Graphite
   // face object should have been released.
@@ -123,6 +129,22 @@ void gfxFontEntry::InitializeFrom(fontlist::Face* aFace,
   MOZ_POP_THREAD_SAFETY
   TrySetShmemCharacterMap();
 }
+
+#ifdef MOZ_FONTATIONS
+void gfxFontEntry::SetSkrifaFont(SkrifaFontRef* aSkrifaFont,
+                                 MemoryMappedFile&& aSkrifaFontFile) {
+  // If another thread came in and initialized the font face ahead of us,
+  // just delete the face this thread constructed.
+  if (mSkrifaFontFace.compareExchange(nullptr, aSkrifaFont)) {
+    // If we won the race, store our file data to back the font.
+    mSkrifaFontFile = std::move(aSkrifaFontFile);
+  } else {
+    // We lost the race, delete the font we just constructed and let the
+    // file mapping be destroyed normally.
+    skrifa_font_delete(aSkrifaFont);
+  }
+}
+#endif
 
 bool gfxFontEntry::TrySetShmemCharacterMap() {
   auto* pfl = gfxPlatformFontList::PlatformFontList();

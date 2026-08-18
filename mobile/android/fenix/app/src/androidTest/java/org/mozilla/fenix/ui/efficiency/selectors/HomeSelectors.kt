@@ -133,6 +133,29 @@ object HomeSelectors {
             groups = listOf("topSiteItem"),
         )
 
+    // The legacy robot hardcodes the English literal "Recently visited"; this keys off the string resource
+    // it duplicates, so the selector survives localization.
+    val RECENTLY_VISITED_HEADER =
+        Selector(
+            strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+            value = getStringResource(R.string.history_metadata_header_2),
+            description = "Recently visited section header",
+            groups = listOf(),
+        )
+
+    // A search group in the "Recently visited" section, titled with the search term. Exact text, because the
+    // term is also the query and a CONTAINS match would collide with the awesomebar and history rows.
+    // The group's "N pages" size caption is a sibling text node — assert it with
+    // mozVerifyElementHasSiblingWithText, not as part of this selector.
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun RECENTLY_VISITED_SEARCH_GROUP(searchTerm: String = "") =
+        Selector(
+            strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+            value = searchTerm,
+            description = "'$searchTerm' search group",
+            groups = listOf(),
+        )
+
     val all =
         listOf(
             TOP_SITES_LIST,
@@ -151,5 +174,7 @@ object HomeSelectors {
             RECENT_BOOKMARKS_SECTION,
             PRIVATE_BROWSING_INFO_CARD_TITLE,
             TOP_SITE_ITEM(),
+            RECENTLY_VISITED_HEADER,
+            RECENTLY_VISITED_SEARCH_GROUP(),
         )
 }

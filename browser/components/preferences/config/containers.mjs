@@ -11,6 +11,13 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
 });
 
+Preferences.addAll([
+  {
+    id: "browser.link.force_default_user_context_id_for_external_opens",
+    type: "bool",
+  },
+]);
+
 const IDENTITY_CHANGE_TOPICS = [
   "contextual-identity-created",
   "contextual-identity-updated",
@@ -167,6 +174,11 @@ Preferences.addSetting({
   pref: "privacy.userContext.newTabContainerOnLeftClick.enabled",
 });
 
+Preferences.addSetting({
+  id: "containers-external-links-check",
+  pref: "browser.link.force_default_user_context_id_for_external_opens",
+});
+
 SettingGroupManager.registerGroups({
   containers: {
     l10nId: "containers-card-header2",
@@ -188,6 +200,10 @@ SettingGroupManager.registerGroups({
       {
         id: "containers-new-tab-check",
         l10nId: "containers-new-tab-check3",
+      },
+      {
+        id: "containers-external-links-check",
+        l10nId: "containers-external-links-check",
       },
     ],
   },
