@@ -415,6 +415,11 @@ void gc::GCRuntime::endVerifyPreBarriers() {
   resetDelayedMarking();
   resetDeferredWeakMaps();
 
+  // Barriers fired during verification also push things onto the mark stack
+  // which are never traced. This can leave things marked black without their
+  // children having been marked to match, so may leave black to gray edges.
+  setGrayBitsInvalid();
+
   for (AllZonesIter zone(this); !zone.done(); zone.next()) {
     zone->bufferAllocator.clearMarkStateAfterBarrierVerification();
   }
