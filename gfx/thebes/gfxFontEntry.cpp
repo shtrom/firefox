@@ -242,12 +242,25 @@ nsresult gfxFontEntry::ReadCMAP(FontInfoData* aFontInfoData) {
 }
 
 nsCString gfxFontEntry::RealFaceName() {
+#if MOZ_FONTATIONS
+  if (auto* skf = GetSkrifaFont()) {
+    nsCString name;
+    if (skrifa_font_get_preferred_name(skf, gfxFontUtils::NAME_ID_FULL,
+                                       &name)) {
+#  if NIGHTLY_BUILD
+      name.AppendLiteral(" (skrifa)");
+#  endif
+      return name;
+    }
+  }
+#endif
+
   AutoTable nameTable(this, TRUETYPE_TAG('n', 'a', 'm', 'e'));
   if (nameTable) {
-    nsAutoCString name;
+    nsCString name;
     nsresult rv = gfxFontUtils::GetFullNameFromTable(nameTable, name);
     if (NS_SUCCEEDED(rv)) {
-      return std::move(name);
+      return name;
     }
   }
   return Name();

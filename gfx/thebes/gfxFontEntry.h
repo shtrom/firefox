@@ -241,7 +241,7 @@ class gfxFontEntry {
 
   // The "real" name of the face, if available from the font resource;
   // returns Name() if nothing better is available.
-  virtual nsCString RealFaceName();
+  nsCString RealFaceName();
 
   WeightRange Weight() const { return mWeightRange; }
   WidthRange Width() const { return mWidthRange; }
