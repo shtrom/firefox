@@ -829,7 +829,7 @@ Preferences.addSetting({
     return Referrals.isEnabled;
   },
   onUserClick: () => {
-    Referrals.openReferralsTab(window);
+    Referrals.openReferralsTab(window, "preferences");
   },
 });
 
