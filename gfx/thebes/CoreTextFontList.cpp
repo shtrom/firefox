@@ -548,7 +548,7 @@ class FontTableRec {
 #endif
 }
 
-hb_blob_t* CTFontEntry::GetFontTable(uint32_t aTag) {
+hb_blob_t* CTFontEntry::GetFontTableInternal(uint32_t aTag) {
   mLock.ReadLock();
   AutoCFTypeRef<CGFontRef> fontRef(CreateOrCopyFontRef());
   mLock.ReadUnlock();

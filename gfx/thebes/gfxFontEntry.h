@@ -373,20 +373,7 @@ class gfxFontEntry {
   // which will remain valid until the blob is destroyed.
   // The data MUST be treated as read-only; we may be getting a
   // reference to a shared system font cache.
-  //
-  // The default implementation uses CopyFontTable to get the data
-  // into a byte array, and maintains a cache of loaded tables.
-  //
-  // Subclasses should override this if they can provide more efficient
-  // access than copying table data into our own buffers.
-  //
-  // Get blob that encapsulates a specific font table, or nullptr if
-  // the table doesn't exist in the font.
-  //
-  // Caller is responsible to call hb_blob_destroy() on the returned blob
-  // (if non-nullptr) when no longer required. For transient access to a
-  // table, use of AutoTable (below) is generally preferred.
-  virtual hb_blob_t* GetFontTable(uint32_t aTag);
+  hb_blob_t* GetFontTable(uint32_t aTag);
 
   // Stack-based utility to return a specified table, automatically releasing
   // the blob when the AutoTable goes out of scope.
@@ -781,6 +768,20 @@ class gfxFontEntry {
   inline bool CheckForGraphiteTables() {
     return HasFontTable(TRUETYPE_TAG('S', 'i', 'l', 'f'));
   }
+
+  // The default implementation uses CopyFontTable to get the data
+  // into a byte array, and maintains a cache of loaded tables.
+  //
+  // Subclasses should override this if they can provide more efficient
+  // access than copying table data into our own buffers.
+  //
+  // Get blob that encapsulates a specific font table, or nullptr if
+  // the table doesn't exist in the font.
+  //
+  // Caller is responsible to call hb_blob_destroy() on the returned blob
+  // (if non-nullptr) when no longer required. For transient access to a
+  // table, use of AutoTable (below) is generally preferred.
+  virtual hb_blob_t* GetFontTableInternal(uint32_t aTag);
 
   // Copy a font table into aBuffer.
   // The caller will be responsible for ownership of the data.

@@ -467,7 +467,11 @@ hb_blob_t* gfxFontEntry::GetFontTable(uint32_t aTag) {
                           nullptr);
   }
 #endif
+  return GetFontTableInternal(aTag);
+}
 
+// virtual method: may be overridden by platform subclasses
+hb_blob_t* gfxFontEntry::GetFontTableInternal(uint32_t aTag) {
   auto* cache = GetFontTableCache(true);
   MOZ_ASSERT(cache, "missing or incomplete GetFontTable override?");
   if (!cache) {

@@ -109,7 +109,7 @@ class gfxFontconfigFontEntry final : public gfxFT2FontEntryBase {
 
   bool HasFontTable(uint32_t aTableTag) override;
   nsresult CopyFontTable(uint32_t aTableTag, nsTArray<uint8_t>&) override;
-  hb_blob_t* GetFontTable(uint32_t aTableTag) override;
+  hb_blob_t* GetFontTableInternal(uint32_t aTableTag) override;
   FontTableCache* GetFontTableCache(bool aCreate) override {
     return mFontTableCache;
   };

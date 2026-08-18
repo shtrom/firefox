@@ -575,7 +575,7 @@ nsresult FT2FontEntry::CopyFontTable(uint32_t aTableTag,
   return gfxFT2FontEntryBase::CopyFaceTable(face, aTableTag, aBuffer);
 }
 
-hb_blob_t* FT2FontEntry::GetFontTable(uint32_t aTableTag) {
+hb_blob_t* FT2FontEntry::GetFontTableInternal(uint32_t aTableTag) {
   if (FTUserFontData* userFontData = GetUserFontData()) {
     // If there's a cairo font face, we may be able to return a blob
     // that just wraps a range of the attached user font data
@@ -596,7 +596,7 @@ hb_blob_t* FT2FontEntry::GetFontTable(uint32_t aTableTag) {
 
   // Otherwise, use the default method (which in turn will call our
   // implementation of CopyFontTable).
-  return gfxFontEntry::GetFontTable(aTableTag);
+  return gfxFontEntry::GetFontTableInternal(aTableTag);
 }
 
 gfxFontEntry::FontTableCache* FT2FontEntry::GetFontTableCache(bool aCreate) {

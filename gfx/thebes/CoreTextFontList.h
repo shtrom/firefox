@@ -53,7 +53,7 @@ class CTFontEntry final : public gfxFontEntry {
 
   // override gfxFontEntry table access function to bypass table cache,
   // use CGFontRef API to get direct access to system font data
-  hb_blob_t* GetFontTable(uint32_t aTag) override;
+  hb_blob_t* GetFontTableInternal(uint32_t aTag) override;
 
   void AddSizeOfIncludingThis(mozilla::MallocSizeOf aMallocSizeOf,
                               FontListSizes* aSizes) const override;

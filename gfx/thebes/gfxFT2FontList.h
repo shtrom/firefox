@@ -64,7 +64,7 @@ class FT2FontEntry final : public gfxFT2FontEntryBase {
 
   nsresult ReadCMAP(FontInfoData* aFontInfoData = nullptr) override;
 
-  hb_blob_t* GetFontTable(uint32_t aTableTag) override;
+  hb_blob_t* GetFontTableInternal(uint32_t aTableTag) override;
 
   bool HasFontTable(uint32_t aTableTag) override;
   nsresult CopyFontTable(uint32_t aTableTag, nsTArray<uint8_t>&) override;

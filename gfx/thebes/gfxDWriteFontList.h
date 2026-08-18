@@ -174,7 +174,7 @@ class gfxDWriteFontEntry final : public gfxFontEntry {
 
   gfxFontEntry* Clone() const override;
 
-  hb_blob_t* GetFontTable(uint32_t aTableTag) override;
+  hb_blob_t* GetFontTableInternal(uint32_t aTableTag) override;
 
   nsresult ReadCMAP(FontInfoData* aFontInfoData = nullptr) override;
 
