@@ -38,6 +38,7 @@ BROWSER_CHROME_MANIFESTS += [
 
 XPIDL_SOURCES += [
     "nsIMLModelHub.idl",
+    "nsIMLModelResolver.idl",
     "nsIMLUtils.idl",
 ]
 
