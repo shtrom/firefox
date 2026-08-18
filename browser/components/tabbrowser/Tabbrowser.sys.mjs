@@ -5333,12 +5333,19 @@ let Tabbrowser;
       );
     }
 
-    removeAllDuplicateTabs() {
-      // I would like to have the caller provide this target,
-      // but the caller lives in a different document.
-      let alltabsButton = this.document.getElementById("alltabs-button");
+    /**
+     * @param {object} [options]
+     * @param {Element} [options.confirmationAnchor]
+     *   What the "closed N tabs" hint should point at. Callers outside the All
+     *   Tabs menu need to pass their own button, since the All Tabs button is
+     *   not necessarily on the toolbar and the hint lands in the window's
+     *   corner without an anchor.
+     */
+    removeAllDuplicateTabs({
+      confirmationAnchor = this.document.getElementById("alltabs-button"),
+    } = {}) {
       this._removeDuplicateTabs(
-        alltabsButton,
+        confirmationAnchor,
         this.getAllDuplicateTabsToClose(),
         this.closingTabsEnum.ALL_DUPLICATES
       );
