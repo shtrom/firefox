@@ -652,16 +652,14 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP page channel, time from connection open to cache read start.
-      Corresponds to Legacy histogram HTTP_PAGE_OPEN_TO_FIRST_FROM_CACHE_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077#c10
     notification_emails:
       - necko@mozilla.com
-    telemetry_mirror: HTTP_PAGE_OPEN_TO_FIRST_FROM_CACHE_V2
     expires: never
 
   tcp_connection:
@@ -670,18 +668,16 @@ network:
     description: >
       In the HTTP page channel, time from the TCP SYN packet is received to
       the connection is established and ready for HTTP.
-      Corresponds to Legacy histogram HTTP_PAGE_TCP_CONNECTION_2 in Desktop
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=772589
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077#c10
     notification_emails:
       - necko@mozilla.com
       - vgosu@mozilla.com
-    telemetry_mirror: HTTP_PAGE_TCP_CONNECTION_2
     expires: never
     metadata:
       monitor:
@@ -699,17 +695,15 @@ network:
     description: >
       In the HTTP page channel, time from connection open to the DNS request
       being issued.
-      Corresponds to Legacy histogram HTTP_PAGE_DNS_ISSUE_TIME in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077#c10
     notification_emails:
       - necko@mozilla.com
       - vgosu@mozilla.com
-    telemetry_mirror: HTTP_PAGE_DNS_ISSUE_TIME
     expires: never
 
   dns_end:
@@ -718,17 +712,15 @@ network:
     description: >
       In the HTTP page channel, time from the DNS request being issued to
       the response.
-      Corresponds to Legacy histogram HTTP_PAGE_DNS_LOOKUP_TIME in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077#c10
     notification_emails:
       - necko@mozilla.com
       - vgosu@mozilla.com
-    telemetry_mirror: HTTP_PAGE_DNS_LOOKUP_TIME
     expires: never
     metadata:
       monitor:
@@ -761,16 +753,13 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP page channel, time from first byte of request sent to the last byte received.
-      Corresponds to Legacy histogram HTTP_PAGE_FIRST_SENT_TO_LAST_RECEIVED in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
     notification_emails:
       - necko@mozilla.com
-    telemetry_mirror:
-      HTTP_PAGE_FIRST_SENT_TO_LAST_RECEIVED
     expires: never
 
   open_to_first_sent:
@@ -778,16 +767,13 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP page channel, time from connection open to the first byte of requst sent.
-      Corresponds to Legacy histogram HTTP_PAGE_OPEN_TO_FIRST_SENT in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
     notification_emails:
       - necko@mozilla.com
-    telemetry_mirror:
-      HTTP_PAGE_OPEN_TO_FIRST_SENT
     expires: never
     metadata:
       monitor:
@@ -804,16 +790,13 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel,time from connection open to the first byte received.
-      Corresponds to Legacy histogram HTTP_PAGE_OPEN_TO_FIRST_RECEIVED in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
     notification_emails:
       - necko@mozilla.com
-    telemetry_mirror:
-      HTTP_PAGE_OPEN_TO_FIRST_RECEIVED
     expires: never
 
   sub_cache_read_time:
@@ -935,16 +918,13 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel, time from first byte of request sent to the last byte received.
-      Corresponds to Legacy histogram HTTP_SUB_FIRST_SENT_TO_LAST_RECEIVED in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
     notification_emails:
       - necko@mozilla.com
-    telemetry_mirror:
-      HTTP_SUB_FIRST_SENT_TO_LAST_RECEIVED
     expires: never
 
   sub_http_revalidation:
@@ -968,16 +948,13 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel, time from connection open to the first byte of requst sent.
-      Corresponds to Legacy histogram HTTP_SUB_OPEN_TO_FIRST_SENT in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
     notification_emails:
       - necko@mozilla.com
-    telemetry_mirror:
-      HTTP_SUB_OPEN_TO_FIRST_SENT
     expires: never
 
   sub_open_to_first_received:
@@ -985,16 +962,13 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP subitem channel, time from connection open to the first byte received.
-      Corresponds to Legacy histogram HTTP_SUB_OPEN_TO_FIRST_RECEIVED in Desktop.
-      (Migrated from the geckoview metric of the same name).
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1898247
     notification_emails:
       - necko@mozilla.com
-    telemetry_mirror:
-      HTTP_SUB_OPEN_TO_FIRST_RECEIVED
     expires: never
 
   sub_tls_handshake:
