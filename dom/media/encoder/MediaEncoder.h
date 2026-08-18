@@ -149,11 +149,6 @@ class MediaEncoder {
   void ConnectMediaStreamTrack(dom::MediaStreamTrack* aTrack);
 
   /**
-   * Removes a connected MediaStreamTrack.
-   */
-  void RemoveMediaStreamTrack(dom::MediaStreamTrack* aTrack);
-
-  /**
    * Creates an encoder with the given MIME type. This must be a valid MIME type
    * or we will crash hard.
    * Bitrates are given either explicit, or with 0 for defaults.
@@ -251,6 +246,11 @@ class MediaEncoder {
    * graph.
    */
   void EnsureGraphTrackFrom(MediaTrack* aTrack);
+
+  /**
+   * Removes a connected MediaStreamTrack.
+   */
+  void RemoveMediaStreamTrack(dom::MediaStreamTrack* aTrack);
 
   /**
    * Shuts down gracefully if there is no remaining live track encoder.
