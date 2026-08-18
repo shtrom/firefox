@@ -1240,6 +1240,12 @@ class Settings(
             default = false,
         )
 
+    var shouldUseOledTheme by
+        booleanPreference(
+            appContext.getPreferenceKey(R.string.pref_key_oled_theme),
+            default = false,
+        )
+
     var shouldFollowDeviceTheme by
         booleanPreference(
             appContext.getPreferenceKey(R.string.pref_key_follow_device_theme),
