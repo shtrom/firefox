@@ -3246,6 +3246,7 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
         self.cppfile = None
         self.ns = None
         self.cls = None
+        self.concreteActorType = None
         self.protocolCxxIncludes = []
         self.actorForwardDecls = []
         self.usingDecls = []
@@ -3355,18 +3356,6 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
         traitsdecl, traitsdefn = _ParamTraits.actorPickling(actortype, self.side)
 
         self.hdrfile.addthings([traitsdecl, Whitespace.NL] + _includeGuardEnd(hf))
-
-        # If the implementation type is not overridden, add an implicit import
-        # for the default implementation header file. Explicit implementation
-        # types will specify their headers manually with `include`.
-        if self.protocol.implAttribute(self.side) is None:
-            assert self.protocol.name.startswith("P")
-            self.externalIncludes.add(
-                "".join(n.name + "/" for n in self.protocol.namespaces)
-                + self.protocol.name[1:]
-                + self.side.capitalize()
-                + ".h"
-            )
 
         # make the .cpp file
         cf.addthings(
@@ -3520,6 +3509,30 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
                 Whitespace.NL,
             ])
 
+        implAttr = self.protocol.implAttribute(self.side)
+        if implAttr is None:
+            assert self.protocol.name.startswith("P")
+            pqname = self.protocol.qname()
+            self.concreteActorType = ipdl.ast.QualifiedId(
+                pqname.loc, pqname.baseid[1:] + self.side.title(), pqname.quals
+            )
+
+            # If the implementation type is not overridden, add an implicit
+            # import for the default implementation header file. Explicit
+            # implementation types will specify their headers manually with
+            # `include`.
+            self.externalIncludes.add(
+                "/".join(
+                    self.concreteActorType.quals
+                    + [self.concreteActorType.baseid + ".h"]
+                )
+            )
+        elif implAttr != "virtual":
+            parts = implAttr.value.split("::")
+            self.concreteActorType = ipdl.ast.QualifiedId(
+                implAttr.loc, parts[-1], parts[:-1]
+            )
+
         self.cls = Class(self.clsname, inherits=inherits, abstract=True)
 
         self.cls.addstmt(Label.PRIVATE)
@@ -3604,7 +3617,7 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
                     defaultRecv = MethodDefn(recvDecl)
                     defaultRecv.addcode("return IPC_OK();\n")
                     self.cls.addstmt(defaultRecv)
-                elif self.protocol.implAttribute(self.side) == "virtual":
+                elif self.concreteActorType is None:
                     # If we're using virtual calls, we need the methods to be
                     # declared on the base class.
                     recvDecl.methodspec = MethodSpec.PURE
@@ -3612,7 +3625,7 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
 
         # If we're using virtual calls, we need the methods to be declared on
         # the base class.
-        if self.protocol.implAttribute(self.side) == "virtual":
+        if self.concreteActorType is None:
             for md in p.messageDecls:
                 managed = md.decl.type.constructedType()
                 if not ptype.isManagerOf(managed) or md.decl.type.isDtor():
@@ -4287,18 +4300,11 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
     ##
 
     def concreteThis(self):
-        implAttr = self.protocol.implAttribute(self.side)
-        if implAttr == "virtual":
+        if self.concreteActorType is None:
             return ExprVar.THIS
-
-        if implAttr is None:
-            assert self.protocol.name.startswith("P")
-            className = self.protocol.name[1:] + self.side.capitalize()
-        else:
-            assert isinstance(implAttr, ipdl.ast.StringLiteral)
-            className = implAttr.value
-
-        return ExprCode("static_cast<${className}*>(this)", className=className)
+        return ExprCast(
+            ExprVar.THIS, Type(str(self.concreteActorType), ptr=True), static=True
+        )
 
     def thisCall(self, function, args):
         return ExprCall(ExprSelect(self.concreteThis(), "->", function), args=args)
