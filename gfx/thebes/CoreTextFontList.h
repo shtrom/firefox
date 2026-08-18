@@ -17,6 +17,11 @@
 #include "nsTArray.h"
 #include "nsUnicharUtils.h"
 
+#ifdef MOZ_FONTATIONS
+#  include "mozilla/MemoryMappedFile.h"
+#  include "mozilla/gfx/fontations_glue_generated.h"
+#endif
+
 // Abstract base class for Core Text/Core Graphics-based platform font list,
 // which is subclassed to create specific macOS and iOS variants.
 
@@ -36,6 +41,10 @@ class CTFontEntry final : public gfxFontEntry {
               bool aIsDataUserFont, bool aIsLocal);
 
   gfxFontEntry* Clone() const override;
+
+#if MOZ_FONTATIONS
+  void InitSkrifaFontFace() override;
+#endif
 
   // Return a non-owning reference to our CGFont; caller must not release it.
   // This will cause the fontEntry to create & retain a CGFont for the life
