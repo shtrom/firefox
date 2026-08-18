@@ -94,8 +94,7 @@ class MediaEncoder::AudioTrackListener : public MediaTrackListener {
   static RefPtr<AudioTrackListener> Create(DriftCompensator* aDriftCompensator,
                                            MediaEncoder* aMediaEncoder,
                                            TRACK* aTrack) {
-    RefPtr listener =
-        new AudioTrackListener(aDriftCompensator, aMediaEncoder);
+    RefPtr listener = new AudioTrackListener(aDriftCompensator, aMediaEncoder);
     aTrack->AddListener(listener);
     return listener;
   }
