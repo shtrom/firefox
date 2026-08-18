@@ -2189,9 +2189,6 @@ networking:
     type: dual_labeled_counter
     description: >
       Upgrading display content Channel Disposition
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram HTTP_CHANNEL_DISPOSITION_UPGRADE.
     dual_labels:
       key:
         description: No static keys unfortunately.
@@ -2236,9 +2233,6 @@ networking:
     type: dual_labeled_counter
     description: >
       Successfully started HTTP channels when HTTP3 is used
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram HTTP3_CHANNEL_ONSTART_SUCCESS.
     dual_labels:
       key:
         labels:
@@ -2717,9 +2711,6 @@ networking:
     description: >
       Time spent blocked in PR_Close when we are not shutting down and there has
       been niether a network nor an offline state change in the last 60s (ms).
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram PRCLOSE_UDP_BLOCKING_TIME_NORMAL.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1944631
@@ -2734,9 +2725,6 @@ networking:
     type: timing_distribution
     description: >
       Time spent blocked in PR_Close during a shutdown (ms).
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram PRCLOSE_UDP_BLOCKING_TIME_SHUTDOWN.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1944631
@@ -2752,9 +2740,6 @@ networking:
     description: >
       Time spent blocked in PR_Close when there has been the connectivity change
       in the last 60s (ms).
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram PRCLOSE_UDP_BLOCKING_TIME_CONNECTIVITY_CHANGE.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1944631
@@ -2769,9 +2754,6 @@ networking:
     description: >
       Time spent blocked in PR_Close when there has been a link change in the
       last 60s (ms).
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram PRCLOSE_UDP_BLOCKING_TIME_LINK_CHANGE.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1944631
@@ -2787,9 +2769,6 @@ networking:
     description: >
       Time spent blocked in PR_Close when the offline state has changed in the
       last 60s (ms).
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram PRCLOSE_UDP_BLOCKING_TIME_OFFLINE.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1944631
@@ -2806,8 +2785,6 @@ network.dns:
     description: >
       This telemetry records the status of the TRR confirmation across.
       The value of the event is one of:   "ok"   "trying"
-      This event was generated to correspond to the Legacy Telemetry event
-      network.dns.trrConfirmation#context.
     bugs:
       - https://bugzil.la/1691408
       - https://bugzil.la/1694949
@@ -2822,9 +2799,7 @@ network.dns:
     extra_keys:
       value:
         description: >
-          The `value` of the event. Mirrors to the Legacy Telemetry
-          event's `value` parameter.
-          The `ConfirmationState`.
+          The `value` of the event: `ConfirmationState`.
         type: quantity
       trigger:
         description: >
@@ -2905,9 +2880,6 @@ network.cookies:
     type: timing_distribution
     description: >
       Time spent on cookie DB open with readahead (ms)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram MOZ_SQLITE_COOKIES_OPEN_READAHEAD_MS.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1950710
@@ -2941,9 +2913,6 @@ network:
     description: >
       Network identification (0=None, 1=New Ipv4, 2=Same, 3=New IPv6, 4=New
       dual)
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram NETWORK_ID2.
     range_min: 0
     range_max: 6
     bucket_count: 7
@@ -2964,9 +2933,6 @@ network:
     description: >
       Network ID presence when the network connectivity checker reports that we
       have connectivity
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram NETWORK_ID_ONLINE.
     labels:
       - absent
       - present
@@ -2983,9 +2949,6 @@ network:
     description: >
       Maximum number of concurrent threads reached during a given download
       session
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram BACKGROUNDFILESAVER_THREAD_COUNT.
     range_min: 0
     range_max: 21
     bucket_count: 22
@@ -3005,9 +2968,6 @@ network:
       Count the number of 0) successful connections to an ipv4 address, 1)
       failed connection an ipv4 address, 2) successful connection to an ipv6
       address and 3) failed connections to an ipv6 address.
-
-      This metric was generated to correspond to the Legacy Telemetry enumerated
-      histogram IPV4_AND_IPV6_ADDRESS_CONNECTIVITY.
     range_min: 0
     range_max: 4
     bucket_count: 5
@@ -3025,9 +2985,6 @@ network:
     description: >
       Ratio of used and unused resources preloaded with link rel=preload tag or
       response header, broken down by supported resource type.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram REL_PRELOAD_MISS_RATIO.
     labels:
       - TYPE_SCRIPT_USED
       - TYPE_SCRIPT_UNUSED
