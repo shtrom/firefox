@@ -25,6 +25,8 @@
 nameTemplate = "{Class}.{method}"
 funcPrefixTemplates = [
   "mozilla::dom::{Class}_Binding::{method}(",
+  "blink::`anonymous namespace'::v8_{Class:blink_snake}::{method:pascal}StaticOperation", # E.g. `BoundStaticOperationCallback` for `IDBKeyRange.bound`
+  "blink::(anonymous namespace)::v8_{Class:blink_snake}::{method:pascal}StaticOperation",
   "blink::`anonymous namespace'::v8_{Class:blink_snake}::{method:pascal}Operation",
   "blink::(anonymous namespace)::v8_{Class:blink_snake}::{method:pascal}Operation",
   "WebCore::js{Class}PrototypeFunction_{method}",
