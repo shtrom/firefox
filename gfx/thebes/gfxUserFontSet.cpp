@@ -27,7 +27,7 @@
 #include "nsTHashSet.h"
 
 #if MOZ_FONTATIONS
-#include "mozilla/gfx/fontations_glue_generated.h"
+#  include "mozilla/gfx/fontations_glue_generated.h"
 #endif
 
 using namespace mozilla;
@@ -230,13 +230,10 @@ const uint8_t* gfxUserFontEntry::SanitizeOpenTypeData(
   return static_cast<const uint8_t*>(output.forget());
 }
 
-void gfxUserFontEntry::StoreUserFontData(gfxFontEntry* aFontEntry,
-                                         uint32_t aSrcIndex, bool aPrivate,
-                                         const nsACString& aOriginalName,
-                                         FallibleTArray<uint8_t>* aMetadata,
-                                         uint32_t aMetaOrigLen,
-                                         uint8_t aCompression,
-                                         RefPtr<FontData>&& aFontData) {
+void gfxUserFontEntry::StoreUserFontData(
+    gfxFontEntry* aFontEntry, uint32_t aSrcIndex, bool aPrivate,
+    const nsACString& aOriginalName, FallibleTArray<uint8_t>* aMetadata,
+    uint32_t aMetaOrigLen, uint8_t aCompression, RefPtr<FontData>&& aFontData) {
   if (!aFontEntry->mUserFontData) {
     aFontEntry->mUserFontData = MakeUnique<gfxUserFontData>();
   }
@@ -817,8 +814,7 @@ bool gfxUserFontEntry::LoadPlatformFont(uint32_t aSrcIndex,
 #if MOZ_FONTATIONS
   // Give the new gfxFontEntry a Skrifa reference backed by our downloaded and
   // sanitized font data.
-  SkrifaFontRef* skf =
-      skrifa_font_new(fontData->Data(), fontData->Length());
+  SkrifaFontRef* skf = skrifa_font_new(fontData->Data(), fontData->Length());
   if (skf) {
     fe->SetSkrifaFont(skf);
 #  if NIGHTLY_BUILD

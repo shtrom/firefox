@@ -4338,8 +4338,8 @@ bool gfxFont::InitMetricsFromSkrifa(Metrics& aMetrics) {
     return false;
   }
 
-  SkrifaLocation* location =
-      skrifa_font_resolve_variations_to_location(skf, &mStyle.variationSettings);
+  SkrifaLocation* location = skrifa_font_resolve_variations_to_location(
+      skf, &mStyle.variationSettings);
   SkrifaMetrics metrics;
   skrifa_font_get_metrics(skf, GetAdjustedSize(), location, &metrics);
   skrifa_location_delete(location);
