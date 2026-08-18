@@ -10,7 +10,6 @@
 
 namespace mozilla {
 
-class AudioSegment;
 class MediaTrackGraph;
 class MediaStreamVideoSink;
 class VideoSegment;
@@ -159,7 +158,6 @@ class DirectMediaTrackListener : public MediaTrackListener {
  protected:
   virtual ~DirectMediaTrackListener() = default;
 
-  void MirrorAndDisableSegment(AudioSegment& aFrom, AudioSegment& aTo);
   void MirrorAndDisableSegment(VideoSegment& aFrom, VideoSegment& aTo,
                                DisabledTrackMode aMode);
   void NotifyRealtimeTrackDataAndApplyTrackDisabling(MediaTrackGraph* aGraph,
