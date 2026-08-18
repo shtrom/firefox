@@ -2732,6 +2732,13 @@ class Settings(
             default = { FxNimbus.features.shakeToSummarize.value().enabled },
         )
 
+    /** Nimbus controlled feature flag that indicates if the Listen to Page feature should be enabled */
+    var listenToPageFeatureFlagEnabled by
+        booleanPreference(
+            key = appContext.getPreferenceKey(R.string.pref_key_enable_listen_to_page),
+            default = { FxNimbus.features.listenToPage.value().enabled },
+        )
+
     var aiControlsFeatureFlagEnabled by
         booleanPreference(
             key = appContext.getPreferenceKey(R.string.pref_key_enable_ai_controls),
