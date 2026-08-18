@@ -1064,7 +1064,6 @@ network:
     description: >
       In the HTTP page channel, time from after the TCP SYN packet is
       received to the secure connection is established and ready for HTTP.
-      Corresponds to Legacy histogram HTTP_PAGE_TLS_HANDSHAKE in Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=772589
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1580077
@@ -1074,7 +1073,6 @@ network:
     notification_emails:
       - necko@mozilla.com
       - vgosu@mozilla.com
-    telemetry_mirror: HTTP_PAGE_TLS_HANDSHAKE
     expires: never
     metadata:
       monitor:
@@ -1922,9 +1920,6 @@ http:
     description: >
       Whether an HTTP request occurred over TLS/SSL or not. Recorded during
       response processing for all requests.
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram HTTP_TRANSACTION_IS_SSL.
     labels:
       - "false"
       - "true"
@@ -1935,16 +1930,12 @@ http:
     notification_emails:
       - seceng-telemetry@mozilla.com
     expires: never
-    telemetry_mirror: h#HTTP_TRANSACTION_IS_SSL
 
   pageload_is_ssl:
     type: labeled_counter
     description: >
       Whether a HTTP page load was over SSL or not. Recorded during response
       processing for all first-party page loads.
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram HTTP_PAGELOAD_IS_SSL.
     labels:
       - "false"
       - "true"
@@ -1955,7 +1946,6 @@ http:
     notification_emails:
       - seceng-telemetry@mozilla.com
     expires: never
-    telemetry_mirror: h#HTTP_PAGELOAD_IS_SSL
 
   transaction_use_altsvc:
     type: labeled_counter
