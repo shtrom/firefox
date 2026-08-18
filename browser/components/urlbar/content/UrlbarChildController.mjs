@@ -5,11 +5,8 @@
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 import { UrlbarChildTelemetry } from "chrome://browser/content/urlbar/UrlbarChildTelemetry.mjs";
 import { UrlbarParentControllerProxy } from "chrome://browser/content/urlbar/UrlbarParentControllerProxy.mjs";
+import { getPlatform } from "chrome://browser/content/urlbar/UrlbarContentUtils.mjs";
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
-
-const { AppConstants } = ChromeUtils.importESModule(
-  "resource://gre/modules/AppConstants.sys.mjs"
-);
 
 const lazy = {};
 
@@ -169,9 +166,6 @@ export class UrlbarChildController {
       this.#parentController.engagementEvent ??
       (this.#childTelemetry ??= new UrlbarChildTelemetry(this))
     );
-  }
-  get platform() {
-    return AppConstants.platform;
   }
   /**
    * The selection behavior that the user has used to select a result. The
@@ -435,7 +429,7 @@ export class UrlbarChildController {
       return;
     }
 
-    const isMac = AppConstants.platform == "macosx";
+    const isMac = getPlatform() == "macosx";
     // Handle readline/emacs-style navigation bindings on Mac.
     if (
       isMac &&
@@ -777,7 +771,7 @@ export class UrlbarChildController {
     if (this.view.isOpen) {
       return false;
     }
-    if (AppConstants.platform != "macosx" && AppConstants.platform != "linux") {
+    if (getPlatform() != "macosx" && getPlatform() != "linux") {
       return false;
     }
     let isArrowUp = event.keyCode == KeyEvent.DOM_VK_UP;
@@ -836,7 +830,7 @@ export class UrlbarChildController {
     return (
       KeyboardEvent.isInstance(event) &&
       event.keyCode == KeyEvent.DOM_VK_RETURN &&
-      (AppConstants.platform == "macosx" ? event.metaKey : event.ctrlKey) &&
+      (getPlatform() == "macosx" ? event.metaKey : event.ctrlKey) &&
       !(/** @type {any} */ (event)._disableCanonization) &&
       UrlbarPrefs.get("ctrlCanonizesURLs")
     );

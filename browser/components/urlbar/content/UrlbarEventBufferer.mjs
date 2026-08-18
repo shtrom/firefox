@@ -4,6 +4,7 @@
 
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
+import { getPlatform } from "chrome://browser/content/urlbar/UrlbarContentUtils.mjs";
 
 /**
  * Array of keyCodes to defer.
@@ -253,7 +254,7 @@ export class UrlbarEventBufferer {
     // At this point, no events have been deferred for this search; we must
     // figure out if this event should be deferred.
     let isMacNavigation =
-      this.input.controller.platform == "macosx" &&
+      getPlatform() == "macosx" &&
       event.ctrlKey &&
       this.input.view.isOpen &&
       (event.key === "n" || event.key === "p");
@@ -357,7 +358,7 @@ export class UrlbarEventBufferer {
     }
 
     let isMacDownNavigation =
-      this.input.controller.platform == "macosx" &&
+      getPlatform() == "macosx" &&
       event.ctrlKey &&
       this.input.view.isOpen &&
       event.key === "n";
