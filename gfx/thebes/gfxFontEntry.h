@@ -720,6 +720,13 @@ class gfxFontEntry {
   mozilla::Atomic<bool> mGrFaceInitialized;
   mozilla::Atomic<bool> mCheckedForColorGlyph;
   mozilla::Atomic<bool> mCheckedForVariationAxes;
+#if MOZ_FONTATIONS
+  // This is set to true when InitSkrifaFontFace() has been called, regardless
+  // of whether the initialization was successful. If we could not instantiate
+  // a SkrifaFontRef, the mSkrifaFontFace field will remain null even though
+  // this flag is true.
+  mozilla::Atomic<bool> mSkrifaFontInitialized;
+#endif
 
   // Atomic flags that are lazily evaluated - initially set to UNINITIALIZED,
   // changed to NO or YES once we determine the actual value.
@@ -740,8 +747,23 @@ class gfxFontEntry {
   };
 
   std::atomic<SpaceFeatures> mHasSpaceFeatures;
-#ifdef MOZ_FONTATIONS
-  const mozilla::gfx::SkrifaFontRef* GetSkrifaFontFace() const {
+
+#if MOZ_FONTATIONS
+  // Get the Skrifa font for this resource, if available, creating it via
+  // (virtual) InitSkrifaFontFace() if necessary. The Init call is only
+  // attempted once; if it fails, no Skrifa font ref is available for this
+  // entry.
+  const mozilla::gfx::SkrifaFontRef* GetSkrifaFont() {
+    if (mozilla::gfx::SkrifaFontRef* f = mSkrifaFontFace) {
+      return f;
+    }
+    if (!mSkrifaFontInitialized) {
+      mozilla::AutoWriteLock lock(mLock);
+      if (!mSkrifaFontInitialized) {
+        InitSkrifaFontFace();
+        mSkrifaFontInitialized = true;
+      }
+    }
     return mSkrifaFontFace;
   }
 #endif
@@ -793,8 +815,16 @@ class gfxFontEntry {
                       const mozilla::fontlist::Family* aFamily);
 
 #ifdef MOZ_FONTATIONS
+  // Set the Skrifa font ref and hold on to the memory mapping, unless the
+  // face has already been set, in which case the passed font and mapping
+  // are discarded.
   void SetSkrifaFont(mozilla::gfx::SkrifaFontRef* aSkrifaFont,
                      mozilla::MemoryMappedFile&& aSkrifaFontFile);
+
+  // Attempt to initialize a SkrifaFontRef for this resource, and record it
+  // via SetSkrifaFont.
+  virtual void InitSkrifaFontFace() {}
+
   mozilla::Atomic<mozilla::gfx::SkrifaFontRef*> mSkrifaFontFace;
   mozilla::MemoryMappedFile mSkrifaFontFile;
 #endif
