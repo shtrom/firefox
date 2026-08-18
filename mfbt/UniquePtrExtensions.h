@@ -148,8 +148,10 @@ struct FileHandleHelper {
 
   // When there's only one user-defined conversion operator, the
   // compiler will use that to derive equality, but that doesn't work
-  // when the conversion is ambiguous (the XP_WIN case above).
-  bool operator==(const FileHandleHelper& aOther) const = default;
+  // when the conversion is ambiguoug (the XP_WIN case above).
+  bool operator==(const FileHandleHelper& aOther) const {
+    return mHandle == aOther.mHandle;
+  }
 
  private:
   FileHandleType mHandle{kInvalidHandle};

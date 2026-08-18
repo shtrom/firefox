@@ -453,8 +453,13 @@ class LinkedList {
       return *this;
     }
 
-    bool operator==(const IteratorImpl& aOther) const = default;
-    bool operator!=(const IteratorImpl& aOther) const = default;
+    bool operator==(const IteratorImpl& aOther) const {
+      return mCurrent == aOther.mCurrent;
+    }
+
+    bool operator!=(const IteratorImpl& aOther) const {
+      return mCurrent != aOther.mCurrent;
+    }
   };
 
  public:
