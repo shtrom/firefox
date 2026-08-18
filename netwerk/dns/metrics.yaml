@@ -37,35 +37,29 @@ dns:
     type: timing_distribution
     description: >
       DNS Cache Entry Age at Removal Time (minutes)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram DNS_CLEANUP_AGE.
     time_unit: minute
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1935420
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1935420
     notification_emails:
       - necko@mozilla.com
     expires: never
-    telemetry_mirror: DNS_CLEANUP_AGE
 
   by_type_cleanup_age:
     type: timing_distribution
     description: >
       DNS Cache Entry Age for by-type queries at Removal Time (minutes)
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram DNS_BY_TYPE_CLEANUP_AGE.
     time_unit: minute
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1481251
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1481251
     notification_emails:
       - necko@mozilla.com
     expires: never
-    telemetry_mirror: DNS_BY_TYPE_CLEANUP_AGE
 
   premature_eviction:
     type: timing_distribution

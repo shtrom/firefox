@@ -503,15 +503,13 @@ network:
     time_unit: millisecond
     description: >
       In the HTTP page channel, time from connection open to complete load (cache read end/until the last byte received)
-      Corresponds to Legacy histogram HTTP_PAGE_COMPLETE_LOAD_V2 in
-      Desktop.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1877839
     notification_emails:
       - necko@mozilla.com
-    telemetry_mirror: HTTP_PAGE_COMPLETE_LOAD_V2
     expires: never
 
   complete_load_cached:
@@ -1337,9 +1335,6 @@ network:
     description: >
       Collect whether the resource is suspended by back pressure. And split by
       local-ness.
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram NETWORK_BACK_PRESSURE_SUSPENSION_RATE_V2.
     labels:
       - Suspended
       - NotSuspended
@@ -1352,6 +1347,7 @@ network:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1616069
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1668513
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1700824
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1280629
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1494133
@@ -1362,7 +1358,6 @@ network:
     notification_emails:
       - necko@mozilla.com
     expires: never
-    telemetry_mirror: h#NETWORK_BACK_PRESSURE_SUSPENSION_RATE_V2
 
   back_pressure_suspension_cp_type:
     type: custom_distribution
@@ -1549,9 +1544,6 @@ networking:
         "Y21_P3FpLead",
         "Y22_P3FpBg",
         "Y23_P3FpOth"
-
-      This metric was generated to correspond to the Legacy Telemetry
-      scalar networking.data_transferred_v3_kb.
     bugs:
       - https://bugzil.la/1533363
       - https://bugzil.la/1546903
@@ -1563,6 +1555,7 @@ networking:
       - https://bugzil.la/1621800
       - https://bugzil.la/1668604
       - https://bugzil.la/1706842
+      - https://bugzil.la/2062940
     data_reviews:
       - https://bugzil.la/1533363
       - https://bugzil.la/1546903
@@ -1578,7 +1571,6 @@ networking:
       - arthur@mozilla.com
       - tihuang@mozilla.com
     expires: never
-    telemetry_mirror: NETWORKING_DATA_TRANSFERRED_V3_KB
 
   https_record_state:
     type: labeled_counter
@@ -2084,20 +2076,17 @@ http:
     type: labeled_counter
     description: >
       Whether a HTTP transaction was routed via Alt-Svc or not.
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram HTTP_TRANSACTION_USE_ALTSVC.
     labels:
       - "false"
       - "true"
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1935420
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1935420
     notification_emails:
       - necko@mozilla.com
     expires: never
-    telemetry_mirror: h#HTTP_TRANSACTION_USE_ALTSVC
 
 
   altsvc_mapping_changed_target:
@@ -2105,20 +2094,17 @@ http:
     description: >
       Whether or not a new alt-svc mapping would change the target hostname of
       the existing mapping
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram HTTP_ALTSVC_MAPPING_CHANGED_TARGET.
     labels:
       - "false"
       - "true"
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1499149
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1499149
     notification_emails:
       - necko@mozilla.com
     expires: never
-    telemetry_mirror: h#HTTP_ALTSVC_MAPPING_CHANGED_TARGET
 
   response_version:
     type: custom_distribution
@@ -2165,22 +2151,19 @@ http:
     type: labeled_counter
     description: >
       Successfully started HTTP channels
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram HTTP_CHANNEL_ONSTART_SUCCESS.
     labels:
       - "false"
       - "true"
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1473333
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1587226
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1473333
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1587226
     notification_emails:
       - necko@mozilla.com
     expires: never
-    telemetry_mirror: h#HTTP_CHANNEL_ONSTART_SUCCESS
 
   channel_page_onstart_success_trr:
     type: labeled_custom_distribution
@@ -2432,9 +2415,6 @@ http:
     description: >
       TLS early data was used and it was accepted (true) or rejected (false) by
       the remote host.
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram TLS_EARLY_DATA_ACCEPTED.
     labels:
       - "false"
       - "true"
@@ -2442,6 +2422,7 @@ http:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1296288
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1654309
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1749881
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1296288
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1654309
@@ -2450,7 +2431,6 @@ http:
       - necko@mozilla.com
       - vgosu@mozilla.com
     expires: never
-    telemetry_mirror: h#TLS_EARLY_DATA_ACCEPTED
 
   http2_fail_before_settings:
     type: labeled_counter
@@ -2475,20 +2455,17 @@ http:
     type: labeled_counter
     description: >
       Cache discovered inconsistent last-modified entry
-
-      This metric was generated to correspond to the Legacy Telemetry boolean
-      histogram CACHE_LM_INCONSISTENT.
     labels:
       - "false"
       - "true"
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1956726
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1956726
     notification_emails:
       - necko@mozilla.com
     expires: never
-    telemetry_mirror: h#CACHE_LM_INCONSISTENT
 
   dnt_usage:
     type: custom_distribution
@@ -2651,13 +2628,10 @@ http:
       or private browsing 2. system principal or not 3. first party or third
       party 4. class of service (Leader/Background/Others) 5. tracking
       classification (Basic/Content/FingerprintingContent).
-
-      This metric was generated to correspond to the Legacy Telemetry
-      categorical histogram HTTP_TRAFFIC_ANALYSIS_3.
     dual_labels:
       key:
-        description: Keys of the keyed categorical legacy telemetry histogram
-          HTTP_TRAFFIC_ANALYSIS_3.
+        description: Whether the recorded value counts connections or
+          transactions.
         labels:
           - Connection
           - Transaction
@@ -2687,8 +2661,8 @@ http:
           - Y21_P3FpLead
           - Y22_P3FpBg
           - Y23_P3FpOth
-        description: Labels of the keyed categorical legacy telemetry histogram
-          HTTP_TRAFFIC_ANALYSIS_3.
+        description: The traffic category the connection or transaction falls
+          into.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1533363
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1546796
@@ -2699,6 +2673,7 @@ http:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1621800
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1668604
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1706842
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1533363
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1546796
@@ -2714,7 +2689,6 @@ http:
       - tanvi@mozilla.com
       - tihuang@mozilla.com
     expires: never
-    telemetry_mirror: HTTP_TRAFFIC_ANALYSIS_3
 
 http3:
   ech_outcome:
@@ -2897,21 +2871,18 @@ http3:
     type: custom_distribution
     description: >
       HTTP3: packet loss ratio (multiply by 10000).
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram HTTP3_LOSS_RATIO.
     range_min: 1
     range_max: 2000
     bucket_count: 100
     histogram_type: exponential
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1677951
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2062940
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1677951
     notification_emails:
       - necko@mozilla.com
     expires: never
-    telemetry_mirror: HTTP3_LOSS_RATIO
 
   late_ack_ratio:
     type: labeled_custom_distribution
