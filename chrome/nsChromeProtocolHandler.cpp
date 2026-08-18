@@ -9,7 +9,6 @@
 */
 
 #include "nsChromeProtocolHandler.h"
-#include "mozilla/Components.h"
 #include "nsChromeRegistry.h"
 #include "nsCOMPtr.h"
 #include "nsContentUtils.h"
@@ -94,8 +93,7 @@ nsChromeProtocolHandler::NewChannel(nsIURI* aURI, nsILoadInfo* aLoadInfo,
   if (!nsChromeRegistry::gChromeRegistry) {
     // We don't actually want this ref, we just want the service to
     // initialize if it hasn't already.
-    nsCOMPtr<nsIChromeRegistry> reg =
-        mozilla::components::ChromeRegistry::Service();
+    nsCOMPtr<nsIChromeRegistry> reg = mozilla::services::GetChromeRegistry();
     NS_ENSURE_TRUE(nsChromeRegistry::gChromeRegistry, NS_ERROR_FAILURE);
   }
 

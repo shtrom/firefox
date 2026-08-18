@@ -47,7 +47,7 @@
 #include "nsIViewSourceChannel.h"
 #include "nsNetUtil.h"
 #include "xpcpublic.h"
-#include "mozilla/Components.h"
+#include "mozilla/Services.h"
 
 using namespace mozilla;
 
@@ -179,7 +179,7 @@ Html5BackgroundFlushShutdownBlocker::GetState(nsIPropertyBag** aState) {
 // static
 void nsHtml5TreeOpExecutor::InitializeStatics() {
   MOZ_ASSERT(!sShutdown, "InitializeStatics called after shutdown");
-  nsCOMPtr<nsIAsyncShutdownService> svc = components::AsyncShutdown::Service();
+  nsCOMPtr<nsIAsyncShutdownService> svc = services::GetAsyncShutdownService();
   if (svc) {
     nsCOMPtr<nsIAsyncShutdownClient> phase;
     nsresult rv = svc->GetXpcomWillShutdown(getter_AddRefs(phase));

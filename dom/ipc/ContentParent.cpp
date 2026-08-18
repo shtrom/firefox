@@ -3844,8 +3844,7 @@ ContentParent::GetState(nsIPropertyBag** aResult) {
 static void InitShutdownClients() {
   if (!sXPCOMShutdownClient) {
     nsresult rv;
-    nsCOMPtr<nsIAsyncShutdownService> svc =
-        components::AsyncShutdown::Service();
+    nsCOMPtr<nsIAsyncShutdownService> svc = services::GetAsyncShutdownService();
     if (!svc) {
       return;
     }

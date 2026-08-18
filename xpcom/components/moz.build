@@ -24,7 +24,6 @@ EXPORTS.mozilla += [
     "GenericFactory.h",
     "Module.h",
     "ModuleUtils.h",
-    "Services.h",
 ]
 
 XPCOM_MANIFESTS += [
@@ -53,7 +52,6 @@ UNIFIED_SOURCES += [
     "nsCategoryManager.cpp",
     "nsComponentManager.cpp",
     "nsComponentManagerUtils.cpp",
-    "Services.cpp",
 ]
 
 SOURCES += [

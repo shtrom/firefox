@@ -12,7 +12,6 @@
 #include "nsStringStream.h"
 #include "StartupCacheUtils.h"
 #include "mozilla/scache/StartupCache.h"
-#include "mozilla/Components.h"
 #include "mozilla/Omnijar.h"
 
 namespace mozilla {
@@ -164,7 +163,7 @@ nsresult ResolveURI(nsIURI* in, nsIURI** out) {
   }
   if (scheme.EqualsLiteral("chrome")) {
     nsCOMPtr<nsIChromeRegistry> chromeReg =
-        mozilla::components::ChromeRegistry::Service();
+        mozilla::services::GetChromeRegistry();
     if (!chromeReg) return NS_ERROR_UNEXPECTED;
 
     return chromeReg->ConvertChromeURL(in, out);

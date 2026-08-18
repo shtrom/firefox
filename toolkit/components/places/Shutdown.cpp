@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "Shutdown.h"
-#include "mozilla/Components.h"
 #include "mozilla/Services.h"
 #include "mozilla/SimpleEnumerator.h"
 #include "nsComponentManagerUtils.h"
@@ -30,7 +29,7 @@ PlacesShutdownBlocker::PlacesShutdownBlocker(const nsString& aName)
   // Create a barrier that will be exposed to clients through GetClient(), so
   // they can block Places shutdown.
   nsCOMPtr<nsIAsyncShutdownService> asyncShutdown =
-      components::AsyncShutdown::Service();
+      services::GetAsyncShutdownService();
   MOZ_ASSERT(asyncShutdown);
   if (asyncShutdown) {
     nsCOMPtr<nsIAsyncShutdownBarrier> barrier;

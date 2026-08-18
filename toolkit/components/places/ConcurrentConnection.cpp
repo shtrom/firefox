@@ -11,7 +11,6 @@
 #include "MainThreadUtils.h"
 #include "mozilla/AppShutdown.h"
 #include "mozilla/Assertions.h"
-#include "mozilla/Components.h"
 #include "mozilla/DataMutex.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/Services.h"
@@ -129,7 +128,7 @@ void ConcurrentConnection::InitializeOnMainThread() {
 
   // Check shutdown and try to add this as a blocker.
   nsCOMPtr<nsIAsyncShutdownService> asyncShutdownSvc =
-      components::AsyncShutdown::Service();
+      services::GetAsyncShutdownService();
   MOZ_ASSERT(asyncShutdownSvc);
   if (AppShutdown::IsInOrBeyond(ShutdownPhase::AppShutdownConfirmed) ||
       !asyncShutdownSvc) {
