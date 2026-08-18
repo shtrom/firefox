@@ -101,8 +101,8 @@ class MediaTrackListener {
 
 /**
  * This is a base class for media graph thread listener direct callbacks from
- * within AppendToTrack(). It is bound to a certain track and can only be
- * installed on audio tracks. Once added to a track on any track in the graph,
+ * within AppendToTrack(). It is bound to a certain track, and should be used
+ * only with video tracks. Once added to a track in the graph,
  * the graph will try to install it at that track's source of media data.
  *
  * This works for ForwardedInputTracks, which will forward the listener to the
