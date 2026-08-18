@@ -5,8 +5,7 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  sessionStoreLogger:
-    "moz-src:///browser/components/sessionstore/SessionLogger.sys.mjs",
+  sessionStoreLogger: "resource:///modules/sessionstore/SessionLogger.sys.mjs",
 });
 
 /**

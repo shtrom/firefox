@@ -1,13 +1,13 @@
 "use strict";
 
 const { SessionWriter } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/SessionWriter.sys.mjs"
+  "resource:///modules/sessionstore/SessionWriter.sys.mjs"
 );
 
 // Make sure that we have a profile before initializing SessionFile.
 const profd = do_get_profile();
 const { SessionFile } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/SessionFile.sys.mjs"
+  "resource:///modules/sessionstore/SessionFile.sys.mjs"
 );
 const Paths = SessionFile.Paths;
 

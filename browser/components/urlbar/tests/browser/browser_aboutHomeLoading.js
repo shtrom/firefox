@@ -8,10 +8,10 @@
 "use strict";
 
 const { SessionSaver } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/SessionSaver.sys.mjs"
+  "resource:///modules/sessionstore/SessionSaver.sys.mjs"
 );
 const { TabStateFlusher } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
+  "resource:///modules/sessionstore/TabStateFlusher.sys.mjs"
 );
 
 add_setup(function addHomeButton() {

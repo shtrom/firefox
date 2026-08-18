@@ -16,7 +16,7 @@ const { sinon } = ChromeUtils.importESModule(
 );
 
 const { TabStateFlusher } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
+  "resource:///modules/sessionstore/TabStateFlusher.sys.mjs"
 );
 
 const TabHoverPanelSet = ChromeUtils.importESModule(

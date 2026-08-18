@@ -5,8 +5,7 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  SessionStore:
-    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
+  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
   TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
 });
 

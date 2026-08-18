@@ -6,8 +6,7 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
-  SessionStore:
-    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
+  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
 });
 
 const PREF = "sidebar.openTabsPanel.collapsedWindows";

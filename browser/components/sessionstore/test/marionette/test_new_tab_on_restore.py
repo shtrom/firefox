@@ -246,7 +246,7 @@ class TestNewTabOnRestoreNotSettingBased(SessionStoreTestCase):
         self.marionette.execute_script(
             """
             const { SessionStore } = ChromeUtils.importESModule(
-                "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs"
+                "resource:///modules/sessionstore/SessionStore.sys.mjs"
             );
             SessionStore.restoreLastSession();
             """
@@ -294,10 +294,10 @@ class TestNewTabOnRestoreAfterCrash(SessionStoreTestCase):
             let [resolve] = arguments;
             Services.prefs.savePrefFile(Services.dirsvc.get("PrefF", Ci.nsIFile));
             const { TabStateFlusher } = ChromeUtils.importESModule(
-                "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
+                "resource:///modules/sessionstore/TabStateFlusher.sys.mjs"
             );
             const { SessionSaver } = ChromeUtils.importESModule(
-                "moz-src:///browser/components/sessionstore/SessionSaver.sys.mjs"
+                "resource:///modules/sessionstore/SessionSaver.sys.mjs"
             );
             (async () => {
                 for (let win of Services.wm.getEnumerator("navigator:browser")) {
@@ -318,7 +318,7 @@ class TestNewTabOnRestoreAfterCrash(SessionStoreTestCase):
             """
             let [resolve] = arguments;
             const { SessionStore } = ChromeUtils.importESModule(
-                "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs"
+                "resource:///modules/sessionstore/SessionStore.sys.mjs"
             );
             SessionStore.promiseAllWindowsRestored.then(resolve);
             """

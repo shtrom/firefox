@@ -9,8 +9,7 @@ const { AppConstants } = ChromeUtils.importESModule(
 );
 ChromeUtils.defineESModuleGetters(this, {
   PlacesUIUtils: "moz-src:///browser/components/places/PlacesUIUtils.sys.mjs",
-  SessionStore:
-    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
+  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
 });
 
 var gStateObject;

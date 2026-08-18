@@ -7,8 +7,7 @@ const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
   TabGroupTestUtils: "resource://testing-common/TabGroupTestUtils.sys.mjs",
-  TabStateFlusher:
-    "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs",
+  TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.sys.mjs",
 });
 
 // Context menu tests

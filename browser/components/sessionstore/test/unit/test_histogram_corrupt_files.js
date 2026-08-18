@@ -15,7 +15,7 @@ const HistogramId = "FX_SESSION_RESTORE_ALL_FILES_CORRUPT";
 // Prepare the session file.
 do_get_profile();
 const { SessionFile } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/SessionFile.sys.mjs"
+  "resource:///modules/sessionstore/SessionFile.sys.mjs"
 );
 
 /**

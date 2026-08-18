@@ -7,7 +7,7 @@ const { SessionStoreBackupResource } = ChromeUtils.importESModule(
   "resource:///modules/backup/SessionStoreBackupResource.sys.mjs"
 );
 const { SessionStore } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs"
+  "resource:///modules/sessionstore/SessionStore.sys.mjs"
 );
 const { NetUtil } = ChromeUtils.importESModule(
   "resource://gre/modules/NetUtil.sys.mjs"
