@@ -6861,7 +6861,18 @@ var SessionStoreInternal = {
     }
 
     let promiseParts = Promise.withResolvers();
+    const wasMinimized = aWindow.windowState == aWindow.STATE_MINIMIZED;
     aWindow.setTimeout(() => {
+      // A minimization that happened while this callback was pending is
+      // newer than the saved window state. In particular, this avoids
+      // undoing a user-initiated "show desktop" operation.
+      const minimizedWhilePending =
+        !wasMinimized && aWindow.windowState == aWindow.STATE_MINIMIZED;
+      if (minimizedWhilePending) {
+        promiseParts.resolve(aWindow);
+        return;
+      }
+
       this.restoreDimensions(
         aWindow,
         +(aWinData.width || 0),
