@@ -206,5 +206,9 @@
   "humblebundle": {
     "queryParams": ["hmb_source", "hmb_medium", "hmb_campaign"],
     "origins": ["www.humblebundle.com"]
+  },
+  "linkedin": {
+    "queryParams": ["rcm"],
+    "origins": ["www.linkedin.com"]
   }
 }
