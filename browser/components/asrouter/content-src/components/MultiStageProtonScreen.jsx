@@ -833,6 +833,7 @@ export class ProtonScreen extends React.PureComponent {
       "paddingBlock",
       "paddingBlockStart",
       "paddingBlockEnd",
+      "width",
     ];
 
     const innerContentStyles = isWideScreen

@@ -1089,7 +1089,7 @@ __webpack_require__.r(__webpack_exports__);
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
-const CONFIGURABLE_STYLES = ["background", "color", "display", "fontSize", "fontWeight", "letterSpacing", "lineHeight", "marginBlock", "marginBlockStart", "marginBlockEnd", "marginInline", "paddingBlock", "paddingBlockStart", "paddingBlockEnd", "paddingInline", "paddingInlineStart", "paddingInlineEnd", "textAlign", "whiteSpace", "width", "height", "borderBlockStart", "borderBlockEnd", "top", "bottom", "left", "right", "inset", "insetBlock", "insetInline", "minHeight", "minWidth"];
+const CONFIGURABLE_STYLES = ["background", "color", "display", "fontSize", "fontWeight", "letterSpacing", "lineHeight", "marginBlock", "marginBlockStart", "marginBlockEnd", "marginInline", "paddingBlock", "paddingBlockStart", "paddingBlockEnd", "paddingInline", "paddingInlineStart", "paddingInlineEnd", "textAlign", "whiteSpace", "width", "height", "border", "borderBlockStart", "borderBlockEnd", "top", "bottom", "left", "right", "inset", "insetBlock", "insetInline", "minHeight", "minWidth", "maxWidth"];
 const ZAP_SIZE_THRESHOLD = 160;
 
 /**
@@ -1895,7 +1895,7 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
     }));
   }
   getCombinedInnerStyles(content, isWideScreen) {
-    const CONFIGURABLE_STYLES = ["overflow", "display", "paddingInline", "paddingInlineStart", "paddingInlineEnd", "paddingBlock", "paddingBlockStart", "paddingBlockEnd"];
+    const CONFIGURABLE_STYLES = ["overflow", "display", "paddingInline", "paddingInlineStart", "paddingInlineEnd", "paddingBlock", "paddingBlockStart", "paddingBlockEnd", "width"];
     const innerContentStyles = isWideScreen ? content.main_content_style || {} : content.main_content_style_narrow || {};
     const validInnerStyles = _lib_multistage_utils_mjs__WEBPACK_IMPORTED_MODULE_2__.MultiStageUtils.getValidStyle(innerContentStyles, CONFIGURABLE_STYLES) || {};
     return {
