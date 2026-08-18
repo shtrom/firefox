@@ -221,7 +221,7 @@
     width: 1px;
   }
 
-  .privacy-count-sites {
+  .privacy-count-text > :last-child {
     align-items: center;
     display: inline-flex;
     gap: var(--space-xsmall);

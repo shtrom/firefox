@@ -161,6 +161,23 @@ describe("Privacy widget", () => {
     expect(container.querySelector(".privacy-count")).toBeFalsy();
   });
 
+  it("keeps the count but drops the across-sites line at zero sites", () => {
+    // Bug 2063207: the count is real, so only the "Across 0 sites" line goes.
+    const { container } = renderPrivacy(
+      jest.fn(),
+      {},
+      stateWithTrackers(34, 0)
+    );
+    expect(container.querySelector("article.privacy").className).not.toContain(
+      "is-empty"
+    );
+    expect(container.querySelector(".privacy-count-number").textContent).toBe(
+      "34"
+    );
+    expect(container.querySelector(".privacy-count-label")).toBeTruthy();
+    expect(container.querySelector(".privacy-count-sites")).toBeFalsy();
+  });
+
   it("leaves the empty state once the count climbs, even with a stale empty variant", () => {
     // A SYSTEM_TICK refreshes trackersToday without touching `variant`, so a
     // tab that opened at zero can carry variant "empty" with a non-zero count.

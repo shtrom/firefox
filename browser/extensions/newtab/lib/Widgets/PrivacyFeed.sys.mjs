@@ -67,6 +67,8 @@ const ENABLEMENT_PREFS = new Set([
   PRIVACY_ENTRY.enabledPref,
   PRIVACY_ENTRY.systemEnabledPref,
   "trainhopConfig",
+  // Synthetic value from PrefsFeed; turning history back on resumes fetching.
+  "recordsHistory",
 ]);
 
 /**
