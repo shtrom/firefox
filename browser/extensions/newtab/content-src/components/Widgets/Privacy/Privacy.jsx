@@ -151,9 +151,8 @@ function Privacy({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
 
   const trackersToday = privacyData?.trackersToday ?? 0;
   const sitesToday = privacyData?.sitesToday ?? 0;
-  // Gate the metric UI on a real feed update. Before the first broadcast — or
-  // when it's skipped (e.g. the backward-compat guard in PrivacyFeed on older
-  // platforms) — show no metric state rather than a misleading empty/zero one.
+  // Gate the metric UI on a real feed update: before the first broadcast, show
+  // no metric state rather than a misleading empty/zero one.
   const initialized = privacyData?.initialized ?? false;
 
   // Message decision chosen by PrivacyFeed's selector (Bug 2050954).

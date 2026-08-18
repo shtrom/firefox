@@ -185,9 +185,8 @@ add_task(async function test_new_tab_init_runs_scheduler() {
     [PREF_SYSTEM_PRIVACY_ENABLED]: true,
   });
   const sandbox = sinon.createSandbox();
-  // getTodayStats must exist (backward-compat guard); the data-gathering
-  // helpers are stubbed so we exercise the scheduler + routing wiring only.
-  sandbox.stub(PrivacyMetricsService, "getTodayStats").resolves({ total: 1 });
+  // The data-gathering helpers are stubbed so we exercise the scheduler +
+  // routing wiring only.
   sandbox
     .stub(feed, "fetchTodayCounts")
     .resolves({ trackersToday: 42, sitesToday: 7, lastUpdated: 123 });
@@ -252,7 +251,6 @@ add_task(async function test_force_message_id_pins_the_message() {
     [PREF_FORCE_MESSAGE_ID]: "newtab-privacy-message-promo-relay-1",
   });
   const sandbox = sinon.createSandbox();
-  sandbox.stub(PrivacyMetricsService, "getTodayStats").resolves({ total: 1 });
   sandbox
     .stub(feed, "fetchTodayCounts")
     .resolves({ trackersToday: 42, sitesToday: 7, lastUpdated: 123 });
