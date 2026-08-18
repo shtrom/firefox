@@ -2111,49 +2111,6 @@ class _ParamTraits:
         return clsns, defns
 
     @classmethod
-    def actorPickling(cls, actortype, side):
-        """Generates pickling for IPDL actors. This is a |nullable| deserializer.
-        Write and read callers will perform nullability validation."""
-
-        cxxtype = _cxxBareType(actortype, side, fq=True)
-        basetype = Type("mozilla::ipc::IProtocol", ptr=True)
-
-        # void Write(..) impl - Write actor as IProtocol*
-        write = cls.checkedWrite(
-            None,
-            ExprCast(cls.var, basetype, static=True),
-            cls.writervar,
-            sentinelKey=actortype.name(),
-        )
-
-        # bool Read(..) impl - Read actor as IProtocol*
-        read = StmtCode(
-            """
-            ${read}
-            if (actor && actor->GetProtocolId() != ${protocolid}) {
-                ${typeerror}
-                return {};
-            }
-            return static_cast<${cxxtype}>(actor);
-            """,
-            read=cls._checkedRead(
-                None,
-                basetype,
-                ExprVar("actor"),
-                sentinelKey=actortype.name(),
-                what="managed " + actortype.name() + " actor",
-            ),
-            protocolid=_protocolId(actortype),
-            typeerror=cls.fatalError(
-                cls.readervar,
-                "Unexpected actor type (expected " + actortype.name() + ")",
-            ),
-            cxxtype=cxxtype,
-        )
-
-        return cls.generateDecl(cxxtype, [write], [read])
-
-    @classmethod
     def structPickling(cls, structtype):
         sd = structtype._ast
         # NOTE: Not using _cxxBareType here as we don't have a side
@@ -3352,10 +3309,34 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
             Whitespace.NL,
         ])
 
-        actortype = ActorType(tu.protocol.decl.type)
-        traitsdecl, traitsdefn = _ParamTraits.actorPickling(actortype, self.side)
+        def makeActorTraits(qname):
+            return StmtCode(
+                """
+                namespace mozilla::ipc {
+                template <>
+                struct ActorTraits<${qname}> {
+                    static constexpr ProtocolId kProtocolId = ${protocolid};
+                    static constexpr Side kSide = ${side}Side;
+                };
+                }  // namespace mozilla::ipc
+                """,
+                qname=qname,
+                protocolid=_protocolId(self.protocol.decl.type),
+                side=self.side.title(),
+            )
 
-        self.hdrfile.addthings([traitsdecl, Whitespace.NL] + _includeGuardEnd(hf))
+        # Generate ActorTraits specializations for the generated actor type, as
+        # well as the single implementation type (if known).
+        # This will allow the type to be used by IProtocol::ActorCast to perform
+        # safe downcasting of actor types.
+        self.hdrfile.addthing(
+            makeActorTraits(_actorName(str(self.protocol.qname()), self.side))
+        )
+
+        if self.concreteActorType is not None:
+            self.hdrfile.addthing(makeActorTraits(self.concreteActorType))
+
+        self.hdrfile.addthings(_includeGuardEnd(hf))
 
         # make the .cpp file
         cf.addthings(
@@ -3392,8 +3373,6 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
             Whitespace.NL,
             Whitespace.NL,
         ])
-
-        cf.addthing(traitsdefn)
 
     def visitUsingStmt(self, using):
         if using.decl.fullname is not None:
@@ -3532,6 +3511,17 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
             self.concreteActorType = ipdl.ast.QualifiedId(
                 implAttr.loc, parts[-1], parts[:-1]
             )
+
+        # Add a forward declaration to the header file for our actor's concrete
+        # type, if we have one.
+        if self.concreteActorType is not None:
+            self.hdrfile.addthings([
+                _makeForwardDeclForQClass(
+                    self.concreteActorType.baseid,
+                    self.concreteActorType.quals,
+                ),
+                Whitespace.NL,
+            ])
 
         self.cls = Class(self.clsname, inherits=inherits, abstract=True)
 
