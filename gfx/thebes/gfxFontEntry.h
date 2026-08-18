@@ -822,6 +822,10 @@ class gfxFontEntry {
   void SetSkrifaFont(mozilla::gfx::SkrifaFontRef* aSkrifaFont,
                      mozilla::MemoryMappedFile&& aSkrifaFontFile);
 
+  // Set the Skrifa font ref with no memmap'd file. Used for webfonts when
+  // mIsDataUserFont is true.
+  void SetSkrifaFont(mozilla::gfx::SkrifaFontRef* aSkrifaFont);
+
   // Attempt to initialize a SkrifaFontRef for this resource, and record it
   // via SetSkrifaFont.
   virtual void InitSkrifaFontFace() {}

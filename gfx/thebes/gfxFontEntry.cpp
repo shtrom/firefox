@@ -144,6 +144,14 @@ void gfxFontEntry::SetSkrifaFont(SkrifaFontRef* aSkrifaFont,
     skrifa_font_delete(aSkrifaFont);
   }
 }
+
+void gfxFontEntry::SetSkrifaFont(SkrifaFontRef* aSkrifaFont) {
+  // If we lose a race to set the Skrifa font, just discard it.
+  MOZ_ASSERT(mIsDataUserFont);
+  if (!mSkrifaFontFace.compareExchange(nullptr, aSkrifaFont)) {
+    skrifa_font_delete(aSkrifaFont);
+  }
+}
 #endif
 
 bool gfxFontEntry::TrySetShmemCharacterMap() {
