@@ -104,31 +104,18 @@ pub extern "C" fn skrifa_font_get_table(font: &SkrifaFontRef, tag: u32) -> Skrif
 }
 
 // VARIATION SETTINGS
-#[repr(C)]
-pub struct VariationSetting {
-    tag: u32,
-    value: f32,
-}
-
-impl From<&VariationSetting> for skrifa::setting::VariationSetting {
-    fn from(setting: &VariationSetting) -> Self {
-        Self {
-            selector: Tag::from_u32(setting.tag),
-            value: setting.value,
-        }
-    }
-}
+use style::gecko_bindings::structs::gfxFontVariation;
 
 pub struct SkrifaLocation(skrifa::instance::Location);
 
 #[no_mangle]
 pub extern "C" fn skrifa_font_resolve_variations_to_location(
     font: &SkrifaFontRef,
-    settings: &ThinVec<VariationSetting>,
+    settings: &ThinVec<gfxFontVariation>,
 ) -> *mut SkrifaLocation {
-    Box::into_raw(Box::new(SkrifaLocation(
-        font.0.axes().location(settings.iter()),
-    )))
+    Box::into_raw(Box::new(SkrifaLocation(font.0.axes().location(
+        settings.iter().map(|s| (Tag::from_u32(s.mTag), s.mValue)),
+    ))))
 }
 
 #[no_mangle]
@@ -197,7 +184,7 @@ pub extern "C" fn skrifa_font_copy_instance(
     font: &SkrifaFontRef,
     index: usize,
     name: &mut nsCString,
-    settings: &mut ThinVec<VariationSetting>,
+    settings: &mut ThinVec<gfxFontVariation>,
 ) -> bool {
     let instance = match font.0.named_instances().get(index) {
         Some(instance) => instance,
@@ -209,13 +196,13 @@ pub extern "C" fn skrifa_font_copy_instance(
         .english_or_first()
         .map_or_else(|| nsCString::new(), |name| name.to_string().into());
     settings.extend(instance.user_coords().enumerate().map(|(i, value)| {
-        VariationSetting {
-            tag: font
+        gfxFontVariation {
+            mTag: font
                 .0
                 .axes()
                 .get(i)
                 .map_or_else(|| 0, |axis| axis.tag().to_u32()),
-            value,
+            mValue: value,
         }
     }));
     true
