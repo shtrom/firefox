@@ -2866,6 +2866,8 @@
     <string name="ip_protection_location_picker_title" tools:ignore="UnusedResources">Choose VPN location</string>
     <!-- Description for what it means to use the Recommended setting and let the app automatically pick the best server location. -->
     <string name="ip_protection_location_fastest_description" tools:ignore="BrandUsage">Firefox finds the fastest location</string>
+    <!-- Description for an unavailable VPN location in the location list. -->
+    <string name="ip_protection_location_unavailable_description">Unavailable</string>
     <!-- Error message shown when the selected browser VPN location is unavailable. -->
     <string name="ip_protection_location_unavailable" tools:ignore="UnusedResources">Location unavailable. Choose another location.</string>
     <!-- Snackbar (in-app pop-up notification) text shown when the previously selected browser VPN location is unavailable and the recommended location was used instead. -->
