@@ -21571,7 +21571,7 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 **Owner**: Media Team
 
-**Description**: Measures buffered video seek latency (time from a currentTime seek to the seeked event) with the decoder warm and cold.
+**Description**: Measures buffered video seek latency (time from a currentTime seek to the seeked event) with the decoder warm, and also cold on Firefox, where the decoder can be forced to be released on pause.
 
 * **alert on**: [seekedColdLatency](raptor-metrics.md#seek-latency), [seekedWarmLatency](raptor-metrics.md#seek-latency)
 * **alert threshold**: 5.0
