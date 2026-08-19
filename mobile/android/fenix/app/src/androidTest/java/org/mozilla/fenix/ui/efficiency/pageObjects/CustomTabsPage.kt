@@ -6,6 +6,7 @@ package org.mozilla.fenix.ui.efficiency.pageObjects
 
 import android.content.Intent
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.core.net.toUri
 import androidx.test.platform.app.InstrumentationRegistry
 import org.mozilla.fenix.IntentReceiverActivity
 import org.mozilla.fenix.helpers.DataGenerationHelper.createCustomTabIntent
@@ -55,6 +56,27 @@ class CustomTabsPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestR
     fun openMainMenu(): CustomTabsPage {
         mozClick(CustomTabsSelectors.MAIN_MENU_BUTTON)
         return this
+    }
+
+    /**
+     * Leave the custom tab the way an external app would: an ACTION_VIEW intent scoped to Firefox, which opens the URL
+     * in the full browser. Distinct from the custom tab's own "Open in Firefox" menu item (MENU_OPEN_IN_APP), which
+     * hands over the existing tab — a test that means to exercise the external entry point cannot substitute one for
+     * the other.
+     *
+     * Not a NavigationRegistry edge for the same reason launchCustomTab is not: it is an intent rather than a
+     * click-path. Sets the page state to BrowserPage, since that is where it lands; the caller should then assert on
+     * `on.browserPage` rather than continuing to chain off the custom tab.
+     */
+    fun openUrlFromExternalLink(url: String) {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val intent =
+            Intent(Intent.ACTION_VIEW, url.toUri()).apply {
+                `package` = context.packageName
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        context.startActivity(intent)
+        PageStateTracker.currentPageName = "BrowserPage"
     }
 
     // Web content is rendered by GeckoView and matched device-wide (UIAutomator text), so the BrowserPage
