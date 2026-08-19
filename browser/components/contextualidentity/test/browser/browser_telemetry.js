@@ -56,6 +56,58 @@ function openTabInContainer(gBrowser, reopenMenu, id) {
   return tabPromise;
 }
 
+add_task(async function testManageContainersOpened() {
+  Services.fog.testResetFOG();
+
+  await SpecialPowers.pushPrefEnv({
+    set: [["privacy.userContext.enabled", true]],
+  });
+
+  const tab = await BrowserTestUtils.openNewForegroundTab(
+    gBrowser,
+    TEST_URL_FULL
+  );
+
+  const reopenMenu = await openReopenMenuForTab(tab);
+  const manageItem = reopenMenu.querySelector(
+    'menuitem[data-l10n-id="user-context-manage-containers"]'
+  );
+  ok(manageItem, "The Manage Containers item should be shown");
+
+  const prefsTabPromise = BrowserTestUtils.waitForNewTab(
+    gBrowser,
+    url => url.startsWith("about:preferences"),
+    true
+  );
+  reopenMenu.activateItem(manageItem);
+  const prefsTab = await prefsTabPromise;
+
+  Assert.ok(
+    prefsTab.linkedBrowser.currentURI.spec.includes(
+      "entrypoint=tab_context_menu"
+    ),
+    "The entry point is passed to about:preferences"
+  );
+
+  let events;
+  await TestUtils.waitForCondition(() => {
+    events = Glean.containers.manageContainersOpened.testGetValue();
+    return !!events;
+  }, "waiting for the manage_containers_opened event");
+
+  Assert.equal(events.length, 1, "One manage_containers_opened event");
+  Assert.equal(
+    events[0].extra.source,
+    "tab_context_menu",
+    "manage_containers_opened reports the tab context menu source"
+  );
+
+  BrowserTestUtils.removeTab(prefsTab);
+  BrowserTestUtils.removeTab(tab);
+
+  await SpecialPowers.popPrefEnv();
+});
+
 add_task(async function testTelemetry() {
   Services.telemetry.clearEvents();
   Services.fog.testResetFOG();
@@ -89,6 +141,11 @@ add_task(async function testTelemetry() {
   Assert.equal(tabOpenedEvent.length, 2);
   Assert.equal(tabOpenedEvent[0].extra.container_id, 1);
   Assert.equal(tabOpenedEvent[1].extra.container_id, 2);
+  Assert.equal(
+    tabOpenedEvent[1].extra.source,
+    "tab_context_menu",
+    "container_tab_opened reports the tab context menu source"
+  );
 
   const tabAssignedEvent = Glean.containers.tabAssignedContainer.testGetValue();
   Assert.ok(Array.isArray(tabAssignedEvent), "tab_assigned_container exists");
@@ -148,6 +205,59 @@ add_task(async function testAddContainerClicked() {
     Glean.containers.containerCreated.testGetValue(),
     undefined,
     "The dialog was opened, no container was created"
+  );
+
+  const panelHidden = BrowserTestUtils.waitForEvent(
+    creationPanel,
+    "popuphidden"
+  );
+  creationPanel.hidePopup();
+  await panelHidden;
+
+  await SpecialPowers.popPrefEnv();
+});
+
+add_task(async function testAddContainerFromAllTabsMenu() {
+  Services.fog.testResetFOG();
+
+  await SpecialPowers.pushPrefEnv({
+    set: [["privacy.userContext.enabled", true]],
+  });
+
+  gTabsPanel.init();
+  const allTabsView = document.getElementById("allTabsMenu-allTabsView");
+  let viewShown = BrowserTestUtils.waitForEvent(allTabsView, "ViewShown");
+  document.getElementById("alltabs-button").click();
+  await viewShown;
+
+  const containerView = document.getElementById(
+    "allTabsMenu-containerTabsView"
+  );
+  viewShown = BrowserTestUtils.waitForEvent(containerView, "ViewShown");
+  document.getElementById("allTabsMenu-containerTabsButton").click();
+  await viewShown;
+
+  Assert.equal(
+    containerView.querySelector("toolbarbutton[data-usercontextid='1']").dataset
+      .containerEntrypoint,
+    "all_tabs_menu",
+    "The container items carry the all tabs menu entry point"
+  );
+
+  const creationPanel = document.getElementById("containerCreation-panel");
+  const panelShown = BrowserTestUtils.waitForEvent(creationPanel, "popupshown");
+  containerView
+    .querySelector('[data-l10n-id="user-context-add-container"]')
+    .click();
+  await panelShown;
+
+  const clickedEvent = Glean.containers.addContainerClicked.testGetValue();
+  Assert.ok(Array.isArray(clickedEvent), "add_container_clicked must exist");
+  Assert.equal(clickedEvent.length, 1);
+  Assert.equal(
+    clickedEvent[0].extra.source,
+    "all_tabs_menu",
+    "add_container_clicked reports the all tabs menu source"
   );
 
   const panelHidden = BrowserTestUtils.waitForEvent(
