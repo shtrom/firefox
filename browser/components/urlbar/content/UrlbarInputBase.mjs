@@ -3372,7 +3372,12 @@ ${
   _observer;
 
   _addObservers() {
-    if (!this._observersAdded) {
+    if (this._observersAdded) {
+      return;
+    }
+    // The AI window's state only ever concerns a chrome window, so there is
+    // nothing there for a content-realm input to observe.
+    if (typeof ChromeUtils != "undefined") {
       this._observer = {
         observe: this.observe,
         QueryInterface: ChromeUtils.generateQI([
@@ -3381,17 +3386,20 @@ ${
         ]),
       };
       Services.obs.addObserver(this._observer, "ai-window-state-changed", true);
-      this.controller.engineStore.addObserver(this.onSearchEngineUpdate);
-      this._observersAdded = true;
     }
+    this.controller.engineStore.addObserver(this.onSearchEngineUpdate);
+    this._observersAdded = true;
   }
 
   _removeObservers() {
-    if (this._observersAdded) {
-      Services.obs.removeObserver(this._observer, "ai-window-state-changed");
-      this.controller.engineStore.removeObserver(this.onSearchEngineUpdate);
-      this._observersAdded = false;
+    if (!this._observersAdded) {
+      return;
     }
+    if (this._observer) {
+      Services.obs.removeObserver(this._observer, "ai-window-state-changed");
+    }
+    this.controller.engineStore.removeObserver(this.onSearchEngineUpdate);
+    this._observersAdded = false;
   }
 
   _afterTabSelectAndFocusChange() {
