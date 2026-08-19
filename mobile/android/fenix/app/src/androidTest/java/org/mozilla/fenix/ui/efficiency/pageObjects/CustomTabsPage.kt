@@ -14,6 +14,7 @@ import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
 import org.mozilla.fenix.ui.efficiency.helpers.PageStateTracker
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
+import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
 import org.mozilla.fenix.ui.efficiency.selectors.BrowserPageSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.CustomTabsSelectors
 
@@ -22,7 +23,21 @@ class CustomTabsPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestR
 
     // Custom tabs are LAUNCH-reached: they run in their own activity (CustomTabActivity), started by firing
     // a custom-tabs intent at IntentReceiverActivity — not by navigating a click-path from HomePage. So there
-    // is no NavigationRegistry edge; use launchCustomTab() as the entry point (it sets the page state).
+    // is no INBOUND NavigationRegistry edge; use launchCustomTab() as the entry point (it sets the page state).
+
+    init {
+        // Outbound 0-step edge for the "Open in Firefox" flow: the menu click that converts the custom tab
+        // into a normal tab is performed by the test, and this edge only carries navigateToPage() past its
+        // single-pass mozIsOnPageNow() check into the polling mozWaitForPageToLoad(). That poll is what
+        // absorbs the ~1s CustomTabActivity -> HomeActivity transition, during which the engineView anchor
+        // isn't in the tree yet — without the edge, a slow transition makes path-finding fail with
+        // "No navigation path found to 'BrowserPage'" (intermittent). Mirrors MainMenuPage -> BrowserPage.
+        NavigationRegistry.register(
+            from = pageName,
+            to = "BrowserPage",
+            steps = listOf(),
+        )
+    }
 
     fun launchCustomTab(url: String, customMenuItemLabel: String = ""): CustomTabsPage {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
