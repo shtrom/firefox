@@ -5595,13 +5595,16 @@ ${
       this.setPageProxyState("invalid", true);
     }
 
-    let state = this.getBrowserState(this.window.gBrowser.selectedBrowser);
-    if (
-      state.persist?.shouldPersist &&
-      this.value !== state.persist.searchTerms
-    ) {
-      state.persist.shouldPersist = false;
-      this.removeAttribute("persistsearchterms");
+    if (this.#isAddressbar) {
+      // Search-terms persistence is an address bar feature.
+      let state = this.getBrowserState(this.window.gBrowser.selectedBrowser);
+      if (
+        state.persist?.shouldPersist &&
+        this.value !== state.persist.searchTerms
+      ) {
+        state.persist.shouldPersist = false;
+        this.removeAttribute("persistsearchterms");
+      }
     }
 
     if (this.view.isOpen) {
