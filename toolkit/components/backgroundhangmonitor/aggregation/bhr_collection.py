@@ -480,15 +480,21 @@ def process_hangs(ping, config):
 
 
 def symbolicate_stacks(stack, symbol_map):
-    """Replace (module, offset) frames with (symbol, lib_name) frames.
+    """Replace (module, offset) frames with (symbol, lib_name, inline_depth).
 
     symbol_map is the dict returned by symbolication.symbolicate_modules,
-    keyed by (module, offset). Each value is a LIST of (symbol, lib_name)
+    keyed by (module, offset). Each value is a list of (symbol, lib_name)
     frames: usually one, but more than one when the address resolves inside
     inlined code, in which case the whole inlined chain is spliced into the
     stack in place (outer-first) so equivalent hangs dedup (bug 2052961). A
     frame with no module, no map entry, or a None leading symbol falls back to
     the UNSYMBOLICATED sentinel.
+
+    Each frame carries its position in that chain as inline_depth: 0 for a
+    real frame (the enclosing FUNC, or an address that inlined nothing) and
+    1, 2, ... for each inlined callee. Once spliced, an inlined frame is
+    otherwise indistinguishable from a real caller, so without this the
+    frontend cannot tell them apart or fold them back (bug 2059443).
     """
     symbolicated = []
     for module, offset in stack:
@@ -496,11 +502,12 @@ def symbolicate_stacks(stack, symbol_map):
             debug_name = module[0]
             processed = symbol_map.get((tuple(module), offset), None)
             if processed and processed[0][0] is not None:
-                symbolicated.extend(processed)
+                for depth, (name, lib) in enumerate(processed):
+                    symbolicated.append((name, lib, depth))
             else:
-                symbolicated.append((UNSYMBOLICATED, debug_name))
+                symbolicated.append((UNSYMBOLICATED, debug_name, 0))
         else:
-            symbolicated.append((UNSYMBOLICATED, "unknown"))
+            symbolicated.append((UNSYMBOLICATED, "unknown", 0))
     return symbolicated
 
 
@@ -550,20 +557,30 @@ def map_to_hang_data(hang, config):
     if duration >= config["hang_upper_bound"]:
         return []
 
+    # Inline depth is deliberately NOT part of the key. A build that inlined a
+    # call and one that did not produce the same reconstructed stack, and the
+    # point of bug 2052961 is that those merge. Depth rides in the value and is
+    # max-merged, so a frame counts as inlined if any contributing build
+    # inlined it.
     key = (
-        tuple((a, b) for a, b in stack),
+        tuple((a, b) for a, b, _ in stack),
         runnable_name,
         thread,
         build_date,
         tupleize_annotation_list(annotations),
         platform,
     )
-    return [(key, (float(duration), 1.0))]
+    depths = tuple(depth for _, _, depth in stack)
+    return [(key, (float(duration), 1.0, depths))]
 
 
 def merge_hang_data(a, b):
-    """Sum the (duration, count) values of two hangs that share a key."""
-    return (a[0] + b[0], a[1] + b[1])
+    """Sum the (duration, count) of two hangs that share a key, max their depths.
+
+    The stacks are identical (they are the key), so the depth tuples are the
+    same length and merge element-wise.
+    """
+    return (a[0] + b[0], a[1] + b[1], tuple(map(max, a[2], b[2])))
 
 
 def group_hangs(hangs, config):
@@ -572,7 +589,9 @@ def group_hangs(hangs, config):
     Replaces the python_mozetl Spark chain
     flatMap(map_to_hang_data).reduceByKey(merge_hang_data).collect().
     Returns a list of (key fields..., duration_sum, count_sum) tuples, the
-    8-element shape ProfileProcessor.ingest consumes.
+    8-element shape ProfileProcessor.ingest consumes. The merged inline depths
+    are folded back onto the stack frames rather than carried as a ninth field,
+    so the row shape is unchanged.
     """
     grouped = {}
     for hang in hangs:
@@ -581,7 +600,14 @@ def group_hangs(hangs, config):
                 grouped[key] = merge_hang_data(grouped[key], value)
             else:
                 grouped[key] = value
-    return [(*key, *value) for key, value in grouped.items()]
+    rows = []
+    for key, (duration, count, depths) in grouped.items():
+        stack, *rest = key
+        with_depth = tuple(
+            (name, lib, depth) for (name, lib), depth in zip(stack, depths)
+        )
+        rows.append((with_depth, *rest, duration, count))
+    return rows
 
 
 def write_file(name, data, output_dir):
