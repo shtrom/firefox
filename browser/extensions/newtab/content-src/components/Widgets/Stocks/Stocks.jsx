@@ -25,10 +25,13 @@ import {
   addToWatchlist,
   removeFromWatchlist,
   normalize,
+  MAX_STOCKS_WATCHLIST,
 } from "common/StocksWatchlist.mjs";
 import { WidgetMenuFooter } from "../WidgetMenuFooter";
 import { SizeSubmenu } from "../SizeSubmenu";
 import { StockTicker } from "./StockTicker";
+import { StockSearch } from "./StockSearch";
+import { useStockSearch } from "./useStockSearch";
 import { StocksError } from "./StocksError";
 
 const STOCKS_ENTRY = WIDGET_REGISTRY.find(w => w.id === "stocks");
@@ -58,6 +61,8 @@ function Stocks({
     lastUpdated,
     watchlistTickers = EMPTY_ARRAY,
     watchlistReconciledSymbols = EMPTY_ARRAY,
+    searchStatus = "idle",
+    searchResults = EMPTY_ARRAY,
   } = useSelector(state => state.Stocks);
   const watchlistPref = useSelector(
     state => state.Prefs.values[PREF_STOCKS_WATCHLIST]
@@ -100,6 +105,12 @@ function Stocks({
   const watchlistRef = useRef(null);
   const marketsRef = useRef(null);
   const menuButtonRef = useRef(null);
+  const {
+    active: searchActive,
+    open: openSearch,
+    close: closeSearch,
+    submit: submitSearch,
+  } = useStockSearch({ dispatch, recordUserAction, menuButtonRef });
 
   useEffect(() => {
     const parsed = parseWatchlist(watchlistPref ?? "");
@@ -231,6 +242,7 @@ function Stocks({
   // How many saved symbols the dropdown counts: all of them while the watchlist
   // is loading, then only the ones that resolved once it has loaded.
   const savedInFeed = watchlistReady ? matchedRows.length : savedSymbols.length;
+  const atWatchlistLimit = savedSymbols.length >= MAX_STOCKS_WATCHLIST;
   const showDropdown = widgetSize === "large" && savedInFeed > 0;
   const activeList =
     showDropdown && selectedList === "watchlist" ? "watchlist" : "markets";
@@ -338,12 +350,37 @@ function Stocks({
     [dispatch, recordUserAction, handleInteraction]
   );
 
-  // Placeholder: a real ticker search will replace this telemetry-only stub in
-  // a follow-up.
   function handleSearchTickers() {
     recordUserAction("search_tickers", { source: "context_menu" });
+    openSearch();
     handleInteraction();
   }
+
+  const handleAddFromSearch = useCallback(
+    (symbol, tickerName) => {
+      const next = addToWatchlist(savedSymbols, symbol);
+      if (next !== savedSymbols) {
+        writeWatchlist(next);
+        recordUserAction("add_ticker", { source: "search" });
+        setAnnouncement({
+          id: "newtab-stocks-added-to-watchlist",
+          args: { name: tickerName },
+        });
+        // Show the Watchlist so the added ticker appears in the list. Closing
+        // search drops the widget back to its original size.
+        setSelectedList("watchlist");
+        handleInteraction();
+      }
+      closeSearch();
+    },
+    [
+      savedSymbols,
+      writeWatchlist,
+      recordUserAction,
+      handleInteraction,
+      closeSearch,
+    ]
+  );
 
   // The shared footer opens the support link; here we only record the click.
   function handleLearnMore() {
@@ -353,205 +390,236 @@ function Stocks({
 
   return (
     <article
-      className={`stocks widget col-4 ${widgetSize}-widget`}
+      className={`stocks widget col-4 ${searchActive ? "large" : widgetSize}-widget`}
       ref={impressionRef}
       aria-labelledby="stocks-widget-label"
     >
-      <div className="stocks-title-wrapper">
-        <div className="stocks-badge-title-wrapper">
-          {widgetSize !== "small" && !hasInteracted && !!tickers.length && (
-            <moz-badge
-              className="stocks-new-badge"
-              data-l10n-id="newtab-widget-lists-label-new"
-            ></moz-badge>
-          )}
-          {/* Keep the heading mounted so aria-labelledby always resolves. */}
+      {searchActive ? (
+        <>
+          {/* Keep the region name while the search panel replaces the body. */}
           <h2
             id="stocks-widget-label"
-            className={`stocks-heading${
-              showDropdown || (widgetSize === "small" && chosenSymbol)
-                ? " sr-only"
-                : ""
-            }`}
+            className="stocks-heading sr-only"
             data-l10n-id="newtab-stocks-widget-title"
           />
-          {widgetSize === "small" && chosenSymbol && (
-            <span className="stocks-small-symbol">{headerSymbol}</span>
-          )}
-          {showDropdown && (
-            <>
-              <moz-button
-                className="stocks-list-button"
-                type="ghost"
-                size="small"
-                iconSrc="chrome://global/skin/icons/arrow-down-12.svg"
-                iconPosition="end"
-                menuId="stocks-list-menu"
-                data-l10n-id={selectedListL10nId}
-              ></moz-button>
-              <panel-list id="stocks-list-menu">
-                {STOCKS_LISTS.map(({ id, l10nId }) => (
-                  <panel-item
-                    key={id}
-                    type="checkbox"
-                    checked={selectedList === id || undefined}
-                    onClick={() => handleSelectList(id)}
-                    data-list={id}
-                    data-l10n-id={l10nId}
-                  />
-                ))}
-              </panel-list>
-            </>
-          )}
-        </div>
-        <div className="stocks-context-menu-wrapper">
-          <moz-button
-            ref={menuButtonRef}
-            className="stocks-context-menu-button"
-            iconSrc="chrome://global/skin/icons/more.svg"
-            menuId="stocks-context-menu"
-            type="icon ghost"
-            size="small"
-            data-l10n-id="newtab-stocks-widget-menu-button"
+          <StockSearch
+            searchStatus={searchStatus}
+            searchResults={searchResults}
+            savedSymbols={savedSymbols}
+            atWatchlistLimit={atWatchlistLimit}
+            onSubmit={submitSearch}
+            onAdd={handleAddFromSearch}
+            onClose={closeSearch}
           />
-          <panel-list id="stocks-context-menu">
-            <panel-item
-              data-l10n-id="newtab-stocks-menu-search-stocks"
-              onClick={handleSearchTickers}
-            />
-            <WidgetMenuFooter
-              dispatch={dispatch}
-              widgetId="stocks"
-              widgetEnabledMap={widgetEnabledMap}
-              widgetName="stocks"
-              enabledPref={STOCKS_ENTRY.enabledPref}
-              widgetSize={widgetSize}
-              learnMoreL10nId="newtab-stocks-menu-learn-more"
-              onLearnMore={handleLearnMore}
-              sizeSubmenu={
-                widgetsMayBeMaximized ? (
-                  <SizeSubmenu
-                    submenuId="stocks-size-submenu"
-                    sizes={STOCKS_ENTRY.validSizes}
-                    checkedSize={widgetSize}
-                    onChangeSize={handleChangeSize}
-                  />
-                ) : null
-              }
-            />
-          </panel-list>
-        </div>
-      </div>
-
-      <div className="stocks-body">
-        {showAnyError && <StocksError recordError={recordError} />}
-        {!showAnyError && widgetSize === "small" && (
-          <ul
-            className={`stocks-list stocks-list--small${
-              chosenRow ? "" : " stocks-list--loading"
-            }`}
-          >
-            {chosenRow ? (
-              <StockTicker
-                size="small"
-                name={chosenRow.name}
-                ticker={chosenRow.ticker}
-                price={chosenRow.last_price}
-                changePercent={chosenRow.todays_change_perc}
+        </>
+      ) : (
+        <>
+          <div className="stocks-title-wrapper">
+            <div className="stocks-badge-title-wrapper">
+              {widgetSize !== "small" && !hasInteracted && !!tickers.length && (
+                <moz-badge
+                  className="stocks-new-badge"
+                  data-l10n-id="newtab-widget-lists-label-new"
+                ></moz-badge>
+              )}
+              {/* Keep the heading mounted so aria-labelledby always resolves. */}
+              <h2
+                id="stocks-widget-label"
+                className={`stocks-heading${
+                  showDropdown || (widgetSize === "small" && chosenSymbol)
+                    ? " sr-only"
+                    : ""
+                }`}
+                data-l10n-id="newtab-stocks-widget-title"
               />
-            ) : (
-              <StockTicker size="small" loading={true} />
-            )}
-          </ul>
-        )}
-        {!showAnyError && widgetSize !== "small" && (
-          <>
-            {activeList === "markets" && (
-              <>
-                {widgetSize === "medium" && (
-                  <ul
-                    className={`stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`}
-                  >
-                    {tickers.length
-                      ? tickers.map(t => (
-                          <StockTicker
-                            key={t.ticker}
-                            name={t.name}
-                            ticker={t.ticker}
-                            price={t.last_price}
-                            changePercent={t.todays_change_perc}
-                          />
-                        ))
-                      : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map(
-                          (_, i) => <StockTicker key={i} loading={true} />
-                        )}
-                  </ul>
+              {widgetSize === "small" && chosenSymbol && (
+                <span className="stocks-small-symbol">{headerSymbol}</span>
+              )}
+              {showDropdown && (
+                <>
+                  <moz-button
+                    className="stocks-list-button"
+                    type="ghost"
+                    size="small"
+                    iconSrc="chrome://global/skin/icons/arrow-down-12.svg"
+                    iconPosition="end"
+                    menuId="stocks-list-menu"
+                    data-l10n-id={selectedListL10nId}
+                  ></moz-button>
+                  <panel-list id="stocks-list-menu">
+                    {STOCKS_LISTS.map(({ id, l10nId }) => (
+                      <panel-item
+                        key={id}
+                        type="checkbox"
+                        checked={selectedList === id || undefined}
+                        onClick={() => handleSelectList(id)}
+                        data-list={id}
+                        data-l10n-id={l10nId}
+                      />
+                    ))}
+                  </panel-list>
+                </>
+              )}
+            </div>
+            <div className="stocks-context-menu-wrapper">
+              <moz-button
+                ref={menuButtonRef}
+                className="stocks-context-menu-button"
+                iconSrc="chrome://global/skin/icons/more.svg"
+                menuId="stocks-context-menu"
+                type="icon ghost"
+                size="small"
+                data-l10n-id="newtab-stocks-widget-menu-button"
+              />
+              <panel-list id="stocks-context-menu">
+                <panel-item
+                  data-l10n-id="newtab-stocks-menu-search-stocks"
+                  onClick={handleSearchTickers}
+                />
+                <WidgetMenuFooter
+                  dispatch={dispatch}
+                  widgetId="stocks"
+                  widgetEnabledMap={widgetEnabledMap}
+                  widgetName="stocks"
+                  enabledPref={STOCKS_ENTRY.enabledPref}
+                  widgetSize={widgetSize}
+                  learnMoreL10nId="newtab-stocks-menu-learn-more"
+                  onLearnMore={handleLearnMore}
+                  sizeSubmenu={
+                    widgetsMayBeMaximized ? (
+                      <SizeSubmenu
+                        submenuId="stocks-size-submenu"
+                        sizes={STOCKS_ENTRY.validSizes}
+                        checkedSize={widgetSize}
+                        onChangeSize={handleChangeSize}
+                      />
+                    ) : null
+                  }
+                />
+              </panel-list>
+            </div>
+          </div>
+
+          <div className="stocks-body">
+            {showAnyError && <StocksError recordError={recordError} />}
+            {!showAnyError && widgetSize === "small" && (
+              <ul
+                className={`stocks-list stocks-list--small${
+                  chosenRow ? "" : " stocks-list--loading"
+                }`}
+              >
+                {chosenRow ? (
+                  <StockTicker
+                    size="small"
+                    name={chosenRow.name}
+                    ticker={chosenRow.ticker}
+                    price={chosenRow.last_price}
+                    changePercent={chosenRow.todays_change_perc}
+                  />
+                ) : (
+                  <StockTicker size="small" loading={true} />
                 )}
-                {widgetSize === "large" && (
+              </ul>
+            )}
+            {!showAnyError && widgetSize !== "small" && (
+              <>
+                {activeList === "markets" && (
+                  <>
+                    {widgetSize === "medium" && (
+                      <ul
+                        className={`stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`}
+                      >
+                        {tickers.length
+                          ? tickers.map(t => (
+                              <StockTicker
+                                key={t.ticker}
+                                name={t.name}
+                                ticker={t.ticker}
+                                price={t.last_price}
+                                changePercent={t.todays_change_perc}
+                              />
+                            ))
+                          : Array.from({
+                              length: STOCKS_PLACEHOLDER_COUNT,
+                            }).map((_, i) => (
+                              <StockTicker key={i} loading={true} />
+                            ))}
+                      </ul>
+                    )}
+                    {widgetSize === "large" && (
+                      <ul
+                        ref={marketsRef}
+                        className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
+                      >
+                        {tickers.length
+                          ? tickers.map(t => (
+                              <StockTicker
+                                key={t.ticker}
+                                size="large"
+                                name={t.name}
+                                ticker={t.ticker}
+                                price={t.last_price}
+                                changePercent={t.todays_change_perc}
+                                watchlistState={
+                                  savedSymbols.includes(normalize(t.ticker))
+                                    ? "added"
+                                    : "add"
+                                }
+                                disabled={atWatchlistLimit}
+                                onWatchlistToggle={handleToggleWatchlist}
+                              />
+                            ))
+                          : Array.from({
+                              length: STOCKS_PLACEHOLDER_COUNT,
+                            }).map((_, i) => (
+                              <StockTicker
+                                key={i}
+                                size="large"
+                                loading={true}
+                              />
+                            ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+                {activeList === "watchlist" && (
                   <ul
-                    ref={marketsRef}
-                    className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
+                    ref={watchlistRef}
+                    aria-busy={!watchlistReady}
+                    className={`stocks-list stocks-list--watchlist${
+                      !matchedRows.length && !watchlistReady
+                        ? " stocks-list--loading"
+                        : ""
+                    }`}
                   >
-                    {tickers.length
-                      ? tickers.map(t => (
-                          <StockTicker
-                            key={t.ticker}
-                            size="large"
-                            name={t.name}
-                            ticker={t.ticker}
-                            price={t.last_price}
-                            changePercent={t.todays_change_perc}
-                            watchlistState={
-                              savedSymbols.includes(normalize(t.ticker))
-                                ? "added"
-                                : "add"
-                            }
-                            onWatchlistToggle={handleToggleWatchlist}
-                          />
-                        ))
-                      : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map(
-                          (_, i) => (
-                            <StockTicker key={i} size="large" loading={true} />
-                          )
-                        )}
+                    {matchedRows.map(t => (
+                      <StockTicker
+                        key={t.ticker}
+                        size="large"
+                        name={t.name}
+                        ticker={t.ticker}
+                        price={t.last_price}
+                        changePercent={t.todays_change_perc}
+                        watchlistState="remove"
+                        onWatchlistToggle={handleToggleWatchlist}
+                      />
+                    ))}
+                    {Array.from({ length: watchlistPendingCount }).map(
+                      (_, i) => (
+                        <StockTicker
+                          key={`pending-${i}`}
+                          size="large"
+                          loading={true}
+                        />
+                      )
+                    )}
                   </ul>
                 )}
               </>
             )}
-            {activeList === "watchlist" && (
-              <ul
-                ref={watchlistRef}
-                aria-busy={!watchlistReady}
-                className={`stocks-list${
-                  !matchedRows.length && !watchlistReady
-                    ? " stocks-list--loading"
-                    : ""
-                }`}
-              >
-                {matchedRows.map(t => (
-                  <StockTicker
-                    key={t.ticker}
-                    size="large"
-                    name={t.name}
-                    ticker={t.ticker}
-                    price={t.last_price}
-                    changePercent={t.todays_change_perc}
-                    watchlistState="remove"
-                    onWatchlistToggle={handleToggleWatchlist}
-                  />
-                ))}
-                {Array.from({ length: watchlistPendingCount }).map((_, i) => (
-                  <StockTicker
-                    key={`pending-${i}`}
-                    size="large"
-                    loading={true}
-                  />
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
       <span
         className="stocks-sr-status sr-only"
         role="status"

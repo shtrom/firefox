@@ -385,6 +385,24 @@ describe("StockTicker watchlist control (large only)", () => {
     ).toBeNull();
     jest.useRealTimers();
   });
+
+  it("disables the add button when disabled is set", () => {
+    const { container } = renderRow({
+      watchlistState: "add",
+      onWatchlistToggle: jest.fn(),
+      disabled: true,
+    });
+    expect(
+      container
+        .querySelector("moz-button.stock-ticker-action")
+        .getAttribute("disabled")
+    ).not.toBeNull();
+  });
+
+  it("marks a search-variant row with the result class", () => {
+    const { container } = renderRow({ variant: "search" });
+    expect(container.querySelector("li.stock-ticker--result")).toBeTruthy();
+  });
 });
 
 describe("StockTicker small size", () => {

@@ -17,6 +17,10 @@ describe("StocksWatchlist helpers", () => {
     expect(parseWatchlist(undefined)).toEqual([]);
   });
 
+  it("caps the watchlist at 10", () => {
+    expect(MAX_STOCKS_WATCHLIST).toBe(10);
+  });
+
   it("caps parsing at MAX_STOCKS_WATCHLIST", () => {
     const many = Array.from(
       { length: MAX_STOCKS_WATCHLIST + 5 },

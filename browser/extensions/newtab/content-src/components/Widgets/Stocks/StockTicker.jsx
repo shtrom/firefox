@@ -78,6 +78,8 @@ function StockTicker({
   changePercent,
   watchlistState,
   onWatchlistToggle,
+  disabled,
+  variant,
 }) {
   const direction = getDirection(changePercent);
   const locale =
@@ -128,7 +130,9 @@ function StockTicker({
   };
   return (
     <li
-      className={`stock-ticker stock-ticker--${size}`}
+      className={`stock-ticker stock-ticker--${size}${
+        variant === "search" ? " stock-ticker--result" : ""
+      }`}
       aria-hidden={loading ? "true" : undefined}
     >
       {!loading && (
@@ -185,6 +189,7 @@ function StockTicker({
           type="icon"
           size="small"
           iconSrc={actionIcon}
+          disabled={disabled || undefined}
           data-l10n-id={
             watchlistState === "remove"
               ? "newtab-stocks-remove-from-watchlist"
