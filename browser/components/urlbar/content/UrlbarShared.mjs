@@ -73,10 +73,6 @@ import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs"
 // windows. Real container ids are non-negative, so -1 is a safe sentinel.
 const PRIVATE_USER_CONTEXT_ID = -1;
 
-// `nsIScriptSecurityManager.DEFAULT_USER_CONTEXT_ID`, which a content realm has
-// no `Ci` to read it from.
-const DEFAULT_USER_CONTEXT_ID = 0;
-
 export const UrlbarShared = {
   // REGEXP_ constants are duplicated from UrlUtils.sys.mjs
   // Regex matching on whitespaces.
@@ -462,7 +458,7 @@ export const UrlbarShared = {
       this.getUserContextIdForOpenPagesTable(
         userContextId,
         isInPrivateWindow
-      ) || DEFAULT_USER_CONTEXT_ID
+      ) || Ci.nsIScriptSecurityManager.DEFAULT_USER_CONTEXT_ID
     );
   },
 
