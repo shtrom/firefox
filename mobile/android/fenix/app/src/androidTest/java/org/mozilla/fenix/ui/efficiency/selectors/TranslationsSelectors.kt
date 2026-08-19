@@ -19,5 +19,17 @@ object TranslationsSelectors {
             groups = listOf("requiredForPage"),
         )
 
-    val all = listOf(TRANSLATIONS_OPTIONS_BUTTON)
+    val TRANSLATION_SETTINGS_BUTTON =
+        Selector(
+            strategy = SelectorStrategy.COMPOSE_BY_TEXT,
+            value = getStringResource(R.string.translation_option_bottom_sheet_translation_settings),
+            description = "the Translation settings button on the options sheet",
+            groups = listOf(),
+        )
+
+    val all =
+        listOf(
+            TRANSLATIONS_OPTIONS_BUTTON,
+            TRANSLATION_SETTINGS_BUTTON,
+        )
 }

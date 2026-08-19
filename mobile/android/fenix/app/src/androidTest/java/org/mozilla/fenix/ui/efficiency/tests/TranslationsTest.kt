@@ -12,6 +12,8 @@ import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
 import org.mozilla.fenix.ui.efficiency.helpers.SwipeDirection
 import org.mozilla.fenix.ui.efficiency.selectors.BrowserPageSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.SettingsTranslationSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.TranslationsSelectors
 
 class TranslationsTest : BaseTest(isPageLoadTranslationsPromptEnabled = true) {
 
@@ -42,6 +44,33 @@ class TranslationsTest : BaseTest(isPageLoadTranslationsPromptEnabled = true) {
             .mozVerifyElementsByGroup("notTranslatedPageTranslationSheet")
     }
 
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2439667
+    @SmokeTest
+    @Test
+    fun verifyTheDownloadLanguagesFunctionalityTest() {
+        val url = mockWebServer.firstForeignWebPageAsset.url.toString()
+
+        on.browserPage
+            .navigateToPage(url)
+            .verifyTranslationSheetWithReload(url)
+            .mozClick(TranslationsSelectors.TRANSLATIONS_OPTIONS_BUTTON)
+            .mozClick(TranslationsSelectors.TRANSLATION_SETTINGS_BUTTON)
+            .mozClick(SettingsTranslationSelectors.DOWNLOAD_LANGUAGES_BUTTON)
+            .mozClick(SettingsTranslationSelectors.DOWNLOAD_LANGUAGE_ROW(LANGUAGE_TO_DOWNLOAD))
+            // The download is a real multi-MB model fetch, hence the long timeout (legacy waits 30s).
+            .mozVerify(
+                SettingsTranslationSelectors.DOWNLOAD_LANGUAGE_ROW(LANGUAGE_TO_DOWNLOAD),
+                timeout = TestAssetHelper.waitingTimeLong,
+            )
+            // Deliberately STRONGER than the legacy assertion, which re-matched the same
+            // content-description substring as the click target above and so held whether or not anything
+            // downloaded. This one only holds once a model is really on disk.
+            .mozVerify(
+                SettingsTranslationSelectors.ANY_LANGUAGE_DOWNLOADED,
+                timeout = TestAssetHelper.waitingTimeLong,
+            )
+    }
+
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2437107
     @SmokeTest
     @Test
@@ -64,5 +93,10 @@ class TranslationsTest : BaseTest(isPageLoadTranslationsPromptEnabled = true) {
                 TestAssetHelper.waitingTimeLong,
             )
         on.browserPage.verifyPageContent("Article of the day")
+    }
+
+    private companion object {
+        // The legacy test hardcodes Bosnian; it must be an offered translations model.
+        const val LANGUAGE_TO_DOWNLOAD = "Bosnian"
     }
 }
