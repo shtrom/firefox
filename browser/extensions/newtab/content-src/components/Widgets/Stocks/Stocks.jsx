@@ -178,6 +178,15 @@ function Stocks({
       : Math.min(savedSymbols.length, STOCKS_PLACEHOLDER_COUNT);
   }, [watchlistReady, matchedRows.length, savedSymbols.length]);
 
+  const mediumWatchlistRows = matchedRows.slice(0, STOCKS_PLACEHOLDER_COUNT);
+  const mediumWatchlistPendingCount = watchlistReady
+    ? 0
+    : Math.max(
+        Math.min(STOCKS_PLACEHOLDER_COUNT, savedSymbols.length) -
+          mediumWatchlistRows.length,
+        0
+      );
+
   const handleToggleWatchlist = useCallback(
     (symbol, tickerName) => {
       const normalized = normalize(symbol);
@@ -243,7 +252,7 @@ function Stocks({
   // is loading, then only the ones that resolved once it has loaded.
   const savedInFeed = watchlistReady ? matchedRows.length : savedSymbols.length;
   const atWatchlistLimit = savedSymbols.length >= MAX_STOCKS_WATCHLIST;
-  const showDropdown = widgetSize === "large" && savedInFeed > 0;
+  const showDropdown = widgetSize !== "small" && savedInFeed > 0;
   const activeList =
     showDropdown && selectedList === "watchlist" ? "watchlist" : "markets";
 
@@ -269,7 +278,7 @@ function Stocks({
   // so the watchlist still shows even if the default feed failed.
   const watchlistRowShown =
     (widgetSize === "small" && chosenIsSaved && !!chosenRow) ||
-    (widgetSize === "large" &&
+    (widgetSize !== "small" &&
       activeList === "watchlist" &&
       !!matchedRows.length);
   // Show the error box from one place so switching error states doesn't report it
@@ -386,6 +395,59 @@ function Stocks({
   function handleLearnMore() {
     recordUserAction("learn_more", { source: "context_menu" });
     handleInteraction();
+  }
+
+  function renderWatchlist() {
+    if (widgetSize === "medium") {
+      return (
+        <ul
+          aria-busy={!watchlistReady}
+          className={`stocks-grid${
+            !mediumWatchlistRows.length && !watchlistReady
+              ? " stocks-grid--loading"
+              : ""
+          }`}
+        >
+          {mediumWatchlistRows.map(t => (
+            <StockTicker
+              key={t.ticker}
+              name={t.name}
+              ticker={t.ticker}
+              price={t.last_price}
+              changePercent={t.todays_change_perc}
+            />
+          ))}
+          {Array.from({ length: mediumWatchlistPendingCount }).map((_, i) => (
+            <StockTicker key={`pending-${i}`} loading={true} />
+          ))}
+        </ul>
+      );
+    }
+    return (
+      <ul
+        ref={watchlistRef}
+        aria-busy={!watchlistReady}
+        className={`stocks-list stocks-list--watchlist${
+          !matchedRows.length && !watchlistReady ? " stocks-list--loading" : ""
+        }`}
+      >
+        {matchedRows.map(t => (
+          <StockTicker
+            key={t.ticker}
+            size="large"
+            name={t.name}
+            ticker={t.ticker}
+            price={t.last_price}
+            changePercent={t.todays_change_perc}
+            watchlistState="remove"
+            onWatchlistToggle={handleToggleWatchlist}
+          />
+        ))}
+        {Array.from({ length: watchlistPendingCount }).map((_, i) => (
+          <StockTicker key={`pending-${i}`} size="large" loading={true} />
+        ))}
+      </ul>
+    );
   }
 
   return (
@@ -582,39 +644,7 @@ function Stocks({
                     )}
                   </>
                 )}
-                {activeList === "watchlist" && (
-                  <ul
-                    ref={watchlistRef}
-                    aria-busy={!watchlistReady}
-                    className={`stocks-list stocks-list--watchlist${
-                      !matchedRows.length && !watchlistReady
-                        ? " stocks-list--loading"
-                        : ""
-                    }`}
-                  >
-                    {matchedRows.map(t => (
-                      <StockTicker
-                        key={t.ticker}
-                        size="large"
-                        name={t.name}
-                        ticker={t.ticker}
-                        price={t.last_price}
-                        changePercent={t.todays_change_perc}
-                        watchlistState="remove"
-                        onWatchlistToggle={handleToggleWatchlist}
-                      />
-                    ))}
-                    {Array.from({ length: watchlistPendingCount }).map(
-                      (_, i) => (
-                        <StockTicker
-                          key={`pending-${i}`}
-                          size="large"
-                          loading={true}
-                        />
-                      )
-                    )}
-                  </ul>
-                )}
+                {activeList === "watchlist" && renderWatchlist()}
               </>
             )}
           </div>
