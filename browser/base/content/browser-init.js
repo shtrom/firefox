@@ -403,6 +403,7 @@ var gBrowserInit = {
 
     if (!PrivateBrowsingUtils.enabled) {
       document.getElementById("Tools:PrivateBrowsing").hidden = true;
+      document.getElementById("menu_newPrivateWindow").hidden = true;
       // Setting disabled doesn't disable the shortcut, so we just remove
       // the keybinding.
       document.getElementById("key_privatebrowsing").remove();
