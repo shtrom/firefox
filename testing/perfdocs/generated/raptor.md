@@ -21625,6 +21625,11 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
+* - **browsertime-media-seek-chrome-media-seek**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
 * - **browsertime-media-seek-firefox-media-seek**
   - ✅
   - ✅
@@ -21676,6 +21681,11 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
+* - **browsertime-media-seek-chrome-media-seek**
+  - ❌
+  - ❌
+  - ❌
+  - ❌
 * - **browsertime-media-seek-firefox-media-seek**
   - ✅
   - ✅

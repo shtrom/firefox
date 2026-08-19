@@ -928,15 +928,27 @@ browsertime-custom:
 
 browsertime-media-seek:
     raptor:
-        apps: [firefox]
+        apps: [firefox, chrome]
         subtests: [[media-seek, mseek]]
     description: Raptor (browsertime) media seek-latency test
+    limit-platforms:
+        by-app:
+            chrome:
+                - linux.*shippable.*
+                - macosx1470.*shippable.*
+            default: []
     max-run-time: 2700
     run-on-projects:
-        by-test-platform:
-            .*64(?!.*nightlyasrelease).*shippable.*: [trunk]
+        by-app:
+            firefox:
+                by-test-platform:
+                    .*64(?!.*nightlyasrelease).*shippable.*: [trunk]
+                    default: []
             default: []
-    tier: 2
+    tier:
+        by-app:
+            firefox: 2
+            default: 3
     treeherder-symbol: Btime(mseek)
 
 browsertime-first-install:
