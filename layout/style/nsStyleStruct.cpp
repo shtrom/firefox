@@ -1112,7 +1112,7 @@ nsStylePosition::nsStylePosition()
       mJustifyItems({{StyleAlignFlags::LEGACY}, {StyleAlignFlags::NORMAL}}),
       mJustifySelf({StyleAlignFlags::AUTO}),
       mFlexDirection(StyleFlexDirection::Row),
-      mFlexWrap(StyleFlexWrap::Nowrap),
+      mFlexWrap(StyleFlexWrap::NOWRAP),
       mObjectFit(StyleObjectFit::Fill),
       mBoxSizing(StyleBoxSizing::ContentBox),
       mOrder(0),
