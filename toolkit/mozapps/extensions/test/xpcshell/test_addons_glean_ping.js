@@ -20,12 +20,6 @@ add_setup(() => {
 add_task(
   {
     pref_set: [
-      // Enable AddonManager managed EnvironmentAddonBuilder on any build
-      // to make it easier to test the `addons` Glean Ping scheduling
-      // across Android and Desktop builds (whereas by default the
-      // EnvironmentAddonBuilder is still managed by the legacy
-      // TelemetryEnvironment on Firefox Desktop builds).
-      ["extensions.telemetry.EnvironmentAddonBuilder", true],
       // Reduce the delay and idle timeout for the `addons` Glean Ping
       // scheduled on add-ons list updates (delay to 2s from the 5m default,
       // idle timeout disabled completely).
@@ -59,7 +53,7 @@ add_task(
         // Glean Ping `addons` to be submitted with reason `startup`.
         await AddonTestUtils.promiseStartupManager();
         Services.obs.notifyObservers(null, "test-load-xpi-database");
-        await AMTelemetry.telemetryAddonBuilder._pendingTask;
+        await AMTelemetry.addonsBuilder._pendingTask;
       }
     );
 
