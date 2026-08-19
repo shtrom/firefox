@@ -710,8 +710,8 @@ export function createEditor(inputElement) {
 
   const mentionsPlugin = setupMentionsPlugin(editorElement, panelList);
   const plugins = [mentionsPlugin];
-  // Keep the "/" command out of the address bar
-  if (isSidebarMode) {
+  // Enable the "/" command palette in every Smart Window smartbar
+  if (smartbarInput.sapName === "smartbar") {
     plugins.push(setupCommandsPlugin(editorElement, panelList));
   }
   editorElement.plugins = plugins;
