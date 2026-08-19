@@ -96,86 +96,120 @@ let getBoundsWithoutFlushing = element =>
   element.documentGlobal.windowUtils.getBoundsWithoutFlushing(element);
 let px = number => number.toFixed(2) + "px";
 
+const XHTML_NS = "http://www.w3.org/1999/xhtml";
+const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+
+/**
+ * Parses an input's markup into a fragment. The markup is XML in the XHTML
+ * namespace, with `xul:` for its one XUL element. A content document can hold no
+ * XUL at all, so there that prefix resolves to HTML as well and the element
+ * parses as an undefined custom element.
+ *
+ * @param {string} markup
+ *   The markup to parse.
+ * @returns {DocumentFragment}
+ */
+function parseMarkupToFragment(markup) {
+  let parser = new DOMParser();
+  let xulNS = XHTML_NS;
+  if (typeof ChromeUtils != "undefined") {
+    // A DOMParser constructed with the system principal gives its document a
+    // null principal, which disallows XUL like any other content principal.
+    parser.forceEnableXULXBL();
+    xulNS = XUL_NS;
+  }
+
+  // A template's contents stay inert until they are imported into a document.
+  let doc = parser.parseFromString(
+    `<template xmlns="${XHTML_NS}" xmlns:xul="${xulNS}">${markup}</template>`,
+    "application/xml"
+  );
+  if (doc.documentElement.localName == "parsererror") {
+    throw new Error("not well-formed XML");
+  }
+  return doc.documentElement.content;
+}
+
 /**
  * Implements the text input part of the address bar UI.
  */
 export class UrlbarInputBase extends HTMLElement {
   static get #markup() {
     return `
-      <html:div class="urlbar-background"/>
-      <html:div class="urlbar-input-container"
-            pageproxystate="invalid">
-        <html:moz-urlbar-slot name="remote-control-box" />
+      <div class="urlbar-background"/>
+      <div class="urlbar-input-container"
+           pageproxystate="invalid">
+        <moz-urlbar-slot name="remote-control-box" />
 
-        <html:moz-button class="searchmode-switcher chromeclass-toolbar-additional"
-                         type="muted"
-                         iconsrc="chrome://global/skin/icons/search-glass.svg"
-                         title="More options"
-                         aria-label="More options"
-                         data-l10n-id="urlbar-searchmode-default2"
-                         tabindex="-1"
-                         role="combobox">
+        <moz-button class="searchmode-switcher chromeclass-toolbar-additional"
+                    type="muted"
+                    iconsrc="chrome://global/skin/icons/search-glass.svg"
+                    title="More options"
+                    aria-label="More options"
+                    data-l10n-id="urlbar-searchmode-default2"
+                    tabindex="-1"
+                    role="combobox">
           <!-- This span has no purpose other than making the moz-button think
                it contains text even when searchmode-switcher-title is hidden. -->
-          <html:span class="urlbar-visually-hidden" aria-hidden="true">a</html:span>
-          <html:span class="searchmode-switcher-content">
-            <html:img class="searchmode-switcher-dropmarker"
-                      data-l10n-id="urlbar-searchmode-dropmarker2"
-                      draggable="false" />
-            <html:span class="searchmode-switcher-title" />
-            <html:button class="searchmode-switcher-close toolbarbutton-icon close-button"
-                         data-l10n-id="urlbar-searchmode-exit-button2"
-                         tabindex="-1"
-                         keyNav="false" />
-          </html:span>
-        </html:moz-button>
+          <span class="urlbar-visually-hidden" aria-hidden="true">a</span>
+          <span class="searchmode-switcher-content">
+            <img class="searchmode-switcher-dropmarker"
+                 data-l10n-id="urlbar-searchmode-dropmarker2"
+                 draggable="false" />
+            <span class="searchmode-switcher-title" />
+            <button class="searchmode-switcher-close toolbarbutton-icon close-button"
+                    data-l10n-id="urlbar-searchmode-exit-button2"
+                    tabindex="-1"
+                    keyNav="false" />
+          </span>
+        </moz-button>
         <!-- In XUL windows, this will be wrapped in a panel with class="searchmode-switcher-panel". -->
-        <html:panel-list class="searchmode-switcher-panel-list">
-          <html:div class="searchmode-switcher-panel-description" role="heading" />
+        <panel-list class="searchmode-switcher-panel-list">
+          <div class="searchmode-switcher-panel-description" role="heading" />
 ${
   UrlbarPrefs.get("browser.nova.enabled")
-    ? '<html:hr class="searchmode-switcher-panel-installed-engine-separator"/><html:hr class="searchmode-switcher-panel-footer-separator"/>'
-    : '<html:hr/><html:hr class="searchmode-switcher-panel-installed-engine-separator searchmode-switcher-panel-footer-separator"/>'
+    ? '<hr class="searchmode-switcher-panel-installed-engine-separator"/><hr class="searchmode-switcher-panel-footer-separator"/>'
+    : '<hr/><hr class="searchmode-switcher-panel-installed-engine-separator searchmode-switcher-panel-footer-separator"/>'
 }
-        </html:panel-list>
+        </panel-list>
 
-        <html:moz-urlbar-slot name="site-info" />
-        <moz-input-box tooltip="aHTMLTooltip"
-                       class="urlbar-input-box"
-                       flex="1">
+        <moz-urlbar-slot name="site-info" />
+        <xul:moz-input-box tooltip="aHTMLTooltip"
+                           class="urlbar-input-box"
+                           flex="1">
           <!-- In the addressbar, there will be an input with id="urlbar-scheme" here. -->
-          <html:input class="urlbar-input textbox-input"
-                      role="combobox"
-                      dir="auto"
-                      aria-autocomplete="both"
-                      inputmode="mozAwesomebar"
-                      data-l10n-id="urlbar-placeholder"/>
-        </moz-input-box>
-        <html:moz-urlbar-slot name="revert-button" />
-        <html:img class="urlbar-icon urlbar-go-button"
-               role="button"
-               keyNav="false"
-               data-l10n-id="urlbar-go-button2"/>
-        <html:moz-urlbar-slot name="page-actions" />
-      </html:div>
-      <html:div class="urlbarView"
-            role="group"
-            tooltip="aHTMLTooltip">
-        <html:div class="urlbarView-body-outer">
-          <html:div class="urlbarView-body-inner">
-            <html:div class="urlbarView-results"
-                      role="listbox"/>
-          </html:div>
-        </html:div>
-        <html:panel-list class="urlbarView-result-menu"></html:panel-list>
-        <html:moz-urlbar-slot name="search-one-offs" />
-   </html:div>`;
+          <input class="urlbar-input textbox-input"
+                 role="combobox"
+                 dir="auto"
+                 aria-autocomplete="both"
+                 inputmode="mozAwesomebar"
+                 data-l10n-id="urlbar-placeholder"/>
+        </xul:moz-input-box>
+        <moz-urlbar-slot name="revert-button" />
+        <img class="urlbar-icon urlbar-go-button"
+             role="button"
+             keyNav="false"
+             data-l10n-id="urlbar-go-button2"/>
+        <moz-urlbar-slot name="page-actions" />
+      </div>
+      <div class="urlbarView"
+           role="group"
+           tooltip="aHTMLTooltip">
+        <div class="urlbarView-body-outer">
+          <div class="urlbarView-body-inner">
+            <div class="urlbarView-results"
+                 role="listbox"/>
+          </div>
+        </div>
+        <panel-list class="urlbarView-result-menu"></panel-list>
+        <moz-urlbar-slot name="search-one-offs" />
+   </div>`;
   }
 
   /** @type {DocumentFragment} */
   static get fragment() {
     if (!UrlbarInputBase.#fragment) {
-      UrlbarInputBase.#fragment = window.MozXULElement.parseXULToFragment(
+      UrlbarInputBase.#fragment = parseMarkupToFragment(
         UrlbarInputBase.#markup
       );
     }
