@@ -355,6 +355,24 @@ ${
   }
 
   /**
+   * Links the stylesheets a content document needs. A chrome window imports the
+   * same set through browser-shared.css.
+   */
+  #addStylesheet() {
+    const HREF = "chrome://browser/skin/urlbar.css";
+    if (
+      typeof ChromeUtils != "undefined" ||
+      document.querySelector(`link[href="${HREF}"]`)
+    ) {
+      return;
+    }
+    let link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = HREF;
+    document.head.appendChild(link);
+  }
+
+  /**
    * Initialization that happens once on the first connect.
    */
   #init() {
@@ -363,6 +381,8 @@ ${
         this.getAttribute("sap-name")
       );
     this.#isAddressbar = this.#sapName == "urlbar";
+
+    this.#addStylesheet();
 
     // This listener must be added before connecting the fragment
     // because the event could fire while or after connecting it.

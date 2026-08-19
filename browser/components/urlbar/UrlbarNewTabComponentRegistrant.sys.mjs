@@ -45,6 +45,7 @@ export class UrlbarNewTabComponentRegistrant extends BaseAboutNewTabComponentReg
         componentURL: "chrome://browser/content/urlbar/UrlbarInput.mjs",
         tagName: "moz-urlbar",
         attributes: {
+          class: "urlbar",
           pageproxystate: "invalid",
           "sap-name": "newtab_searchbar",
           "unifiedsearchbutton-available": "",

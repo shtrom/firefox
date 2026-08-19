@@ -62,7 +62,7 @@
   skin/classic/browser/urlbar/view.css                         (../shared/urlbar/view.css)
   skin/classic/browser/urlbar/view-nova.css                    (../shared/urlbar/view-nova.css)
   skin/classic/browser/urlbar/view-proton.css                  (../shared/urlbar/view-proton.css)
-  skin/classic/browser/urlbar-searchbar.css                    (../shared/urlbar-searchbar.css)
+  skin/classic/browser/urlbar.css                              (../shared/urlbar.css)
   skin/classic/browser/UITour.css                              (../shared/UITour.css)
   skin/classic/browser/webRTC-indicator.css                    (../shared/webRTC-indicator.css)
   skin/classic/browser/webRTC-menubar-indicator.css            (../shared/webRTC-menubar-indicator.css)
