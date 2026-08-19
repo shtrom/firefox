@@ -677,11 +677,7 @@ ImgDrawResult nsImageRenderer::BuildWebRenderDisplayItems(
         containerFlags |= imgIContainer::FLAG_RECORD_BLOB;
       }
 
-      CSSIntSize destCSSSize{
-          nsPresContext::AppUnitsToIntCSSPixels(aDest.width),
-          nsPresContext::AppUnitsToIntCSSPixels(aDest.height)};
-
-      SVGImageContext svgContext(Some(destCSSSize));
+      SVGImageContext svgContext(Some(CSSSize::FromAppUnits(aDest.Size())));
       Maybe<ImageIntRegion> region;
 
       const int32_t appUnitsPerDevPixel = aPresContext->AppUnitsPerDevPixel();
@@ -959,7 +955,7 @@ ImgDrawResult nsImageRenderer::DrawBorderImageComponent(
     const nsRect& aDirtyRect, const nsRect& aFill, const CSSIntRect& aSrc,
     StyleBorderImageRepeatKeyword aHFill, StyleBorderImageRepeatKeyword aVFill,
     const nsSize& aUnitSize, uint8_t aIndex,
-    const Maybe<nsSize>& aSVGViewportSize, const bool aHasIntrinsicRatio) {
+    const Maybe<CSSSize>& aSVGViewportSize, const bool aHasIntrinsicRatio) {
   if (!IsReady()) {
     MOZ_ASSERT_UNREACHABLE(
         "Ensure PrepareImage() has returned true before "
@@ -1022,6 +1018,9 @@ ImgDrawResult nsImageRenderer::DrawBorderImageComponent(
     if (!RequiresScaling(aFill, aHFill, aVFill, aUnitSize)) {
       SVGImageContext svgContext;
       SVGImageContext::MaybeStoreContextPaint(svgContext, mForFrame, subImage);
+      if (aSVGViewportSize) {
+        svgContext.SetViewportSize(aSVGViewportSize);
+      }
       ImgDrawResult result = nsLayoutUtils::DrawSingleImage(
           aRenderingContext, aPresContext, subImage, samplingFilter, aFill,
           aDirtyRect, svgContext, drawFlags);
