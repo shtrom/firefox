@@ -543,13 +543,11 @@ void SandboxBrokerPolicyFactory::InitContentPolicy() {
 
   nsAutoCString xdgConfigDirs(PR_GetEnv("XDG_CONFIG_DIRS"));
   for (const auto& path : xdgConfigDirs.Split(':')) {
-    if (path[0] != '/') {
+    if (path.IsEmpty() || path[0] != '/') {
       continue;
     }
 
-    if (!path.IsEmpty()) {  // AddPath will fail on empty strings
-      policy->AddFutureDir(rdonly, PromiseFlatCString(path).get());
-    }
+    policy->AddFutureDir(rdonly, PromiseFlatCString(path).get());
   }
 
   // Allow fonts subdir in XDG_DATA_HOME
@@ -563,7 +561,7 @@ void SandboxBrokerPolicyFactory::InitContentPolicy() {
   // Any font subdirs in XDG_DATA_DIRS
   nsAutoCString xdgDataDirs(PR_GetEnv("XDG_DATA_DIRS"));
   for (const auto& path : xdgDataDirs.Split(':')) {
-    if (path[0] != '/') {
+    if (path.IsEmpty() || path[0] != '/') {
       continue;
     }
 
