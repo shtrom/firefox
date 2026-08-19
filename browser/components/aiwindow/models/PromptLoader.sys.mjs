@@ -5,7 +5,7 @@
  */
 
 import {
-  getRemoteClient,
+  getRemoteRecords,
   selectMainConfig,
   renderPrompt,
   checkMajorVersion,
@@ -69,7 +69,7 @@ function getDefaultServiceType(feature) {
 const V2_RECORD_KINDS = new Set(["module", "skill", "params"]);
 
 async function loadV2Records() {
-  const records = await getRemoteClient().get();
+  const records = await getRemoteRecords();
   return records.filter(r => V2_RECORD_KINDS.has(r.kind));
 }
 
@@ -364,7 +364,7 @@ export async function buildBrowserContextPrompt(
  * @returns {Promise<object>}
  */
 async function selectFeatureConfig(feature, opts = {}) {
-  const allRecords = await getRemoteClient().get();
+  const allRecords = await getRemoteRecords();
 
   const hasV2Params = allRecords.some(
     r => r.feature === feature && r.kind === "params"
