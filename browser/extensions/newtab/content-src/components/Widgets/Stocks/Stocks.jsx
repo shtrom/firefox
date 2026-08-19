@@ -170,7 +170,7 @@ function Stocks({
           />
           <panel-list id="stocks-context-menu">
             <panel-item
-              data-l10n-id="newtab-stocks-menu-search"
+              data-l10n-id="newtab-stocks-menu-search-stocks"
               onClick={handleSearchTickers}
             />
             <WidgetMenuFooter
