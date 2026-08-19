@@ -40,13 +40,13 @@ class PageSummariesSettingsFragment : Fragment(), SystemInsetsPaddedFragment {
         savedInstanceState: Bundle?,
     ): View {
         val summarizeSettings = requireComponents.summarizationSettings
-        val cache = requireComponents.summarizationSettingsCache
+        val cache = requireComponents.core.summarizationSettingsBinding
         val store =
             SummarizeSettingsStore(
                 initialState =
                     SummarizeSettingsState(
-                        isFeatureEnabled = cache.featureEnabled.value,
-                        isGestureEnabled = cache.gestureEnabled.value,
+                        isFeatureEnabled = cache.isFeatureEnabled.value,
+                        isGestureEnabled = cache.isGestureEnabled.value,
                         shakeSensitivity = cache.shakeSensitivity.value,
                     ),
                 reducer = ::summarizeSettingsReducer,

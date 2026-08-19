@@ -135,14 +135,14 @@ class SummarizationFragment : BottomSheetDialogFragment() {
         savedInstanceState: Bundle?,
     ): View {
         val summarizeSettings = requireComponents.summarizationSettings
-        val cache = requireComponents.summarizationSettingsCache
+        val cache = requireComponents.core.summarizationSettingsBinding
 
         val settingsStore =
             SummarizeSettingsStore(
                 initialState =
                     SummarizeSettingsState(
-                        isFeatureEnabled = cache.featureEnabled.value,
-                        isGestureEnabled = cache.gestureEnabled.value,
+                        isFeatureEnabled = cache.isFeatureEnabled.value,
+                        isGestureEnabled = cache.isGestureEnabled.value,
                     ),
                 reducer = ::summarizeSettingsReducer,
                 middleware =

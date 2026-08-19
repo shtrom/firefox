@@ -128,7 +128,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
 
     private val summarizationNavigator by lazy {
         SummarizationNavigator(
-            summarizationSettings = requireComponents.core.summarizationSettings,
+            summarizationSettings = requireComponents.core.summarizationSettingsBinding,
             eligibilityChecker = requireComponents.core.summarizationEligibilityChecker,
             getCurrentTab = ::getSafeCurrentTab,
         )
@@ -236,7 +236,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
     private fun setupShakeDetection() {
         val shouldSetupShake =
             requireComponents.core.summarizeFeatureSettings.canShowFeature &&
-                requireComponents.core.summarizationSettings.isGestureEnabled.value
+                requireComponents.core.summarizationSettingsBinding.isGestureEnabled.value
         if (!shouldSetupShake) {
             return
         }
@@ -247,7 +247,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler, SystemIns
             lifecycle.addObserver(accelerometer)
             lifecycleScope.launch {
                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    requireComponents.core.summarizationSettings.shakeSensitivity
+                    requireComponents.core.summarizationSettingsBinding.shakeSensitivity
                         .flatMapLatest { sensitivity ->
                             accelerometer.detectShakes(sensitivity = sensitivity)
                         }
