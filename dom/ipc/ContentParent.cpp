@@ -230,7 +230,6 @@
 #include "nsILocalStorageManager.h"
 #include "nsIMemoryInfoDumper.h"
 #include "nsIMemoryReporter.h"
-#include "nsINavHistoryService.h"
 #include "nsINetworkLinkService.h"
 #include "nsIObserverService.h"
 #include "nsIParentChannel.h"
@@ -6301,71 +6300,6 @@ static bool WebDriverSessionRunning() {
   return false;
 }
 
-#ifndef MOZ_GECKOVIEW_HISTORY
-// Whether aDomain (an ETLD+1) was unvisited today, until aNavigationStartTime,
-// per the in-process Places history. Returns false when history is
-// unavailable. Desktop only; GeckoView history lives in the embedding app.
-static bool FirstDailyLoadFromPlaces(const nsACString& aDomain,
-                                     const TimeStamp& aNavigationStartTime) {
-  if (aNavigationStartTime.IsNull()) {
-    return false;
-  }
-
-  nsCOMPtr<nsINavHistoryService> history =
-      do_GetService(NS_NAVHISTORYSERVICE_CONTRACTID);
-  bool historyDisabled = true;
-  if (!history || NS_FAILED(history->GetHistoryDisabled(&historyDisabled)) ||
-      historyDisabled) {
-    return false;
-  }
-
-  nsCOMPtr<nsINavHistoryQuery> query;
-  nsCOMPtr<nsINavHistoryQueryOptions> options;
-  if (NS_FAILED(history->GetNewQuery(getter_AddRefs(query))) ||
-      NS_FAILED(history->GetNewQueryOptions(getter_AddRefs(options)))) {
-    return false;
-  }
-
-  // Convert the monotonic navigation start to Places' wall-clock visit_date.
-  PRTime navigationStart =
-      PR_Now() -
-      static_cast<PRTime>(
-          (TimeStamp::Now() - aNavigationStartTime).ToMicroseconds());
-
-  if (NS_FAILED(query->SetDomain(aDomain)) ||
-      NS_FAILED(query->SetDomainIsHost(false)) ||
-      NS_FAILED(query->SetBeginTimeReference(
-          nsINavHistoryQuery::TIME_RELATIVE_TODAY)) ||
-      NS_FAILED(query->SetBeginTime(0)) ||
-      NS_FAILED(query->SetEndTime(navigationStart)) ||
-      NS_FAILED(options->SetResultType(
-          nsINavHistoryQueryOptions::RESULTS_AS_VISIT)) ||
-      NS_FAILED(options->SetMaxResults(1)) ||
-      NS_FAILED(options->SetQueryType(
-          nsINavHistoryQueryOptions::QUERY_TYPE_HISTORY))) {
-    return false;
-  }
-
-  nsCOMPtr<nsINavHistoryResult> result;
-  if (NS_FAILED(
-          history->ExecuteQuery(query, options, getter_AddRefs(result)))) {
-    return false;
-  }
-
-  nsCOMPtr<nsINavHistoryContainerResultNode> root;
-  if (NS_FAILED(result->GetRoot(getter_AddRefs(root))) ||
-      NS_FAILED(root->SetContainerOpen(true))) {
-    return false;
-  }
-
-  uint32_t visitCount = 0;
-  nsresult rv = root->GetChildCount(&visitCount);
-  root->SetContainerOpen(false);
-
-  return NS_SUCCEEDED(rv) && visitCount == 0;
-}
-#endif
-
 #ifdef MOZ_GECKOVIEW_HISTORY
 // Local midnight (start of the current day in local time) as milliseconds since
 // the Unix epoch.
@@ -6420,7 +6354,8 @@ static void QueryFirstDailyLoad(const nsACString& aDomain,
         callback(aVisitedToday.isSome() && !*aVisitedToday);
       });
 #else
-  aCallback(FirstDailyLoadFromPlaces(aDomain, aNavigationStartTime));
+  aCallback(mozilla::performance::pageload_event::FirstDailyLoadFromPlaces(
+      aDomain, aNavigationStartTime));
 #endif
 }
 
@@ -6478,6 +6413,11 @@ mozilla::ipc::IPCResult ContentParent::RecvRecordPageLoadEvent(
     const MaybeDiscarded<BrowsingContext>& aBrowsingContext) {
   // Check whether a webdriver is running.
   aPageloadEventData.set_usingWebdriver(WebDriverSessionRunning());
+
+#ifndef MOZ_GECKOVIEW_HISTORY
+  aPageloadEventData.set_isActiveClient(
+      mozilla::performance::pageload_event::IsActiveClient());
+#endif
 
 #if defined(ANDROID)
   // Get network link type iff android.
