@@ -129,6 +129,11 @@ class TranslationsTest {
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2437991
     @SmokeTest
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.TranslationsTest#verifyTheNeverTranslateOptionTest"],
+        bug = 2063228,
+        since = "2026-08",
+    )
     @Test
     fun verifyTheNeverTranslateOptionTest() {
         val firstTestPage = mockWebServer.firstForeignWebPageAsset
