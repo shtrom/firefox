@@ -10,7 +10,6 @@ ChromeUtils.defineESModuleGetters(lazy, {
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -365,12 +364,11 @@ export class UrlbarChild extends JSWindowActorChild {
     if (!this.manager.parentActor) {
       child = Cu.waiveXrays(child);
     }
-    let deserialized = params.map(param =>
-      param?.serializedQueryContext
-        ? lazy.UrlbarQueryContext.fromWire(param.serializedQueryContext)
-        : param
-    );
-    child.notify(name, ...deserialized);
+    // The wire form crosses as plain data and the child controller builds the
+    // query context from it, so the object is born in the realm that reads it.
+    // Deserializing here would leave content an Xray over it, whose properties
+    // all read `undefined`.
+    child.notifyFromWire(name, ...this.#forContent(params));
   }
 
   /**
