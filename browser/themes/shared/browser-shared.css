@@ -617,6 +617,10 @@ body {
   :root[sessionrestored][lwtheme] & {
     transition: var(--ext-theme-background-transition);
   }
+
+  :root:is([web-extension-popup-window], [chromeless-window]) & {
+    display: none;
+  }
 }
 
 #nav-bar-customization-target {

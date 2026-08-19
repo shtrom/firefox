@@ -1705,7 +1705,10 @@ export class Tabbrowser {
     // add the scheme and host to the title to prevent spoofing.
     // XXX https://bugzilla.mozilla.org/show_bug.cgi?id=22183#c239
     try {
-      if (docElement.getAttribute("chromehidden").includes("location")) {
+      if (
+        docElement.hasAttribute("web-extension-popup-window") ||
+        docElement.hasAttribute("chromeless-window")
+      ) {
         const uri = Services.io.createExposableURI(browser.currentURI);
         let prefix = uri.prePath;
         if (uri.scheme == "about") {

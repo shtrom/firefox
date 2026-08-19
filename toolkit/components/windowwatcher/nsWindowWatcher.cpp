@@ -1955,9 +1955,6 @@ uint32_t nsWindowWatcher::CalculateChromeFlagsForSystem(
   if (aFeatures.GetBoolWithDefault("toolbar", false, &presenceFlag)) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_TOOLBAR;
   }
-  if (aFeatures.GetBoolWithDefault("location", false, &presenceFlag)) {
-    chromeFlags |= nsIWebBrowserChrome::CHROME_LOCATIONBAR;
-  }
   if (aFeatures.GetBoolWithDefault("personalbar", false, &presenceFlag)) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR;
   }

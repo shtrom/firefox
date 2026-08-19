@@ -10,10 +10,6 @@
 //   defaults_to: <what this feature defaults to normally>
 // }
 const DISALLOWED = {
-  location: {
-    flag: Ci.nsIWebBrowserChrome.CHROME_LOCATIONBAR,
-    defaults_to: true,
-  },
   chrome: {
     flag: Ci.nsIWebBrowserChrome.CHROME_OPENAS_CHROME,
     defaults_to: false,
