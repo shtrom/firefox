@@ -995,9 +995,6 @@ dom:
     type: timing_distribution
     description: >
       The time spent in the fully-black screen in fullscreen transition
-
-      This metric was generated to correspond to the Legacy Telemetry
-      exponential histogram FULLSCREEN_TRANSITION_BLACK_MS.
     time_unit: millisecond
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1271160
@@ -1006,7 +1003,6 @@ dom:
     notification_emails:
       - mozilla-telemetry@upsuper.org
     expires: never
-    telemetry_mirror: FULLSCREEN_TRANSITION_BLACK_MS
 
   gc_in_progress:
     type: labeled_timing_distribution
