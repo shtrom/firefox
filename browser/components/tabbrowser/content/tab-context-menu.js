@@ -1158,7 +1158,6 @@ var TabContextMenu = {
     createUserContextMenu(event, {
       isContextMenu: true,
       excludeUserContextId: this.contextTab.getAttribute("usercontextid"),
-      containerSource: "tab_context_menu",
     });
   },
   duplicateSelectedTabs() {
@@ -1222,7 +1221,6 @@ var TabContextMenu = {
         pinned: tab.pinned,
         tabIndex: tab._tPos + 1,
         triggeringPrincipal,
-        eventDetail: { containerSource: "tab_context_menu" },
       });
 
       Glean.containers.tabAssignedContainer.record({

@@ -246,18 +246,10 @@ document.addEventListener(
             openNewUserContextTab(event.sourceEvent);
             break;
           case "Browser:AddContainer":
-            lazy.ContainerCreationPanel.open(
-              window,
-              event.sourceEvent?.target?.dataset.containerEntrypoint
-            );
+            lazy.ContainerCreationPanel.open(window);
             break;
           case "Browser:OpenAboutContainers":
-            openPreferences("paneContainers", {
-              urlParams: {
-                entrypoint:
-                  event.sourceEvent?.target?.dataset.containerEntrypoint,
-              },
-            });
+            openPreferences("paneContainers");
             break;
           // deliberate fallthrough
           case "Profiles:CreateProfile":

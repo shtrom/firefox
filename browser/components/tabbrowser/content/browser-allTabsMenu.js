@@ -191,7 +191,6 @@ var gTabsPanel = {
         menuitem.classList.add("identity-color-" + identity.color);
 
         menuitem.setAttribute("command", "Browser:NewUserContextTab");
-        menuitem.setAttribute("data-container-entrypoint", "all_tabs_menu");
 
         frag.appendChild(menuitem);
         elements.push(menuitem);

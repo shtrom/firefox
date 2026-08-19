@@ -1530,7 +1530,6 @@ export class nsContextMenu {
   openLinkInTab(event) {
     let params = {
       userContextId: parseInt(event.target.getAttribute("data-usercontextid")),
-      eventDetail: { containerSource: "content_context_menu" },
       ...this._getGlobalHistoryOptions(),
     };
 
@@ -2983,7 +2982,6 @@ export class nsContextMenu {
     let createMenuOptions = {
       isContextMenu: true,
       excludeUserContextId: this.contentData.userContextId,
-      containerSource: "content_context_menu",
     };
     return this.window.createUserContextMenu(aEvent, createMenuOptions);
   }

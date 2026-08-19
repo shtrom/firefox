@@ -189,9 +189,7 @@ document.addEventListener(
           gFileMenu.onPopupShowing(event);
           break;
         case "menu_newUserContextPopup":
-          createUserContextMenu(event, {
-            containerSource: "file_menu",
-          });
+          createUserContextMenu(event);
           break;
         case "menu_EditPopup":
           updateEditUIVisibility();

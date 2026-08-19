@@ -187,7 +187,6 @@ function createUserContextMenu(
     useAccessKeys = true,
     showAddContainer = true,
     showManageContainers = true,
-    containerSource = "unknown",
   } = {}
 ) {
   while (event.target.hasChildNodes()) {
@@ -211,7 +210,6 @@ function createUserContextMenu(
     menuitem.setAttribute("data-usercontextid", "0");
     if (!isContextMenu) {
       menuitem.setAttribute("command", "Browser:NewUserContextTab");
-      menuitem.setAttribute("data-container-entrypoint", containerSource);
     }
 
     docfrag.appendChild(menuitem);
@@ -243,7 +241,6 @@ function createUserContextMenu(
 
     if (!isContextMenu) {
       menuitem.setAttribute("command", "Browser:NewUserContextTab");
-      menuitem.setAttribute("data-container-entrypoint", containerSource);
     }
 
     menuitem.classList.add("identity-icon-" + identity.icon);
@@ -267,7 +264,7 @@ function createUserContextMenu(
     }
     menuitem.addEventListener("command", commandEvent => {
       commandEvent.stopPropagation();
-      ContainerCreationPanel.open(window, containerSource);
+      ContainerCreationPanel.open(window);
     });
     docfrag.appendChild(menuitem);
   }
@@ -284,9 +281,7 @@ function createUserContextMenu(
     }
     menuitem.addEventListener("command", commandEvent => {
       commandEvent.stopPropagation();
-      openPreferences("paneContainers", {
-        urlParams: { entrypoint: containerSource },
-      });
+      openPreferences("paneContainers");
     });
     docfrag.appendChild(menuitem);
   }

@@ -40,32 +40,6 @@ function siteContainersEnabled() {
   return Services.prefs.getBoolPref(SWITCH_DURING_NAVIGATION_PREF, false);
 }
 
-// gotoPref records a previous category only for navigations within the settings,
-// where the entrypoint of the URL, if any, belongs to another section.
-let pendingSource = history.state?.previousCategory
-  ? "preferences"
-  : URL.fromURI(document.documentURIObject).searchParams.get("entrypoint");
-
-let sectionShown = false;
-
-document.addEventListener("paneshown", event => {
-  if (event.detail.category != "paneContainers") {
-    sectionShown = false;
-    return;
-  }
-  // Re-requesting the already selected category dispatches paneshown again.
-  if (sectionShown) {
-    return;
-  }
-  sectionShown = true;
-
-  Glean.containers.manageContainersOpened.record({
-    source: pendingSource || "unknown",
-  });
-  // Coming back to the section is a navigation within the settings.
-  pendingSource = "preferences";
-});
-
 function openContainerDialog(userContextId) {
   let identity = {
     name: "",
@@ -212,7 +186,6 @@ Preferences.addSetting(
 Preferences.addSetting({
   id: "containers-add-button",
   onUserClick() {
-    Glean.containers.addContainerClicked.record({ source: "preferences" });
     openContainerDialog(null);
   },
 });
