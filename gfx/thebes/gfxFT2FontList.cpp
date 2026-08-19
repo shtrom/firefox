@@ -517,7 +517,7 @@ hb_face_t* FT2FontEntry::CreateHBFace() {
   return nullptr;
 }
 
-bool FT2FontEntry::HasFontTable(uint32_t aTableTag) {
+bool FT2FontEntry::HasFontTableInternal(uint32_t aTableTag) {
   // If we already have a FreeType face, we can just use that.
   if (mFTFace) {
     RefPtr<SharedFTFace> face = GetFTFace();

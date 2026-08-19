@@ -103,6 +103,16 @@ pub extern "C" fn skrifa_font_get_table(font: &SkrifaFontRef, tag: u32) -> Skrif
     }
 }
 
+/// Check whether a given table is present.
+/// Note that a table that appears in the directory, but has zero length,
+/// is considered to be missing.
+#[no_mangle]
+pub extern "C" fn skrifa_font_has_table(font: &SkrifaFontRef, tag: u32) -> bool {
+    font.0
+        .table_data(skrifa::Tag::from_u32(tag))
+        .is_some_and(|data| data.len() > 0)
+}
+
 // VARIATION SETTINGS
 use style::gecko_bindings::structs::gfxFontVariation;
 

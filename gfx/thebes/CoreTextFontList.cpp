@@ -640,7 +640,7 @@ hb_blob_t* CTFontEntry::GetFontTableInternal(uint32_t aTag) {
   return nullptr;
 }
 
-bool CTFontEntry::HasFontTable(uint32_t aTableTag) {
+bool CTFontEntry::HasFontTableInternal(uint32_t aTableTag) {
   {
     // If we've already initialized mAvailableTables, we can return without
     // needing to take an exclusive lock.

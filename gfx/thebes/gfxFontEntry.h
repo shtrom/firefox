@@ -204,6 +204,9 @@ class gfxFontEntry {
   typedef mozilla::SlantStyleRange SlantStyleRange;
   typedef mozilla::WidthRange WidthRange;
   using imgDrawingParams = mozilla::image::imgDrawingParams;
+#if MOZ_FONTATIONS
+  using SkrifaFontRef = mozilla::gfx::SkrifaFontRef;
+#endif
 
   // Used by stylo
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING(gfxFontEntry)
@@ -283,7 +286,14 @@ class gfxFontEntry {
   const hb_set_t* InputsForOpenTypeFeature(Script aScript,
                                            uint32_t aFeatureTag);
 
-  virtual bool HasFontTable(uint32_t aTableTag);
+  bool HasFontTable(uint32_t aTableTag) {
+#if MOZ_FONTATIONS
+    if (const auto* skf = GetSkrifaFont()) {
+      return skrifa_font_has_table(skf, aTableTag);
+    }
+#endif
+    return HasFontTableInternal(aTableTag);
+  }
 
   inline bool HasGraphiteTables() {
     LazyFlag flag = mHasGraphiteTables;
@@ -740,8 +750,8 @@ class gfxFontEntry {
   // (virtual) InitSkrifaFontFace() if necessary. The Init call is only
   // attempted once; if it fails, no Skrifa font ref is available for this
   // entry.
-  const mozilla::gfx::SkrifaFontRef* GetSkrifaFont() {
-    if (mozilla::gfx::SkrifaFontRef* f = mSkrifaFontFace) {
+  const SkrifaFontRef* GetSkrifaFont() {
+    if (const SkrifaFontRef* f = mSkrifaFontFace) {
       return f;
     }
     if (!mSkrifaFontInitialized) {
@@ -783,6 +793,9 @@ class gfxFontEntry {
   // table, use of AutoTable (below) is generally preferred.
   virtual hb_blob_t* GetFontTableInternal(uint32_t aTag);
 
+  // Check for presence of a given table.
+  virtual bool HasFontTableInternal(uint32_t aTableTag);
+
   // Copy a font table into aBuffer.
   // The caller will be responsible for ownership of the data.
   virtual nsresult CopyFontTable(uint32_t aTableTag,
@@ -819,18 +832,18 @@ class gfxFontEntry {
   // Set the Skrifa font ref and hold on to the memory mapping, unless the
   // face has already been set, in which case the passed font and mapping
   // are discarded.
-  void SetSkrifaFont(mozilla::gfx::SkrifaFontRef* aSkrifaFont,
+  void SetSkrifaFont(SkrifaFontRef* aSkrifaFont,
                      mozilla::MemoryMappedFile&& aSkrifaFontFile);
 
   // Set the Skrifa font ref with no memmap'd file. Used for webfonts when
   // mIsDataUserFont is true.
-  void SetSkrifaFont(mozilla::gfx::SkrifaFontRef* aSkrifaFont);
+  void SetSkrifaFont(SkrifaFontRef* aSkrifaFont);
 
   // Attempt to initialize a SkrifaFontRef for this resource, and record it
   // via SetSkrifaFont.
   virtual void InitSkrifaFontFace() {}
 
-  mozilla::Atomic<mozilla::gfx::SkrifaFontRef*> mSkrifaFontFace;
+  mozilla::Atomic<SkrifaFontRef*> mSkrifaFontFace;
   mozilla::MemoryMappedFile mSkrifaFontFile;
 #endif
 

@@ -87,7 +87,7 @@ class CTFontEntry final : public gfxFontEntry {
 
   gfxFont* CreateFontInstance(const gfxFontStyle* aFontStyle) override;
 
-  bool HasFontTable(uint32_t aTableTag) override;
+  bool HasFontTableInternal(uint32_t aTableTag) override;
 
   static void DestroyBlobFunc(void* aUserData);
 
