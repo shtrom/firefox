@@ -141,6 +141,10 @@ class SharePageActionClass {
         this.#handleOsShare(panel);
         break;
       }
+      case MAIL_SHARE_BUTTON_ID: {
+        lazy.SharingUtils.sendEmail(panel);
+        break;
+      }
       default: {
         return;
       }

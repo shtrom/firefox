@@ -28,6 +28,15 @@ Object.defineProperty(lazy, "MacSharingService", {
   },
 });
 
+Object.defineProperty(lazy, "ExternalProtocolService", {
+  configurable: true,
+  get() {
+    return Cc["@mozilla.org/uriloader/external-protocol-service;1"].getService(
+      Ci.nsIExternalProtocolService
+    );
+  },
+});
+
 /**
  * Class that populates and handles various sharing options
  */
@@ -405,6 +414,24 @@ class SharingUtilsCls {
     lazy.WindowsUIUtils.shareUrl(urlToShare, titleToShare);
   }
 
+  sendEmail(node) {
+    let { urlToShare, titleToShare } = this.getLinkToShare(node);
+    if (!urlToShare) {
+      return;
+    }
+
+    let mailtoUrl =
+      "mailto:?body=" +
+      encodeURIComponent(urlToShare) +
+      "&subject=" +
+      encodeURIComponent(titleToShare ?? "");
+
+    lazy.ExternalProtocolService.loadURI(
+      Services.io.newURI(mailtoUrl),
+      Services.scriptSecurityManager.getSystemPrincipal()
+    );
+  }
+
   shareOnMac(node, serviceName) {
     let { urlToShare, titleToShare } = this.getLinkToShare(node);
     if (!urlToShare) {
@@ -431,6 +458,24 @@ class SharingUtilsCls {
         return Cc["@mozilla.org/windows-ui-utils;1"].getService(
           Ci.nsIWindowsUIUtils
         );
+      },
+    });
+  }
+
+  testOnlyMockExternalProtocolService(mock) {
+    if (!Cu.isInAutomation) {
+      throw new Error("Can only mock utils in automation.");
+    }
+    // eslint-disable-next-line mozilla/valid-lazy
+    Object.defineProperty(lazy, "ExternalProtocolService", {
+      configurable: true,
+      get() {
+        if (mock) {
+          return mock;
+        }
+        return Cc[
+          "@mozilla.org/uriloader/external-protocol-service;1"
+        ].getService(Ci.nsIExternalProtocolService);
       },
     });
   }
