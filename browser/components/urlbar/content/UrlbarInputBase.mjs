@@ -5104,6 +5104,12 @@ ${
       // entered in the bar, or if there is a tab switch to a tab which has a url
       // loaded. We delay the update until the user is out of search mode since
       // an alternative placeholder is used in search mode.
+      // A tab switch only hides the placeholder in the address bar, whose value
+      // comes from the selected tab. Every other input keeps its own value, so
+      // typing is its one cue that the user has looked away.
+      let tabContainer = this.#isAddressbar
+        ? this.window.gBrowser.tabContainer
+        : null;
       let updateListener = () => {
         if (this.value && !this.searchMode) {
           // By the time the user has switched, they may have changed the engine
@@ -5113,18 +5119,12 @@ ${
           this.searchModeSwitcher.updateSearchIcon().catch(console.error);
           this.updatePlaceholder();
           this.inputField.removeEventListener("input", updateListener);
-          this.window.gBrowser.tabContainer.removeEventListener(
-            "TabSelect",
-            updateListener
-          );
+          tabContainer?.removeEventListener("TabSelect", updateListener);
         }
       };
 
       this.inputField.addEventListener("input", updateListener);
-      this.window.gBrowser.tabContainer.addEventListener(
-        "TabSelect",
-        updateListener
-      );
+      tabContainer?.addEventListener("TabSelect", updateListener);
     } else {
       this.updatePlaceholder();
     }
