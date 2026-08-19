@@ -122,6 +122,22 @@ export class UrlbarChild extends JSWindowActorChild {
   }
 
   /**
+   * Clones a payload the parent sent into the content realm, so content code can
+   * read it: an object left in this realm reaches content as an Xray, which
+   * denies even `Symbol.iterator`. In the parent both sides share a realm and the
+   * payload passes through as it is.
+   *
+   * @param {any[]} args
+   *   The arguments to hand to content.
+   * @returns {any[]}
+   */
+  #forContent(args) {
+    return this.manager.parentActor
+      ? args
+      : Cu.cloneInto(args, Cu.waiveXrays(this.contentWindow));
+  }
+
+  /**
    * Exposes the actor's content-facing surface on the window for a content-realm
    * `<moz-urlbar>`, which can't reach the `[ChromeOnly]`
    * `windowGlobalChild.getActor` nor hold the system-principal actor. Such an
@@ -383,7 +399,7 @@ export class UrlbarChild extends JSWindowActorChild {
     if (!this.manager.parentActor) {
       child = Cu.waiveXrays(child);
     }
-    child[target]?.[method](...args);
+    child[target]?.[method](...this.#forContent(args));
   }
 
   #updateEngineStore({ instanceId, args }) {
@@ -397,6 +413,6 @@ export class UrlbarChild extends JSWindowActorChild {
     if (!this.manager.parentActor) {
       child = Cu.waiveXrays(child);
     }
-    child.updateEngineStore(...args);
+    child.updateEngineStore(...this.#forContent(args));
   }
 }
