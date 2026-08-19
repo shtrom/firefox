@@ -78,6 +78,20 @@ const PRIVATE_USER_CONTEXT_ID = -1;
 const DEFAULT_USER_CONTEXT_ID = 0;
 
 export const UrlbarShared = {
+  /**
+   * Measures an element without flushing layout where that is possible.
+   * `windowUtils` is chrome-only, so a content realm takes the flushing path.
+   *
+   * @param {Element} element
+   *   The element to measure.
+   * @returns {DOMRect}
+   */
+  getBoundsWithoutFlushing:
+    typeof ChromeUtils != "undefined"
+      ? element =>
+          element.documentGlobal.windowUtils.getBoundsWithoutFlushing(element)
+      : element => element.getBoundingClientRect(),
+
   // REGEXP_ constants are duplicated from UrlUtils.sys.mjs
   // Regex matching on whitespaces.
   REGEXP_SPACES: /\s+/,

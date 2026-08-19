@@ -92,8 +92,22 @@ const logger = () => UrlbarShared.getLogger({ prefix: "Input" });
 
 const UNLIMITED_MAX_RESULTS = 99;
 
-let getBoundsWithoutFlushing = element =>
-  element.documentGlobal.windowUtils.getBoundsWithoutFlushing(element);
+let getBoundsWithoutFlushing = UrlbarShared.getBoundsWithoutFlushing;
+
+// `promiseDocumentFlushed` is chrome-only. A frame does instead, since the
+// measurements it guards flush layout themselves in a content document.
+let promiseLayoutFlushed =
+  typeof ChromeUtils != "undefined"
+    ? win => win.promiseDocumentFlushed(() => {})
+    : win => new Promise(resolve => win.requestAnimationFrame(resolve));
+
+// `getBoxQuads` is gated on a pref for a content caller, and the transform it
+// ignores is the toolbar's.
+let getUntransformedTop =
+  typeof ChromeUtils != "undefined"
+    ? element =>
+        element.getBoxQuads({ ignoreTransforms: true, flush: false })[0].p1.y
+    : element => element.getBoundingClientRect().top;
 let px = number => number.toFixed(2) + "px";
 
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
@@ -3145,7 +3159,7 @@ ${
     // Enable the animation only after the first extend call to ensure it
     // doesn't run when opening a new window.
     if (!this.hasAttribute("breakout-extend-animate")) {
-      this.window.promiseDocumentFlushed(() => {
+      promiseLayoutFlushed(this.window).then(() => {
         this.window.requestAnimationFrame(() => {
           this.toggleAttribute("breakout-extend-animate", true);
         });
@@ -3477,12 +3491,7 @@ ${
       return;
     }
 
-    this.style.top = px(
-      this.parentNode.getBoxQuads({
-        ignoreTransforms: true,
-        flush: false,
-      })[0].p1.y
-    );
+    this.style.top = px(getUntransformedTop(this.parentNode));
   }
 
   #updateTextboxPositionNextFrame() {
@@ -3528,7 +3537,7 @@ ${
     // finishes, we need to disregard the first one.
     let updateKey = {};
     this._layoutBreakoutUpdateKey = updateKey;
-    await this.window.promiseDocumentFlushed(() => {});
+    await promiseLayoutFlushed(this.window);
     await new Promise(resolve => {
       this.window.requestAnimationFrame(() => {
         if (this._layoutBreakoutUpdateKey != updateKey || !this.isConnected) {
@@ -5473,7 +5482,11 @@ ${
       this.window.UpdatePopupNotificationsVisibility();
     }
 
-    Services.obs.notifyObservers(null, "urlbar-focus");
+    if (typeof ChromeUtils != "undefined") {
+      // The observer service is chrome-only, and its one consumer here is the
+      // macOS Touch Bar, which tracks a chrome window.
+      Services.obs.notifyObservers(null, "urlbar-focus");
+    }
   }
 
   _on_mouseover() {
