@@ -457,10 +457,6 @@
   list-style-image: url("chrome://browser/skin/grid-sparkle.svg");
 }
 
-#smartwindow-monitor-button {
-  list-style-image: url("chrome://browser/content/aiwindow/assets/agent-watch.svg");
-}
-
 #document-pip-return-to-opener-button {
   list-style-image: url("chrome://global/skin/media/picture-in-picture-closed.svg");
 }
