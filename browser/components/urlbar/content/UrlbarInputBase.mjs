@@ -127,7 +127,18 @@ function parseMarkupToFragment(markup) {
   if (doc.documentElement.localName == "parsererror") {
     throw new Error("not well-formed XML");
   }
-  return doc.documentElement.content;
+  let fragment = doc.documentElement.content;
+  // The markup is indented, and keeping the whitespace between elements as text
+  // nodes changes the accessibility tree the input exposes.
+  let walker = doc.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
+  let blank = [];
+  while (walker.nextNode()) {
+    if (!walker.currentNode.data.trim()) {
+      blank.push(walker.currentNode);
+    }
+  }
+  blank.forEach(node => node.remove());
+  return fragment;
 }
 
 /**
