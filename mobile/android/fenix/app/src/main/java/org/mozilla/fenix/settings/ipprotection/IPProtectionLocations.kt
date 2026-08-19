@@ -286,7 +286,7 @@ private fun IPProtectionLocationsEmptyPreview(@PreviewParameter(PreviewThemeProv
 
 private val SAMPLE_LOCATIONS =
     listOf(
-        Recommended(),
+        Recommended,
         Country(countryCode = "dk", available = true),
         Country(countryCode = "fr", available = true),
         Country(countryCode = "gb", available = false),
