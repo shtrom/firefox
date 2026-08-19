@@ -24,6 +24,7 @@
 [[auto_labels]]
 nameTemplate = "{Class}.{method}"
 funcPrefixTemplates = [
+  "mozilla::dom::{Class}_Binding::_{method}_(", # E.g. `mozilla::dom::IDBObjectStore_Binding::_delete_(...)` for `IDBObjectStore.delete`
   "mozilla::dom::{Class}_Binding::{method}(",
   "blink::`anonymous namespace'::v8_{Class:blink_snake}::{method:pascal}StaticOperation", # E.g. `BoundStaticOperationCallback` for `IDBKeyRange.bound`
   "blink::(anonymous namespace)::v8_{Class:blink_snake}::{method:pascal}StaticOperation",
