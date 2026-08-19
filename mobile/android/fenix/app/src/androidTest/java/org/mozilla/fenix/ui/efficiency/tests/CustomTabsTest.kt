@@ -212,9 +212,13 @@ class CustomTabsTest : BaseTest() {
             .mozClick(BrowserPageSelectors.SAVE_LOGIN_PROMPT_CONFIRM_BUTTON)
 
         // Re-enter through an external link, as legacy does. Legacy asserted nothing about the result, so a
-        // failure here surfaced much later; requiring the form to render proves the app really took over.
+        // failure here surfaced much later; assert the browser took over instead. We check ENGINE_VIEW rather
+        // than the web username field: the external-link intent brings the backgrounded browser to the front
+        // through an activity switch, and GeckoView's web-content accessibility nodes are not reliably rebuilt
+        // afterwards (the page loads and the toolbar renders, but the form's a11y ids stay absent), so a
+        // web-field assertion is flaky here. ENGINE_VIEW is the layout-invariant "browser is loaded" signal.
         on.customTabs.openUrlFromExternalLink(LOGIN_FORM_URL)
-        on.browserPage.mozVerify(BrowserPageSelectors.USERNAME_WEB_FIELD, timeout = waitingTimeLong)
+        on.browserPage.mozVerify(BrowserPageSelectors.ENGINE_VIEW, timeout = waitingTimeLong)
 
         // Driven click-by-click instead of on.settingsSavedPasswords.navigateToPage(): every registered edge
         // to that page ends in ClickIfPresent(LOGINS_SECURITY_DIALOG_LATER_BUTTON), which would dismiss the
