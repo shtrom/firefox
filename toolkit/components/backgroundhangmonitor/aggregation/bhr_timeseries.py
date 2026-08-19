@@ -42,11 +42,7 @@ import uuid
 # the primary job emits, so we can report the share of distinct users a
 # signature affected over each trailing window.
 from client_metrics import HyperLogLog
-
-# Frame and stack separators for the canonical key. Control characters that
-# cannot appear in a symbol or library name, so the join is unambiguous.
-_FIELD_SEP = "\x1f"
-_FRAME_SEP = "\x1e"
+from stack_keys import canonical_key, reconstruct_stack
 
 # Defaults. window_days matches the issue's "last 365 days"; top_count is the
 # published signature cap; per_day_top_n is the per-day cushion kept in state so
@@ -66,11 +62,6 @@ AFFECTED_WINDOWS = (("d7", 7), ("d28", 28), ("d365", 365))
 _ARTIFACT_RE = re.compile(r"hangs_(?P<tag>.+)_(?P<date>\d{8})\.json$")
 
 
-def canonical_key(frames):
-    """Stable cross-day signature key for a leaf->root list of [name, lib]."""
-    return _FRAME_SEP.join(f"{name}{_FIELD_SEP}{lib}" for name, lib in frames)
-
-
 def pick_thread(profile):
     """Select the thread the frontend analyzes: main-process Gecko, else first."""
     threads = profile["threads"]
@@ -78,27 +69,6 @@ def pick_thread(profile):
         if thread["name"] == "Gecko" and thread["processType"] == "default":
             return thread
     return threads[0] if threads else None
-
-
-def reconstruct_stack(thread, sample_index):
-    """Return a sample's stack as [funcName, libName] pairs, leaf->root."""
-    string_array = thread["stringArray"]
-    libs = thread["libs"]
-    func_name = thread["funcTable"]["name"]
-    func_lib = thread["funcTable"]["lib"]
-    prefix = thread["stackTable"]["prefix"]
-    func = thread["stackTable"]["func"]
-
-    frames = []
-    stack = thread["sampleTable"]["stack"][sample_index]
-    while stack:
-        func_index = func[stack]
-        name = string_array[func_name[func_index]]
-        lib_index = func_lib[func_index]
-        lib = "" if lib_index is None else libs[lib_index]["name"]
-        frames.append([name, lib])
-        stack = prefix[stack]
-    return frames
 
 
 def aggregate_day(profile, per_day_top_n):

@@ -800,8 +800,10 @@ def test_aggregate_end_to_end_offline(monkeypatch, tmp_path):
         output_dir=str(tmp_path),
     )
 
-    # Profile shape the frontend expects.
-    assert set(profile.keys()) == {"threads", "usageHoursByDate", "uuid"}
+    # Profile shape the frontend expects. leafGroups is attached by the
+    # near-duplicate grouping pass (empty here: a single hang can't group).
+    assert set(profile.keys()) == {"threads", "usageHoursByDate", "uuid", "leafGroups"}
+    assert profile["leafGroups"] == {"Gecko": []}
     assert profile["usageHoursByDate"] == {"20260502": 1.0}
     assert len(profile["threads"]) == 1
     assert profile["threads"][0]["name"] == "Gecko"

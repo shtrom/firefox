@@ -29,6 +29,7 @@ from datetime import timedelta
 
 from client_metrics import HyperLogLog
 from heuristics import apply_hang_signature_heuristics
+from leaf_grouping import compute_leaf_groups
 from profile_processor import ProfileProcessor
 from symbolication import UNSYMBOLICATED, symbolicate_modules
 
@@ -68,6 +69,10 @@ DEFAULT_CONFIG = {
     # Reads client_id (locally only); only counts and mergeable sketches are
     # emitted, never ids. See client_metrics.py.
     "client_metrics": False,
+    # Attach near-duplicate groups to the profile so the frontend can show them
+    # without fuzzy matching of its own. Additive: the signature list itself is
+    # unchanged. See leaf_grouping.py.
+    "leaf_grouping": True,
 }
 
 # Frontend signature key. Each frame is "funcName<FIELD_SEP>libName" where
@@ -670,6 +675,13 @@ def aggregate(
 
     if affected_clients is not None:
         profile["affectedClients"] = affected_clients
+
+    # Skipped in split-thread mode (a list of per-thread payloads), which the
+    # daily job does not use.
+    if config["leaf_grouping"] and not config["split_threads_in_out_file"]:
+        profile["leafGroups"] = compute_leaf_groups(profile)
+        group_count = sum(len(groups) for groups in profile["leafGroups"].values())
+        _phase(f"Grouped near-duplicates into {group_count} groups.")
 
     base = "hangs_" + output_tag
     written = write_file(f"{base}_{date_str}", profile, output_dir)
