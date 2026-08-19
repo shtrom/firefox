@@ -643,7 +643,10 @@ document.addEventListener(
           DynamicShortcutTooltip.updateText(event.target);
           break;
         case "SyncedTabsOpenSelectedInContainerTabMenu":
-          createUserContextMenu(event, { isContextMenu: true });
+          createUserContextMenu(event, {
+            isContextMenu: true,
+            containerSource: "synced_tabs_context_menu",
+          });
           break;
         case "unified-extensions-context-menu":
           gUnifiedExtensions.updateContextMenu(event.target, event);
