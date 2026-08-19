@@ -1696,16 +1696,16 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
-    "widgets.pictureOfTheDay.size",
+    "widgets.stocks.watchlist",
     {
-      title: "Size of the picture of the day widget (small, medium, or large)",
+      title: "Saved stocks widget watchlist ticker symbols (comma-separated)",
       value: "",
     },
   ],
   [
-    "widgets.stocks.size",
+    "widgets.pictureOfTheDay.size",
     {
-      title: "Size of the stocks widget (small, medium, or large)",
+      title: "Size of the picture of the day widget (small, medium, or large)",
       value: "",
     },
   ],

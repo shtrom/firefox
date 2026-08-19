@@ -3,11 +3,29 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 // eslint-disable-next-line no-unused-vars
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSelector, batch } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
 import { useWidgetTelemetry } from "../useWidgetTelemetry";
-import { WIDGET_REGISTRY, resolveWidgetSize } from "common/WidgetsRegistry.mjs";
+import {
+  WIDGET_REGISTRY,
+  resolveWidgetSize,
+  PREF_STOCKS_WATCHLIST,
+} from "common/WidgetsRegistry.mjs";
+import {
+  parseWatchlist,
+  serializeWatchlist,
+  addToWatchlist,
+  removeFromWatchlist,
+  normalize,
+} from "./StocksWatchlist.mjs";
 import { WidgetMenuFooter } from "../WidgetMenuFooter";
 import { SizeSubmenu } from "../SizeSubmenu";
 import { StockTicker } from "./StockTicker";
@@ -31,6 +49,9 @@ function Stocks({
 }) {
   const prefs = useSelector(state => state.Prefs.values);
   const { tickers, error } = useSelector(state => state.Stocks);
+  const watchlistPref = useSelector(
+    state => state.Prefs.values[PREF_STOCKS_WATCHLIST]
+  );
 
   // Resolve size through the registry helper, not the pref, so trainhop and the
   // default can apply.
@@ -54,8 +75,111 @@ function Stocks({
     [handleUserInteraction]
   );
 
+  // SET_PREF is OnlyToMain, so the pref only updates after a round-trip. Keep the list
+  // locally so the UI updates immediately and rapid adds build on each other, then
+  // reconcile when the pref broadcast arrives.
+  const [savedSymbols, setSavedSymbols] = useState(() =>
+    parseWatchlist(watchlistPref)
+  );
+  const pendingWriteRef = useRef(null);
+  const [announcement, setAnnouncement] = useState(null);
+  // Index of the removed Watchlist row whose neighbour should receive focus next.
+  const focusRemoveIndexRef = useRef(null);
+  // Index of the added Markets row whose next add button should receive focus.
+  const focusAddIndexRef = useRef(null);
+  const watchlistRef = useRef(null);
+  const marketsRef = useRef(null);
+  const menuButtonRef = useRef(null);
+
+  useEffect(() => {
+    const parsed = parseWatchlist(watchlistPref ?? "");
+    const serialized = serializeWatchlist(parsed);
+    if (pendingWriteRef.current === null) {
+      // Adopt an external change or the first-load value. Compare canonical forms so a
+      // non-canonical pref (padded or lower-case) doesn't set state on every render.
+      if (serializeWatchlist(savedSymbols) !== serialized) {
+        setSavedSymbols(parsed);
+      }
+    } else if (serialized === pendingWriteRef.current) {
+      pendingWriteRef.current = null;
+    }
+    // A broadcast that is neither our pending write nor an external change is an
+    // out-of-date acknowledgement; leave the local list as-is.
+  }, [savedSymbols, watchlistPref]);
+
+  const writeWatchlist = useCallback(
+    nextSymbols => {
+      const serialized = serializeWatchlist(nextSymbols);
+      setSavedSymbols(nextSymbols);
+      pendingWriteRef.current = serialized;
+      dispatch(
+        ac.OnlyToMain({
+          type: at.SET_PREF,
+          data: { name: PREF_STOCKS_WATCHLIST, value: serialized },
+        })
+      );
+    },
+    [dispatch]
+  );
+
+  // Feed tickers keyed by normalized symbol, so matching a saved symbol doesn't depend on
+  // the feed's casing.
+  const bySymbol = useMemo(
+    () => new Map(tickers.map(t => [normalize(t.ticker), t])),
+    [tickers]
+  );
+  const matchedRows = useMemo(
+    () => savedSymbols.map(s => bySymbol.get(s)).filter(Boolean),
+    [savedSymbols, bySymbol]
+  );
+
+  const handleToggleWatchlist = useCallback(
+    (symbol, tickerName) => {
+      const normalized = normalize(symbol);
+      const isSaved = savedSymbols.includes(normalized);
+      const next = isSaved
+        ? removeFromWatchlist(savedSymbols, normalized)
+        : addToWatchlist(savedSymbols, normalized);
+      if (next === savedSymbols) {
+        return;
+      }
+      if (isSaved) {
+        focusRemoveIndexRef.current = matchedRows.findIndex(
+          t => normalize(t.ticker) === normalized
+        );
+      } else {
+        // The added row flips to "added" and its add button unmounts, so record its
+        // position among the addable rows to move focus to the next add button.
+        focusAddIndexRef.current = tickers
+          .filter(t => !savedSymbols.includes(normalize(t.ticker)))
+          .findIndex(t => normalize(t.ticker) === normalized);
+      }
+      writeWatchlist(next);
+      recordUserAction(isSaved ? "remove_ticker" : "add_ticker", {
+        source: "row",
+      });
+      setAnnouncement({
+        id: isSaved
+          ? "newtab-stocks-removed-from-watchlist"
+          : "newtab-stocks-added-to-watchlist",
+        args: { name: tickerName },
+      });
+      handleInteraction();
+    },
+    [
+      savedSymbols,
+      matchedRows,
+      tickers,
+      writeWatchlist,
+      recordUserAction,
+      handleInteraction,
+    ]
+  );
+
   // Switching lists counts as an interaction; reselecting the current list does not.
-  const [selectedList, setSelectedList] = useState("markets");
+  const [selectedList, setSelectedList] = useState(() =>
+    savedSymbols.length ? "watchlist" : "markets"
+  );
   const handleSelectList = useCallback(
     list => {
       if (list === selectedList) {
@@ -70,15 +194,67 @@ function Stocks({
   const selectedListL10nId = STOCKS_LISTS.find(
     l => l.id === selectedList
   ).l10nId;
-  const showDropdown = widgetSize === "large";
+  const feedLoaded = !!tickers.length && !error;
+  // How many saved symbols to show the dropdown for. Until the feed loads we count the
+  // whole saved list (so the dropdown shows right after an add); once it loads we count
+  // only the ones the feed returned (so an all-missing watchlist reverts to the heading).
+  const savedInFeed = feedLoaded ? matchedRows.length : savedSymbols.length;
+  const showDropdown = widgetSize === "large" && savedInFeed > 0;
+  const activeList =
+    showDropdown && selectedList === "watchlist" ? "watchlist" : "markets";
 
-  // Without the dropdown (medium/small) there's no way to switch lists, so reset to
-  // Markets; otherwise a leftover "watchlist" selection would leave the body empty.
+  // Return to Markets when there's nothing to show (the watchlist emptied, or the feed no
+  // longer carries any saved symbol) so the next add starts there with the confirmation
+  // animation. A size change with a non-empty watchlist keeps the selection.
   useEffect(() => {
-    if (!showDropdown && selectedList !== "markets") {
+    if (!savedInFeed && selectedList !== "markets") {
       setSelectedList("markets");
     }
-  }, [showDropdown, selectedList]);
+  }, [savedInFeed, selectedList]);
+
+  // After a removal re-renders the Watchlist, move focus to a neighbouring remove button,
+  // or to the widget menu button if the list collapsed back to Markets.
+  useLayoutEffect(() => {
+    const index = focusRemoveIndexRef.current;
+    if (index === null) {
+      return;
+    }
+    focusRemoveIndexRef.current = null;
+    const buttons =
+      watchlistRef.current?.querySelectorAll(".stock-ticker-action") ?? [];
+    const target =
+      index >= 0 && buttons.length
+        ? buttons[Math.min(index, buttons.length - 1)]
+        : null;
+    if (target) {
+      target.focus();
+    } else {
+      menuButtonRef.current?.focus();
+    }
+  }, [matchedRows]);
+
+  // After an add re-renders Markets, move focus to the next add button, or to the widget
+  // menu button if none remain (e.g., the watchlist just reached its limit).
+  useLayoutEffect(() => {
+    const index = focusAddIndexRef.current;
+    if (index === null) {
+      return;
+    }
+    focusAddIndexRef.current = null;
+    const buttons =
+      marketsRef.current?.querySelectorAll(
+        ".stock-ticker-action:not([disabled])"
+      ) ?? [];
+    const target =
+      index >= 0 && buttons.length
+        ? buttons[Math.min(index, buttons.length - 1)]
+        : null;
+    if (target) {
+      target.focus();
+    } else {
+      menuButtonRef.current?.focus();
+    }
+  }, [savedSymbols]);
 
   const handleChangeSize = useCallback(
     size => {
@@ -161,6 +337,7 @@ function Stocks({
         </div>
         <div className="stocks-context-menu-wrapper">
           <moz-button
+            ref={menuButtonRef}
             className="stocks-context-menu-button"
             iconSrc="chrome://global/skin/icons/more.svg"
             menuId="stocks-context-menu"
@@ -198,10 +375,10 @@ function Stocks({
       </div>
 
       <div className="stocks-body">
-        {selectedList === "markets" && (
+        {showError && <StocksError recordError={recordError} />}
+        {!showError && activeList === "markets" && (
           <>
-            {showError && <StocksError recordError={recordError} />}
-            {!showError && widgetSize === "medium" && (
+            {widgetSize === "medium" && (
               <ul
                 className={`stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`}
               >
@@ -220,8 +397,9 @@ function Stocks({
                     )}
               </ul>
             )}
-            {!showError && widgetSize === "large" && (
+            {widgetSize === "large" && (
               <ul
+                ref={marketsRef}
                 className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
               >
                 {tickers.length
@@ -233,6 +411,12 @@ function Stocks({
                         ticker={t.ticker}
                         price={t.last_price}
                         changePercent={t.todays_change_perc}
+                        watchlistState={
+                          savedSymbols.includes(normalize(t.ticker))
+                            ? "added"
+                            : "add"
+                        }
+                        onWatchlistToggle={handleToggleWatchlist}
                       />
                     ))
                   : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map(
@@ -244,7 +428,38 @@ function Stocks({
             )}
           </>
         )}
+        {!showError && activeList === "watchlist" && (
+          <ul
+            ref={watchlistRef}
+            className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
+          >
+            {tickers.length
+              ? matchedRows.map(t => (
+                  <StockTicker
+                    key={t.ticker}
+                    size="large"
+                    name={t.name}
+                    ticker={t.ticker}
+                    price={t.last_price}
+                    changePercent={t.todays_change_perc}
+                    watchlistState="remove"
+                    onWatchlistToggle={handleToggleWatchlist}
+                  />
+                ))
+              : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map((_, i) => (
+                  <StockTicker key={i} size="large" loading={true} />
+                ))}
+          </ul>
+        )}
       </div>
+      <span
+        className="stocks-sr-status sr-only"
+        role="status"
+        data-l10n-id={announcement?.id}
+        data-l10n-args={
+          announcement ? JSON.stringify(announcement.args) : undefined
+        }
+      />
     </article>
   );
 }

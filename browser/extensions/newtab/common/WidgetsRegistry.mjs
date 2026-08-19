@@ -141,6 +141,7 @@ export const PREF_WIDGETS_SYSTEM_CROSSWORD_ENABLED =
   "widgets.system.crossword.enabled";
 export const PREF_WIDGETS_STOCKS_ENABLED = "widgets.stocks.enabled";
 export const PREF_STOCKS_SIZE = "widgets.stocks.size";
+export const PREF_STOCKS_WATCHLIST = "widgets.stocks.watchlist";
 export const PREF_WIDGETS_SYSTEM_STOCKS_ENABLED =
   "widgets.system.stocks.enabled";
 export const PREF_CROSSWORD_ENDPOINT = "widgets.crossword.endpoint";
