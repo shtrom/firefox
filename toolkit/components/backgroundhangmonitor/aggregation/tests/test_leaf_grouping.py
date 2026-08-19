@@ -17,12 +17,20 @@ if _AGGREGATION_DIR not in sys.path:
 import leaf_grouping  # noqa: E402
 from profile_processor import ProfileProcessor  # noqa: E402
 
+_FUNC_INDEX = {}
+
 
 def _sig(frames, ms, count=1.0):
-    """A signature dict keyed like the pipeline keys it (frames are leaf->root)."""
+    """A signature dict shaped like signatures_from_thread's (frames leaf->root).
+
+    frameKeys stands in for funcTable indices: distinct frames get distinct
+    ordinals, which is all the grouping pass and its assertions need.
+    """
     return {
-        "key": leaf_grouping.canonical_key(frames),
         "frames": [list(f) for f in frames],
+        "frameKeys": [
+            _FUNC_INDEX.setdefault(tuple(f), len(_FUNC_INDEX)) for f in frames
+        ],
         "ms": ms,
         "count": count,
     }
@@ -48,7 +56,10 @@ def test_groups_share_leaf_and_expose_trunk_and_first_unique():
     assert group["totalMs"] == 140.0
     assert group["totalCount"] == 2.0
     # Members are sorted by descending ms and carry their divergent frame.
-    assert [m["key"] for m in group["members"]] == [sig_a["key"], sig_b["key"]]
+    assert [m["frameKeys"] for m in group["members"]] == [
+        sig_a["frameKeys"],
+        sig_b["frameKeys"],
+    ]
     assert group["members"][0]["firstUniqueFrame"] == ["rootA", "xul"]
     assert group["members"][1]["firstUniqueFrame"] == ["rootB", "xul"]
 
@@ -75,9 +86,9 @@ def test_member_that_is_the_trunk_has_no_first_unique_frame():
     long = _sig([["leaf", "xul"], ["mid", "xul"], ["deep", "xul"]], 30.0)
     group = leaf_grouping.group_signatures([short, long])[0]
     assert group["commonTrunk"] == [["leaf", "xul"], ["mid", "xul"]]
-    by_key = {m["key"]: m for m in group["members"]}
-    assert by_key[short["key"]]["firstUniqueFrame"] is None
-    assert by_key[long["key"]]["firstUniqueFrame"] == ["deep", "xul"]
+    by_frames = {tuple(m["frameKeys"]): m for m in group["members"]}
+    assert by_frames[tuple(short["frameKeys"])]["firstUniqueFrame"] is None
+    assert by_frames[tuple(long["frameKeys"])]["firstUniqueFrame"] == ["deep", "xul"]
 
 
 def test_groups_sorted_by_total_ms_descending():
@@ -114,12 +125,21 @@ def test_noise_leaves_are_skipped_when_choosing_the_grouping_frame():
     group = leaf_grouping.group_signatures([sig_a, sig_b])[0]
     assert group["leafFrame"] == ["DoRealWork()", "xul"]
     assert group["displayName"] == "DoRealWork()"
-    # Members keep their FULL-stack canonical keys (identity contract).
-    assert {m["key"] for m in group["members"]} == {sig_a["key"], sig_b["key"]}
+    # Members are still identified by their FULL stack (identity contract).
+    assert {tuple(m["frameKeys"]) for m in group["members"]} == {
+        tuple(sig_a["frameKeys"]),
+        tuple(sig_b["frameKeys"]),
+    }
     # The branch point is a meaningful frame, not the shared noise.
-    by_key = {m["key"]: m for m in group["members"]}
-    assert by_key[sig_a["key"]]["firstUniqueFrame"] == ["Caller()", "xul"]
-    assert by_key[sig_b["key"]]["firstUniqueFrame"] == ["OtherCaller()", "xul"]
+    by_frames = {tuple(m["frameKeys"]): m for m in group["members"]}
+    assert by_frames[tuple(sig_a["frameKeys"])]["firstUniqueFrame"] == [
+        "Caller()",
+        "xul",
+    ]
+    assert by_frames[tuple(sig_b["frameKeys"])]["firstUniqueFrame"] == [
+        "OtherCaller()",
+        "xul",
+    ]
 
 
 def test_different_noise_prefixes_over_same_work_merge():
@@ -173,8 +193,8 @@ def test_all_noise_stack_falls_back_to_raw_leaf():
     assert group["memberCount"] == 2
 
 
-def test_variant_key_collapses_noise_only_differences():
-    # Same meaningful stack, different noise below it: one shared variantKey, so
+def test_variant_collapses_noise_only_differences():
+    # Same meaningful stack, different noise below it: one shared variant, so
     # the frontend can fold these two members into a single row.
     via_alloc = _sig(
         [["je_realloc(void*, unsigned long long)", "mozglue"], ["Feature()", "xul"]],
@@ -188,21 +208,21 @@ def test_variant_key_collapses_noise_only_differences():
         20.0,
     )
     group = leaf_grouping.group_signatures([via_alloc, via_string])[0]
-    assert {m["variantKey"] for m in group["members"]} == {
-        leaf_grouping.canonical_key([["Feature()", "xul"]])
-    }
-    # Member identity is still the full stack, so the keys themselves differ.
-    assert via_alloc["key"] != via_string["key"]
+    assert len({m["variant"] for m in group["members"]}) == 1
+    # Member identity is still the full stack, so the frameKeys differ.
+    assert via_alloc["frameKeys"] != via_string["frameKeys"]
 
 
-def test_variant_key_differs_when_meaningful_frames_differ():
+def test_variant_differs_when_meaningful_frames_differ():
     sig_a = _sig([["L", "xul"], ["A", "xul"], ["rootA", "xul"]], 100.0)
     sig_b = _sig([["L", "xul"], ["A", "xul"], ["rootB", "xul"]], 40.0)
     group = leaf_grouping.group_signatures([sig_a, sig_b])[0]
-    variant_by_key = {m["key"]: m["variantKey"] for m in group["members"]}
-    assert variant_by_key[sig_a["key"]] != variant_by_key[sig_b["key"]]
-    # Nothing here is noise, so a variantKey is the whole stack.
-    assert variant_by_key[sig_a["key"]] == sig_a["key"]
+    variant_by_frames = {tuple(m["frameKeys"]): m["variant"] for m in group["members"]}
+    # Nothing here is noise, so neither member collapses into the other.
+    assert (
+        variant_by_frames[tuple(sig_a["frameKeys"])]
+        != variant_by_frames[tuple(sig_b["frameKeys"])]
+    )
 
 
 def test_ipc_send_glue_is_noise_but_the_named_send_is_not():
@@ -280,13 +300,32 @@ def test_compute_leaf_groups_end_to_end_through_a_profile():
     assert group["displayName"] == "L < mid"
     assert group["totalMs"] == 140.0
 
-    # Member keys are the canonical leaf->root keys the frontend derives.
+    # A member is identified by funcTable indices, and resolving those against
+    # the profile has to reproduce the canonical key the frontend computes.
+    # This is the join the dashboard depends on, so assert the round trip
+    # rather than just the emitted value.
+    thread = profile["threads"][0]
+    string_array = thread["stringArray"]
+    func_name = thread["funcTable"]["name"]
+    func_lib = thread["funcTable"]["lib"]
+    libs = thread["libs"]
+
+    def resolve(frame_keys):
+        frames = []
+        for func_index in frame_keys:
+            lib_index = func_lib[func_index]
+            frames.append([
+                string_array[func_name[func_index]],
+                "" if lib_index is None else libs[lib_index]["name"],
+            ])
+        return leaf_grouping.canonical_key(frames)
+
     expected_key = leaf_grouping.canonical_key([
         ["L", "xul"],
         ["mid", "xul"],
         ["rootA", "xul"],
     ])
-    assert any(m["key"] == expected_key for m in group["members"])
+    assert any(resolve(m["frameKeys"]) == expected_key for m in group["members"])
 
 
 if __name__ == "__main__":

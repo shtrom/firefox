@@ -31,6 +31,18 @@ def reconstruct_stack(thread, sample_index):
     Uses the library's stripped ``name`` (not ``debugName``) so the derived key
     matches the frontend.
     """
+    frames, _ = reconstruct_stack_indexed(thread, sample_index)
+    return frames
+
+
+def reconstruct_stack_indexed(thread, sample_index):
+    """Return a sample's stack as (frames, func_indices), both leaf->root.
+
+    Same walk as reconstruct_stack, additionally handing back each frame's
+    funcTable index. Callers that emit a stack into the artifact use the
+    indices, since the profile already interns those strings and repeating them
+    per frame is what made leafGroups dominate the file.
+    """
     string_array = thread["stringArray"]
     libs = thread["libs"]
     func_name = thread["funcTable"]["name"]
@@ -39,6 +51,7 @@ def reconstruct_stack(thread, sample_index):
     func = thread["stackTable"]["func"]
 
     frames = []
+    func_indices = []
     stack = thread["sampleTable"]["stack"][sample_index]
     while stack:
         func_index = func[stack]
@@ -46,5 +59,6 @@ def reconstruct_stack(thread, sample_index):
         lib_index = func_lib[func_index]
         lib = "" if lib_index is None else libs[lib_index]["name"]
         frames.append([name, lib])
+        func_indices.append(func_index)
         stack = prefix[stack]
-    return frames
+    return frames, func_indices

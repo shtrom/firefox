@@ -37,16 +37,22 @@ We then bucket by the meaningful leaf, find the common trunk each bucket shares
 walking from that leaf downward, and label the group by where its stacks first
 branch apart. Only multi-member groups are emitted. The job emits the groups
 pre-grouped and pre-named so the frontend does no fuzzy matching of its own;
-each group carries the canonical keys of its members so the dashboard can join
-a displayed signature to its group.
+each group identifies its members so the dashboard can join a displayed
+signature to its group.
 
-The member key stays the canonical key of the signature's *full* trimmed stack
-(see stack_keys), byte-for-byte identical to the frontend and timeseries jobs, so
-all three sides join without any shared hashing. Normalization only chooses how
-signatures are bucketed and named; it never changes a signature's identity.
+A member is identified by ``frameKeys``: its stack as funcTable indices,
+leaf -> root. The frontend resolves those against the same funcTable and
+recomputes the canonical key (see stack_keys), so the two sides still agree
+byte-for-byte without any shared hashing. Emitting indices rather than the key
+itself keeps the block small: the columnar profile already interns every one of
+those strings, and spelling them out again per member made leafGroups roughly
+90% of the artifact.
+
+Normalization only chooses how signatures are bucketed and named; it never
+changes a signature's identity.
 """
 
-from stack_keys import canonical_key, reconstruct_stack
+from stack_keys import canonical_key, reconstruct_stack_indexed
 
 # A bucket needs at least this many distinct signatures before grouping it is
 # worthwhile; a lone signature already stands for itself.
@@ -227,7 +233,7 @@ def _event_loop_depth(frames):
 
 
 def signatures_from_thread(thread):
-    """Fold a thread's samples into per-signature {key, frames, ms, count}.
+    """Fold a thread's samples into per-signature {frames, frameKeys, ms, count}.
 
     Samples with identical stacks (but differing runnable/annotations/platform,
     which the frontend ignores for signature identity) are summed together, and
@@ -250,15 +256,15 @@ def signatures_from_thread(thread):
     for i in range(total):
         if ms[i] <= 0.0:
             continue
-        frames = reconstruct_stack(thread, i)
+        frames, frame_keys = reconstruct_stack_indexed(thread, i)
         if not frames:
             continue
         key = canonical_key(frames)
         entry = by_key.get(key)
         if entry is None:
             by_key[key] = {
-                "key": key,
                 "frames": frames,
+                "frameKeys": frame_keys,
                 "ms": ms[i],
                 "count": count[i],
             }
@@ -318,7 +324,10 @@ def group_signatures(signatures, min_group_size=DEFAULT_MIN_GROUP_SIZE):
           "totalCount": float,
           "avgEventLoopDepth": float,          # mean nested-event-loop depth
           "members": [
-            {"key", "ms", "count", "firstUniqueFrame": [name, lib] | None},
+            {"frameKeys": [funcIndex, ...],      # leaf->root, identifies the member
+             "ms", "count",
+             "variant": int,                     # group-local variant ordinal
+             "firstUniqueFrame": [name, lib] | None},
             ...                                  # sorted by descending ms
           ],
         }
@@ -351,18 +360,21 @@ def group_signatures(signatures, min_group_size=DEFAULT_MIN_GROUP_SIZE):
         trunk_depth = len(trunk)
 
         group_members = []
+        variant_ids = {}
         for member in members:
             gframes = member["_gframes"]
             first_unique = gframes[trunk_depth] if len(gframes) > trunk_depth else None
+            # Members sharing a variant are the same hang differing only in
+            # skipped noise frames; the frontend collapses them into one row.
+            # The id only has to distinguish variants within this group, so it
+            # is a small ordinal rather than the meaningful stack's key.
+            variant = variant_ids.setdefault(canonical_key(gframes), len(variant_ids))
             group_members.append({
-                "key": member["key"],
+                "frameKeys": member["frameKeys"],
                 "ms": member["ms"],
                 "count": member["count"],
                 "firstUniqueFrame": first_unique,
-                # Signatures with the same variantKey are the same hang
-                # differing only in skipped noise frames; the frontend
-                # collapses them into one deduplicated member.
-                "variantKey": canonical_key(gframes),
+                "variant": variant,
             })
         group_members.sort(key=lambda m: m["ms"], reverse=True)
 
