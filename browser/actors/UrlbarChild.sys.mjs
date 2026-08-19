@@ -185,7 +185,12 @@ export class UrlbarChild extends JSWindowActorChild {
     );
   }
 
-  actorCreated() {
+  /**
+   * `DOMDocElementInserted`, the actor's only registered event, fires as the
+   * document is created, which is early enough to publish the port before page
+   * script runs.
+   */
+  handleEvent() {
     // Only a content realm reads the port; chrome holds the actor and imports
     // UrlbarPrefs directly, so don't publish it on every chrome window.
     if (!this.manager.parentActor) {
