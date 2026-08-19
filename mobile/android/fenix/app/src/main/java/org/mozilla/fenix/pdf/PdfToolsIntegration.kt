@@ -20,6 +20,7 @@ import mozilla.components.compose.base.theme.layout.AcornWindowSize
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.GleanMetrics.PdfViewer
+import org.mozilla.fenix.components.share.createPdfShareAction
 import org.mozilla.fenix.pdf.ui.PdfTools
 import org.mozilla.fenix.theme.FirefoxTheme
 
@@ -81,6 +82,15 @@ class PdfToolsIntegration(
         }
     }
 
+    /** Shares the PDF the selected tab is displaying. */
+    internal fun handleShareClick() {
+        PdfViewer.shareTapped.record(NoExtras())
+        val tab = browserStore.state.selectedTab ?: return
+        browserStore.createPdfShareAction(tabId = tab.id, url = tab.content.url)?.let {
+            browserStore.dispatch(it)
+        }
+    }
+
     @Composable
     private fun PdfToolsHost() {
         FirefoxTheme {
@@ -89,6 +99,7 @@ class PdfToolsIntegration(
                 isLargeWindow = AcornWindowSize.isLargeWindow(),
                 onDownloadClick = ::handleDownloadClick,
                 onPrintClick = ::handlePrintClick,
+                onShareClick = ::handleShareClick,
             )
         }
     }
@@ -101,6 +112,7 @@ class PdfToolsIntegration(
  * @param isLargeWindow Used to determine if the device should be treated as a tablet.
  * @param onDownloadClick Invoked when the user activates the download PDF button.
  * @param onPrintClick Invoked when the user activates the print PDF button.
+ * @param onShareClick Invoked when the user activates the share PDF button.
  */
 @Composable
 internal fun PdfToolsContent(
@@ -108,6 +120,7 @@ internal fun PdfToolsContent(
     isLargeWindow: Boolean,
     onDownloadClick: () -> Unit,
     onPrintClick: () -> Unit,
+    onShareClick: () -> Unit,
 ) {
     val isPdf by remember {
         browserStore.stateFlow.map { it.isSelectedTabPdf }.distinctUntilChanged()
@@ -121,8 +134,7 @@ internal fun PdfToolsContent(
             onSignClick = {},
             onDownloadClick = onDownloadClick,
             onPrintClick = onPrintClick,
-            // Bug 2054918
-            onShareClick = {},
+            onShareClick = onShareClick,
         )
     }
 }

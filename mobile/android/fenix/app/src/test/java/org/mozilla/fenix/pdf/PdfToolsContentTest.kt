@@ -44,6 +44,7 @@ class PdfToolsContentTest {
                     isLargeWindow = isLargeWindow,
                     onDownloadClick = { clicked.add("download") },
                     onPrintClick = { clicked.add("print") },
+                    onShareClick = { clicked.add("share") },
                 )
             }
         }
@@ -124,5 +125,16 @@ class PdfToolsContentTest {
         composeTestRule.onNodeWithTag(PdfToolsTestTag.PRINT_BUTTON).performClick()
 
         assertEquals(listOf("print"), clicked)
+    }
+
+    @Test
+    fun `WHEN the share button is tapped THEN the share callback is invoked`() {
+        setTestContent(isLargeWindow = false)
+
+        enterPdfViewer()
+
+        composeTestRule.onNodeWithTag(PdfToolsTestTag.SHARE_BUTTON).performClick()
+
+        assertEquals(listOf("share"), clicked)
     }
 }

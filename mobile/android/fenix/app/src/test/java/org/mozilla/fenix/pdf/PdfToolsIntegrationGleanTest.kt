@@ -76,4 +76,18 @@ class PdfToolsIntegrationGleanTest {
 
         assertNotNull(PdfViewer.printTapped.testGetValue())
     }
+
+    @Test
+    fun `GIVEN share has not been activated THEN nothing is recorded`() {
+        integration()
+
+        assertNull(PdfViewer.shareTapped.testGetValue())
+    }
+
+    @Test
+    fun `WHEN share is activated THEN the interaction is recorded`() {
+        integration().handleShareClick()
+
+        assertNotNull(PdfViewer.shareTapped.testGetValue())
+    }
 }
