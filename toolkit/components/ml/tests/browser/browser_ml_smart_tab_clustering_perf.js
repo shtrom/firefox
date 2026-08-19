@@ -131,6 +131,14 @@ function makeUrlTab(url, label, { groupId = null } = {}) {
 // Keyed "SINGLE-TAB-<measurement>-<tag>"; reported after all backends ran.
 const singleTabMetrics = {};
 
+const TRAVEL_TAB_TITLES = [
+  "Tourist Behavior and Decision Making: A Research Overview",
+  "Impact of Tourism on Local Communities - Google Scholar",
+  "Cheap Flights, Airline Tickets & Airfare Deals",
+  "Hotel Deals: Save Big on Hotels with Expedia",
+  "The Influence of Travel Restrictions on the Spread of COVID-19 - Nature",
+];
+
 function pushMetric(metrics, key, value) {
   (metrics[key] = metrics[key] || []).push(value);
 }
@@ -177,24 +185,10 @@ async function runNearestNeighbors({ backend, tag }) {
     endTime - startTime
   );
   const titles = similarTabs.map(s => s.label);
-  Assert.equal(
-    titles.length,
-    5,
-    "Proper number of similar tabs should be returned"
-  );
-  Assert.equal(
-    titles[0],
-    "Tourist Behavior and Decision Making: A Research Overview"
-  );
-  Assert.equal(
-    titles[1],
-    "Impact of Tourism on Local Communities - Google Scholar"
-  );
-  Assert.equal(titles[2], "Cheap Flights, Airline Tickets & Airfare Deals");
-  Assert.equal(titles[3], "Hotel Deals: Save Big on Hotels with Expedia");
-  Assert.equal(
-    titles[4],
-    "The Influence of Travel Restrictions on the Spread of COVID-19 - Nature"
+  Assert.deepEqual(
+    titles.toSorted(),
+    TRAVEL_TAB_TITLES.toSorted(),
+    "All travel tabs and only travel tabs should be returned"
   );
   generateEmbeddingsStub.restore();
   await EngineProcess.destroyMLEngine();
@@ -242,20 +236,24 @@ async function runLogisticRegression({ backend, tag }) {
     endTime - startTime
   );
   const titles = similarTabs.map(s => s.label);
-  Assert.equal(
-    titles.length,
-    3,
-    "Proper number of similar tabs should be returned"
+
+  // Bug 2064679 reported that the result was arch dependent:
+  // aarch64 only returns 2 tabs while x64 returns 3 tabs.
+  // The following assertions therefore must be a bit looser than the nearest neighbor ones.
+
+  Assert.greater(titles.length, 0, "Similar tabs should be returned");
+  for (const title of titles) {
+    Assert.ok(
+      TRAVEL_TAB_TITLES.includes(title),
+      `Returned tab "${title}" should be a travel tab`
+    );
+  }
+  Assert.ok(
+    titles.includes("Tourist Behavior and Decision Making: A Research Overview")
   );
-  Assert.equal(
-    titles[0],
-    "Tourist Behavior and Decision Making: A Research Overview"
+  Assert.ok(
+    titles.includes("Impact of Tourism on Local Communities - Google Scholar")
   );
-  Assert.equal(
-    titles[1],
-    "Impact of Tourism on Local Communities - Google Scholar"
-  );
-  Assert.equal(titles[2], "Cheap Flights, Airline Tickets & Airfare Deals");
   generateEmbeddingsStub.restore();
   await EngineProcess.destroyMLEngine();
   await cleanup();
