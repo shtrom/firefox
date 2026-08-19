@@ -4549,6 +4549,11 @@ export class Tabbrowser {
    */
 
   /**
+   * @typedef {number} TabSplitViewId
+   *   Unique ID of a tab split view.
+   */
+
+  /**
    * @typedef {object} SplitViewWorkingData
    * @property {MozTabbrowserTab[]} tabs
    * @property {MozTabSplitViewWrapper|undefined} node
@@ -4574,9 +4579,9 @@ export class Tabbrowser {
     let tabsFragment = this.document.createDocumentFragment();
     let tabToSelect = null;
     let hiddenTabs = new Map();
-    /** @type {Map<TabGroupStateData['id'], TabGroupWorkingData>} */
+    /** @type {Map<TabGroupId, TabGroupWorkingData>} */
     let tabGroupWorkingData = new Map();
-    /** @type {Map<TabSplitViewStateData['id'], SplitViewWorkingData>} */
+    /** @type {Map<TabSplitViewId, SplitViewWorkingData>} */
     let splitViewWorkingData = new Map();
 
     for (const tabGroupData of tabGroupDataList) {
@@ -5450,7 +5455,7 @@ export class Tabbrowser {
     let tabsWithBeforeUnloadPrompt = [];
     /** @type {MozTabbrowserTab[]} */
     let tabsWithoutBeforeUnload = [];
-    /** @type {Promise<void>[]} */
+    /** @type {Array<Promise<void>>} */
     let beforeUnloadPromises = [];
     /** @type {MozTabbrowserTab|undefined} */
     let lastToClose;
