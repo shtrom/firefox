@@ -260,7 +260,7 @@ IPCResult CookieServiceChild::RecvRemoveBatchDeletedCookies(
     nsTArray<OriginAttributes>&& aAttrsList) {
   MOZ_ASSERT(aCookiesList.Length() == aAttrsList.Length());
   for (uint32_t i = 0; i < aCookiesList.Length(); i++) {
-    CookieStruct cookieStruct = aCookiesList.ElementAt(i);
+    const CookieStruct& cookieStruct = aCookiesList.ElementAt(i);
     RemoveSingleCookie(cookieStruct, aAttrsList.ElementAt(i), Nothing());
   }
 
