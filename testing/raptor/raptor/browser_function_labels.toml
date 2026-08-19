@@ -102,6 +102,8 @@ funcPrefixes = [
   "js::jit::PerfSpewer::CollectJitCodeInfo",
   "js::jit::JitRuntime::generateEntryTrampolineForScript",
   "mozilla::dom::Performance::MaybeEmitExternalProfilerMarker",
+  "profiler_mark_thread_asleep", # https://share.firefox.dev/4wGvfmf
+  "profiler_mark_thread_awake", # https://share.firefox.dev/4xNkLlI
   "v8::internal::Compiler::LogFunctionCompilation",
   "v8::internal::LinuxPerfJitLogger::LogRecordedBuffer",
   "v8::internal::Builtins::CreateInterpreterEntryTrampolineForProfiling",
@@ -137,7 +139,9 @@ funcPrefixes = [
   "js::gc::UnmarkGrayTracer::unmark", # https://share.firefox.dev/3PVZjZ1
   "nsCycleCollector::Collect",
   "nsCycleCollector_collectSlice", # https://share.firefox.dev/46ePue5
+  "nsCycleCollector::FreeSnowWhite", # https://share.firefox.dev/45xwqJp
   "nsCycleCollector::ForgetSkippable",
+  "mozilla::CCGCScheduler::CCRunnerFired", # https://share.firefox.dev/3Sgxu1b
   "AsyncFreeSnowWhite::Run",
   "mozilla::IncrementalFinalizeRunnable::Run", # https://share.firefox.dev/46ePue5
   "js::GCParallelTask::runHelperThreadTask",
@@ -278,6 +282,7 @@ funcPrefixes = [
   "mozilla::PresShell::ContentWillBeRemoved",
   "mozilla::PresShell::ContentRemoved",
   "mozilla::PresShell::Destroy",
+  "ContentUnbinder::Run", # async DOM subtree unbinding https://share.firefox.dev/4zjIdZo
   "blink::Element::DetachLayoutTree", # https://share.firefox.dev/3sXBczH
   "WTF::DefaultRefCountedTraits<blink::StyleInheritedVariables>::Destruct", # https://share.firefox.dev/47xsJlD
   "blink::ObjectPaintPropertiesSparse::~ObjectPaintPropertiesSparse", # https://share.firefox.dev/47xsJlD
