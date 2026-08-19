@@ -48,7 +48,7 @@ function Stocks({
   widgetEnabledMap,
 }) {
   const prefs = useSelector(state => state.Prefs.values);
-  const { tickers, error } = useSelector(state => state.Stocks);
+  const { tickers, error, lastUpdated } = useSelector(state => state.Stocks);
   const watchlistPref = useSelector(
     state => state.Prefs.values[PREF_STOCKS_WATCHLIST]
   );
@@ -203,6 +203,23 @@ function Stocks({
   const activeList =
     showDropdown && selectedList === "watchlist" ? "watchlist" : "markets";
 
+  // Small size shows a single ticker.
+  const chosenSymbol = savedSymbols.length
+    ? savedSymbols[0]
+    : (tickers[0]?.ticker ?? null);
+  const chosenRow = chosenSymbol ? bySymbol.get(normalize(chosenSymbol)) : null;
+  // Keep the saved symbol visible while data is loading or unavailable.
+  const headerSymbol = chosenRow?.ticker ?? chosenSymbol;
+  // Distinct from feedLoaded above (used by the large dropdown).
+  const hasLoadedSnapshot = lastUpdated !== null;
+  // Error cases only the small size has (a whole-feed error is handled by showError above).
+  const smallError =
+    (!tickers.length && hasLoadedSnapshot) ||
+    (!!chosenSymbol && !!tickers.length && !chosenRow);
+  // Show the error box from one place so switching error states doesn't report it to
+  // telemetry twice.
+  const showAnyError = showError || (widgetSize === "small" && smallError);
+
   // Return to Markets when there's nothing to show (the watchlist emptied, or the feed no
   // longer carries any saved symbol) so the next add starts there with the confirmation
   // animation. A size change with a non-empty watchlist keeps the selection.
@@ -297,7 +314,7 @@ function Stocks({
     >
       <div className="stocks-title-wrapper">
         <div className="stocks-badge-title-wrapper">
-          {!hasInteracted && !!tickers.length && (
+          {widgetSize !== "small" && !hasInteracted && !!tickers.length && (
             <moz-badge
               className="stocks-new-badge"
               data-l10n-id="newtab-widget-lists-label-new"
@@ -306,9 +323,16 @@ function Stocks({
           {/* Keep the heading mounted so aria-labelledby always resolves. */}
           <h2
             id="stocks-widget-label"
-            className={`stocks-heading${showDropdown ? " sr-only" : ""}`}
+            className={`stocks-heading${
+              showDropdown || (widgetSize === "small" && chosenSymbol)
+                ? " sr-only"
+                : ""
+            }`}
             data-l10n-id="newtab-stocks-widget-title"
           />
+          {widgetSize === "small" && chosenSymbol && (
+            <span className="stocks-small-symbol">{headerSymbol}</span>
+          )}
           {showDropdown && (
             <>
               <moz-button
@@ -363,7 +387,7 @@ function Stocks({
                 widgetsMayBeMaximized ? (
                   <SizeSubmenu
                     submenuId="stocks-size-submenu"
-                    sizes={["medium", "large"]}
+                    sizes={STOCKS_ENTRY.validSizes}
                     checkedSize={widgetSize}
                     onChangeSize={handleChangeSize}
                   />
@@ -375,35 +399,87 @@ function Stocks({
       </div>
 
       <div className="stocks-body">
-        {showError && <StocksError recordError={recordError} />}
-        {!showError && activeList === "markets" && (
-          <>
-            {widgetSize === "medium" && (
-              <ul
-                className={`stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`}
-              >
-                {tickers.length
-                  ? tickers.map(t => (
-                      <StockTicker
-                        key={t.ticker}
-                        name={t.name}
-                        ticker={t.ticker}
-                        price={t.last_price}
-                        changePercent={t.todays_change_perc}
-                      />
-                    ))
-                  : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map(
-                      (_, i) => <StockTicker key={i} loading={true} />
-                    )}
-              </ul>
+        {showAnyError && <StocksError recordError={recordError} />}
+        {!showAnyError && widgetSize === "small" && (
+          <ul
+            className={`stocks-list stocks-list--small${
+              chosenRow ? "" : " stocks-list--loading"
+            }`}
+          >
+            {chosenRow ? (
+              <StockTicker
+                size="small"
+                name={chosenRow.name}
+                ticker={chosenRow.ticker}
+                price={chosenRow.last_price}
+                changePercent={chosenRow.todays_change_perc}
+              />
+            ) : (
+              <StockTicker size="small" loading={true} />
             )}
-            {widgetSize === "large" && (
+          </ul>
+        )}
+        {!showAnyError && widgetSize !== "small" && (
+          <>
+            {activeList === "markets" && (
+              <>
+                {widgetSize === "medium" && (
+                  <ul
+                    className={`stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`}
+                  >
+                    {tickers.length
+                      ? tickers.map(t => (
+                          <StockTicker
+                            key={t.ticker}
+                            name={t.name}
+                            ticker={t.ticker}
+                            price={t.last_price}
+                            changePercent={t.todays_change_perc}
+                          />
+                        ))
+                      : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map(
+                          (_, i) => <StockTicker key={i} loading={true} />
+                        )}
+                  </ul>
+                )}
+                {widgetSize === "large" && (
+                  <ul
+                    ref={marketsRef}
+                    className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
+                  >
+                    {tickers.length
+                      ? tickers.map(t => (
+                          <StockTicker
+                            key={t.ticker}
+                            size="large"
+                            name={t.name}
+                            ticker={t.ticker}
+                            price={t.last_price}
+                            changePercent={t.todays_change_perc}
+                            watchlistState={
+                              savedSymbols.includes(normalize(t.ticker))
+                                ? "added"
+                                : "add"
+                            }
+                            onWatchlistToggle={handleToggleWatchlist}
+                          />
+                        ))
+                      : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map(
+                          (_, i) => (
+                            <StockTicker key={i} size="large" loading={true} />
+                          )
+                        )}
+                  </ul>
+                )}
+              </>
+            )}
+            {activeList === "watchlist" && (
               <ul
-                ref={marketsRef}
+                ref={watchlistRef}
                 className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
               >
                 {tickers.length
-                  ? tickers.map(t => (
+                  ? matchedRows.map(t => (
                       <StockTicker
                         key={t.ticker}
                         size="large"
@@ -411,11 +487,7 @@ function Stocks({
                         ticker={t.ticker}
                         price={t.last_price}
                         changePercent={t.todays_change_perc}
-                        watchlistState={
-                          savedSymbols.includes(normalize(t.ticker))
-                            ? "added"
-                            : "add"
-                        }
+                        watchlistState="remove"
                         onWatchlistToggle={handleToggleWatchlist}
                       />
                     ))
@@ -427,29 +499,6 @@ function Stocks({
               </ul>
             )}
           </>
-        )}
-        {!showError && activeList === "watchlist" && (
-          <ul
-            ref={watchlistRef}
-            className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
-          >
-            {tickers.length
-              ? matchedRows.map(t => (
-                  <StockTicker
-                    key={t.ticker}
-                    size="large"
-                    name={t.name}
-                    ticker={t.ticker}
-                    price={t.last_price}
-                    changePercent={t.todays_change_perc}
-                    watchlistState="remove"
-                    onWatchlistToggle={handleToggleWatchlist}
-                  />
-                ))
-              : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map((_, i) => (
-                  <StockTicker key={i} size="large" loading={true} />
-                ))}
-          </ul>
         )}
       </div>
       <span

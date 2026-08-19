@@ -148,7 +148,7 @@ function StockTicker({
         aria-hidden="true"
       />
       <span className="stock-ticker-label" aria-hidden="true">
-        {size === "large" ? (
+        {size === "large" && (
           <>
             <span className="stock-ticker-line">
               <span className="stock-ticker-name">{stockName}</span>
@@ -161,7 +161,8 @@ function StockTicker({
               <span className="stock-ticker-price">{displayPrice}</span>
             </span>
           </>
-        ) : (
+        )}
+        {size === "medium" && (
           <>
             <span className="stock-ticker-line">
               <span className="stock-ticker-symbol">{ticker}</span>
@@ -169,6 +170,12 @@ function StockTicker({
               <span className="stock-ticker-price">{displayPrice}</span>
             </span>
             {changeText}
+          </>
+        )}
+        {size === "small" && (
+          <>
+            {changeText}
+            <span className="stock-ticker-price">{displayPrice}</span>
           </>
         )}
       </span>
