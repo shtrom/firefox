@@ -22,6 +22,7 @@ import mozilla.components.feature.summarize.settings.SummarizeSettingsContent
 import mozilla.components.feature.summarize.settings.SummarizeSettingsMiddleware
 import mozilla.components.feature.summarize.settings.SummarizeSettingsState
 import mozilla.components.feature.summarize.settings.SummarizeSettingsStore
+import mozilla.components.feature.summarize.settings.asMiddleware
 import mozilla.components.feature.summarize.settings.summarizeSettingsReducer
 import org.mozilla.fenix.R
 import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
@@ -57,9 +58,10 @@ class PageSummariesSettingsFragment : Fragment(), SystemInsetsPaddedFragment {
                 middleware =
                     listOf(
                         SummarizeSettingsMiddleware(
-                            settings = summarizeSettings,
-                            scope = viewLifecycleOwner.lifecycleScope,
-                        )
+                                settings = summarizeSettings,
+                                scope = viewLifecycleOwner.lifecycleScope,
+                            )
+                            .asMiddleware()
                     ),
             )
 

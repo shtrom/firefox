@@ -20,7 +20,6 @@ import androidx.core.view.ViewCompat
 import androidx.fragment.app.viewModels
 import androidx.fragment.compose.content
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.google.android.material.R as materialR
@@ -31,12 +30,10 @@ import mozilla.components.browser.state.state.SessionState
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.feature.summarize.SummarizationState
 import mozilla.components.feature.summarize.SummarizationUi
+import mozilla.components.feature.summarize.SummarizeSettingsActionWrapper
 import mozilla.components.feature.summarize.ViewDismissed
 import mozilla.components.feature.summarize.settings.LearnMoreHandled
-import mozilla.components.feature.summarize.settings.SummarizeSettingsMiddleware
 import mozilla.components.feature.summarize.settings.SummarizeSettingsState
-import mozilla.components.feature.summarize.settings.SummarizeSettingsStore
-import mozilla.components.feature.summarize.settings.summarizeSettingsReducer
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.android.view.setNavigationBarColorCompat
 import mozilla.components.support.utils.ext.top
@@ -74,6 +71,7 @@ class SummarizationFragment : BottomSheetDialogFragment() {
 
     private val storeViewModel: SummarizationStoreViewModel by viewModels {
         val title = currentTab?.toDisplayTitle() ?: ""
+        val cache = requireComponents.core.summarizationSettingsBinding
 
         SummarizationStoreViewModel.factory(
             currentTab = currentTab,
@@ -82,6 +80,13 @@ class SummarizationFragment : BottomSheetDialogFragment() {
             connectionType = requireContext().getConnectionType(),
             llmProvider = requireComponents.llm.mlpaProvider,
             settings = requireComponents.summarizationSettings,
+            loadCachedSettings = {
+                SummarizeSettingsState(
+                    isFeatureEnabled = cache.isFeatureEnabled.value,
+                    isGestureEnabled = cache.isGestureEnabled.value,
+                    shakeSensitivity = cache.shakeSensitivity.value,
+                )
+            },
             errorReporter = { tag, exception ->
                 requireComponents.analytics.crashReporter.submitCaughtException(exception)
                 Logger(tag).error(exception.message ?: "", exception)
@@ -135,44 +140,22 @@ class SummarizationFragment : BottomSheetDialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View {
-        val summarizeSettings = requireComponents.summarizationSettings
-        val cache = requireComponents.core.summarizationSettingsBinding
-
-        val settingsStore =
-            SummarizeSettingsStore(
-                initialState =
-                    SummarizeSettingsState(
-                        isFeatureEnabled = cache.isFeatureEnabled.value,
-                        isGestureEnabled = cache.isGestureEnabled.value,
-                    ),
-                reducer = ::summarizeSettingsReducer,
-                middleware =
-                    listOf(
-                        SummarizeSettingsMiddleware(
-                            settings = summarizeSettings,
-                            scope = storeViewModel.viewModelScope,
-                        )
-                    ),
-            )
-
         return content {
-            val settingsState by settingsStore.stateFlow.collectAsStateWithLifecycle()
-            LaunchedEffect(settingsState.isLearnMoreRequested) {
-                if (settingsState.isLearnMoreRequested) {
-                    openLearnMoreLink(SupportUtils.SumoTopic.PAGE_SUMMARIZATION)
-                    settingsStore.dispatch(LearnMoreHandled)
-                }
-            }
-
             val state by storeViewModel.store.stateFlow.collectAsStateWithLifecycle()
             LaunchedEffect(state) {
-                when (state) {
+                when (val currentState = state) {
                     SummarizationState.LearnMoreAboutCloudSupportedFeatures -> {
                         openLearnMoreLink(SupportUtils.SumoTopic.CLOUD_SUPPORTED_FEATURES)
                         dismiss()
                     }
                     SummarizationState.LearnMoreAboutShakeConsent -> {
                         openLearnMoreLink(SupportUtils.SumoTopic.PAGE_SUMMARIZATION)
+                    }
+                    is SummarizationState.Settings -> {
+                        if (currentState.settingsState.isLearnMoreRequested) {
+                            openLearnMoreLink(SupportUtils.SumoTopic.PAGE_SUMMARIZATION)
+                            storeViewModel.store.dispatch(SummarizeSettingsActionWrapper(LearnMoreHandled))
+                        }
                     }
                     SummarizationState.Finished.NavigatedToSignIn -> {
                         navigateToSignIn()
@@ -189,7 +172,6 @@ class SummarizationFragment : BottomSheetDialogFragment() {
                 SummarizationUi(
                     productName = getString(R.string.app_name),
                     store = storeViewModel.store,
-                    settingsStore = settingsStore,
                     resolveError = { throwable -> ErrorCodeLookup.lookup(throwable).code },
                 )
             }
