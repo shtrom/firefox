@@ -4347,6 +4347,11 @@ ${
   }
 
   _initCopyCutController() {
+    // This exists to put an untrimmed URL on the clipboard, and only the address
+    // bar trims. Every other input keeps its native copy/cut.
+    if (!this.#isAddressbar) {
+      return;
+    }
     if (this._copyCutController) {
       return;
     }
