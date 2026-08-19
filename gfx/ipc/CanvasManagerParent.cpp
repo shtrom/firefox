@@ -5,6 +5,7 @@
 #include "CanvasManagerParent.h"
 
 #include "gfxPlatform.h"
+#include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/StaticPrefs_webgl.h"
 #include "mozilla/dom/WebGLParent.h"
@@ -131,7 +132,7 @@ void CanvasManagerParent::ActorDestroy(ActorDestroyReason aWhy) {
 }
 
 already_AddRefed<dom::PWebGLParent> CanvasManagerParent::AllocPWebGLParent() {
-  if (NS_WARN_IF(!gfxVars::AllowWebGL())) {
+  if (NS_WARN_IF(!gfxVars::AllowWebGL() || StaticPrefs::webgl_disabled())) {
     MOZ_ASSERT_UNREACHABLE("AllocPWebGLParent without WebGL");
     return nullptr;
   }
@@ -141,7 +142,8 @@ already_AddRefed<dom::PWebGLParent> CanvasManagerParent::AllocPWebGLParent() {
 
 already_AddRefed<webgpu::PWebGPUParent>
 CanvasManagerParent::AllocPWebGPUParent() {
-  if (NS_WARN_IF(!gfxVars::AllowWebGPU())) {
+  if (NS_WARN_IF(!gfxVars::AllowWebGPU() ||
+                 !StaticPrefs::dom_webgpu_enabled())) {
     MOZ_ASSERT_UNREACHABLE("AllocPWebGPUParent without WebGPU");
     return nullptr;
   }
