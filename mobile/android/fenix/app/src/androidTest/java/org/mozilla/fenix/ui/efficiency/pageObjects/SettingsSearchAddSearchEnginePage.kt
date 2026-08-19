@@ -5,6 +5,7 @@
 package org.mozilla.fenix.ui.efficiency.pageObjects
 
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.test.espresso.Espresso.closeSoftKeyboard
 import androidx.test.uiautomator.By
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.TestHelper.mDevice
@@ -58,7 +59,7 @@ class SettingsSearchAddSearchEnginePage(composeRule: AndroidComposeTestRule<Home
 
     fun saveNewSearchEngine(): SettingsSearchAddSearchEnginePage {
         // The Save button sits below the fields in a ScrollView, so the keyboard can cover it.
-        dismissSoftKeyboard()
+        closeSoftKeyboard()
         mozClick(SettingsSearchAddSearchEngineSelectors.SAVE_BUTTON)
         return this
     }

@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.test.espresso.Espresso.closeSoftKeyboard
 import androidx.test.platform.app.InstrumentationRegistry
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTimeLong
@@ -173,7 +174,7 @@ class SettingsAutofillPage(composeRule: AndroidComposeTestRule<HomeActivityInten
     }
 
     private fun waitForKeyboardDismiss(timeoutMs: Long = 15_000L) {
-        dismissSoftKeyboard()
+        closeSoftKeyboard()
         waitForAppWindowToBeUpdated()
         val startTime = SystemClock.elapsedRealtime()
         while (SystemClock.elapsedRealtime() - startTime < timeoutMs) {
