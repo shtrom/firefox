@@ -509,6 +509,7 @@ function Privacy({ dispatch, widgetsMayBeMaximized, widgetEnabledMap }) {
 
   return (
     <article
+      data-l10n-id="newtab-privacy-widget-label"
       className={`privacy widget col-4 ${widgetSize}-widget${
         initialized && isEmptyState ? " is-empty" : ""
       }${initialized && isTip ? " has-tip-msg" : ""}${

@@ -113,6 +113,16 @@ describe("Privacy widget", () => {
     expect(root.className).toContain("medium-widget");
   });
 
+  it("names the widget region for screen readers", () => {
+    // The widget has no visible title, so the article carries the accessible
+    // name itself via an attribute-only Fluent message.
+    const { container } = renderPrivacy();
+    const root = container.querySelector("article.privacy");
+    expect(root.getAttribute("data-l10n-id")).toBe(
+      "newtab-privacy-widget-label"
+    );
+  });
+
   it("fires widgets_impression once when the widget scrolls into view", () => {
     // beforeEach installs a firing IntersectionObserver, so the hook's
     // impression goes out on observe. This is the trigger the impression-time
