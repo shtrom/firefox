@@ -2,6 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+## Monitor Toolbar Button
+
+# Toolbar button that opens the panel where the user creates a monitor
+smartwindow-monitor-button =
+    .label = Monitors
+    .tooltiptext = Monitors
+
 ## AI Tasks
 
 # Desktop notification shown when a AI Tasks fires. A "monitor" is

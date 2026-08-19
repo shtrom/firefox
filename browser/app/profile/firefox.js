@@ -2410,6 +2410,8 @@ pref("browser.smartwindow.smartformfill.disallowedRegions", "FR");
 // Smart Window Agent
 pref("browser.smartwindow.agent.enabled", false);
 pref("browser.smartwindow.agent.supportedRegions", "US,CA");
+// Toolbar button that opens the monitor creation panel (bug 2062113).
+pref("browser.smartwindow.agent.toolbar.enabled", false);
 
 
 // Smart Window: Merino World Cup Soccer tool call (bug 2038266)

@@ -29,6 +29,9 @@ const PREF_SEMANTIC_HISTORY_SMARTWINDOW_FEATURE_GATE =
   "places.semanticHistory.smartwindow.featureGate";
 const PREF_AUTO_TAB_GROUPING = "browser.smartwindow.autoTabGrouping.enabled";
 const PREF_FIRSTRUN_HAS_COMPLETED = "browser.smartwindow.firstrun.hasCompleted";
+const PREF_AGENT = "browser.smartwindow.agent.enabled";
+const PREF_AGENT_TOOLBAR = "browser.smartwindow.agent.toolbar.enabled";
+const MONITOR_WIDGET_ID = "smartwindow-monitor-button";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -80,6 +83,22 @@ XPCOMUtils.defineLazyPreferenceGetter(
     hasCompleted && AIWindow._startSchedulers()
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "agentEnabled",
+  PREF_AGENT,
+  false,
+  () => AIWindow._updateMonitorWidgetRegistration()
+);
+
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "agentToolbarEnabled",
+  PREF_AGENT_TOOLBAR,
+  false,
+  () => AIWindow._updateMonitorWidgetRegistration()
+);
+
 /**
  * AI Window Service
  */
@@ -89,6 +108,7 @@ export const AIWindow = {
   _windowStates: new WeakMap(),
   _aiWindowMenu: null,
   _switcherWidgetCreated: false,
+  _monitorWidgetCreated: false,
 
   /**
    * A WeakMap<window, AIWindowTabStatesManager> that keeps references
@@ -106,6 +126,7 @@ export const AIWindow = {
       this._updateHamburgerMenuPosition(win);
       this._initializeAskButtonOnToolbox(win);
       this._initializeGroupTabsButtonOnToolbox(win);
+      this._updateMonitorButtonForWindow(win);
       const windowArgs = win?.arguments?.[1];
       if (
         windowArgs instanceof Ci.nsIPropertyBag2 &&
@@ -152,6 +173,7 @@ export const AIWindow = {
     lazy.NimbusFeatures.smartWindow.onUpdate(this.onNimbusUpdate);
     this._initialized = true;
     this._updateSwitcherWidgetRegistration();
+    this._updateMonitorWidgetRegistration();
   },
 
   _startSchedulers() {
@@ -295,6 +317,7 @@ export const AIWindow = {
 
   _onAIWindowEnabledPrefChange() {
     this._updateSwitcherWidgetRegistration();
+    this._updateMonitorWidgetRegistration();
     const widget = lazy.CustomizableUI.getWidget("ai-window-toggle");
     for (const { node } of widget?.instances ?? []) {
       this._updateButtonVisibility(node);
@@ -380,6 +403,80 @@ export const AIWindow = {
     if (!button.hidden) {
       lazy.AutoTabGroupingSuggestions.preloadModels();
     }
+  },
+
+  /**
+   * Whether the monitor toolbar button is enabled. It is the toolbar surface of
+   * the Smart Window agent, so it needs the agent feature as well as its own
+   * gate, both default-off.
+   *
+   * @returns {boolean}
+   */
+  get monitorButtonEnabled() {
+    return lazy.agentEnabled && lazy.agentToolbarEnabled;
+  },
+
+  /**
+   * The monitor button is a CustomizableUI button, it must not exist
+   * when the feature is off or when Smart Window is blocked by browser.ai.control.
+   */
+  _updateMonitorWidgetRegistration() {
+    if (this.monitorButtonEnabled && !this.isBlocked) {
+      this._createMonitorWidget();
+      return;
+    }
+    this._destroyMonitorWidget();
+  },
+
+  _createMonitorWidget() {
+    if (this._monitorWidgetCreated) {
+      return;
+    }
+
+    lazy.CustomizableUI.createWidget({
+      id: MONITOR_WIDGET_ID,
+      l10nId: "smartwindow-monitor-button",
+      defaultArea: lazy.CustomizableUI.AREA_NAVBAR,
+      removable: true,
+      showInPrivateBrowsing: false,
+      onCreated: node => {
+        node.setAttribute("aria-haspopup", "dialog");
+        node.setAttribute("aria-expanded", "false");
+        node.hidden = !this._shouldShowMonitorButton(node.ownerGlobal);
+      },
+      onCommand: event => {
+        lazy.AIWindowUI.toggleMonitorPanel(event.view);
+      },
+    });
+    this._monitorWidgetCreated = true;
+  },
+
+  _destroyMonitorWidget() {
+    if (!this._monitorWidgetCreated) {
+      return;
+    }
+
+    lazy.CustomizableUI.destroyWidget(MONITOR_WIDGET_ID);
+    this._monitorWidgetCreated = false;
+  },
+
+  /**
+   * Placement is global across windows, so the button is hidden per window to
+   * keep it out of Classic Windows. Unlike the ask button it stays visible in
+   * the immersive view.
+   *
+   * @param {Window} win
+   */
+  _updateMonitorButtonForWindow(win) {
+    const button = win.document.getElementById(MONITOR_WIDGET_ID);
+    if (!button) {
+      return;
+    }
+    button.hidden = !this._shouldShowMonitorButton(win);
+  },
+
+  _shouldShowMonitorButton(win) {
+    return this.monitorButtonEnabled && this.isAIWindowActive(win);
   },
 
   get isDefaultWindow() {
@@ -801,6 +898,7 @@ export const AIWindow = {
       this._updateHamburgerMenuPosition(win, { isToggling: true });
       this._initializeAskButtonOnToolbox(win);
       this._initializeGroupTabsButtonOnToolbox(win);
+      this._updateMonitorButtonForWindow(win);
       Services.obs.notifyObservers(
         win,
         "ai-window-state-changed",
@@ -1012,6 +1110,7 @@ export const AIWindow = {
       root.removeAttribute("aiwindow-immersive-view");
       root.removeAttribute("aiwindow-new-window");
       root.removeAttribute("aiwindow-has-nav-forward");
+      this._updateMonitorButtonForWindow(win);
       return;
     }
 
@@ -1051,6 +1150,8 @@ export const AIWindow = {
     if (askButton) {
       askButton.hidden = isImmersiveView;
     }
+
+    this._updateMonitorButtonForWindow(win);
 
     const groupTabsButton = win.document.getElementById(
       "smartwindow-group-tabs-button"
