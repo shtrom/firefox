@@ -123,11 +123,11 @@ def test_query_sql_includes_correct_sample_slices():
     assert "FARM_FINGERPRINT(document_id), 10000)) < 42" in sql
 
 
-def test_query_sql_targets_the_glean_hang_report_table():
+def test_query_sql_targets_the_redacted_hang_report_view():
     sql = bhr_collection.build_query_sql(
         datetime.date(2026, 5, 1), datetime.date(2026, 5, 1), 1
     )
-    assert "mozdata.firefox_desktop.hang_report" in sql
+    assert "`mozdata.firefox_desktop.hang_report_redacted`" in sql
 
 
 def test_query_sql_filters_build_date_in_sql():

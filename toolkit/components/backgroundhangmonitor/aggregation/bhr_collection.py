@@ -32,7 +32,7 @@ from heuristics import apply_hang_signature_heuristics
 from profile_processor import ProfileProcessor
 from symbolication import UNSYMBOLICATED, symbolicate_modules
 
-_BQ_TABLE = "mozdata.firefox_desktop.hang_report"
+_BQ_TABLE = "mozdata.firefox_desktop.hang_report_redacted"
 _MAX_SAMPLE_SLICES = 10000
 
 # Project/dataset where query results are materialized before being read back.
