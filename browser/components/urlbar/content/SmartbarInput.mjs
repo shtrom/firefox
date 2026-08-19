@@ -1569,20 +1569,12 @@ ${
   /**
    * Dispatches a smartbar-commit custom event.
    *
-   * @param {Event} event - The event that triggered the actibrowser_aiwindow_smartbar_command_palette.json.
+   * @param {Event} event - The event that triggered the action.
    * @param {string} value - The value to commit.
    * @param {SmartbarAction} [action] - The action to commit. Defaults to the
    *   current smartbar action.
-   * @param {string} [submitType] - How the value was submitted (e.g. "enter"
-   *   or "button"), forwarded for telemetry. Left unset when it should be
-   *   inferred by the consumer.
    */
-  #dispatchSmartbarCommitEvent(
-    event,
-    value,
-    action = this.smartbarAction,
-    submitType
-  ) {
+  #dispatchSmartbarCommitEvent(event, value, action = this.smartbarAction) {
     this.dispatchEvent(
       new CustomEvent("smartbar-commit", {
         bubbles: true,
@@ -1596,7 +1588,6 @@ ${
           event,
           location: this.sapLocation,
           searchProvider: this.controller.engineStore.default?.name,
-          submitType,
         },
       })
     );
@@ -1607,17 +1598,10 @@ ${
    *
    * @param {Event} event - The event that triggered the action.
    * @param {string} value - The value to commit.
-   * @param {string} [submitType] - How the value was submitted (e.g. "enter"
-   *   or "button").
    */
-  submitChat(event, value, submitType) {
+  submitChat(event, value) {
     this.smartbarAction = "chat";
-    this.#dispatchSmartbarCommitEvent(
-      event,
-      value,
-      this.smartbarAction,
-      submitType
-    );
+    this.#dispatchSmartbarCommitEvent(event, value);
   }
 
   /**
@@ -1992,13 +1976,13 @@ ${
 
   /**
    * Whether the current input is a known Agent command such as
-   * "/watch ...". The input is submitted to chat so the
-   * agent router can handle it
+   * "/watch ...". Such input is submitted to chat so the
+   * agent router can handle it. Sidebar only for now.
    *
    * @returns {boolean}
    */
   get #isAgentCommand() {
-    return this.#isSmartbarMode && isAgentCommand(this.untrimmedValue);
+    return this.#isSidebarMode && isAgentCommand(this.untrimmedValue);
   }
 
   /**
@@ -3148,11 +3132,7 @@ ${
     // close the suggestions view. The mentions/command plugin will handle querying
     // providers directly.
     const isHandlingMentions = this.inputField.isHandlingMentions;
-    const isHandlingCommands = this.inputField.isHandlingCommands;
-    if (
-      (isHandlingMentions || isHandlingCommands || this.#isAgentCommand) &&
-      event
-    ) {
+    if ((isHandlingMentions || this.#isAgentCommand) && event) {
       this.view.close();
       // no query runs so refresh the CTA state directly
       this.#updateSmartbarCTAButton();
@@ -3166,7 +3146,6 @@ ${
         this.getAttribute("pageproxystate") == "valid" ? "" : this.value;
     } else if (
       !isHandlingMentions &&
-      !isHandlingCommands &&
       !this.#isAgentCommand &&
       !this.value.startsWith(searchString)
     ) {

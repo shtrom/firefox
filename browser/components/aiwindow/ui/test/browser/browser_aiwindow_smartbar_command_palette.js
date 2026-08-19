@@ -7,21 +7,19 @@ const { Region } = ChromeUtils.importESModule(
   "resource://gre/modules/Region.sys.mjs"
 );
 
-const SUPPORTED_REGIONS_PREF = "browser.smartwindow.agent.supportedRegions";
-const TEST_REGION = "US";
-
 add_setup(async function () {
   const originalRegion = Region.home;
-  Region._setHomeRegion(TEST_REGION, false);
+  Region._setHomeRegion("US", false);
   registerCleanupFunction(() => {
     Region._setHomeRegion(originalRegion, false);
   });
+
   await SpecialPowers.pushPrefEnv({
     set: [
       ["browser.search.suggest.enabled", false],
       ["browser.smartwindow.endpoint", "http://localhost:0/v1"],
       ["browser.smartwindow.agent.enabled", true],
-      [SUPPORTED_REGIONS_PREF, TEST_REGION],
+      ["browser.smartwindow.agent.supportedRegions", "US"],
     ],
   });
 });
@@ -41,84 +39,7 @@ async function getCommandGroups(browser) {
   });
 }
 
-add_task(async function test_command_palette_keyboard_navigation() {
-  const { win, sidebarBrowser } = await openAIWindowWithSidebar();
-
-  await typeInSmartbar(sidebarBrowser, "/");
-  await waitForPanelOpen(sidebarBrowser);
-
-  await SpecialPowers.spawn(sidebarBrowser, [], async () => {
-    const aiWindow = content.document.querySelector("ai-window");
-    const smartbar = aiWindow.shadowRoot.querySelector("#ai-window-smartbar");
-    const panelList = smartbar.querySelector("smartwindow-panel-list");
-
-    // The first command is selected by default
-    await ContentTaskUtils.waitForCondition(
-      () => panelList.selectedItemId === "watch",
-      "The first command is selected by default"
-    );
-
-    smartbar.inputField.view.focus();
-
-    // Arrow navigation keeps a valid selection
-    EventUtils.synthesizeKey("KEY_ArrowDown", {}, content);
-    Assert.equal(
-      panelList.selectedItemId,
-      "watch",
-      "ArrowDown keeps a command selected"
-    );
-
-    // Enter runs the highlighted command - it submits "/watch" to chat
-    let committed = null;
-    aiWindow.ownerDocument.addEventListener(
-      "smartbar-commit",
-      e => {
-        committed = {
-          action: e.detail.action,
-          value: e.detail.value,
-          submitType: e.detail.submitType,
-        };
-      },
-      { capture: true, once: true }
-    );
-    EventUtils.synthesizeKey("KEY_Enter", {}, content);
-    await ContentTaskUtils.waitForCondition(
-      () => committed,
-      "Enter submits the highlighted command to chat"
-    );
-    Assert.equal(committed.action, "chat", "Command is submitted to chat");
-    Assert.equal(committed.value, "/watch", "Command value is submitted");
-    Assert.equal(
-      committed.submitType,
-      "enter",
-      "Enter key records submitType 'enter'"
-    );
-  });
-
-  await BrowserTestUtils.closeWindow(win);
-});
-
-add_task(async function test_command_palette_escape_closes() {
-  const { win, sidebarBrowser } = await openAIWindowWithSidebar();
-
-  await typeInSmartbar(sidebarBrowser, "/");
-  await waitForPanelOpen(sidebarBrowser);
-
-  await SpecialPowers.spawn(sidebarBrowser, [], async () => {
-    const aiWindow = content.document.querySelector("ai-window");
-    const smartbar = aiWindow.shadowRoot.querySelector("#ai-window-smartbar");
-
-    smartbar.inputField.view.focus();
-    EventUtils.synthesizeKey("KEY_Escape", {}, content);
-
-    await ContentTaskUtils.waitForCondition(
-      () => smartbar.inputField.isHandlingCommands === false,
-      "Escape closes the command palette"
-    );
-  });
-
-  await BrowserTestUtils.closeWindow(win);
-});
+// TODO: Bug 2060620 - Add command palette navigation test
 
 add_task(async function test_slash_opens_command_palette() {
   const { win, sidebarBrowser } = await openAIWindowWithSidebar();
@@ -128,70 +49,11 @@ add_task(async function test_slash_opens_command_palette() {
 
   const groups = await getCommandGroups(sidebarBrowser);
   Assert.equal(groups.length, 1, "One command group is shown");
-  Assert.equal(
-    groups[0].headerL10nId,
-    "smartbar-command-tasks-header",
-    "Group has the tasks header"
-  );
+  Assert.equal(groups[0].header, "TASKS", "Group has the 'TASKS' header");
   Assert.ok(
     groups[0].items.some(item => item.id === "watch"),
     "The watch command is listed"
   );
-
-  await BrowserTestUtils.closeWindow(win);
-});
-
-add_task(async function test_command_palette_opens_in_full_page() {
-  const win = await openAIWindow();
-  const browser = win.gBrowser.selectedBrowser;
-
-  await typeInSmartbar(browser, "/");
-  await waitForPanelOpen(browser);
-
-  const groups = await getCommandGroups(browser);
-  Assert.ok(
-    groups[0]?.items.some(item => item.id === "watch"),
-    "The command palette opens in the full-page smartbar"
-  );
-
-  await SpecialPowers.spawn(browser, [], async () => {
-    const aiWindow = content.document.querySelector("ai-window");
-    const smartbar = aiWindow.shadowRoot.querySelector("#ai-window-smartbar");
-    await ContentTaskUtils.waitForCondition(
-      () => !smartbar.view?.isOpen,
-      "The urlbar results view stays closed while the command palette is open"
-    );
-  });
-
-  await BrowserTestUtils.closeWindow(win);
-});
-
-add_task(async function test_command_activates_chat_view_in_full_page() {
-  const win = await openAIWindow();
-  const browser = win.gBrowser.selectedBrowser;
-
-  await SpecialPowers.spawn(browser, [], async () => {
-    const aiWindow = content.document.querySelector("ai-window");
-    Assert.ok(
-      !aiWindow.classList.contains("chat-active"),
-      "Full page starts on the new-tab starter view"
-    );
-  });
-
-  await typeInSmartbar(browser, "/watch");
-  await waitForPanelOpen(browser);
-
-  await SpecialPowers.spawn(browser, [], async () => {
-    const aiWindow = content.document.querySelector("ai-window");
-    const smartbar = aiWindow.shadowRoot.querySelector("#ai-window-smartbar");
-    smartbar.inputField.view.focus();
-    EventUtils.synthesizeKey("KEY_Enter", {}, content);
-
-    await ContentTaskUtils.waitForCondition(
-      () => aiWindow.classList.contains("chat-active"),
-      "Running a command switches the new tab into the chat view"
-    );
-  });
 
   await BrowserTestUtils.closeWindow(win);
 });
@@ -207,6 +69,7 @@ add_task(async function test_command_palette_filters_by_query() {
     "'/wat' matches the watch command"
   );
 
+  // Extend the query so nothing matches
   await typeInSmartbar(sidebarBrowser, "xyz");
   await SpecialPowers.spawn(sidebarBrowser, [], async () => {
     const aiWindow = content.document.querySelector("ai-window");
@@ -221,7 +84,7 @@ add_task(async function test_command_palette_filters_by_query() {
   await BrowserTestUtils.closeWindow(win);
 });
 
-add_task(async function test_command_selection_submits_to_chat() {
+add_task(async function test_command_selection_completes_input() {
   const { win, sidebarBrowser } = await openAIWindowWithSidebar();
 
   await typeInSmartbar(sidebarBrowser, "/");
@@ -232,88 +95,44 @@ add_task(async function test_command_selection_submits_to_chat() {
     const smartbar = aiWindow.shadowRoot.querySelector("#ai-window-smartbar");
     const panelList = smartbar.querySelector("smartwindow-panel-list");
     const panel = panelList.shadowRoot.querySelector("panel-list");
-
-    let committed = null;
-    aiWindow.ownerDocument.addEventListener(
-      "smartbar-commit",
-      e => {
-        committed = {
-          action: e.detail.action,
-          value: e.detail.value,
-          submitType: e.detail.submitType,
-        };
-      },
-      { capture: true, once: true }
-    );
-
     const firstItem = panel.querySelector(
       "panel-item:not(.panel-section-header)"
     );
     firstItem.click();
 
     await ContentTaskUtils.waitForCondition(
-      () => committed,
-      "Clicking the command submits it to chat"
-    );
-    Assert.equal(committed.action, "chat", "Command is submitted to chat");
-    Assert.equal(committed.value, "/watch", "Command value is submitted");
-    Assert.equal(
-      committed.submitType,
-      "button",
-      "Clicking a palette item records submitType 'button'"
+      () => smartbar.value === "/watch ",
+      "Selecting the command completes the input to '/watch '"
     );
   });
 
   await BrowserTestUtils.closeWindow(win);
 });
 
-add_task(async function test_shift_enter_does_not_complete_command() {
+add_task(async function test_command_selection_is_undoable() {
   const { win, sidebarBrowser } = await openAIWindowWithSidebar();
 
-  await typeInSmartbar(sidebarBrowser, "/wa");
+  await typeInSmartbar(sidebarBrowser, "/wat");
   await waitForPanelOpen(sidebarBrowser);
 
   await SpecialPowers.spawn(sidebarBrowser, [], async () => {
     const aiWindow = content.document.querySelector("ai-window");
     const smartbar = aiWindow.shadowRoot.querySelector("#ai-window-smartbar");
+    const panelList = smartbar.querySelector("smartwindow-panel-list");
+    const panel = panelList.shadowRoot.querySelector("panel-list");
 
-    smartbar.inputField.view.focus();
-    EventUtils.synthesizeKey("KEY_Enter", { shiftKey: true }, content);
-
-    Assert.ok(
-      !smartbar.value.startsWith("/watch "),
-      "Shift+Enter does not complete the command"
+    panel.querySelector("panel-item:not(.panel-section-header)").click();
+    await ContentTaskUtils.waitForCondition(
+      () => smartbar.value === "/watch ",
+      "Selecting the command completes the input to '/watch '"
     );
 
-    Assert.equal(
-      smartbar.inputField.view.state.doc.childCount,
-      2,
-      "Shift+Enter inserts a line break"
-    );
-  });
-
-  await BrowserTestUtils.closeWindow(win);
-});
-
-add_task(async function test_modifier_keys_do_not_complete_command() {
-  const { win, sidebarBrowser } = await openAIWindowWithSidebar();
-
-  await typeInSmartbar(sidebarBrowser, "/wa");
-  await waitForPanelOpen(sidebarBrowser);
-
-  await SpecialPowers.spawn(sidebarBrowser, [], async () => {
-    const aiWindow = content.document.querySelector("ai-window");
-    const smartbar = aiWindow.shadowRoot.querySelector("#ai-window-smartbar");
-
     smartbar.inputField.view.focus();
-
-    for (const modifier of ["ctrlKey", "altKey", "metaKey"]) {
-      EventUtils.synthesizeKey("KEY_Enter", { [modifier]: true }, content);
-      Assert.ok(
-        !smartbar.value.startsWith("/watch "),
-        `${modifier}+Enter does not complete the command`
-      );
-    }
+    EventUtils.synthesizeKey("z", { accelKey: true }, content);
+    await ContentTaskUtils.waitForCondition(
+      () => !smartbar.value.startsWith("/watch"),
+      "Cmd+z undoes the command completion"
+    );
   });
 
   await BrowserTestUtils.closeWindow(win);
