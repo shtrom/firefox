@@ -460,6 +460,10 @@ pref("browser.urlbar.focusContentDocumentOnEsc", true);
 // pref-on CI variant and local testing of the actor path.
 pref("browser.urlbar.ipc.chromeMessagePassing", false);
 
+// Feature gate for the <moz-urlbar> on about:newtab and about:home. When
+// enabled, it supersedes New Tab's handoff search bar.
+pref("browser.urlbar.newtab.featureGate", false);
+
 // Enable a certain level of urlbar logging to the Browser Console. See
 // ConsoleInstance.webidl.
 pref("browser.urlbar.loglevel", "Error");

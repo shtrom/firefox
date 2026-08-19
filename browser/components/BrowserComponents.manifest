@@ -218,3 +218,4 @@ category browser-quit-application-granted moz-src:///browser/components/ipprotec
 category search-service-notification moz-src:///browser/components/search/SearchUIUtils.sys.mjs SearchUIUtils.showSearchServiceNotification
 
 category browser-newtab-external-component moz-src:///browser/components/search/SearchUIUtils.sys.mjs SearchNewTabComponentsRegistrant
+category browser-newtab-external-component moz-src:///browser/components/urlbar/UrlbarNewTabComponentRegistrant.sys.mjs UrlbarNewTabComponentRegistrant
