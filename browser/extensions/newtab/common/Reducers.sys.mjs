@@ -207,6 +207,10 @@ export const INITIAL_STATE = {
     error: false,
     watchlistTickers: [],
     watchlistReconciledSymbols: [],
+    searchResults: [],
+    searchStatus: "idle",
+    activeRequestId: null,
+    submittedQuery: "",
   },
   PictureOfTheDay: {
     initialized: false,
@@ -1400,6 +1404,31 @@ function Stocks(prevState = INITIAL_STATE.Stocks, action) {
         ...prevState,
         watchlistTickers: action.data.watchlistTickers,
         watchlistReconciledSymbols: action.data.reconciledSymbols,
+      };
+    case at.WIDGETS_STOCKS_SEARCH_STARTED:
+      return {
+        ...prevState,
+        searchStatus: "loading",
+        searchResults: [],
+        activeRequestId: action.data.requestId,
+        submittedQuery: action.data.query,
+      };
+    case at.WIDGETS_STOCKS_SEARCH_RESPONSE:
+      if (action.data.requestId !== prevState.activeRequestId) {
+        return prevState;
+      }
+      return {
+        ...prevState,
+        searchStatus: action.data.status,
+        searchResults: action.data.values || [],
+      };
+    case at.WIDGETS_STOCKS_SEARCH_CLEAR:
+      return {
+        ...prevState,
+        searchStatus: "idle",
+        searchResults: [],
+        activeRequestId: null,
+        submittedQuery: "",
       };
     default:
       return prevState;

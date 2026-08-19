@@ -22,6 +22,7 @@ import { PREF_STOCKS_WATCHLIST } from "resource://newtab/common/WidgetsRegistry.
 
 const CACHE_KEY = "stocks_feed";
 const MERINO_CLIENT_KEY = "HNT_STOCKS_FEED";
+const MERINO_SEARCH_CLIENT_KEY = "HNT_STOCKS_SEARCH";
 const MERINO_PROVIDER = ["polygon"];
 const STOCKS_UPDATE_TIME = 15 * 60 * 1000; // 15 minutes
 const MERINO_TIMEOUT_MS = 5000;
@@ -148,6 +149,88 @@ export class StocksFeed {
       this.merino = client;
     }
     return this.merino;
+  }
+
+  // Read lastFetchStatus because fetch() returns [] for both errors and no
+  // matches, so the values alone cannot tell the two apart.
+  async _searchFetch(client, query) {
+    const result = await client.fetch({
+      query,
+      providers: MERINO_PROVIDER,
+      timeoutMs: MERINO_TIMEOUT_MS,
+      otherParams: { source: "newtab" },
+    });
+    const status = client.lastFetchStatus;
+    if (
+      status === "timeout" ||
+      status === "network_error" ||
+      status === "http_error"
+    ) {
+      return null;
+    }
+    const values = result?.[0]?.custom_details?.polygon?.values;
+    return Array.isArray(values) && values.length ? values : [];
+  }
+
+  // Look up a search query and reply only to the tab that asked. Each search gets
+  // its own Merino client so overlapping searches don't cancel each other (one
+  // client serves one request at a time).
+  async search(query, requestId, target) {
+    if (!target) {
+      return; // no port to reply to
+    }
+    const reply = (status, values = []) =>
+      this.store.dispatch(
+        ac.OnlyToOneContent(
+          {
+            type: at.WIDGETS_STOCKS_SEARCH_RESPONSE,
+            data: { query, requestId, status, values },
+          },
+          target
+        )
+      );
+    try {
+      if (!this.isEnabled() || typeof query !== "string") {
+        reply("error");
+        return;
+      }
+      const normalized = query.trim().replace(/^\$+/, "").trim();
+      if (!normalized) {
+        reply("empty");
+        return;
+      }
+      const client = this.MerinoClient(MERINO_SEARCH_CLIENT_KEY);
+      try {
+        const bare = await this._searchFetch(client, normalized);
+        if (bare === null) {
+          reply("error");
+        } else if (bare.length) {
+          reply("success", bare);
+        } else {
+          // A company name (e.g. amazon) or a symbol Merino rejects bare (e.g.
+          // SPY) resolves through the "<query> stock" phrase Merino maps to a
+          // ticker. Lower-cased because Merino matches those phrases in lower case.
+          const named = await this._searchFetch(
+            client,
+            `${normalized.toLowerCase()} stock`
+          );
+          if (named === null) {
+            reply("error");
+          } else if (named.length) {
+            reply("success", named);
+          } else {
+            reply("empty");
+          }
+        }
+      } finally {
+        // End the client's session so this per-search client is released
+        // instead of lingering until the session timer fires.
+        client.resetSession();
+      }
+    } catch (e) {
+      console.error("StocksFeed search failed", e);
+      reply("error");
+    }
   }
 
   // `query` defaults to "" (the default ETF set). A non-empty query (e.g.
@@ -483,6 +566,13 @@ export class StocksFeed {
         break;
       case at.PREF_CHANGED:
         await this.onPrefChangedAction(action);
+        break;
+      case at.WIDGETS_STOCKS_SEARCH_REQUEST:
+        await this.search(
+          action.data?.query,
+          action.data?.requestId,
+          action.meta?.fromTarget
+        );
         break;
       case at.DISCOVERY_STREAM_DEV_EXPIRE_CACHE:
         // Dev-tools "Expire Cache": clear both snapshots and refetch.
