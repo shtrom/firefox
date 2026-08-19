@@ -971,6 +971,10 @@ def target_tasks_general_perf_testing(full_task_graph, parameters, graph_config)
                         for x in ["speedometer3", "jetstream3", "motionmark"]
                     ):
                         return False
+                # Labels for this suite carry no "benchmark" token, so the
+                # check below cannot match them.
+                if "safari" in try_name and "video-playback-latency" in try_name:
+                    return True
                 if "safari" and "benchmark" in try_name:
                     if "jetstream2" in try_name and "safari" in try_name:
                         return False
