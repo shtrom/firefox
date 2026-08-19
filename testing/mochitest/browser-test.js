@@ -347,6 +347,14 @@ function Tester(aTests, structuredLogger, aCallback) {
   window.SpecialPowers.SimpleTest = this.SimpleTest;
   window.SpecialPowers.setAsDefaultAssertHandler();
 
+  // In the EventUtils scope, as EventUtils reaches for this.ClickChecks to
+  // suppress the checks for synthesized clicks.
+  this._scriptLoader.loadSubScript(
+    "chrome://mochikit/content/tests/SimpleTest/ClickChecks.js",
+    this.EventUtils
+  );
+  this.ClickChecks = this.EventUtils.ClickChecks;
+
   this._scriptLoader.loadSubScript(
     "chrome://mochikit/content/tests/SimpleTest/AccessibilityUtils.js",
     // AccessibilityUtils are integrated with EventUtils to perform additional
@@ -356,6 +364,10 @@ function Tester(aTests, structuredLogger, aCallback) {
   );
   this.AccessibilityUtils = this.EventUtils.AccessibilityUtils;
 
+  // Before AccessibilityUtils, so that its check runs, and reports, first: the
+  // accessibility checks force refresh driver ticks, which can let a popup
+  // finish opening before we look at its state.
+  this.ClickChecks.init(this.SimpleTest);
   this.AccessibilityUtils.init(this.SimpleTest);
 
   var extensionUtilsScope = {
@@ -443,6 +455,7 @@ function Tester(aTests, structuredLogger, aCallback) {
 Tester.prototype = {
   EventUtils: {},
   AccessibilityUtils: {},
+  ClickChecks: {},
   SimpleTest: {},
   ContentTask: null,
   ExtensionTestUtils: null,
@@ -803,6 +816,7 @@ Tester.prototype = {
     DOMWindowTracker.destroy();
     Services.console.unregisterListener(this);
 
+    this.ClickChecks.uninit();
     this.AccessibilityUtils.uninit();
 
     // It's important to terminate the module to avoid crashes on shutdown.
@@ -1102,6 +1116,9 @@ Tester.prototype = {
           );
         }
       }
+
+      // After the cleanup functions, which can still click things.
+      this.ClickChecks.forgetMouseDownState();
 
       // Ensure any sinon stubs and spies have been cleaned up before the next test.
       if (Cu.isESModuleLoaded("resource://testing-common/Sinon.sys.mjs")) {
@@ -1609,6 +1626,7 @@ Tester.prototype = {
 
     this.SimpleTest.reset();
     // Reset accessibility environment.
+    this.ClickChecks.reset();
     this.AccessibilityUtils.reset(this.a11y_checks, this.currentTest.path);
 
     // Load the tests into a testscope
@@ -1851,6 +1869,9 @@ Tester.prototype = {
                 "PASS",
                 "Test timed out"
               );
+              // nextTest, which normally does this, doesn't run for a test that
+              // timed out.
+              self.ClickChecks.forgetMouseDownState();
               self._shutdownCleanup(async () => {
                 await self._checkForLeakedWindows(true);
                 self.finish();
