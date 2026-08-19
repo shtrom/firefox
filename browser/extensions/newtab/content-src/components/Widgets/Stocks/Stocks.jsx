@@ -25,7 +25,7 @@ import {
   addToWatchlist,
   removeFromWatchlist,
   normalize,
-} from "./StocksWatchlist.mjs";
+} from "common/StocksWatchlist.mjs";
 import { WidgetMenuFooter } from "../WidgetMenuFooter";
 import { SizeSubmenu } from "../SizeSubmenu";
 import { StockTicker } from "./StockTicker";
@@ -33,6 +33,10 @@ import { StocksError } from "./StocksError";
 
 const STOCKS_ENTRY = WIDGET_REGISTRY.find(w => w.id === "stocks");
 const STOCKS_PLACEHOLDER_COUNT = 4;
+// One shared empty array. When the Stocks state lacks these fields (an older
+// build that predates them), the fallback below reuses this instead of a new []
+// each render, so the derived lists don't recompute needlessly.
+const EMPTY_ARRAY = [];
 
 // The two lists the dropdown switches between: "markets" (the default ETFs)
 // and "watchlist" (the user's picks). Each id maps to its menu/button label.
@@ -48,7 +52,13 @@ function Stocks({
   widgetEnabledMap,
 }) {
   const prefs = useSelector(state => state.Prefs.values);
-  const { tickers, error, lastUpdated } = useSelector(state => state.Stocks);
+  const {
+    tickers,
+    error,
+    lastUpdated,
+    watchlistTickers = EMPTY_ARRAY,
+    watchlistReconciledSymbols = EMPTY_ARRAY,
+  } = useSelector(state => state.Stocks);
   const watchlistPref = useSelector(
     state => state.Prefs.values[PREF_STOCKS_WATCHLIST]
   );
@@ -122,16 +132,40 @@ function Stocks({
     [dispatch]
   );
 
-  // Feed tickers keyed by normalized symbol, so matching a saved symbol doesn't depend on
-  // the feed's casing.
+  // Merge default and watchlist rows by normalized ticker so a saved symbol
+  // resolves from either set. Defaults go last so their fresher data wins a
+  // symbol that appears in both.
   const bySymbol = useMemo(
-    () => new Map(tickers.map(t => [normalize(t.ticker), t])),
-    [tickers]
+    () =>
+      new Map(
+        [...watchlistTickers, ...tickers].map(t => [normalize(t.ticker), t])
+      ),
+    [tickers, watchlistTickers]
   );
   const matchedRows = useMemo(
     () => savedSymbols.map(s => bySymbol.get(s)).filter(Boolean),
     [savedSymbols, bySymbol]
   );
+  // The watchlist is ready for the current pref only once the feed has
+  // reconciled exactly the saved symbols; before that a newly added symbol is
+  // still pending, not missing.
+  const watchlistReady = useMemo(() => {
+    if (savedSymbols.length !== watchlistReconciledSymbols.length) {
+      return false;
+    }
+    const reconciled = new Set(watchlistReconciledSymbols);
+    return savedSymbols.every(s => reconciled.has(s));
+  }, [savedSymbols, watchlistReconciledSymbols]);
+  // While the watchlist is loading, show a loading row for each saved symbol
+  // that hasn't resolved yet, or a few loading rows if none have resolved.
+  const watchlistPendingCount = useMemo(() => {
+    if (watchlistReady) {
+      return 0;
+    }
+    return matchedRows.length
+      ? Math.max(savedSymbols.length - matchedRows.length, 0)
+      : Math.min(savedSymbols.length, STOCKS_PLACEHOLDER_COUNT);
+  }, [watchlistReady, matchedRows.length, savedSymbols.length]);
 
   const handleToggleWatchlist = useCallback(
     (symbol, tickerName) => {
@@ -194,11 +228,9 @@ function Stocks({
   const selectedListL10nId = STOCKS_LISTS.find(
     l => l.id === selectedList
   ).l10nId;
-  const feedLoaded = !!tickers.length && !error;
-  // How many saved symbols to show the dropdown for. Until the feed loads we count the
-  // whole saved list (so the dropdown shows right after an add); once it loads we count
-  // only the ones the feed returned (so an all-missing watchlist reverts to the heading).
-  const savedInFeed = feedLoaded ? matchedRows.length : savedSymbols.length;
+  // How many saved symbols the dropdown counts: all of them while the watchlist
+  // is loading, then only the ones that resolved once it has loaded.
+  const savedInFeed = watchlistReady ? matchedRows.length : savedSymbols.length;
   const showDropdown = widgetSize === "large" && savedInFeed > 0;
   const activeList =
     showDropdown && selectedList === "watchlist" ? "watchlist" : "markets";
@@ -210,19 +242,32 @@ function Stocks({
   const chosenRow = chosenSymbol ? bySymbol.get(normalize(chosenSymbol)) : null;
   // Keep the saved symbol visible while data is loading or unavailable.
   const headerSymbol = chosenRow?.ticker ?? chosenSymbol;
-  // Distinct from feedLoaded above (used by the large dropdown).
   const hasLoadedSnapshot = lastUpdated !== null;
-  // Error cases only the small size has (a whole-feed error is handled by showError above).
+  // Small size shows one ticker. If it is a saved symbol, treat it as an error
+  // only after the watchlist finished loading with no data for it (before that it
+  // is still loading); if it is a default ticker, use the default feed's check.
+  const chosenIsSaved = !!savedSymbols.length;
   const smallError =
-    (!tickers.length && hasLoadedSnapshot) ||
-    (!!chosenSymbol && !!tickers.length && !chosenRow);
-  // Show the error box from one place so switching error states doesn't report it to
-  // telemetry twice.
-  const showAnyError = showError || (widgetSize === "small" && smallError);
+    widgetSize === "small" &&
+    (chosenIsSaved
+      ? watchlistReady && !chosenRow
+      : (!tickers.length && hasLoadedSnapshot) ||
+        (!!chosenSymbol && !!tickers.length && !chosenRow));
+  // Suppress the default error only when a resolved watchlist row is on screen,
+  // so the watchlist still shows even if the default feed failed.
+  const watchlistRowShown =
+    (widgetSize === "small" && chosenIsSaved && !!chosenRow) ||
+    (widgetSize === "large" &&
+      activeList === "watchlist" &&
+      !!matchedRows.length);
+  // Show the error box from one place so switching error states doesn't report it
+  // to telemetry twice.
+  const showAnyError = (showError && !watchlistRowShown) || smallError;
 
-  // Return to Markets when there's nothing to show (the watchlist emptied, or the feed no
-  // longer carries any saved symbol) so the next add starts there with the confirmation
-  // animation. A size change with a non-empty watchlist keeps the selection.
+  // Return to Markets when there's nothing to show (the watchlist emptied, or
+  // none of its symbols resolved) so the next add starts there with the
+  // confirmation animation. A size change with a non-empty watchlist keeps the
+  // selection.
   useEffect(() => {
     if (!savedInFeed && selectedList !== "markets") {
       setSelectedList("markets");
@@ -476,26 +521,32 @@ function Stocks({
             {activeList === "watchlist" && (
               <ul
                 ref={watchlistRef}
-                className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
+                aria-busy={!watchlistReady}
+                className={`stocks-list${
+                  !matchedRows.length && !watchlistReady
+                    ? " stocks-list--loading"
+                    : ""
+                }`}
               >
-                {tickers.length
-                  ? matchedRows.map(t => (
-                      <StockTicker
-                        key={t.ticker}
-                        size="large"
-                        name={t.name}
-                        ticker={t.ticker}
-                        price={t.last_price}
-                        changePercent={t.todays_change_perc}
-                        watchlistState="remove"
-                        onWatchlistToggle={handleToggleWatchlist}
-                      />
-                    ))
-                  : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map(
-                      (_, i) => (
-                        <StockTicker key={i} size="large" loading={true} />
-                      )
-                    )}
+                {matchedRows.map(t => (
+                  <StockTicker
+                    key={t.ticker}
+                    size="large"
+                    name={t.name}
+                    ticker={t.ticker}
+                    price={t.last_price}
+                    changePercent={t.todays_change_perc}
+                    watchlistState="remove"
+                    onWatchlistToggle={handleToggleWatchlist}
+                  />
+                ))}
+                {Array.from({ length: watchlistPendingCount }).map((_, i) => (
+                  <StockTicker
+                    key={`pending-${i}`}
+                    size="large"
+                    loading={true}
+                  />
+                ))}
               </ul>
             )}
           </>

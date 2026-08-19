@@ -8,7 +8,7 @@ import {
   serializeWatchlist,
   addToWatchlist,
   removeFromWatchlist,
-} from "content-src/components/Widgets/Stocks/StocksWatchlist.mjs";
+} from "common/StocksWatchlist.mjs";
 
 describe("StocksWatchlist helpers", () => {
   it("parses, trimming/upper-casing/deduping and dropping empties", () => {

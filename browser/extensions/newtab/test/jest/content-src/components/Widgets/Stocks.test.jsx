@@ -7,6 +7,7 @@ import { Provider } from "react-redux";
 import { combineReducers, createStore } from "redux";
 import { INITIAL_STATE, reducers } from "common/Reducers.sys.mjs";
 import { actionTypes as at } from "common/Actions.mjs";
+import { parseWatchlist } from "common/StocksWatchlist.mjs";
 import { Stocks } from "content-src/components/Widgets/Stocks/Stocks";
 
 const mockState = {
@@ -58,6 +59,8 @@ function renderStocksState({
   tickers = [],
   error = false,
   watchlist = "",
+  watchlistTickers = [],
+  watchlistReconciledSymbols = parseWatchlist(watchlist),
   lastUpdated = 1,
   dispatch = jest.fn(),
 } = {}) {
@@ -71,7 +74,13 @@ function renderStocksState({
         "widgets.stocks.watchlist": watchlist,
       },
     },
-    Stocks: { tickers, lastUpdated, error },
+    Stocks: {
+      tickers,
+      lastUpdated,
+      error,
+      watchlistTickers,
+      watchlistReconciledSymbols,
+    },
   };
   const store = createStore(combineReducers(reducers), state);
   const view = render(
@@ -635,6 +644,7 @@ describe("Stocks error telemetry across a size change", () => {
       tickers: [],
       error: true,
       watchlist: "VOO",
+      watchlistReconciledSymbols: [], // pending, so the dropdown stays available
       dispatch,
     });
     fireAllIntersections();
@@ -1283,6 +1293,7 @@ describe("Stocks watchlist add/remove", () => {
       size: "large",
       tickers: [],
       watchlist: "VOO",
+      watchlistReconciledSymbols: [], // still loading: not reconciled yet
     });
     expect(container.querySelector(".stocks-list-button")).toBeTruthy();
   });
@@ -1453,6 +1464,7 @@ describe("Stocks small size", () => {
       size: "small",
       tickers: [],
       watchlist: "VOO",
+      watchlistReconciledSymbols: [], // not loaded yet: pending, not reconciled
       lastUpdated: null,
     });
     const li = container.querySelector(
@@ -1565,5 +1577,113 @@ describe("Stocks small size", () => {
     expect(
       container.querySelector("moz-button.stock-ticker-action")
     ).toBeNull();
+  });
+});
+
+describe("Stocks reducer - watchlist data", () => {
+  const { Stocks } = reducers;
+  it("initializes watchlist fields", () => {
+    expect(INITIAL_STATE.Stocks.watchlistTickers).toEqual([]);
+    expect(INITIAL_STATE.Stocks.watchlistReconciledSymbols).toEqual([]);
+  });
+  it("stores a watchlist update without touching default fields", () => {
+    const prev = { ...INITIAL_STATE.Stocks, tickers: [{ ticker: "SPY" }] };
+    const next = Stocks(prev, {
+      type: at.WIDGETS_STOCKS_WATCHLIST_UPDATE,
+      data: {
+        watchlistTickers: [{ ticker: "AAPL" }],
+        reconciledSymbols: ["AAPL"],
+      },
+    });
+    expect(next.watchlistTickers).toEqual([{ ticker: "AAPL" }]);
+    expect(next.watchlistReconciledSymbols).toEqual(["AAPL"]);
+    expect(next.tickers).toEqual([{ ticker: "SPY" }]);
+  });
+});
+
+describe("Stocks watchlist data rendering", () => {
+  const AAPL = {
+    ticker: "AAPL",
+    name: "Apple Inc",
+    last_price: "$1.00 USD",
+    todays_change_perc: "+0.10",
+  };
+
+  it("renders a saved watchlist symbol even when the default feed is empty", () => {
+    const { container } = renderStocksState({
+      size: "large",
+      tickers: [],
+      watchlist: "AAPL",
+      watchlistTickers: [AAPL],
+      watchlistReconciledSymbols: ["AAPL"],
+    });
+    expect(container.textContent).toContain("AAPL");
+    // Resolved, so not dimmed as loading.
+    expect(container.querySelector(".stocks-list--loading")).toBeNull();
+  });
+
+  it("keeps the dropdown and shows placeholders while a newly added symbol is pending", () => {
+    const { container } = renderStocksState({
+      size: "large",
+      tickers: WATCHLIST_SAMPLE,
+      watchlist: "AAPL",
+      watchlistTickers: [],
+      watchlistReconciledSymbols: [], // not reconciled for AAPL yet
+    });
+    expect(container.querySelector(".stocks-list-button")).toBeTruthy();
+    const list = container.querySelector("ul.stocks-list--watchlist");
+    expect(list.className).toContain("stocks-list--loading");
+    expect(list.querySelectorAll(".stock-ticker--large").length).toBe(1);
+  });
+
+  it("shows a resolved row plus a placeholder while another saved symbol is pending", () => {
+    const { container } = renderStocksState({
+      size: "large",
+      tickers: [],
+      watchlist: "AAPL,MSFT",
+      watchlistTickers: [AAPL],
+      watchlistReconciledSymbols: ["AAPL"], // AAPL resolved; MSFT still pending
+    });
+    const ul = container.querySelector("ul.stocks-list");
+    expect(ul.getAttribute("aria-busy")).toBe("true");
+    // One resolved AAPL row plus one placeholder for the pending MSFT.
+    expect(ul.querySelectorAll(".stock-ticker--large").length).toBe(2);
+    expect(ul.textContent).toContain("AAPL");
+  });
+
+  it("small size shows a placeholder (not an error) while a saved symbol loads", () => {
+    const { container } = renderStocksState({
+      size: "small",
+      tickers: [],
+      watchlist: "AAPL",
+      watchlistTickers: [],
+      watchlistReconciledSymbols: [],
+    });
+    expect(container.querySelector(".stocks-error")).toBeNull();
+  });
+
+  it("small size keeps a resolved watchlist row when the default feed errored", () => {
+    const { container } = renderStocksState({
+      size: "small",
+      tickers: [],
+      error: true,
+      watchlist: "AAPL",
+      watchlistTickers: [AAPL],
+      watchlistReconciledSymbols: ["AAPL"],
+    });
+    expect(container.textContent).toContain("AAPL");
+    expect(container.querySelector(".stocks-error")).toBeNull();
+  });
+
+  it("medium size still shows the default error, unaffected by a saved symbol", () => {
+    const { container } = renderStocksState({
+      size: "medium",
+      tickers: [],
+      error: true,
+      watchlist: "AAPL",
+      watchlistTickers: [],
+      watchlistReconciledSymbols: [],
+    });
+    expect(container.querySelector(".stocks-error")).toBeTruthy();
   });
 });

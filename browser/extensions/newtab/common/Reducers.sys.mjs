@@ -205,6 +205,8 @@ export const INITIAL_STATE = {
     tickers: [],
     lastUpdated: null,
     error: false,
+    watchlistTickers: [],
+    watchlistReconciledSymbols: [],
   },
   PictureOfTheDay: {
     initialized: false,
@@ -1392,6 +1394,12 @@ function Stocks(prevState = INITIAL_STATE.Stocks, action) {
         tickers: action.data.tickers,
         lastUpdated: action.data.lastUpdated,
         error: action.data.error ?? false,
+      };
+    case at.WIDGETS_STOCKS_WATCHLIST_UPDATE:
+      return {
+        ...prevState,
+        watchlistTickers: action.data.watchlistTickers,
+        watchlistReconciledSymbols: action.data.reconciledSymbols,
       };
     default:
       return prevState;
