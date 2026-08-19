@@ -43,6 +43,7 @@ class PdfToolsContentTest {
                     browserStore = browserStore,
                     isLargeWindow = isLargeWindow,
                     onDownloadClick = { clicked.add("download") },
+                    onPrintClick = { clicked.add("print") },
                 )
             }
         }
@@ -112,5 +113,16 @@ class PdfToolsContentTest {
         composeTestRule.onNodeWithTag(PdfToolsTestTag.DOWNLOAD_BUTTON).performClick()
 
         assertEquals(listOf("download"), clicked)
+    }
+
+    @Test
+    fun `WHEN the print button is tapped THEN the print callback is invoked`() {
+        setTestContent(isLargeWindow = false)
+
+        enterPdfViewer()
+
+        composeTestRule.onNodeWithTag(PdfToolsTestTag.PRINT_BUTTON).performClick()
+
+        assertEquals(listOf("print"), clicked)
     }
 }

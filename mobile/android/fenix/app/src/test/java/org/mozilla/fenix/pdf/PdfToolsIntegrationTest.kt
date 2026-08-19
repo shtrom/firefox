@@ -97,4 +97,13 @@ class PdfToolsIntegrationTest {
             assertEquals(tabId, it.tabId)
         }
     }
+
+    @Test
+    fun `WHEN print is activated THEN the selected tab is printed`() {
+        integration().handlePrintClick()
+
+        captureActionsMiddleware.assertFirstAction(EngineAction.PrintContentAction::class) {
+            assertEquals(tabId, it.tabId)
+        }
+    }
 }

@@ -73,6 +73,14 @@ class PdfToolsIntegration(
         }
     }
 
+    /** Prints the PDF the selected tab is displaying. */
+    internal fun handlePrintClick() {
+        PdfViewer.printTapped.record(NoExtras())
+        browserStore.state.selectedTabId?.let {
+            browserStore.dispatch(EngineAction.PrintContentAction(it))
+        }
+    }
+
     @Composable
     private fun PdfToolsHost() {
         FirefoxTheme {
@@ -80,6 +88,7 @@ class PdfToolsIntegration(
                 browserStore = browserStore,
                 isLargeWindow = AcornWindowSize.isLargeWindow(),
                 onDownloadClick = ::handleDownloadClick,
+                onPrintClick = ::handlePrintClick,
             )
         }
     }
@@ -91,12 +100,14 @@ class PdfToolsIntegration(
  * @param browserStore Used to observe the PDF status of the selected tab.
  * @param isLargeWindow Used to determine if the device should be treated as a tablet.
  * @param onDownloadClick Invoked when the user activates the download PDF button.
+ * @param onPrintClick Invoked when the user activates the print PDF button.
  */
 @Composable
 internal fun PdfToolsContent(
     browserStore: BrowserStore,
     isLargeWindow: Boolean,
     onDownloadClick: () -> Unit,
+    onPrintClick: () -> Unit,
 ) {
     val isPdf by remember {
         browserStore.stateFlow.map { it.isSelectedTabPdf }.distinctUntilChanged()
@@ -109,8 +120,7 @@ internal fun PdfToolsContent(
             // Bug 2054910
             onSignClick = {},
             onDownloadClick = onDownloadClick,
-            // Bug 2054917
-            onPrintClick = {},
+            onPrintClick = onPrintClick,
             // Bug 2054918
             onShareClick = {},
         )
