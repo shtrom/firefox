@@ -271,6 +271,7 @@ class EventStateManager : public nsSupportsWeakReference, public nsIObserver {
 
   void SetPresContext(nsPresContext* aPresContext);
   void ClearFrameRefs(nsIFrame* aFrame);
+  void MaybeLeavePendingLink(bool aWasCanceled);
 
   nsIFrame* GetEventTarget();
   nsIContent* GetExplicitEventTargetContent(const WidgetEvent* = nullptr);
@@ -317,7 +318,13 @@ class EventStateManager : public nsSupportsWeakReference, public nsIObserver {
 
   nsIContent* GetActiveContent() const { return mActiveContent; }
 
-  void SetLinkOverFrame(nsIFrame* aFrame) { mLinkOverFrame = aFrame; }
+  void SetLinkOverFrame(nsIFrame* aFrame) {
+    mLinkOverFrame = aFrame;
+    if (aFrame) {
+      mPendingLeaveLinkElement = nullptr;
+    }
+  }
+  nsIFrame* GetLinkOverFrame() const { return mLinkOverFrame.GetFrame(); }
 
   void NativeAnonymousContentRemoved(nsIContent* aAnonContent);
   void ContentInserted(nsIContent* aChild, const ContentInsertInfo& aInfo);
@@ -1466,6 +1473,7 @@ class EventStateManager : public nsSupportsWeakReference, public nsIObserver {
   // The primary frame of the link currently shown in the status bar.
   // Checked in ClearFrameRefs to avoid stalling link status bar.
   WeakFrame mLinkOverFrame;
+  RefPtr<dom::Element> mPendingLeaveLinkElement;
 
   nsPresContext* mPresContext;      // Not refcnted
   RefPtr<dom::Document> mDocument;  // Doesn't necessarily need to be owner
