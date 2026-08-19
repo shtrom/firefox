@@ -32,6 +32,7 @@ import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.feature.summarize.SummarizationState
 import mozilla.components.feature.summarize.SummarizationUi
 import mozilla.components.feature.summarize.ViewDismissed
+import mozilla.components.feature.summarize.settings.LearnMoreHandled
 import mozilla.components.feature.summarize.settings.SummarizeSettingsMiddleware
 import mozilla.components.feature.summarize.settings.SummarizeSettingsState
 import mozilla.components.feature.summarize.settings.SummarizeSettingsStore
@@ -149,13 +150,20 @@ class SummarizationFragment : BottomSheetDialogFragment() {
                     listOf(
                         SummarizeSettingsMiddleware(
                             settings = summarizeSettings,
-                            onLearnMoreClicked = { openLearnMoreLink(SupportUtils.SumoTopic.PAGE_SUMMARIZATION) },
-                            storeViewModel.viewModelScope,
+                            scope = storeViewModel.viewModelScope,
                         )
                     ),
             )
 
         return content {
+            val settingsState by settingsStore.stateFlow.collectAsStateWithLifecycle()
+            LaunchedEffect(settingsState.isLearnMoreRequested) {
+                if (settingsState.isLearnMoreRequested) {
+                    openLearnMoreLink(SupportUtils.SumoTopic.PAGE_SUMMARIZATION)
+                    settingsStore.dispatch(LearnMoreHandled)
+                }
+            }
+
             val state by storeViewModel.store.stateFlow.collectAsStateWithLifecycle()
             LaunchedEffect(state) {
                 when (state) {

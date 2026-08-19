@@ -9,11 +9,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.compose.content
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import mozilla.components.feature.summarize.settings.LearnMoreHandled
 import mozilla.components.feature.summarize.settings.SummarizeSettingsContent
 import mozilla.components.feature.summarize.settings.SummarizeSettingsMiddleware
 import mozilla.components.feature.summarize.settings.SummarizeSettingsState
@@ -54,13 +58,20 @@ class PageSummariesSettingsFragment : Fragment(), SystemInsetsPaddedFragment {
                     listOf(
                         SummarizeSettingsMiddleware(
                             settings = summarizeSettings,
-                            onLearnMoreClicked = { openLearnMoreLink() },
                             scope = viewLifecycleOwner.lifecycleScope,
                         )
                     ),
             )
 
         return content {
+            val state by store.stateFlow.collectAsStateWithLifecycle()
+            LaunchedEffect(state.isLearnMoreRequested) {
+                if (state.isLearnMoreRequested) {
+                    openLearnMoreLink()
+                    store.dispatch(LearnMoreHandled)
+                }
+            }
+
             FirefoxTheme {
                 SummarizeSettingsContent(
                     store = store,
