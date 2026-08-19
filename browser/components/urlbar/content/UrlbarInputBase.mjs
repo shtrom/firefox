@@ -607,7 +607,11 @@ ${
     }
 
     this.#allowBreakout =
-      !!this.closest("toolbar") &&
+      // A content document has no toolbar to break out of, so there the popover
+      // attribute is what says the element can go in the top layer.
+      (typeof ChromeUtils == "undefined"
+        ? this.hasAttribute("popover")
+        : !!this.closest("toolbar")) &&
       !document.documentElement.hasAttribute("customizing");
     if (this.#allowBreakout) {
       // TODO(emilio): This could use CSS anchor positioning rather than this
