@@ -473,7 +473,7 @@ ml-perf-wasm: &ml-perf
     attributes:
         batch: false
         cron: false
-    run-on-projects: [autoland, mozilla-central]
+    run-on-projects: [mozilla-central]
     worker:
         env:
             MOZ_ML_BACKENDS: onnx
@@ -511,7 +511,7 @@ ml-llama-summarizer-perf:
     attributes:
         batch: false
         cron: false
-    run-on-projects: [autoland, mozilla-central]
+    run-on-projects: [mozilla-central]
     run:
         clone-with: hg
         command: >-
@@ -559,7 +559,7 @@ ml-security-perf:
     attributes:
         batch: false
         cron: false
-    run-on-projects: [autoland, mozilla-central]
+    run-on-projects: [mozilla-central]
     run:
         clone-with: hg
         command: >-
@@ -587,7 +587,7 @@ ml-multi-perf-wasm: &ml-multi-perf
     attributes:
         batch: false
         cron: false
-    run-on-projects: [autoland, mozilla-central]
+    run-on-projects: [mozilla-central]
     worker:
         env:
             MOZ_ML_BACKENDS: onnx
@@ -705,7 +705,7 @@ ml-perf-autofill-wasm: &ml-perf-autofill
     attributes:
         batch: false
         cron: false
-    run-on-projects: [autoland, mozilla-central]
+    run-on-projects: [mozilla-central]
     worker:
         env:
             MOZ_ML_BACKENDS: onnx
@@ -822,7 +822,7 @@ ml-perf-smart-tab-wasm: &ml-perf-smart-tab
     attributes:
         batch: false
         cron: false
-    run-on-projects: [autoland, mozilla-central]
+    run-on-projects: [mozilla-central]
     worker:
         env:
             MOZ_ML_BACKENDS: onnx
@@ -865,7 +865,7 @@ ml-perf-smart-tab-cluster-wasm: &ml-perf-smart-tab-cluster
     attributes:
         batch: false
         cron: false
-    run-on-projects: [autoland, mozilla-central]
+    run-on-projects: [mozilla-central]
     run:
         clone-with: hg
         command: >-
