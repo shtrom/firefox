@@ -43,6 +43,39 @@ function renderStocks(dispatch = jest.fn(), props = {}) {
   return { container, unmount, dispatch };
 }
 
+function renderStocksState({
+  size = "medium",
+  tickers = [],
+  error = false,
+  watchlist = "",
+  dispatch = jest.fn(),
+} = {}) {
+  const state = {
+    ...mockState,
+    Prefs: {
+      ...mockState.Prefs,
+      values: {
+        ...mockState.Prefs.values,
+        "widgets.stocks.size": size,
+        "widgets.stocks.watchlist": watchlist,
+      },
+    },
+    Stocks: { tickers, lastUpdated: 1, error },
+  };
+  const store = createStore(combineReducers(reducers), state);
+  const view = render(
+    <Provider store={store}>
+      <Stocks
+        dispatch={dispatch}
+        handleUserInteraction={jest.fn()}
+        widgetsMayBeMaximized={true}
+        widgetEnabledMap={{}}
+      />
+    </Provider>
+  );
+  return { ...view, store, dispatch };
+}
+
 describe("Stocks widget", () => {
   afterEach(() => {
     jest.restoreAllMocks();
@@ -55,13 +88,68 @@ describe("Stocks widget", () => {
     expect(root.className).toContain("medium-widget");
   });
 
-  it("renders an always-visible localized title", () => {
-    const { container } = renderStocks();
-    const title = container.querySelector(
-      '[data-l10n-id="newtab-stocks-widget-title"]'
+  it("shows the current list name in the dropdown button at large size", () => {
+    const { container } = renderStocksState({ size: "large" });
+    const button = container.querySelector(".stocks-list-button");
+    expect(button).toBeTruthy();
+    expect(button.getAttribute("data-l10n-id")).toBe(
+      "newtab-stocks-list-markets"
     );
-    expect(title).toBeTruthy();
-    expect(title.getAttribute("aria-hidden")).toBeNull();
+  });
+
+  it.each([
+    ["small", false],
+    ["medium", false],
+    ["large", true],
+  ])(
+    "labels the region with an <h2> Stocks heading at %s size (dropdown shown: %s)",
+    (size, dropdownShown) => {
+      const { container } = renderStocksState({ size });
+      const article = container.querySelector("article.stocks");
+      expect(article.getAttribute("aria-labelledby")).toBe(
+        "stocks-widget-label"
+      );
+      const label = container.querySelector("#stocks-widget-label");
+      expect(label.tagName).toBe("H2");
+      expect(label.getAttribute("data-l10n-id")).toBe(
+        "newtab-stocks-widget-title"
+      );
+      expect(label.hasAttribute("hidden")).toBe(false);
+      expect(label.classList.contains("sr-only")).toBe(dropdownShown);
+      expect(Boolean(container.querySelector(".stocks-list-button"))).toBe(
+        dropdownShown
+      );
+    }
+  );
+
+  it("resets to Markets when the dropdown is hidden so a stale Watchlist selection can't blank the body", () => {
+    const { container, store } = renderStocksState({
+      size: "large",
+      tickers: [
+        {
+          ticker: "SPY",
+          name: "SPDR S&P 500 ETF Trust",
+          last_price: "$559.44 USD",
+          todays_change_perc: "+0.2",
+        },
+      ],
+    });
+    // Select the (blank) Watchlist while the dropdown is available at large.
+    fireEvent.click(
+      container.querySelector(
+        '#stocks-list-menu panel-item[data-list="watchlist"]'
+      )
+    );
+    // Shrink to medium: the dropdown disappears, so the body must fall back to Markets.
+    act(() => {
+      store.dispatch({
+        type: at.PREF_CHANGED,
+        data: { name: "widgets.stocks.size", value: "medium" },
+      });
+    });
+    expect(
+      container.querySelectorAll(".stocks-grid .stock-ticker").length
+    ).toBeGreaterThan(0);
   });
 
   it("offers medium and large sizes only", () => {
@@ -644,5 +732,142 @@ describe("Stocks new badge", () => {
     );
     // The badge follows ticker presence, not the error flag.
     expect(container.querySelector(".stocks-new-badge")).toBeTruthy();
+  });
+});
+
+describe("Stocks list dropdown", () => {
+  const SAMPLE = [
+    {
+      ticker: "SPY",
+      name: "SPDR S&P 500 ETF Trust",
+      last_price: "$559.44 USD",
+      todays_change_perc: "+0.2",
+    },
+  ];
+
+  function renderWithTickers({ tickers = SAMPLE, error = false } = {}) {
+    // The dropdown is Large-only, so this block renders at large.
+    const state = {
+      ...mockState,
+      Prefs: {
+        ...mockState.Prefs,
+        values: { ...mockState.Prefs.values, "widgets.stocks.size": "large" },
+      },
+      Stocks: { tickers, lastUpdated: 1, error },
+    };
+    const dispatch = jest.fn();
+    const handleUserInteraction = jest.fn();
+    const { container } = render(
+      <WrapWithProvider state={state}>
+        <Stocks
+          dispatch={dispatch}
+          handleUserInteraction={handleUserInteraction}
+          widgetsMayBeMaximized={true}
+          widgetEnabledMap={{}}
+        />
+      </WrapWithProvider>
+    );
+    return { container, dispatch, handleUserInteraction };
+  }
+
+  function listItem(container, list) {
+    return container.querySelector(
+      `#stocks-list-menu panel-item[data-list="${list}"]`
+    );
+  }
+
+  function buttonL10n(container) {
+    return container
+      .querySelector(".stocks-list-button")
+      .getAttribute("data-l10n-id");
+  }
+
+  it("defaults to Markets and shows the ticker rows", () => {
+    const { container } = renderWithTickers();
+    expect(buttonL10n(container)).toBe("newtab-stocks-list-markets");
+    expect(listItem(container, "markets").hasAttribute("checked")).toBe(true);
+    expect(listItem(container, "watchlist").hasAttribute("checked")).toBe(
+      false
+    );
+    expect(
+      container.querySelectorAll(".stocks-list .stock-ticker").length
+    ).toBe(1);
+  });
+
+  it("switches to a blank Watchlist and updates the button and checked item", () => {
+    const { container } = renderWithTickers();
+    fireEvent.click(listItem(container, "watchlist"));
+    expect(buttonL10n(container)).toBe("newtab-stocks-list-watchlist");
+    expect(listItem(container, "watchlist").hasAttribute("checked")).toBe(true);
+    expect(listItem(container, "markets").hasAttribute("checked")).toBe(false);
+    expect(container.querySelector(".stocks-grid")).toBeNull();
+    expect(container.querySelector(".stocks-list")).toBeNull();
+  });
+
+  it("keeps the Watchlist blank during error and during loading", () => {
+    const errored = renderWithTickers({ tickers: [], error: true });
+    fireEvent.click(listItem(errored.container, "watchlist"));
+    expect(errored.container.querySelector(".stocks-error")).toBeNull();
+    expect(errored.container.querySelector(".stocks-grid")).toBeNull();
+
+    const loading = renderWithTickers({ tickers: [], error: false });
+    fireEvent.click(listItem(loading.container, "watchlist"));
+    expect(loading.container.querySelector(".stocks-grid")).toBeNull();
+    expect(loading.container.querySelector(".stocks-grid--loading")).toBeNull();
+  });
+
+  it("restores the Markets rows when reselected", () => {
+    const { container } = renderWithTickers();
+    fireEvent.click(listItem(container, "watchlist"));
+    fireEvent.click(listItem(container, "markets"));
+    expect(
+      container.querySelectorAll(".stocks-list .stock-ticker").length
+    ).toBe(1);
+  });
+
+  it("records exactly one change_list event and flips the interaction pref on a switch", () => {
+    const { container, dispatch, handleUserInteraction } = renderWithTickers();
+    fireEvent.click(listItem(container, "watchlist"));
+    const evts = dispatch.mock.calls.filter(
+      ([action]) =>
+        action.type === at.WIDGETS_USER_EVENT &&
+        action.data?.user_action === "change_list"
+    );
+    expect(evts).toHaveLength(1);
+    expect(evts[0][0].data).toMatchObject({
+      widget_name: "stocks",
+      widget_source: "widget",
+      user_action: "change_list",
+      action_value: "watchlist",
+    });
+    expect(handleUserInteraction).toHaveBeenCalledWith("stocks");
+  });
+
+  it("records a change_list event on each genuine switch", () => {
+    const { container, dispatch } = renderWithTickers();
+    fireEvent.click(listItem(container, "watchlist"));
+    fireEvent.click(listItem(container, "markets"));
+    const evts = dispatch.mock.calls.filter(
+      ([action]) =>
+        action.type === at.WIDGETS_USER_EVENT &&
+        action.data?.user_action === "change_list"
+    );
+    expect(evts).toHaveLength(2);
+    expect(evts.map(e => e[0].data.action_value)).toEqual([
+      "watchlist",
+      "markets",
+    ]);
+  });
+
+  it("does nothing when the current list is reselected", () => {
+    const { container, dispatch, handleUserInteraction } = renderWithTickers();
+    fireEvent.click(listItem(container, "markets"));
+    const evt = dispatch.mock.calls.find(
+      ([action]) =>
+        action.type === at.WIDGETS_USER_EVENT &&
+        action.data?.user_action === "change_list"
+    );
+    expect(evt).toBeUndefined();
+    expect(handleUserInteraction).not.toHaveBeenCalled();
   });
 });

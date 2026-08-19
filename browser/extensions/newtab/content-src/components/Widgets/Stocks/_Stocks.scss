@@ -35,6 +35,25 @@
   }
 }
 
+// The plain "Stocks" title shown at medium/small. Resets the h2 defaults to match the
+// small widget-title look.
+.stocks-heading {
+  margin: 0;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight);
+  color: var(--text-color-deemphasized);
+}
+
+// Visually hidden but kept in the accessibility tree (same technique as .stock-ticker-sr).
+.stocks .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 // moz-badge renders its label in shadow DOM, so it can only be styled here
 // through its token custom properties (padding/background) plus inherited
 // properties (text-transform). The green "filled" look normally comes from
@@ -62,12 +81,40 @@
   }
 }
 
-.stocks-title {
-  color: var(--text-color-deemphasized);
-  font-size: var(--font-size-small);
+// Small font like the title; let the button shrink so a long label can truncate.
+.stocks-list-button {
+  --button-font-size-small: var(--font-size-small);
+
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+// Deemphasized text only outside forced colors and Increase Contrast, so those
+// modes keep moz-button's own (higher-contrast) system colour.
+@media (forced-colors: none) and (prefers-contrast: no-preference) {
+  .stocks-list-button {
+    --button-text-color-ghost: var(--text-color-deemphasized);
+  }
+}
+
+// The label is in moz-button's shadow DOM, so reach it via ::part to truncate
+// a long label and keep the context-menu button in the row.
+.stocks-list-button::part(button) {
+  overflow: hidden;
+}
+
+.stocks-list-button::part(moz-button-label) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+// A shared newtab rule shrinks checkbox padding; restore the toolkit's so the
+// checkmark doesn't overlap the label.
+#stocks-list-menu panel-item::part(button) {
+  padding-inline-start: calc(
+    var(--panel-menuitem-padding-inline) + var(--icon-size) + var(--space-small)
+  );
 }
 
 .stocks-context-menu-wrapper {

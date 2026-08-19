@@ -1651,8 +1651,18 @@ newtab-privacy-message-first-protection-cta = View protections
 
 ## Strings for the Stocks widget
 
-# Heading for the Stocks widget.
+# Accessible name for the Stocks widget; hidden because the list dropdown is
+# shown in place of the title.
 newtab-stocks-widget-title = Stocks
+
+# "Markets" is the default list of market ETFs. The value is shown in the menu,
+# and .label is shown on the button that opens it.
+newtab-stocks-list-markets = Markets
+    .label = Markets
+# "Watchlist" is the user's list of stocks to follow. The value is shown in the
+# menu, and .label is shown on the button that opens it.
+newtab-stocks-list-watchlist = Watchlist
+    .label = Watchlist
 
 # Context menu item for searching stock ticker symbols.
 newtab-stocks-menu-search = Search ticker symbols

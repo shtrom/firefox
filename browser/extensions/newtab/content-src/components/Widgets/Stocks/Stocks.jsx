@@ -3,7 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 // eslint-disable-next-line no-unused-vars
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useSelector, batch } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
 import { useWidgetTelemetry } from "../useWidgetTelemetry";
@@ -15,6 +15,13 @@ import { StocksError } from "./StocksError";
 
 const STOCKS_ENTRY = WIDGET_REGISTRY.find(w => w.id === "stocks");
 const STOCKS_PLACEHOLDER_COUNT = 4;
+
+// The two lists the dropdown switches between: "markets" (the default ETFs)
+// and "watchlist" (the user's picks). Each id maps to its menu/button label.
+const STOCKS_LISTS = [
+  { id: "markets", l10nId: "newtab-stocks-list-markets" },
+  { id: "watchlist", l10nId: "newtab-stocks-list-watchlist" },
+];
 
 function Stocks({
   dispatch,
@@ -46,6 +53,32 @@ function Stocks({
     () => handleUserInteraction("stocks"),
     [handleUserInteraction]
   );
+
+  // Switching lists counts as an interaction; reselecting the current list does not.
+  const [selectedList, setSelectedList] = useState("markets");
+  const handleSelectList = useCallback(
+    list => {
+      if (list === selectedList) {
+        return;
+      }
+      setSelectedList(list);
+      recordUserAction("change_list", { source: "widget", value: list });
+      handleInteraction();
+    },
+    [selectedList, recordUserAction, handleInteraction]
+  );
+  const selectedListL10nId = STOCKS_LISTS.find(
+    l => l.id === selectedList
+  ).l10nId;
+  const showDropdown = widgetSize === "large";
+
+  // Without the dropdown (medium/small) there's no way to switch lists, so reset to
+  // Markets; otherwise a leftover "watchlist" selection would leave the body empty.
+  useEffect(() => {
+    if (!showDropdown && selectedList !== "markets") {
+      setSelectedList("markets");
+    }
+  }, [showDropdown, selectedList]);
 
   const handleChangeSize = useCallback(
     size => {
@@ -84,6 +117,7 @@ function Stocks({
     <article
       className={`stocks widget col-4 ${widgetSize}-widget`}
       ref={impressionRef}
+      aria-labelledby="stocks-widget-label"
     >
       <div className="stocks-title-wrapper">
         <div className="stocks-badge-title-wrapper">
@@ -93,10 +127,37 @@ function Stocks({
               data-l10n-id="newtab-widget-lists-label-new"
             ></moz-badge>
           )}
-          <span
-            className="stocks-title"
+          {/* Keep the heading mounted so aria-labelledby always resolves. */}
+          <h2
+            id="stocks-widget-label"
+            className={`stocks-heading${showDropdown ? " sr-only" : ""}`}
             data-l10n-id="newtab-stocks-widget-title"
-          ></span>
+          />
+          {showDropdown && (
+            <>
+              <moz-button
+                className="stocks-list-button"
+                type="ghost"
+                size="small"
+                iconSrc="chrome://global/skin/icons/arrow-down-12.svg"
+                iconPosition="end"
+                menuId="stocks-list-menu"
+                data-l10n-id={selectedListL10nId}
+              ></moz-button>
+              <panel-list id="stocks-list-menu">
+                {STOCKS_LISTS.map(({ id, l10nId }) => (
+                  <panel-item
+                    key={id}
+                    type="checkbox"
+                    checked={selectedList === id || undefined}
+                    onClick={() => handleSelectList(id)}
+                    data-list={id}
+                    data-l10n-id={l10nId}
+                  />
+                ))}
+              </panel-list>
+            </>
+          )}
         </div>
         <div className="stocks-context-menu-wrapper">
           <moz-button
@@ -137,45 +198,51 @@ function Stocks({
       </div>
 
       <div className="stocks-body">
-        {showError && <StocksError recordError={recordError} />}
-        {!showError && widgetSize === "medium" && (
-          <ul
-            className={`stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`}
-          >
-            {tickers.length
-              ? tickers.map(t => (
-                  <StockTicker
-                    key={t.ticker}
-                    name={t.name}
-                    ticker={t.ticker}
-                    price={t.last_price}
-                    changePercent={t.todays_change_perc}
-                  />
-                ))
-              : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map((_, i) => (
-                  <StockTicker key={i} loading={true} />
-                ))}
-          </ul>
-        )}
-        {!showError && widgetSize === "large" && (
-          <ul
-            className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
-          >
-            {tickers.length
-              ? tickers.map(t => (
-                  <StockTicker
-                    key={t.ticker}
-                    size="large"
-                    name={t.name}
-                    ticker={t.ticker}
-                    price={t.last_price}
-                    changePercent={t.todays_change_perc}
-                  />
-                ))
-              : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map((_, i) => (
-                  <StockTicker key={i} size="large" loading={true} />
-                ))}
-          </ul>
+        {selectedList === "markets" && (
+          <>
+            {showError && <StocksError recordError={recordError} />}
+            {!showError && widgetSize === "medium" && (
+              <ul
+                className={`stocks-grid${tickers.length ? "" : " stocks-grid--loading"}`}
+              >
+                {tickers.length
+                  ? tickers.map(t => (
+                      <StockTicker
+                        key={t.ticker}
+                        name={t.name}
+                        ticker={t.ticker}
+                        price={t.last_price}
+                        changePercent={t.todays_change_perc}
+                      />
+                    ))
+                  : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map(
+                      (_, i) => <StockTicker key={i} loading={true} />
+                    )}
+              </ul>
+            )}
+            {!showError && widgetSize === "large" && (
+              <ul
+                className={`stocks-list${tickers.length ? "" : " stocks-list--loading"}`}
+              >
+                {tickers.length
+                  ? tickers.map(t => (
+                      <StockTicker
+                        key={t.ticker}
+                        size="large"
+                        name={t.name}
+                        ticker={t.ticker}
+                        price={t.last_price}
+                        changePercent={t.todays_change_perc}
+                      />
+                    ))
+                  : Array.from({ length: STOCKS_PLACEHOLDER_COUNT }).map(
+                      (_, i) => (
+                        <StockTicker key={i} size="large" loading={true} />
+                      )
+                    )}
+              </ul>
+            )}
+          </>
         )}
       </div>
     </article>
