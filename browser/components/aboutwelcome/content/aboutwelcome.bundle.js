@@ -553,7 +553,7 @@ const renderSingleSecondaryCTAButton = ({
 }) => {
   let buttonStyling = button?.has_arrow_icon ? `secondary arrow-icon` : `secondary`;
   const isPrimary = button?.style === "primary";
-  const isTextLink = !["split", "callout"].includes(content.position) && content.tiles?.type !== "addons-picker" && !isPrimary;
+  const isTextLink = !["split", "callout", "center-large"].includes(content.position) && content.tiles?.type !== "addons-picker" && !isPrimary;
   const isSplitButton = content.submenu_button?.attached_to === targetElement;
   let className = "secondary-cta";
   if (position) {
@@ -1277,6 +1277,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const DEFAULT_AUTO_ADVANCE_MS = 20000;
+const CORNER_IMAGE_POSITIONS = new Set(["bottom-left", "bottom-right", "top-left", "top-right"]);
+const DEFAULT_CORNER_IMAGE_POSITION = "bottom-right";
 const MultiStageProtonScreen = props => {
   const {
     autoAdvance,
@@ -1697,6 +1699,24 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
       className: "noodle yellow-circle"
     }));
   }
+  renderCornerImage() {
+    const cornerImage = this.props.content.corner_image;
+    const position = CORNER_IMAGE_POSITIONS.has(cornerImage.position) ? cornerImage.position : DEFAULT_CORNER_IMAGE_POSITION;
+    return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+      className: "corner-image-container"
+    }, this.renderPicture({
+      imageURL: cornerImage.imageURL,
+      darkModeImageURL: cornerImage.darkModeImageURL,
+      reducedMotionImageURL: cornerImage.reducedMotionImageURL,
+      darkModeReducedMotionImageURL: cornerImage.darkModeReducedMotionImageURL,
+      height: cornerImage.height,
+      width: cornerImage.width,
+      marginBlock: cornerImage.marginBlock,
+      marginInline: cornerImage.marginInline,
+      style: cornerImage.style,
+      className: `corner-image ${position}`
+    }));
+  }
   renderLanguageSwitcher() {
     return this.props.content.languageSwitcher ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_LanguageSwitcher__WEBPACK_IMPORTED_MODULE_4__.LanguageSwitcher, {
       content: this.props.content,
@@ -1945,10 +1965,17 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
       isWideScreen
     } = this.props;
     const includeNoodles = content.has_noodles;
+    const isCenterLargeFullscreen = content.position === "center-large" && !!content.fullscreen;
+    const includeCornerImage = !!content.corner_image && isCenterLargeFullscreen;
+    const secondaryCTATop = content.secondary_button_top ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_3__.SecondaryCTA, {
+      content: content,
+      handleAction: this.props.handleAction,
+      position: "top"
+    }) : null;
     const hasZapBorder = content.zap_border;
     const hasZapShadow = content.zap_shadow;
     // The default screen position is "center"
-    const isCenterPosition = content.position === "center" || !content.position;
+    const isCenterPosition = ["center", "center-large"].includes(content.position) || !content.position;
     const hideStepsIndicator = autoAdvance || content?.video_container || isSingleScreen || forceHideStepsIndicator;
     const textColorClass = content.text_color ? `${content.text_color}-text` : "";
     // Assign proton screen style 'screen-1' or 'screen-2' to centered screens
@@ -1973,16 +2000,12 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
         this.mainContentHeader = input;
       },
       "no-rdm": content.no_rdm ? "" : null
-    }, isCenterPosition ? null : this.renderSecondarySection(content), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    }, includeCornerImage ? this.renderCornerImage() : null, isCenterPosition ? null : this.renderSecondarySection(content), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       className: `section-main ${isEmbeddedMigration ? "embedded-migration" : ""}${isSystemPromptStyleSpotlight ? "system-prompt-spotlight" : ""}`,
       "hide-secondary-section": content.hide_secondary_section ? String(content.hide_secondary_section) : null,
       role: "document",
       style: content.screen_style && _lib_multistage_utils_mjs__WEBPACK_IMPORTED_MODULE_2__.MultiStageUtils.getValidStyle(content.screen_style, ["width", "padding", "height"])
-    }, content.secondary_button_top ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_MultiStageAboutWelcome__WEBPACK_IMPORTED_MODULE_3__.SecondaryCTA, {
-      content: content,
-      handleAction: this.props.handleAction,
-      position: "top"
-    }) : null, includeNoodles ? this.renderNoodles() : null, content.more_button ? this.renderMoreButton() : null, content.dismiss_button && !content.reverse_split ? this.renderDismissButton() : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    }, isCenterLargeFullscreen ? null : secondaryCTATop, includeNoodles ? this.renderNoodles() : null, content.more_button ? this.renderMoreButton() : null, content.dismiss_button && !content.reverse_split ? this.renderDismissButton() : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       className: `main-content ${hideStepsIndicator ? "no-steps" : ""}`,
       style: {
         background: isCenterPosition && this.getEffectiveBackground(content) ? this.getEffectiveBackground(content) : null,
@@ -1990,7 +2013,7 @@ class ProtonScreen extends (react__WEBPACK_IMPORTED_MODULE_0___default().PureCom
         paddingBlock: content.split_content_padding_block ? content.split_content_padding_block : null,
         paddingInline: content.split_content_padding_inline ? content.split_content_padding_inline : null
       }
-    }, isCenterPosition && this.hasAnimatedContent(content) ? this.renderAnimationPlayPauseButton() : null, content.logo && !content.fullscreen ? this.renderPicture(content.logo) : null, isRtamo && !content.fullscreen ? this.renderRTAMOIcon(addonType, this.props.themeScreenshots, this.props.addonIconURL) : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    }, isCenterLargeFullscreen ? secondaryCTATop : null, isCenterPosition && this.hasAnimatedContent(content) ? this.renderAnimationPlayPauseButton() : null, content.logo && !content.fullscreen ? this.renderPicture(content.logo) : null, isRtamo && !content.fullscreen ? this.renderRTAMOIcon(addonType, this.props.themeScreenshots, this.props.addonIconURL) : null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       className: "main-content-inner",
       id: "mainContentInner",
       style: combinedStyles
