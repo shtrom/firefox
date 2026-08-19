@@ -130,6 +130,18 @@ class TIPWrapper {
     this.#mTIP.keyup(AKey);
   }
 
+  typeJapaneseA() {
+    const AKey = new this.#mWindow.KeyboardEvent("", {
+      ky: "a",
+      code: "KeyA",
+      keyCode: this.#mWindow.KeyboardEvent.DOM_VK_A,
+    });
+    this.#mTIP.setPendingCompositionString("\u3042");
+    this.#mTIP.appendClauseToPendingComposition(1, this.#mTIP.ATTR_RAW_CLAUSE);
+    this.#mTIP.setCaretInPendingComposition(1);
+    return this.#mTIP.flushPendingComposition(AKey);
+  }
+
   isAvailable() {
     return this.#mTIP != null;
   }

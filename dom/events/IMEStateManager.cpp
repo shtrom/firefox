@@ -75,6 +75,7 @@ StaticRefPtr<IMEContentObserver> IMEStateManager::sActiveIMEContentObserver;
 TextCompositionArray* IMEStateManager::sTextCompositions = nullptr;
 InputContext::Origin IMEStateManager::sOrigin = InputContext::ORIGIN_MAIN;
 MOZ_RUNINIT InputContext IMEStateManager::sActiveChildInputContext;
+uint32_t IMEStateManager::sFocusGeneration = 0;
 bool IMEStateManager::sInstalledMenuKeyboardListener = false;
 bool IMEStateManager::sIsGettingNewIMEState = false;
 bool IMEStateManager::sCleaningUpForStoppingIMEStateManagement = false;
@@ -310,6 +311,7 @@ void IMEStateManager::StopIMEStateManagement() {
   sActiveInputContextWidget = nullptr;
   sFocusedPresContext = nullptr;
   sFocusedElement = nullptr;
+  AdvanceFocusGeneration();
   sIsActive = false;
   DestroyIMEContentObserver();
 }
@@ -397,6 +399,7 @@ nsresult IMEStateManager::OnDestroyPresContext(nsPresContext& aPresContext) {
   sTextInputHandlingWidget = nullptr;
   sFocusedElement = nullptr;
   sFocusedPresContext = nullptr;
+  AdvanceFocusGeneration();
   return NS_OK;
 }
 
@@ -451,6 +454,7 @@ nsresult IMEStateManager::OnRemoveContent(nsPresContext& aPresContext,
   // FYI: Don't clear sTextInputHandlingWidget and sFocusedPresContext because
   // the window/document keeps having focus.
   sFocusedElement = nullptr;
+  AdvanceFocusGeneration();
 
   // Current IME transaction should commit
   if (!sTextInputHandlingWidget) {
@@ -594,6 +598,7 @@ void IMEStateManager::OnUpdateHTMLEditorRootElement(HTMLEditor& aHTMLEditor,
   OwningNonNull<nsPresContext> presContext = *sFocusedPresContext;
   if (sFocusedElement && presContext->Document()->IsInDesignMode()) {
     sFocusedElement = presContext->Document()->GetRootElement();
+    AdvanceFocusGeneration();
   }
   RefPtr<Element> focusedElement = sFocusedElement;
 
@@ -733,24 +738,31 @@ nsresult IMEStateManager::OnChangeFocusInternal(nsPresContext* aPresContext,
   sIsActive = !!aPresContext;
   if (sPendingFocusedBrowserSwitchingData.isSome()) {
     MOZ_ASSERT(XRE_IsParentProcess());
-    RefPtr<Element> focusedElement = sFocusedElement;
-    RefPtr<nsPresContext> focusedPresContext = sFocusedPresContext;
-    RefPtr<BrowserParent> browserParentBlurred =
+    const uint32_t originalGeneration = sFocusGeneration;
+
+    const RefPtr<Element> focusedElement = sFocusedElement;
+    const RefPtr<nsPresContext> focusedPresContext = sFocusedPresContext;
+    const RefPtr<BrowserParent> browserParentBlurred =
         sPendingFocusedBrowserSwitchingData.ref().mBrowserParentBlurred;
-    RefPtr<BrowserParent> browserParentFocused =
+    const RefPtr<BrowserParent> browserParentFocused =
         sPendingFocusedBrowserSwitchingData.ref().mBrowserParentFocused;
     OnFocusMovedBetweenBrowsers(browserParentBlurred, browserParentFocused);
     // If another call of this method happens during the
     // OnFocusMovedBetweenBrowsers call, we shouldn't take back focus to
     // the old one.
-    if (focusedElement != sFocusedElement.get() ||
-        focusedPresContext != sFocusedPresContext.get()) {
-      MOZ_LOG(sISMLog, LogLevel::Debug,
-              ("  OnChangeFocusInternal(aPresContext=0x%p, aElement=0x%p) "
-               "stoped handling it because the focused content was changed to "
-               "sFocusedPresContext=0x%p, sFocusedElement=0x%p by another call",
-               aPresContext, aElement, sFocusedPresContext.get(),
-               sFocusedElement.get()));
+    if (originalGeneration != sFocusGeneration) {
+      MOZ_LOG_FMT(
+          sISMLog, LogLevel::Debug,
+          "  OnChangeFocusInternal() stoped handling it because the focused "
+          "content was changed (\n"
+          "    sFocusedPresContext=         {}\n"
+          "    previous sFocusedPresContext={}\n"
+          "    sFocusedElement=         {}\n"
+          "    previous sFocusedElement={}\n"
+          "  )",
+          static_cast<void*>(sFocusedPresContext.get()),
+          static_cast<void*>(focusedPresContext.get()), sFocusedElement,
+          focusedElement);
       return NS_OK;
     }
   }
@@ -796,8 +808,27 @@ nsresult IMEStateManager::OnChangeFocusInternal(nsPresContext* aPresContext,
             sISMLog, LogLevel::Info,
             ("  OnChangeFocusInternal(), requesting to commit composition to "
              "the (previous) focused widget"));
+        const uint32_t originalGeneration = sFocusGeneration;
+
+        const RefPtr<Element> focusedElement = sFocusedElement;
+        const RefPtr<nsPresContext> focusedPresContext = sFocusedPresContext;
         NotifyIME(REQUEST_TO_COMMIT_COMPOSITION, oldWidget,
                   composition->GetBrowserParent());
+        if (originalGeneration != sFocusGeneration) {
+          MOZ_LOG_FMT(sISMLog, LogLevel::Info,
+                      "  OnChangeFocusInternal(), abort handling the focus "
+                      "change because focus has been moved during requesting "
+                      "to commit composition (\n"
+                      "    sFocusedPresContext=         {}\n"
+                      "    previous sFocusedPresContext={}\n"
+                      "    sFocusedElement=         {}\n"
+                      "    previous sFocusedElement={}\n"
+                      "  )",
+                      static_cast<void*>(sFocusedPresContext.get()),
+                      static_cast<void*>(focusedPresContext.get()),
+                      sFocusedElement, focusedElement);
+          return NS_OK;
+        }
       }
     }
   }
@@ -972,6 +1003,7 @@ nsresult IMEStateManager::OnChangeFocusInternal(nsPresContext* aPresContext,
 
   sFocusedPresContext = aPresContext;
   sFocusedElement = aElement;
+  AdvanceFocusGeneration();
 
   // Don't call CreateIMEContentObserver() here, we'll call it in
   // UpdateIMEState() after the focused editor is initialized and the focus is
