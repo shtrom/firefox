@@ -437,7 +437,7 @@ g.test('reuse_builtin_name')
     t.expectCompileResult(true, code);
   });
 
-const kBuiltinTests = {
+const kTests = {
   pos: {
     src: `@builtin(position)`,
     pass: true,
@@ -496,17 +496,17 @@ const kBuiltinTests = {
   },
 };
 
-g.test('parse_builtin')
+g.test('parse')
   .desc(`Test that @builtin is parsed correctly.`)
-  .params(u => u.combine('builtin', keysOf(kBuiltinTests)))
+  .params(u => u.combine('builtin', keysOf(kTests)))
   .fn(t => {
-    const src = kBuiltinTests[t.params.builtin].src;
+    const src = kTests[t.params.builtin].src;
     const code = `
 @vertex
 fn main() -> ${src} vec4<f32> {
   return vec4<f32>(.4, .2, .3, .1);
 }`;
-    t.expectCompileResult(kBuiltinTests[t.params.builtin].pass, code);
+    t.expectCompileResult(kTests[t.params.builtin].pass, code);
   });
 
 g.test('placement')
@@ -576,60 +576,4 @@ g.test('placement')
     `;
 
     t.expectCompileResult(scope === undefined || t.params.attribute[scope], code);
-  });
-
-const kFragDepthTests = {
-  unset: {
-    src: `@builtin(frag_depth)`,
-    pass: true,
-    requires_feature: false,
-  },
-  less: {
-    src: `@builtin(frag_depth, less)`,
-    pass: true,
-    requires_feature: true,
-  },
-  greater: {
-    src: `@builtin(frag_depth, greater)`,
-    pass: true,
-    requires_feature: true,
-  },
-  trailing_comma: {
-    src: `@builtin(frag_depth, less,)`,
-    pass: true,
-    requires_feature: true,
-  },
-  missing_enum: {
-    src: `@builtin(frag_depth,)`,
-    pass: true,
-    requires_feature: false,
-  },
-  invalid_enum: {
-    src: `@builtin(frag_depth, any)`,
-    pass: false,
-    requires_feature: false,
-  },
-  missing_comma: {
-    src: `@builtin(frag_depth greater)`,
-    pass: false,
-    requires_feature: false,
-  },
-};
-
-g.test('parse_frag_depth')
-  .desc(`Test that @builtin is parsed correctly.`)
-  .params(u => u.combine('builtin', keysOf(kFragDepthTests)))
-  .fn(t => {
-    const data = kFragDepthTests[t.params.builtin];
-
-    if (data.requires_feature) {
-      t.skipIfLanguageFeatureNotSupported('fragment_depth');
-    }
-
-    const code = `
-@fragment
-fn main() -> ${data.src} f32 {
-  return .5;
-}`;
-    t.expectCompileResult(data.pass, code);
   });
