@@ -5,6 +5,7 @@
 """Tests for the bhr_timeseries secondary job."""
 
 import datetime
+import gzip
 import json
 import os
 import sys
@@ -137,7 +138,7 @@ def test_build_timeseries_end_to_end(tmpdir):
     assert sig_a["totalMs"] == 140.0
 
     assert os.path.exists(os.path.join(work, "hangs_timeseries_main.json"))
-    assert os.path.exists(os.path.join(work, "hangs_timeseries_main_state.json"))
+    assert os.path.exists(os.path.join(work, "hangs_timeseries_main_state.json.gz"))
     # Profiles without client metrics: affected-users fields are omitted, not
     # emitted as misleading zeros.
     assert "totalUsers" not in published
@@ -159,8 +160,8 @@ def test_build_timeseries_is_incremental_and_prunes(tmpdir):
     )
 
     assert published["dates"] == ["20260402", "20260403"]
-    state_path = os.path.join(work, "hangs_timeseries_main_state.json")
-    with open(state_path, encoding="utf-8") as state_file:
+    state_path = os.path.join(work, "hangs_timeseries_main_state.json.gz")
+    with gzip.open(state_path, "rt", encoding="utf-8") as state_file:
         state = json.load(state_file)
     assert "20260401" not in state["days"]
     assert set(state["days"]) == {"20260402", "20260403"}
@@ -247,7 +248,7 @@ def test_day_is_complete_only_below_the_cap():
 
 
 def _sketch_for(client_ids):
-    """Sparse HLL sketch over a set of client ids, as the primary job emits."""
+    """Serialized HLL sketch over a set of client ids, as the primary job emits."""
     hll = HyperLogLog()
     for client_id in client_ids:
         hll.add(client_id)

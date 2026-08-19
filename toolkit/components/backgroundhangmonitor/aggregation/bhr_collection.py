@@ -99,7 +99,7 @@ def _compute_affected_clients(symbolicated):
     so the dashboard can join the counts to each hang row.
 
     Emits both the day's distinct-client estimate and the mergeable HLL sketch
-    (sparse) per signature and for the day total. The secondary roll-up job
+    per signature and for the day total. The secondary roll-up job
     unions these register-wise across a trailing window to report the share of
     users a signature affected over 7 / 28 / 365 days. Only counts and sketches
     (never client ids) are emitted, so cross-day counting stays privacy-safe.
