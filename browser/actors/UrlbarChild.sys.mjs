@@ -10,6 +10,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
+  UrlbarQueryContext: "chrome://browser/content/urlbar/UrlbarQueryContext.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
 
@@ -121,22 +122,6 @@ export class UrlbarChild extends JSWindowActorChild {
   }
 
   /**
-   * Clones a payload the parent sent into the content realm, so content code can
-   * read it: an object left in this realm reaches content as an Xray, which
-   * denies even `Symbol.iterator`. In the parent both sides share a realm and the
-   * payload passes through as it is.
-   *
-   * @param {any[]} args
-   *   The arguments to hand to content.
-   * @returns {any[]}
-   */
-  #forContent(args) {
-    return this.manager.parentActor
-      ? args
-      : Cu.cloneInto(args, Cu.waiveXrays(this.contentWindow));
-  }
-
-  /**
    * Exposes the actor's content-facing surface on the window for a content-realm
    * `<moz-urlbar>`, which can't reach the `[ChromeOnly]`
    * `windowGlobalChild.getActor` nor hold the system-principal actor. Such an
@@ -185,12 +170,7 @@ export class UrlbarChild extends JSWindowActorChild {
     );
   }
 
-  /**
-   * `DOMDocElementInserted`, the actor's only registered event, fires as the
-   * document is created, which is early enough to publish the port before page
-   * script runs.
-   */
-  handleEvent() {
+  actorCreated() {
     // Only a content realm reads the port; chrome holds the actor and imports
     // UrlbarPrefs directly, so don't publish it on every chrome window.
     if (!this.manager.parentActor) {
@@ -369,11 +349,12 @@ export class UrlbarChild extends JSWindowActorChild {
     if (!this.manager.parentActor) {
       child = Cu.waiveXrays(child);
     }
-    // The wire form crosses as plain data and the child controller builds the
-    // query context from it, so the object is born in the realm that reads it.
-    // Deserializing here would leave content an Xray over it, whose properties
-    // all read `undefined`.
-    child.notifyFromWire(name, ...this.#forContent(params));
+    let deserialized = params.map(param =>
+      param?.serializedQueryContext
+        ? lazy.UrlbarQueryContext.fromWire(param.serializedQueryContext)
+        : param
+    );
+    child.notify(name, ...deserialized);
   }
 
   /**
@@ -402,7 +383,7 @@ export class UrlbarChild extends JSWindowActorChild {
     if (!this.manager.parentActor) {
       child = Cu.waiveXrays(child);
     }
-    child[target]?.[method](...this.#forContent(args));
+    child[target]?.[method](...args);
   }
 
   #updateEngineStore({ instanceId, args }) {
@@ -416,6 +397,6 @@ export class UrlbarChild extends JSWindowActorChild {
     if (!this.manager.parentActor) {
       child = Cu.waiveXrays(child);
     }
-    child.updateEngineStore(...this.#forContent(args));
+    child.updateEngineStore(...args);
   }
 }

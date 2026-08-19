@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
-import { UrlbarQueryContext } from "chrome://browser/content/urlbar/UrlbarQueryContext.mjs";
 import { UrlbarChildTelemetry } from "chrome://browser/content/urlbar/UrlbarChildTelemetry.mjs";
 import { UrlbarParentControllerProxy } from "chrome://browser/content/urlbar/UrlbarParentControllerProxy.mjs";
 import { getPlatform } from "chrome://browser/content/urlbar/UrlbarContentUtils.mjs";
@@ -222,25 +221,6 @@ export class UrlbarChildController {
   }
   removeListener(listener) {
     this.#listeners.delete(listener);
-  }
-  /**
-   * Takes a notification off the wire, building the query context in this realm
-   * before anything reads it.
-   *
-   * @param {string} notification
-   *   The notification, one of `UrlbarShared.NOTIFICATIONS`.
-   * @param {...any} params
-   *   The notification's arguments, the query context in its wire form.
-   */
-  notifyFromWire(notification, ...params) {
-    this.notify(
-      notification,
-      ...params.map(param =>
-        param?.serializedQueryContext
-          ? UrlbarQueryContext.fromWire(param.serializedQueryContext)
-          : param
-      )
-    );
   }
   /**
    * Hands a notification to the listeners, dropping the results and the end of
