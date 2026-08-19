@@ -26901,11 +26901,10 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
-* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#86`
+* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#82`
 * **lower is better**: true
 * **page cycles**: 3
 * **page timeout**: 360000
@@ -26929,16 +26928,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-av1-q-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
-* - **browsertime-webcodecs-custom-car-ve-av1-q-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-av1-q-cam**
   - ✅
   - ✅
@@ -26956,11 +26945,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-av1-q-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-av1-q-cam**
   - ✅
   - ✅
@@ -27581,7 +27565,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
@@ -27609,16 +27592,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-av1-rt-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
-* - **browsertime-webcodecs-custom-car-ve-av1-rt-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-av1-rt-cam**
   - ✅
   - ✅
@@ -27636,11 +27609,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-av1-rt-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-av1-rt-cam**
   - ✅
   - ✅
@@ -28195,11 +28163,10 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
-* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#112`
+* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#100`
 * **lower is better**: true
 * **page cycles**: 3
 * **page timeout**: 360000
@@ -28682,11 +28649,10 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
-* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#138`
+* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#118`
 * **lower is better**: true
 * **page cycles**: 3
 * **page timeout**: 360000
@@ -28710,11 +28676,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-h264-q-sd-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-h264-q-sd-cam**
   - ✅
   - ✅
@@ -29009,11 +28970,10 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
-* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#99`
+* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#91`
 * **lower is better**: true
 * **page cycles**: 3
 * **page timeout**: 360000
@@ -29496,11 +29456,10 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
-* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#125`
+* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#109`
 * **lower is better**: true
 * **page cycles**: 3
 * **page timeout**: 360000
@@ -29524,11 +29483,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-h264-rt-sd-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-h264-rt-sd-cam**
   - ✅
   - ✅
@@ -29889,11 +29843,10 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
-* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#164`
+* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#136`
 * **lower is better**: true
 * **page cycles**: 3
 * **page timeout**: 360000
@@ -29917,16 +29870,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-vp8-q-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
-* - **browsertime-webcodecs-custom-car-ve-vp8-q-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-vp8-q-cam**
   - ✅
   - ✅
@@ -29944,11 +29887,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-vp8-q-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-vp8-q-cam**
   - ✅
   - ✅
@@ -30569,11 +30507,10 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
-* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#151`
+* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#127`
 * **lower is better**: true
 * **page cycles**: 3
 * **page timeout**: 360000
@@ -30597,16 +30534,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-vp8-rt-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
-* - **browsertime-webcodecs-custom-car-ve-vp8-rt-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-vp8-rt-cam**
   - ✅
   - ✅
@@ -30624,11 +30551,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-vp8-rt-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-vp8-rt-cam**
   - ✅
   - ✅
@@ -31249,11 +31171,10 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
-* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#190`
+* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#154`
 * **lower is better**: true
 * **page cycles**: 3
 * **page timeout**: 360000
@@ -31277,16 +31198,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-vp9-q-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
-* - **browsertime-webcodecs-custom-car-ve-vp9-q-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-vp9-q-cam**
   - ✅
   - ✅
@@ -31304,11 +31215,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-vp9-q-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-vp9-q-cam**
   - ✅
   - ✅
@@ -31929,11 +31835,10 @@ Browsertime tests that use a custom pageload test script. These use the pageload
 
 * **alert threshold**: 2.0
 * **apps**: firefox, chrome, safari, custom-car
-* **chrome args**: --use-fake-device-for-media-stream --use-fake-ui-for-media-stream
 * **expected**: pass
 * **expose browser profiler**: true
 * **gecko profile interval**: 1
-* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#177`
+* **link searchfox**: {searchfox}`testing/raptor/raptor/tests/custom/browsertime-webcodecs.toml#145`
 * **lower is better**: true
 * **page cycles**: 3
 * **page timeout**: 360000
@@ -31957,16 +31862,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-vp9-rt-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
-* - **browsertime-webcodecs-custom-car-ve-vp9-rt-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-vp9-rt-cam**
   - ✅
   - ✅
@@ -31984,11 +31879,6 @@ Browsertime tests that use a custom pageload test script. These use the pageload
   - autoland
   - mozilla-release
   - mozilla-beta
-* - **browsertime-webcodecs-chrome-ve-vp9-rt-cam**
-  - ❌
-  - ❌
-  - ❌
-  - ❌
 * - **browsertime-webcodecs-firefox-ve-vp9-rt-cam**
   - ✅
   - ✅
