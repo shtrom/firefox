@@ -1198,6 +1198,11 @@ JSObject* CreateGenerator(JSContext* cx, HandleFunction callee,
   return AbstractGeneratorObject::create(cx, callee, environmentChain, argsObj);
 }
 
+JSObject* CreateModuleGenerator(JSContext* cx, Handle<ModuleObject*> module,
+                                HandleObject environmentChain) {
+  return AbstractGeneratorObject::create(cx, module, environmentChain);
+}
+
 bool NormalSuspend(JSContext* cx, HandleObject obj, BaselineFrame* frame,
                    uint32_t frameSize, const jsbytecode* pc) {
   MOZ_ASSERT(JSOp(*pc) == JSOp::InitialYield || JSOp(*pc) == JSOp::Yield ||

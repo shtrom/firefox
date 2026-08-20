@@ -1975,13 +1975,6 @@ bool CanIonCompileScript(JSContext* cx, JSScript* script) {
     return false;
   }
 
-  if (script->isAsync() && script->isModule()) {
-    // Async modules are not supported (bug 1996189).
-    JitSpew(JitSpew_IonAbort, "async module");
-    script->disableIon();
-    return false;
-  }
-
   if (script->hasNonSyntacticScope() && !script->function()) {
     // Support functions with a non-syntactic global scope but not other
     // scripts. For global scripts, WarpBuilder currently uses the global

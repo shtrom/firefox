@@ -21861,6 +21861,17 @@ void CodeGenerator::visitGenerator(LGenerator* lir) {
   callVM<Fn, CreateGenerator>(lir);
 }
 
+void CodeGenerator::visitModuleGenerator(LModuleGenerator* lir) {
+  Register module = ToRegister(lir->module());
+  Register environmentChain = ToRegister(lir->environmentChain());
+
+  pushArg(environmentChain);
+  pushArg(module);
+
+  using Fn = JSObject* (*)(JSContext * cx, Handle<ModuleObject*>, HandleObject);
+  callVM<Fn, CreateModuleGenerator>(lir);
+}
+
 void CodeGenerator::visitAsyncResolve(LAsyncResolve* lir) {
   Register generator = ToRegister(lir->generator());
   ValueOperand value = ToValue(lir->value());

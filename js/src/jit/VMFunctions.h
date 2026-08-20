@@ -34,6 +34,7 @@ class InterpreterFrame;
 class LexicalScope;
 class ClassBodyScope;
 class MapObject;
+class ModuleObject;
 class NativeObject;
 class PlainObject;
 class PropertyName;
@@ -444,6 +445,8 @@ void FrameIsDebuggeeCheck(BaselineFrame* frame);
 JSObject* CreateGeneratorFromFrame(JSContext* cx, BaselineFrame* frame);
 JSObject* CreateGenerator(JSContext* cx, HandleFunction, HandleObject,
                           HandleObject);
+JSObject* CreateModuleGenerator(JSContext* cx, Handle<ModuleObject*>,
+                                HandleObject);
 
 [[nodiscard]] bool NormalSuspend(JSContext* cx, HandleObject obj,
                                  BaselineFrame* frame, uint32_t frameSize,

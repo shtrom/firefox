@@ -3799,6 +3799,14 @@
 - name: Generator
   gen_boilerplate: false
 
+- name: ModuleGenerator
+  operands:
+    module: Object
+    environmentChain: Object
+  result_type: Object
+  possibly_calls: true
+  generate_lir: true
+
 - name: CanSkipAwait
   operands:
     value: Value

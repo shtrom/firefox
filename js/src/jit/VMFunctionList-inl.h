@@ -135,6 +135,7 @@ namespace jit {
   _(CreateBigIntFromUint64, js::jit::CreateBigIntFromUint64)                   \
   _(CreateGenerator, js::jit::CreateGenerator)                                 \
   _(CreateGeneratorFromFrame, js::jit::CreateGeneratorFromFrame)               \
+  _(CreateModuleGenerator, js::jit::CreateModuleGenerator)                     \
   _(CreateSuppressedError, js::CreateSuppressedError)                          \
   _(CreateThisFromIC, js::jit::CreateThisFromIC)                               \
   _(CreateThisFromICWithAllocSite, js::jit::CreateThisFromICWithAllocSite)     \
