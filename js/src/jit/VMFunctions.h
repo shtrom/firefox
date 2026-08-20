@@ -444,7 +444,7 @@ void FrameIsDebuggeeCheck(BaselineFrame* frame);
 
 JSObject* CreateGeneratorFromFrame(JSContext* cx, BaselineFrame* frame);
 JSObject* CreateGenerator(JSContext* cx, HandleFunction, HandleObject,
-                          HandleObject);
+                          HandleValue);
 JSObject* CreateModuleGenerator(JSContext* cx, Handle<ModuleObject*>,
                                 HandleObject);
 

@@ -1192,9 +1192,11 @@ JSObject* CreateGeneratorFromFrame(JSContext* cx, BaselineFrame* frame) {
 }
 
 JSObject* CreateGenerator(JSContext* cx, HandleFunction callee,
-                          HandleObject environmentChain, HandleObject args) {
-  Rooted<ArgumentsObject*> argsObj(
-      cx, args ? &args->as<ArgumentsObject>() : nullptr);
+                          HandleObject environmentChain, HandleValue args) {
+  Rooted<ArgumentsObject*> argsObj(cx);
+  if (args.isObject()) {
+    argsObj = &args.toObject().as<ArgumentsObject>();
+  }
   return AbstractGeneratorObject::create(cx, callee, environmentChain, argsObj);
 }
 

@@ -21850,14 +21850,14 @@ void CodeGenerator::visitCheckThisReinit(LCheckThisReinit* ins) {
 void CodeGenerator::visitGenerator(LGenerator* lir) {
   Register callee = ToRegister(lir->callee());
   Register environmentChain = ToRegister(lir->environmentChain());
-  Register argsObject = ToRegister(lir->argsObject());
+  ValueOperand argsObject = ToValue(lir->argsObject());
 
   pushArg(argsObject);
   pushArg(environmentChain);
   pushArg(callee);
 
   using Fn =
-      JSObject* (*)(JSContext * cx, HandleFunction, HandleObject, HandleObject);
+      JSObject* (*)(JSContext * cx, HandleFunction, HandleObject, HandleValue);
   callVM<Fn, CreateGenerator>(lir);
 }
 

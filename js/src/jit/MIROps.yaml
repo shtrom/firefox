@@ -3796,8 +3796,15 @@
   generate_lir: true
   lir_result_type: none
 
+# Allocate the generator object for a frame.
 - name: Generator
-  gen_boilerplate: false
+  operands:
+    callee: Object
+    environmentChain: Object
+    argsObject: Value
+  result_type: Object
+  possibly_calls: true
+  generate_lir: true
 
 - name: ModuleGenerator
   operands:

@@ -2738,7 +2738,7 @@ bool WarpBuilder::build_Generator(BytecodeLocation loc) {
   } else {
     MDefinition* callee = getCallee();
     MDefinition* argsObj = info().needsArgsObj() ? current->argumentsObject()
-                                                 : constant(Int32Value(0));
+                                                 : constant(NullValue());
     generator = MGenerator::New(alloc(), callee, environmentChain, argsObj);
   }
 

@@ -7735,7 +7735,7 @@ void LIRGenerator::visitGenerator(MGenerator* ins) {
   auto* lir =
       new (alloc()) LGenerator(useRegisterAtStart(ins->callee()),
                                useRegisterAtStart(ins->environmentChain()),
-                               useRegisterAtStart(ins->argsObject()));
+                               useBoxAtStart(ins->argsObject()));
   defineReturn(lir, ins);
   assignSafepoint(lir, ins);
 }
