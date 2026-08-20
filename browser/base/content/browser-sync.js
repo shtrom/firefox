@@ -2191,7 +2191,6 @@ var gSync = {
     profilesSeparator.remove();
     secureSyncHeader.remove();
 
-    profilesSeparator.hidden = false;
     secureSyncHeader.hidden = false;
 
     anchorEl.after(secureSyncHeader);
