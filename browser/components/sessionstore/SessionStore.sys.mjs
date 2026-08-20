@@ -6,7 +6,8 @@
 const FORMAT_VERSION = 1;
 
 const PERSIST_SESSIONS = Services.prefs.getBoolPref(
-  "browser.sessionstore.persist_closed_tabs_between_sessions"
+  "browser.sessionstore.persist_closed_tabs_between_sessions",
+  true
 );
 const TAB_CUSTOM_VALUES = new WeakMap();
 const TAB_LAZY_STATES = new WeakMap();
@@ -161,7 +162,7 @@ import { PrivateBrowsingUtils } from "resource://gre/modules/PrivateBrowsingUtil
 import { TabMetrics } from "moz-src:///browser/components/tabbrowser/TabMetrics.sys.mjs";
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
-import { GlobalState } from "resource:///modules/sessionstore/GlobalState.sys.mjs";
+import { GlobalState } from "moz-src:///browser/components/sessionstore/GlobalState.sys.mjs";
 
 const lazy = {};
 
@@ -181,21 +182,29 @@ ChromeUtils.defineESModuleGetters(lazy, {
   HomePage: "resource:///modules/HomePage.sys.mjs",
   JsonSchema: "resource://gre/modules/JsonSchema.sys.mjs",
   PrivacyFilter: "resource://gre/modules/sessionstore/PrivacyFilter.sys.mjs",
-  sessionStoreLogger: "resource:///modules/sessionstore/SessionLogger.sys.mjs",
-  RunState: "resource:///modules/sessionstore/RunState.sys.mjs",
-  SessionCookies: "resource:///modules/sessionstore/SessionCookies.sys.mjs",
-  SessionFile: "resource:///modules/sessionstore/SessionFile.sys.mjs",
+  sessionStoreLogger:
+    "moz-src:///browser/components/sessionstore/SessionLogger.sys.mjs",
+  RunState: "moz-src:///browser/components/sessionstore/RunState.sys.mjs",
+  SessionCookies:
+    "moz-src:///browser/components/sessionstore/SessionCookies.sys.mjs",
+  SessionFile: "moz-src:///browser/components/sessionstore/SessionFile.sys.mjs",
   SessionHistory: "resource://gre/modules/sessionstore/SessionHistory.sys.mjs",
-  SessionSaver: "resource:///modules/sessionstore/SessionSaver.sys.mjs",
-  SessionStartup: "resource:///modules/sessionstore/SessionStartup.sys.mjs",
+  SessionSaver:
+    "moz-src:///browser/components/sessionstore/SessionSaver.sys.mjs",
+  SessionStartup:
+    "moz-src:///browser/components/sessionstore/SessionStartup.sys.mjs",
   SessionStoreHelper:
     "resource://gre/modules/sessionstore/SessionStoreHelper.sys.mjs",
-  TabAttributes: "resource:///modules/sessionstore/TabAttributes.sys.mjs",
+  TabAttributes:
+    "moz-src:///browser/components/sessionstore/TabAttributes.sys.mjs",
   TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
-  TabGroupState: "resource:///modules/sessionstore/TabGroupState.sys.mjs",
-  TabState: "resource:///modules/sessionstore/TabState.sys.mjs",
-  TabStateCache: "resource:///modules/sessionstore/TabStateCache.sys.mjs",
-  TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.sys.mjs",
+  TabGroupState:
+    "moz-src:///browser/components/sessionstore/TabGroupState.sys.mjs",
+  TabState: "moz-src:///browser/components/sessionstore/TabState.sys.mjs",
+  TabStateCache:
+    "moz-src:///browser/components/sessionstore/TabStateCache.sys.mjs",
+  TabStateFlusher:
+    "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
 });
 
@@ -8498,7 +8507,7 @@ export var SessionStore = {
       delete state.deferredInitialState;
     }
     const schema = await fetch(
-      "resource:///modules/sessionstore/session.schema.json"
+      "moz-src:///browser/components/sessionstore/session.schema.json"
     ).then(rsp => rsp.json());
 
     let result;

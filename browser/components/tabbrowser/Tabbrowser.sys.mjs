@@ -23,7 +23,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "resource:///modules/ReducedProtectionNotification.sys.mjs",
   SelectableProfileService:
     "resource:///modules/profiles/SelectableProfileService.sys.mjs",
-  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
+  SessionStore:
+    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.sys.mjs",
   SitePermissions: "resource:///modules/SitePermissions.sys.mjs",
   TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
@@ -191,7 +192,7 @@ export class Tabbrowser {
         "moz-src:///browser/components/newtab/SponsorProtection.sys.mjs",
       TabMetrics: "moz-src:///browser/components/tabbrowser/TabMetrics.sys.mjs",
       TabStateFlusher:
-        "resource:///modules/sessionstore/TabStateFlusher.sys.mjs",
+        "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs",
       TaskbarTabsUtils:
         "resource:///modules/taskbartabs/TaskbarTabsUtils.sys.mjs",
       TaskbarTabs: "resource:///modules/taskbartabs/TaskbarTabs.sys.mjs",
