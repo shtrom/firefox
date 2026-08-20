@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "gc/GC.h"
 #include "gc/HashUtil.h"
 #include "js/friend/WindowProxy.h"  // js::IsWindow
 #include "js/HashTable.h"
@@ -127,6 +128,8 @@ bool js::NativeObject::toDictionaryMode(JSContext* cx,
   }
 
   obj->setShape(shape);
+
+  gc::MaybeSleepForConcurrentMarkingDelays(cx);
 
   MOZ_ASSERT(obj->inDictionaryMode());
   obj->setDictionaryModeSlotSpan(span);
