@@ -127,12 +127,16 @@ bool js::NativeObject::toDictionaryMode(JSContext* cx,
     return false;
   }
 
-  obj->setShape(shape);
+  obj->setDictionaryModeSlotSpan(span);
+
+  // Ensure concurrent marking can't see the new shape without the dictionary
+  // mode slot span.
+  gc::MemoryReleaseFence(obj->zone());
 
   gc::MaybeSleepForConcurrentMarkingDelays(cx);
 
+  obj->setShape(shape);
   MOZ_ASSERT(obj->inDictionaryMode());
-  obj->setDictionaryModeSlotSpan(span);
 
   return true;
 }
