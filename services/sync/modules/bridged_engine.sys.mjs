@@ -5,12 +5,12 @@
 /**
  * This file has all the machinery for hooking up bridged engines implemented
  * in Rust. It's the JavaScript side of the Golden Gate bridge that connects
- * Desktop Sync to a Rust sync engine, via the UniFFI-generated bridged engine
- * object (a thin wrapper over the Rust `SyncEngine` trait).
+ * Desktop Sync to a Rust `BridgedEngine`, via the `mozIBridgedSyncEngine`
+ * XPCOM interface.
  *
  * Creating a bridged engine only takes a few lines of code, since most of the
  * hard work is done on the Rust side. On the JS side, you'll need to subclass
- * `BridgedEngine` (instead of `SyncEngine`), supply a bridged engine object
+ * `BridgedEngine` (instead of `SyncEngine`), supply a `mozIBridgedSyncEngine`
  * for your subclass to wrap, and optionally implement and override the tracker.
  */
 
@@ -77,7 +77,7 @@ class BridgedRecord extends RawCryptoWrapper {
    *
    * @param  {string} collection The collection name.
    * @param  {object} bso   The outgoing bso (ie, a sync15::bso::OutgoingBso) returned from
-   *                        the bridged engine's `apply`.
+   *                        `mozIBridgedSyncEngine::apply`.
    * @return {BridgedRecord}     A Sync record ready to encrypt and upload.
    */
   static fromOutgoingBso(collection, bso) {
@@ -113,7 +113,7 @@ class BridgedRecord extends RawCryptoWrapper {
    * This object must be kept in sync with `sync15::IncomingBso`.
    *
    * @return {object} The incoming envelope, to pass to
-   *                  the bridged engine's `storeIncoming`.
+   *                  `mozIBridgedSyncEngine::storeIncoming`.
    */
   toIncomingBso() {
     return {
@@ -237,10 +237,8 @@ BridgedEngine.prototype = {
     return Math.round(lastSyncMS / 10) / 100;
   },
 
-  // Engines own their own last-sync timestamp, Only use-case to set it is a reset.
-  async resetLastSync() {
-    this._log.debug(`Resetting ${this.name} last sync time`);
-    await this._bridge.resetLastSync();
+  async setLastSync(lastSyncSeconds) {
+    await this._bridge.setLastSync(Math.round(lastSyncSeconds * 1000));
   },
 
   /**
@@ -282,12 +280,7 @@ BridgedEngine.prototype = {
   async _processIncoming(newitems) {
     await super._processIncoming(newitems);
 
-    // Pass the collection's server last-modified time (which the base engine
-    // has just stored as our last sync time) so the engine can reconcile
-    // against the real timestamp. `lastModified` is in seconds; the bridge
-    // works in integer milliseconds.
-    let serverModifiedMillis = Math.round((this.lastModified ?? 0) * 1000);
-    let outgoingBsosAsJSON = await this._bridge.apply(serverModifiedMillis);
+    let outgoingBsosAsJSON = await this._bridge.apply();
     let changeset = {};
     for (let bsoAsJSON of outgoingBsosAsJSON) {
       this._log.trace("outgoing bso", bsoAsJSON);

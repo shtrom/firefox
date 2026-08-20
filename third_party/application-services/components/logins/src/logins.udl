@@ -324,9 +324,8 @@ interface LoginStore {
     void shutdown();
 };
 
-/// The Desktop-facing bridged sync engine - a thin wrapper over the
-/// `sync15::engine::SyncEngine` implemented by this component (see
-/// `sync15::engine::BridgedEngineWrapper`).
+/// The Desktop-facing bridged sync engine. The canonical docs are in
+/// https://searchfox.org/mozilla-central/source/services/interfaces/mozIBridgedSyncEngine.idl
 /// It's only actually used on Desktop, but it's fine to expose this everywhere.
 /// NOTE: all timestamps here are milliseconds.
 interface LoginsBridgedEngine {
@@ -334,7 +333,7 @@ interface LoginsBridgedEngine {
     i64 last_sync();
 
     [Throws=LoginsApiError]
-    void reset_last_sync();
+    void set_last_sync(i64 last_sync);
 
     [Throws=LoginsApiError]
     string? sync_id();
@@ -352,7 +351,7 @@ interface LoginsBridgedEngine {
     void store_incoming(sequence<string> incoming_envelopes_as_json);
 
     [Throws=LoginsApiError]
-    sequence<string> apply(i64 server_modified_millis);
+    sequence<string> apply();
 
     [Throws=LoginsApiError]
     void set_uploaded(i64 new_timestamp, sequence<string> uploaded_ids);

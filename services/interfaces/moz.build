@@ -12,5 +12,6 @@ with Files("**"):
 XPIDL_MODULE = "services"
 
 XPIDL_SOURCES += [
+    "mozIBridgedSyncEngine.idl",
     "mozIInterruptible.idl",
 ]

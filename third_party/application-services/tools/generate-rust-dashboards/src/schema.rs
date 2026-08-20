@@ -128,8 +128,6 @@ pub enum Unit {
     Microseconds,
     #[serde(rename = "ns")]
     Nanoseconds,
-    #[serde(rename = "sishort")]
-    SiShort,
 }
 
 #[derive(Default, Serialize)]

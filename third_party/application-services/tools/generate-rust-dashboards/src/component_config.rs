@@ -69,7 +69,7 @@ impl Component {
         match self {
             Self::Autofill => &["addresses", "creditcards"],
             Self::Fxa => &[],
-            Self::Logins => &["logins", "rust-logins"],
+            Self::Logins => &["logins"],
             Self::Places => &["bookmarks", "history"],
             Self::RemoteSettings => &[],
             Self::Suggest => &[],

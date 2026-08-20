@@ -37,9 +37,8 @@ pub fn synchronize_with_clients_engine(
         }
     };
 
-    engine.sync_started()?;
     if let Some(clients) = clients {
-        engine.set_clients(&|| clients.get_client_data())?;
+        engine.prepare_for_sync(&|| clients.get_client_data())?;
     }
     interruptee.err_if_interrupted()?;
     // We assume an "engine" manages exactly one "collection" with the engine's name.

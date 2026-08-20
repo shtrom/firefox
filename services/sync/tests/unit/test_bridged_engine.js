@@ -26,10 +26,14 @@ add_task(async function test_interface() {
       this.wasWiped = false;
     }
 
-    // Bridged engine methods.
+    // `mozIBridgedSyncEngine` methods.
 
     lastSync() {
       return this.lastSyncMillis;
+    }
+
+    setLastSync(millis) {
+      this.lastSyncMillis = millis;
     }
 
     resetSyncId() {
@@ -49,8 +53,7 @@ add_task(async function test_interface() {
       this.incomingEnvelopes.push(...envelopes.map(r => JSON.parse(r)));
     }
 
-    apply(serverModifiedMillis) {
-      this.lastSyncMillis = serverModifiedMillis;
+    apply() {
       let outgoingEnvelopes = [
         {
           id: "hanson",
@@ -76,16 +79,11 @@ add_task(async function test_interface() {
     }
 
     setUploaded(millis, ids) {
-      this.lastSyncMillis = millis;
       this.uploadedIDs.push(...ids);
     }
 
     syncFinished() {
       this.wasSyncFinished = true;
-    }
-
-    resetLastSync() {
-      this.lastSyncMillis = 0;
     }
 
     reset() {

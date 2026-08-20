@@ -14,7 +14,6 @@ use crate::Guid;
 use crate::error::{trace, warn};
 use error_support::report_error;
 use serde::Serialize;
-use serde::ser::Error as _;
 
 // The only errors we return here are serde errors.
 type Result<T> = std::result::Result<T, serde_json::Error>;
@@ -209,13 +208,7 @@ where
             match map.get("id").as_ref().and_then(|v| v.as_str()) {
                 Some(id) => {
                     let id: Guid = id.into();
-                    if !id.is_valid_for_sync_server() {
-                        // This is a sanity check on our own IDs, not something the
-                        // server enforces, so a violation is an error for this one
-                        // record rather than a reason to panic the process, which
-                        // took down the whole parent process (bug 2056116).
-                        return Err(serde_json::Error::custom("record's ID is invalid"));
-                    }
+                    assert!(id.is_valid_for_sync_server(), "record's ID is invalid");
                     id
                 }
                 // In practice, this is a "static" error and not influenced by runtime behavior
@@ -239,10 +232,7 @@ where
     if let Some(ref mut map) = payload.as_object_mut() {
         if let Some(content_id) = map.get("id").as_ref().and_then(|v| v.as_str()) {
             assert_eq!(content_id, id);
-            if !id.is_valid_for_sync_server() {
-                // See content_with_id_to_json: don't panic on an invalid ID.
-                return Err(serde_json::Error::custom("record's ID is invalid"));
-            }
+            assert!(id.is_valid_for_sync_server(), "record's ID is invalid");
         } else {
             map.insert("id".to_string(), serde_json::Value::String(id.to_string()));
         }
@@ -392,23 +382,24 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_content_empty_id() {
         error_support::init_for_tests();
         let val = TestStruct {
             id: Guid::new(""),
             data: 1,
         };
-        // An invalid ID is a recoverable error, not a panic (bug 2056116).
-        assert!(OutgoingBso::from_content_with_id(val).is_err());
+        let _ = OutgoingBso::from_content_with_id(val);
     }
 
     #[test]
+    #[should_panic]
     fn test_content_invalid_id() {
         error_support::init_for_tests();
         let val = TestStruct {
             id: Guid::new(&"X".repeat(65)),
             data: 1,
         };
-        assert!(OutgoingBso::from_content_with_id(val).is_err());
+        let _ = OutgoingBso::from_content_with_id(val);
     }
 }

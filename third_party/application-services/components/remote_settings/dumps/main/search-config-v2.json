@@ -2120,9 +2120,6 @@
     },
     {
       "base": {
-        "aliases": [
-          "ecosia"
-        ],
         "classification": "general",
         "name": "Ecosia",
         "partnerCode": "mzl",
@@ -2151,9 +2148,9 @@
       },
       "id": "e8e4a7e3-aead-43e3-887d-4064a186bd70",
       "identifier": "ecosia",
-      "last_modified": 1783024776556,
+      "last_modified": 1734364924960,
       "recordType": "engine",
-      "schema": 1782777609128,
+      "schema": 1734220806364,
       "variants": [
         {
           "environment": {
@@ -3882,14 +3879,15 @@
       },
       "id": "5fb2256b-fdb0-42e8-8d8a-0d633b14e8d5",
       "identifier": "startpage",
-      "last_modified": 1778165854657,
+      "last_modified": 1776702260347,
       "recordType": "engine",
-      "schema": 1778115248130,
+      "schema": 1776701460565,
       "variants": [
         {
           "environment": {
             "experiment": "startpage"
-          }
+          },
+          "isNewUntil": "2026-05-19"
         }
       ]
     },
@@ -8423,5 +8421,5 @@
       "schema": 1707824831520
     }
   ],
-  "timestamp": 1783024776556
+  "timestamp": 1776702260347
 }
