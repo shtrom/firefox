@@ -388,10 +388,8 @@ fuzzy-if(Android,0-2,0-18) == 315920-17.html 315920-17-ref.html
 == chrome://reftest/content/bugs/315920-18a.html chrome://reftest/content/bugs/315920-18-ref.html
 == chrome://reftest/content/bugs/315920-18b.html chrome://reftest/content/bugs/315920-18-ref.html
 == chrome://reftest/content/bugs/315920-18c.html chrome://reftest/content/bugs/315920-18-ref.html
-== chrome://reftest/content/bugs/315920-18d.html chrome://reftest/content/bugs/315920-18-ref.html
 == chrome://reftest/content/bugs/315920-18e.html chrome://reftest/content/bugs/315920-18-ref.html
 == chrome://reftest/content/bugs/315920-18f.html chrome://reftest/content/bugs/315920-18-ref.html
-== chrome://reftest/content/bugs/315920-18g.html chrome://reftest/content/bugs/315920-18-ref.html
 == chrome://reftest/content/bugs/315920-18h.html chrome://reftest/content/bugs/315920-18-ref.html
 == chrome://reftest/content/bugs/315920-18i.html chrome://reftest/content/bugs/315920-18-ref.html
 == chrome://reftest/content/bugs/315920-19.html chrome://reftest/content/bugs/315920-19-ref.html
