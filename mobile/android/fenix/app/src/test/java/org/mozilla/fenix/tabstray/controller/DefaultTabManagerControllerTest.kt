@@ -59,6 +59,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.fenix.GleanMetrics.Events
 import org.mozilla.fenix.GleanMetrics.TabsTray
+import org.mozilla.fenix.GleanMetrics.TrackingProtection
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
@@ -84,7 +85,6 @@ import org.mozilla.fenix.tabstray.redux.state.Page
 import org.mozilla.fenix.tabstray.redux.state.TabsTrayState
 import org.mozilla.fenix.tabstray.redux.store.TabsTrayStore
 import org.mozilla.fenix.tabstray.ui.TabManagementFragmentDirections
-import org.mozilla.fenix.trackingprotection.ProtectionsDashboardFragment
 import org.mozilla.fenix.utils.Settings
 import org.robolectric.RobolectricTestRunner
 
@@ -2357,7 +2357,7 @@ class DefaultTabManagerControllerTest {
     }
 
     @Test
-    fun `WHEN the privacy report pill is tapped THEN navigate to the protections dashboard with the tabs_tray source`() {
+    fun `WHEN the privacy report pill is tapped THEN navigate to the protections dashboard`() {
         every { navController.currentDestination } returns
             mockk<NavDestination> {
                 every { id } returns R.id.tabManagementFragment
@@ -2374,12 +2374,22 @@ class DefaultTabManagerControllerTest {
             navController.navigate(
                 directions =
                     TabManagementFragmentDirections.actionTabManagementFragmentToGlobalProtectionsDashboard(
-                        currentSessionId,
-                        source = ProtectionsDashboardFragment.SOURCE_TABS_TRAY,
+                        customTabSessionId = currentSessionId
                     ),
                 navOptions = null,
             )
         }
+    }
+
+    @Test
+    fun `WHEN the privacy report pill is tapped THEN record telemetry`() {
+        browserStore = BrowserStore()
+        createController().onPrivacyReportTapped()
+
+        assertEquals(
+            TABS_TRAY_TELEMETRY_SOURCE,
+            TrackingProtection.privacyReportTapped.testGetValue()?.last()?.extra?.get("source"),
+        )
     }
 
     private fun makeBookmarkFolder(guid: String) =

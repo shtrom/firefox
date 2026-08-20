@@ -34,6 +34,7 @@ import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.GleanMetrics.Collections
 import org.mozilla.fenix.GleanMetrics.Events
 import org.mozilla.fenix.GleanMetrics.TabsTray
+import org.mozilla.fenix.GleanMetrics.TrackingProtection
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.browser.browsingmode.BrowsingModeManager
@@ -68,10 +69,11 @@ import org.mozilla.fenix.tabstray.redux.state.Page
 import org.mozilla.fenix.tabstray.redux.state.TabsTrayState
 import org.mozilla.fenix.tabstray.redux.store.TabsTrayStore
 import org.mozilla.fenix.tabstray.ui.TabManagementFragmentDirections
-import org.mozilla.fenix.trackingprotection.ProtectionsDashboardFragment
 import org.mozilla.fenix.utils.Settings
 
 internal const val INACTIVE_TABS_FEATURE_NAME = "Inactive tabs"
+
+@VisibleForTesting internal const val TABS_TRAY_TELEMETRY_SOURCE = "tabs_tray"
 
 /** Controller for handling any actions in the tab manager. */
 interface TabManagerController : SyncedTabsController, InactiveTabsController, TabsTrayFabController {
@@ -734,12 +736,15 @@ class DefaultTabManagerController(
     }
 
     override fun onPrivacyReportTapped() {
+        TrackingProtection.privacyReportTapped.record(
+            TrackingProtection.PrivacyReportTappedExtra(TABS_TRAY_TELEMETRY_SOURCE)
+        )
+
         val currentSessionId = browserStore.state.selectedTabId
         navController.nav(
             R.id.tabManagementFragment,
             TabManagementFragmentDirections.actionTabManagementFragmentToGlobalProtectionsDashboard(
-                currentSessionId,
-                source = ProtectionsDashboardFragment.SOURCE_TABS_TRAY,
+                customTabSessionId = currentSessionId
             ),
         )
     }
