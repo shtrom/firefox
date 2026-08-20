@@ -476,16 +476,13 @@ class TrustPanel {
   }
 
   /**
-   * Called when the top-level document finishes loading. It does two things:
-   * 1. Update the tracker count to the most recent number. This is necessary
-   *    because `onContentBlockingEvent` only gets called when a particular
-   *    category of trackers is first blocked (e.g. fingerprinters), not for
-   *    every blocked origin, leaving the count incomplete.
-   * 2. Set `this.#blockersChecked` and call `#updateUrlBarIcon`, to ensure
-   *    the scanning state gets resolved to the final secure/insecure state.
+   * Called when the top-level document finishes loading. If the scanning shield
+   * is still up (no tracker was blocked during the load), resolve it now to the
+   * final secure/insecure state. A tracker blocked later still increments the
+   * count via #updateToolbarTrackerCount.
    */
   async onNavigationComplete() {
-    if (!this.#enabled || !this.#uri) {
+    if (!this.#enabled || !this.#uri || this.#blockersChecked) {
       return;
     }
     if (
@@ -494,15 +491,15 @@ class TrustPanel {
     ) {
       return;
     }
+    // Resolve the count first: if a tracker was blocked it already set
+    // #blockersChecked, so we only fall through to the plain check when none was.
     const uri = this.#uri;
     await this.#updateToolbarTrackerCount();
-    if (this.#uri !== uri) {
+    if (this.#uri !== uri || this.#blockersChecked) {
       return;
     }
-    if (!this.#blockersChecked) {
-      this.#blockersChecked = true;
-      this.#updateUrlbarIcon();
-    }
+    this.#blockersChecked = true;
+    this.#updateUrlbarIcon();
   }
 
   updateIdentity(state, uri) {
@@ -533,13 +530,17 @@ class TrustPanel {
     this.#qwacStatusPromise = null;
     this.#pageExtensionPolicy = WebExtensionPolicy.getByURI(uri);
     this.#breachedStatus = null;
-    // Don't show the "scanning" icon while navigating between different pages on the same site:
     if (this.#sameSiteNavigation) {
-      this.#blockersChecked = true;
+      // Keep the count so the synchronous #updateUrlbarIcon() below doesn't
+      // strip .has-blocked-trackers and blink the pill off mid-navigation;
+      // clear first-visit so it renders statically. #sameSiteNavigation is
+      // now tab-aware, so this no longer inherits the count across tab switches.
+      this.#isFirstVisit = false;
+    } else {
+      this.#trackerCount = null;
+      this.#trackerCountPromise = null;
+      this.#isFirstVisit = false;
     }
-    this.#trackerCount = null;
-    this.#trackerCountPromise = null;
-    this.#isFirstVisit = false;
     // #blockersChecked is reset in resetIconForNavigation, not here, so tab
     // switches and re-fired security changes don't re-enter scanning.
     this.#updateUrlbarIcon();
@@ -633,6 +634,12 @@ class TrustPanel {
       targetClasses = new Set(["scanning"]);
     }
 
+    // Suppresses the reveal animation so the pill stays static across a
+    // same-site navigation.
+    if (this.#sameSiteNavigation && !targetClasses.has("scanning")) {
+      targetClasses.add("same-site-nav");
+    }
+
     // A breach supersedes scanning: resolve so the shield doesn't mask it.
     if (targetClasses.has("breached")) {
       this.#blockersChecked = true;
@@ -651,9 +658,6 @@ class TrustPanel {
         });
         // Logic will re-add breached, and since it's the first time for
         // breach-animating, the CSS animation will play.
-      } else if (icon.classList.contains("breach-animating")) {
-        // Don't interrupt animations that are already running for this URL:
-        targetClasses.add("breach-animating");
       }
     }
 
@@ -800,10 +804,6 @@ class TrustPanel {
       !ContentBlockingAllowList.canHandle(window.gBrowser.selectedBrowser)
     );
 
-    // Ensure the toolbar tracker count is fully up-to-date and aligns with the
-    // trust panel's count:
-    void this.#updateToolbarTrackerCount();
-
     await this.#updateBlockerView();
   }
 
@@ -811,20 +811,16 @@ class TrustPanel {
     if (this.#trackerCountPromise) {
       return this.#trackerCountPromise;
     }
-    const p = (async () => {
+    this.#trackerCountPromise = (async () => {
       let count = this.#fetchSmartBlocked().length;
       for (let blocker of Object.values(this.#blockers)) {
-        count += await blocker.getBlockerCount();
+        if (blocker.isBlocking(this.#lastEvent)) {
+          count += await blocker.getBlockerCount();
+        }
       }
       return count;
     })();
-    this.#trackerCountPromise = p;
-    p.finally(() => {
-      if (this.#trackerCountPromise === p) {
-        this.#trackerCountPromise = null;
-      }
-    });
-    return p;
+    return this.#trackerCountPromise;
   }
 
   async #markFirstVisit() {
@@ -885,6 +881,11 @@ class TrustPanel {
       return;
     }
 
+    // On a same-site navigation, keep the last positive count until the new page
+    // reports its own, so the pill doesn't flash "0" mid-load.
+    if (this.#sameSiteNavigation && count === 0 && this.#trackerCount > 0) {
+      count = this.#trackerCount;
+    }
     this.#trackerCount = count;
     // A blocked tracker resolves the scanning shield straight into the reveal.
     if (count > 0) {
