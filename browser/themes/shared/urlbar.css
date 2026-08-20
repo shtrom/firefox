@@ -1413,11 +1413,6 @@ toolbar[inactive="true"] .urlbar,
   }
 }
 
-.searchmode-switcher-panel {
-  /* Override definition for toolbar-menupopup.  */
-  --panel-padding: 0 !important;
-}
-
 .searchmode-switcher-dropmarker {
   -moz-context-properties: fill;
   fill: currentColor;
@@ -1446,14 +1441,22 @@ toolbar[inactive="true"] .urlbar,
   }
 }
 
+.searchmode-switcher-panel {
+  /* Override definition for toolbar-menupopup.  */
+  --panel-padding: 0 !important;
+}
+
 .searchmode-switcher-panel-list {
   max-width: var(--search-engine-name-max-width);
   /* TODO bug 2032017: clean this up after 1826841 is done */
-  --panel-list-background-color: var(--panel-background);
   --panel-list-border-radius: var(--panel-border-radius);
-  padding: var(--panel-subview-body-padding);
 
   min-width: var(--urlbar-searchmode-switcher-panel-list-min-width);
+
+  .searchmode-switcher-panel > & {
+    --panel-list-background-color: var(--panel-background);
+    padding: var(--panel-subview-body-padding);
+  }
 
   > panel-item::part(button) {
     -moz-context-properties: fill;
@@ -1464,7 +1467,7 @@ toolbar[inactive="true"] .urlbar,
     /* TODO bug 2032017: clean this up after 1826841 is done */
     padding: var(--panel-menuitem-padding);
     padding-inline-start: calc(var(--panel-menuitem-padding-inline) + 22px);
-    border-radius: var(--menuitem-border-radius);
+    border-radius: var(--panel-menuitem-border-radius);
     margin: var(--panel-menuitem-margin);
   }
 
