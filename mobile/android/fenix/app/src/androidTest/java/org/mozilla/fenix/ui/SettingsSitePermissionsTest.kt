@@ -500,6 +500,12 @@ class SettingsSitePermissionsTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/246976
+    @Converted(
+        replacedBy =
+            ["org.mozilla.fenix.ui.efficiency.tests.SettingsSitePermissionsTest#clearAllSitePermissionsExceptionsTest"],
+        bug = 2064823,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun clearAllSitePermissionsExceptionsTest() {

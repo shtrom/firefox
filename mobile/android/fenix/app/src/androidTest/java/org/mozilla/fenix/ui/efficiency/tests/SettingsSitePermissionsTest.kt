@@ -4,6 +4,7 @@
 
 package org.mozilla.fenix.ui.efficiency.tests
 
+import androidx.core.net.toUri
 import mozilla.components.concept.engine.mediasession.MediaSession
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SmokeTest
@@ -12,6 +13,8 @@ import org.mozilla.fenix.helpers.TestAssetHelper.mutedVideoPageAsset
 import org.mozilla.fenix.helpers.TestAssetHelper.videoPageAsset
 import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
 import org.mozilla.fenix.ui.efficiency.selectors.SettingsSiteSettingsAutoplaySelectors
+import org.mozilla.fenix.ui.efficiency.selectors.SettingsSiteSettingsExceptionsSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.SitePermissionsSelectors
 
 /**
  * Both tests assert the behaviour of the *default* autoplay setting ("Block audio only"), so neither changes the
@@ -66,5 +69,41 @@ class SettingsSitePermissionsTest : BaseTest() {
 
         on.browserPage.navigateToPage(mutedVideoTestPage.url.toString())
         on.browserPage.verifyPageContentWithReload(mutedVideoTestPage.url.toString(), "Media file is playing")
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/246976
+    // The Cancel round-trip is the point: legacy dismissed the dialog once and re-opened it, proving Cancel does not
+    // clear anything, before confirming with OK.
+    @SmokeTest
+    @Test
+    fun clearAllSitePermissionsExceptionsTest() {
+        on.browserPage.navigateToPage(PERMISSIONS_TEST_PAGE)
+        on.browserPage.mozClick(
+            SitePermissionsSelectors.PAGE_PERMISSION_BUTTON("notify", "Open notifications dialogue")
+        )
+        on.browserPage
+            .mozVerify(SitePermissionsSelectors.NOTIFICATIONS_PERMISSION_PROMPT(PERMISSIONS_TEST_PAGE_HOST))
+            .mozClick(SitePermissionsSelectors.PAGE_PERMISSION_DIALOG_ALLOW_BUTTON)
+
+        on.settingsSiteSettingsExceptions.navigateToPage()
+        on.settingsSiteSettingsExceptions
+            .mozVerify(SettingsSiteSettingsExceptionsSelectors.EXCEPTION_ROW(PERMISSIONS_TEST_PAGE_ORIGIN))
+            .mozClick(SettingsSiteSettingsExceptionsSelectors.CLEAR_PERMISSIONS_ON_ALL_SITES_BUTTON)
+            .mozVerify(SettingsSiteSettingsExceptionsSelectors.CLEAR_PERMISSIONS_DIALOG_TITLE)
+            .mozClick(SettingsSiteSettingsExceptionsSelectors.CLEAR_PERMISSIONS_DIALOG_CANCEL_BUTTON)
+            .mozClick(SettingsSiteSettingsExceptionsSelectors.CLEAR_PERMISSIONS_ON_ALL_SITES_BUTTON)
+            .mozClick(SettingsSiteSettingsExceptionsSelectors.CLEAR_PERMISSIONS_DIALOG_OK_BUTTON)
+            .mozVerify(SettingsSiteSettingsExceptionsSelectors.EMPTY_EXCEPTIONS_LIST)
+    }
+
+    companion object {
+        const val PERMISSIONS_TEST_PAGE = "https://mozilla-mobile.github.io/testapp/v2.0/permissions"
+
+        // Derived from the URL so the three cannot drift. requireNotNull rather than !!, so a malformed URL names
+        // itself instead of throwing a bare NPE while the companion object initialises; and the origin is built
+        // from the authority, which keeps a port if one ever appears where scheme + host would drop it.
+        val PERMISSIONS_TEST_PAGE_HOST =
+            requireNotNull(PERMISSIONS_TEST_PAGE.toUri().host) { "no host in $PERMISSIONS_TEST_PAGE" }
+        val PERMISSIONS_TEST_PAGE_ORIGIN = PERMISSIONS_TEST_PAGE.toUri().let { "${it.scheme}://${it.authority}" }
     }
 }
