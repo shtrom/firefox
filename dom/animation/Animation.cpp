@@ -439,14 +439,7 @@ bool Animation::SetTimelineNoUpdate(AnimationTimeline* aTimeline,
     // flag's invariant (true only while the timeline is finite) is violated
     // and AutoAlignStartTime would later fire on a monotonic timeline.
     // [1] https://drafts.csswg.org/web-animations-2/#setting-the-timeline
-    if (mAutoAlignStartTime) {
-      mAutoAlignStartTime = false;
-      // If we don't have the start time aligned, we may not have any valid time
-      // set.
-      if (mHoldTime.IsNull() && mStartTime.IsNull()) {
-        previousProgress.SetValue(0.0);
-      }
-    }
+    mAutoAlignStartTime = false;
     if (!previousProgress.IsNull()) {
       // If from finite timeline and previous progress is resolved, run the
       // procedure to set the current time to previous progress * end time.
