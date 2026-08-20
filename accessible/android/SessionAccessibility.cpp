@@ -653,6 +653,7 @@ void SessionAccessibility::PopulateNodeInfo(
   nsAutoString hint;
   nsAutoString text;
   nsAutoString description;
+  nsAutoString containerTitle;
   if (state & states::EDITABLE) {
     // An editable field's name is populated in the hint.
     hint.Assign(name);
@@ -660,6 +661,8 @@ void SessionAccessibility::PopulateNodeInfo(
   } else {
     if (role == roles::LINK || role == roles::HEADING) {
       description.Assign(name);
+    } else if (role == roles::GROUPING) {
+      containerTitle.Assign(name);
     } else if (role != roles::CELL || nameFlag != eNameFromSubtree) {
       // In most cases, use the name as the text. We discard the name completely
       // for a table cell where the name is computed from the subtree because
@@ -724,7 +727,8 @@ void SessionAccessibility::PopulateNodeInfo(
       className, jni::IntArray::New(boundsArray, 4), jni::StringParam(text),
       jni::StringParam(description), jni::StringParam(hint),
       jni::StringParam(geckoRole), jni::StringParam(roleDescription),
-      jni::StringParam(nodeID), jni::StringParam(language), inputType);
+      jni::StringParam(nodeID), jni::StringParam(containerTitle),
+      jni::StringParam(language), inputType);
 
   if (aAccessible->HasNumericValue()) {
     double curValue = aAccessible->CurValue();

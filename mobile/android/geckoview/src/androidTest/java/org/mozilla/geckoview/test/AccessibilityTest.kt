@@ -751,6 +751,25 @@ class AccessibilityTest : BaseSessionTest() {
     }
 
     @Test
+    fun testFieldset() {
+        mainSession.loadTestPath(FORMS2_HTML_PATH)
+        waitForInitialFocus()
+
+        val rootNode = createNodeInfo(View.NO_ID)
+        assertThat("Document has 2 children", rootNode.childCount, equalTo(2))
+
+        val formNode = createNodeInfo(rootNode.getChildId(0))
+        assertThat("Form has 1 child", formNode.childCount, equalTo(1))
+
+        val fieldsetNode = createNodeInfo(formNode.getChildId(0))
+        assertThat(
+            "Fieldset has correct containerTitle",
+            fieldsetNode.containerTitle.toString(),
+            equalTo("Create New Account"),
+        )
+    }
+
+    @Test
     fun testMoveByCharacter() {
         var nodeId = AccessibilityNodeProvider.HOST_VIEW_ID
         mainSession.loadUri("data:text/html;charset=utf-8,<p>🤦‍♂️ Peanut</p>")

@@ -7,6 +7,7 @@ package org.mozilla.geckoview;
 import android.content.Context;
 import android.graphics.Matrix;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.SpannableString;
@@ -28,6 +29,8 @@ import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import org.mozilla.gecko.GeckoAppShell;
 import org.mozilla.gecko.GeckoThread;
@@ -748,6 +751,7 @@ public class SessionAccessibility {
         @Nullable final String geckoRole,
         @Nullable final String roleDescription,
         @Nullable final String viewIdResourceName,
+        @Nullable final String containerTitle,
         @Nullable final String language,
         final int inputType) {
       if (mView == null) {
@@ -772,7 +776,21 @@ public class SessionAccessibility {
 
       node.setText(addSpansToText(text, language));
 
-      node.setContentDescription(addSpansToText(description, language));
+      final List<String> contentDescription = new ArrayList<String>();
+      if (description != null) {
+        contentDescription.add(description);
+      }
+
+      if (containerTitle != null) {
+        if (Build.VERSION.SDK_INT >= 34) {
+          node.setContainerTitle(addSpansToText(containerTitle, language));
+        } else {
+          // As a stopgap for older android versions, append container title to content description.
+          contentDescription.add(description);
+        }
+      }
+
+      node.setContentDescription(addSpansToText(String.join(" ", contentDescription), language));
 
       // Add actions
       node.addAction(AccessibilityNodeInfo.ACTION_NEXT_HTML_ELEMENT);
