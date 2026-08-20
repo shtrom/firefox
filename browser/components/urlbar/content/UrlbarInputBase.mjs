@@ -1832,6 +1832,9 @@ ${
           openParams.userContextId = parseInt(
             element.getAttribute("data-usercontextid")
           );
+          openParams.eventDetail = {
+            containerSource: "urlbar_result_context_menu",
+          };
         }
       }
 

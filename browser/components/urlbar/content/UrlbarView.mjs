@@ -4562,6 +4562,7 @@ export class UrlbarView {
     ) {
       event.target.documentGlobal.createUserContextMenu(event, {
         isContextMenu: true,
+        containerSource: "urlbar_result_context_menu",
       });
     }
   }
