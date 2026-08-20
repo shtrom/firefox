@@ -535,13 +535,6 @@
                 }
               : null,
           };
-
-          row.type = parsedComment?.type ?? null;
-          row.sources = parsedComment?.sources ?? [];
-          row.sourcesLabel = parsedComment?.sourcesLabel ?? null;
-          row.loading = parsedComment?.loading ?? false;
-          row.loadingLabel = parsedComment?.loadingLabel ?? null;
-          row.emptySourcesLabel = parsedComment?.emptySourcesLabel ?? null;
         }
 
         item.setAttribute("dir", this.style.direction);
