@@ -79,8 +79,6 @@ class ImageDecoder::SelectTrackMessage final
 NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE_CLASS(ImageDecoder)
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(ImageDecoder)
-  // Do not cancel mReadRequest here: cancellation synchronously invokes the
-  // page's UnderlyingSource.cancel() callback
   tmp->CloseWithoutRef(
       MediaResult(NS_ERROR_DOM_ABORT_ERR, "Cycle-collected decoder"_ns));
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mParent)
@@ -121,7 +119,6 @@ ImageDecoder::ImageDecoder(nsCOMPtr<nsIGlobalObject>&& aParent,
 ImageDecoder::~ImageDecoder() {
   MOZ_LOG_FMT(gWebCodecsLog, LogLevel::Debug, "ImageDecoder {} ~ImageDecoder",
               fmt::ptr(this));
-  // Similar to CYCLE_COLLECTION_UNLINK_BEGIN above
   CloseWithoutRef(MediaResult(NS_ERROR_DOM_ABORT_ERR, "Destroyed decoder"_ns));
 }
 
@@ -241,19 +238,12 @@ MessageProcessedResult ImageDecoder::ProcessConfigureMessage(
   mMessageQueueBlocked = true;
 
   NS_DispatchToCurrentThread(NS_NewCancelableRunnableFunction(
-      "ImageDecoder::ProcessConfigureMessage",
-      [self = RefPtr{this}] MOZ_CAN_RUN_SCRIPT_BOUNDARY_LAMBDA {
+      "ImageDecoder::ProcessConfigureMessage", [self = RefPtr{this}] {
         // 5. Enqueue the following steps to the [[codec work queue]]:
         // 5.1. Configure [[codec implementation]] in accordance with the values
         //      given for colorSpaceConversion, desiredWidth, and desiredHeight.
         // 5.2. Assign false to [[message queue blocked]].
         // 5.3. Queue a task to Process the control message queue.
-        //
-        // This lambda is only ever reached via NS_DispatchToCurrentThread, at
-        // a fresh, safe-to-run-script stack frame -- never from
-        // cycle-collection Unlink, ~ImageDecoder, or OnShutdown. Unlike
-        // ImageDecoderReadRequest::Cancel()'s prior boundary (removed above),
-        // this one is not reachable from any unsafe teardown path.
         self->ResumeControlMessageQueue();
       }));
 
@@ -277,10 +267,9 @@ MessageProcessedResult ImageDecoder::ProcessDecodeMetadataMessage(
       [self = RefPtr{this}](const image::DecodeMetadataResult& aMetadata) {
         self->OnMetadataSuccess(aMetadata);
       },
-      [self = RefPtr{this}](const nsresult& aErr)
-          MOZ_CAN_RUN_SCRIPT_FOR_DEFINITION -> void {
-            self->OnMetadataFailed(aErr);
-          });
+      [self = RefPtr{this}](const nsresult& aErr) {
+        self->OnMetadataFailed(aErr);
+      });
   return MessageProcessedResult::Processed;
 }
 
@@ -652,16 +641,14 @@ void ImageDecoder::Initialize(const GlobalObject& aGlobal,
     // 10.2.2.17.5. Let reader be the result of getting a reader for data.
     // 10.2.2.17.6. In parallel, perform the Fetch Stream Data Loop on d with
     //              reader.
-    RefPtr<ImageDecoderReadRequest> readRequest =
-        MakeAndAddRef<ImageDecoderReadRequest>(mSourceBuffer);
-    if (NS_WARN_IF(!readRequest->Initialize(aGlobal, this, stream))) {
+    mReadRequest = MakeAndAddRef<ImageDecoderReadRequest>(mSourceBuffer);
+    if (NS_WARN_IF(!mReadRequest->Initialize(aGlobal, this, stream))) {
       MOZ_LOG_FMT(gWebCodecsLog, LogLevel::Error,
                   "ImageDecoder {} Initialize -- create read request failed",
                   fmt::ptr(this));
       aRv.ThrowInvalidStateError("Could not create reader for ReadableStream");
       return;
     }
-    mReadRequest = std::move(readRequest);
   } else if (aInit.mData.IsArrayBufferView()) {
     // 10.2.2.18.3.1. Assert that init.data is of type BufferSource.
     isBufferSource = true;
@@ -902,10 +889,9 @@ void ImageDecoder::RequestFrameCount(uint32_t aKnownFrameCount) {
           [self = RefPtr{this}](const image::DecodeFrameCountResult& aResult) {
             self->OnFrameCountSuccess(aResult);
           },
-          [self = RefPtr{this}](const nsresult& aErr)
-              MOZ_CAN_RUN_SCRIPT_FOR_DEFINITION -> void {
-                self->OnFrameCountFailed(aErr);
-              });
+          [self = RefPtr{this}](const nsresult& aErr) {
+            self->OnFrameCountFailed(aErr);
+          });
 }
 
 void ImageDecoder::RequestDecodeFrames(uint32_t aFramesToDecode) {
@@ -1093,32 +1079,12 @@ void ImageDecoder::ResetWithoutRef(const MediaResult& aResult) {
 
 void ImageDecoder::Close(const MediaResult& aResult) {
   RefPtr<ImageDecoder> kungFuDeathGrip(this);
-  CloseAndCancelWithoutRef(aResult);
+  CloseWithoutRef(aResult);
 }
 
 void ImageDecoder::CloseWithoutRef(const MediaResult& aResult) {
-  if (RefPtr<ImageDecoderReadRequest> readRequest = CloseCommon(aResult)) {
-    readRequest->Destroy();
-  }
-}
-
-void ImageDecoder::CloseAndCancelWithoutRef(const MediaResult& aResult) {
-  if (RefPtr<ImageDecoderReadRequest> readRequest = CloseCommon(aResult)) {
-    // Runs script (the page's UnderlyingSource.cancel() callback). By this
-    // point every other piece of internal state has already been torn down
-    // above, so reentrant calls into this ImageDecoder see mClosed == true
-    // and no-op. This must only be reached from contexts that are already
-    // safe to run script in -- never from cycle-collection Unlink,
-    // ~ImageDecoder, or OnShutdown, which all go through CloseWithoutRef
-    // instead.
-    readRequest->DestroyAndCancel();
-  }
-}
-
-already_AddRefed<ImageDecoderReadRequest> ImageDecoder::CloseCommon(
-    const MediaResult& aResult) {
   if (mClosed) {
-    return nullptr;
+    return;
   }
 
   MOZ_LOG_FMT(gWebCodecsLog, LogLevel::Debug, "ImageDecoder {} Close '{}'",
@@ -1136,7 +1102,10 @@ already_AddRefed<ImageDecoderReadRequest> ImageDecoder::CloseCommon(
     mDecoder->Destroy();
   }
 
-  RefPtr<ImageDecoderReadRequest> readRequest = std::move(mReadRequest);
+  if (mReadRequest) {
+    mReadRequest->Destroy(/* aCancel */ true);
+    mReadRequest = nullptr;
+  }
 
   mSourceBuffer = nullptr;
   mDecoder = nullptr;
@@ -1160,8 +1129,6 @@ already_AddRefed<ImageDecoderReadRequest> ImageDecoder::CloseCommon(
     mShutdownWatcher->Destroy();
     mShutdownWatcher = nullptr;
   }
-
-  return readRequest.forget();
 }
 
 void ImageDecoder::Reset() {
@@ -1174,10 +1141,7 @@ void ImageDecoder::Close() {
 }
 
 void ImageDecoder::OnShutdown() {
-  // Global shutdown notifications (xpcom-will-shutdown, worker shutdown) are
-  // not a safe context to run script from either, so use the non-cancelling
-  // path, same as cycle-collection Unlink and ~ImageDecoder.
-  CloseWithoutRef(MediaResult(NS_ERROR_DOM_ABORT_ERR, "Shutdown"_ns));
+  Close(MediaResult(NS_ERROR_DOM_ABORT_ERR, "Shutdown"_ns));
 }
 
 }  // namespace mozilla::dom

@@ -48,7 +48,7 @@ bool ImageDecoderReadRequest::Initialize(const GlobalObject& aGlobal,
         "ImageDecoderReadRequest {} Initialize -- cannot get stream reader",
         fmt::ptr(this));
     mSourceBuffer->Complete(NS_ERROR_FAILURE);
-    Destroy();
+    Destroy(/* aCancel */ false);
     return false;
   }
 
@@ -57,26 +57,16 @@ bool ImageDecoderReadRequest::Initialize(const GlobalObject& aGlobal,
   return true;
 }
 
-void ImageDecoderReadRequest::Destroy() {
+void ImageDecoderReadRequest::Destroy(bool aCancel) {
   MOZ_LOG_FMT(gWebCodecsLog, LogLevel::Debug,
               "ImageDecoderReadRequest {} Destroy", fmt::ptr(this));
-  TeardownWithoutCancel();
-}
-
-void ImageDecoderReadRequest::DestroyAndCancel() {
-  MOZ_LOG_FMT(gWebCodecsLog, LogLevel::Debug,
-              "ImageDecoderReadRequest {} DestroyAndCancel", fmt::ptr(this));
 
   RefPtr<ImageDecoderReadRequest> self(this);
-  // Ensure we stop reading from the ReadableStream. This runs script (the
-  // page's UnderlyingSource.cancel() callback), so it must only be reachable
-  // from contexts that are already safe to run script in -- never from
-  // cycle-collection Unlink, ~ImageDecoder, or ImageDecoder::OnShutdown.
-  Cancel();
-  TeardownWithoutCancel();
-}
+  if (aCancel) {
+    // Ensure we stop reading from the ReadableStream.
+    Cancel();
+  }
 
-void ImageDecoderReadRequest::TeardownWithoutCancel() {
   if (mSourceBuffer) {
     if (!mSourceBuffer->IsComplete()) {
       mSourceBuffer->Complete(NS_ERROR_ABORT);
@@ -215,7 +205,7 @@ void ImageDecoderReadRequest::Complete(const MediaResult& aResult) {
     mDecoder->OnSourceBufferComplete(aResult);
   }
 
-  Destroy();
+  Destroy(/* aCancel */ false);
 }
 
 void ImageDecoderReadRequest::ChunkSteps(JSContext* aCx,
