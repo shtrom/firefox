@@ -504,8 +504,8 @@ pref("browser.urlbar.searchModeSwitcher.skipTabStop", true);
 pref("browser.urlbar.searchModeSwitcher.skipTabStop", false);
 #endif
 
-pref("browser.urlbar.trackerCount.featureGate", true);
-pref("browser.urlbar.trackerCount.enabled", true);
+pref("browser.urlbar.trackerCount.featureGate", false);
+pref("browser.urlbar.trackerCount.enabled", false);
 
 pref("browser.urlbar.trustPanel.featureGate", true);
 pref("browser.urlbar.trustPanel.breachAlerts.featureGate", true);
