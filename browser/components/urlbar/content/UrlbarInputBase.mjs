@@ -5331,7 +5331,7 @@ ${
 
     // The extension input sessions depends more on blur than on the fact we
     // actually cancel a running query, so we do it here.
-    if (lazy.ExtensionSearchHandler.hasActiveInputSession()) {
+    if (lazy?.ExtensionSearchHandler.hasActiveInputSession()) {
       lazy.ExtensionSearchHandler.handleInputCancelled();
     }
 
@@ -5359,7 +5359,9 @@ ${
     this._isKeyDownWithMeta = false;
     this._isKeyDownWithMetaAndLeft = false;
 
-    Services.obs.notifyObservers(null, "urlbar-blur");
+    if (typeof ChromeUtils != "undefined") {
+      Services.obs.notifyObservers(null, "urlbar-blur");
+    }
   }
 
   _on_click(event) {
