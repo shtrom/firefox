@@ -308,12 +308,10 @@ const DOMAPIs = [
       el.setAttribute("hidden", "");
       el;
     `,
-    prefs: [["dom.scoped-custom-element-registries.enabled", true]],
   },
   {
     context: CONTEXTS.PAGE,
     expression: `new Document()`,
-    prefs: [["dom.scoped-custom-element-registries.enabled", true]],
   },
 ];
 
