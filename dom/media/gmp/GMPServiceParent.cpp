@@ -304,6 +304,16 @@ GeckoMediaPluginServiceParent::Observe(nsISupports* aSubject,
     MOZ_ASSERT(mShuttingDown);
 #endif
     ShutdownGMPThread();
+
+    // InitializePlugins() settles mInitPromise from the GMP thread, which has
+    // now been joined, so a scan still in flight will never settle it. Do it
+    // here instead, so that EnsureInitialized() cannot leave a caller waiting
+    // forever.
+    MonitorAutoLock lock(mInitPromiseMonitor);
+    if (!mLoadPluginsFromDiskComplete) {
+      mLoadPluginsFromDiskComplete = true;
+      mInitPromise.RejectIfExists(NS_ERROR_ABORT, __func__);
+    }
   } else if (!strcmp(NS_XPCOM_WILL_SHUTDOWN_OBSERVER_ID, aTopic)) {
     mXPCOMWillShutdown = true;
   } else if (!strcmp("last-pb-context-exited", aTopic)) {
