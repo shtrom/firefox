@@ -7101,7 +7101,6 @@ static bool StyleEstablishesBFC(const ComputedStyle* aStyle) {
   return disp->IsContainPaint() || disp->IsContainLayout() ||
          disp->mContainerType &
              (StyleContainerType::SIZE | StyleContainerType::INLINE_SIZE) ||
-         GetLineClampMaxLines(disp->mWebkitLineClamp) ||
          disp->DisplayInside() == StyleDisplayInside::FlowRoot ||
          disp->IsAbsolutelyPositionedStyle() || disp->IsFloatingStyle() ||
          aStyle->IsRootElementStyle() || AnonymousBoxIsBFC(aStyle);
