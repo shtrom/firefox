@@ -6037,6 +6037,11 @@
   value: true
   mirror: always
 
+- name: dom.range.cut_contents.use_flat_tree
+  type: bool
+  value: false
+  mirror: always
+
 # If true, when user selects a range, `Selection` will split the range to
 # exclude unselectable content from the range.
 - name: dom.selection.exclude_non_selectable_nodes
