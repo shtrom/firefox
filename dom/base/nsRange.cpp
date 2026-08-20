@@ -1777,8 +1777,10 @@ static already_AddRefed<nsINode> CutCharacterData(
   return clone.forget();
 }
 
-void nsRange::CutContents(DocumentFragment** aFragment,
-                          ElementHandler aElementHandler, ErrorResult& aRv) {
+void nsRange::CutContents(
+    DocumentFragment** aFragment, ElementHandler aElementHandler,
+    const Maybe<AllowRangeCrossShadowBoundary>& aAllowCrossShadowBoundary,
+    ErrorResult& aRv) {
   if (aFragment && aElementHandler) {
     // Theoretically no reason it can't be handled, but not plumbed in enough to
     // test.
@@ -1791,7 +1793,9 @@ void nsRange::CutContents(DocumentFragment** aFragment,
   }
 
   const bool handleInFlatTree =
-      StaticPrefs::dom_range_cut_contents_use_flat_tree();
+      aAllowCrossShadowBoundary
+          ? *aAllowCrossShadowBoundary == AllowRangeCrossShadowBoundary::Yes
+          : StaticPrefs::dom_range_cut_contents_use_flat_tree();
   const AllowRangeCrossShadowBoundary allowRangeCrossShadowBoundary =
       handleInFlatTree ? AllowRangeCrossShadowBoundary::Yes
                        : AllowRangeCrossShadowBoundary::No;
@@ -2163,12 +2167,12 @@ void nsRange::CutContents(DocumentFragment** aFragment,
 }
 
 void nsRange::DeleteContents(ErrorResult& aRv) {
-  CutContents(nullptr, nullptr, aRv);
+  CutContents(nullptr, nullptr, Nothing(), aRv);
 }
 
 already_AddRefed<DocumentFragment> nsRange::ExtractContents(ErrorResult& rv) {
   RefPtr<DocumentFragment> fragment;
-  CutContents(getter_AddRefs(fragment), nullptr, rv);
+  CutContents(getter_AddRefs(fragment), nullptr, Nothing(), rv);
   return fragment.forget();
 }
 
@@ -2913,7 +2917,7 @@ void nsRange::SuppressContentsForPrintSelection(ErrorResult& aRv) {
         // preserve e.g. ::first-letter.
         aElement->AddStates(ElementState::SUPPRESS_FOR_PRINT_SELECTION);
       },
-      aRv);
+      Some(AllowRangeCrossShadowBoundary::Yes), aRv);
 }
 
 /* static */
