@@ -147,6 +147,11 @@ async function handleDroppedLink(
   }
 }
 
+/**
+ * Displays and manages the contents of a browser window's tabs. Every window
+ * instantiates this class during startup and exposes the instance in its window
+ * scope as `gBrowser`.
+ */
 export class Tabbrowser {
   static create(window) {
     window.gBrowser = new Tabbrowser(window);
@@ -892,10 +897,9 @@ export class Tabbrowser {
     hbox.hidden = false;
   }
 
-  /**
-   * BEGIN FORWARDED BROWSER PROPERTIES.  IF YOU ADD A PROPERTY TO THE BROWSER ELEMENT
-   * MAKE SURE TO ADD IT HERE AS WELL.
-   */
+  // Begin forwarded browser properties. If you add a property to the browser
+  // element, consider adding it here as well.
+
   get canGoBack() {
     return this.selectedBrowser.canGoBack;
   }
@@ -3436,7 +3440,7 @@ export class Tabbrowser {
    *
    * @param {string} aURI
    * @param {object} [options]
-   * @see this.addTab options
+   * @see Tabbrowser.addTab
    * @returns {MozTabbrowserTab|null}
    */
   addTrustedTab(aURI, options = {}) {
