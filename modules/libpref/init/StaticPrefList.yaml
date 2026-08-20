@@ -11860,6 +11860,13 @@
   mirror: always
   rust: true
 
+# Whether :-moz-placeholder is supported in content.
+- name: layout.css.moz-placeholder.content.enabled
+  type: RelaxedAtomicBool
+  value: false
+  mirror: always
+  rust: true
+
 # Whether the modern ::slider-* pseudos are enabled.
 - name: layout.css.modern-range-pseudos.enabled
   type: RelaxedAtomicBool
