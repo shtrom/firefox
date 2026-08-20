@@ -4,7 +4,9 @@
 
 package org.mozilla.fenix.ui.efficiency.tests
 
+import android.Manifest
 import androidx.core.net.toUri
+import androidx.test.filters.SdkSuppress
 import mozilla.components.concept.engine.mediasession.MediaSession
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SmokeTest
@@ -12,8 +14,11 @@ import org.mozilla.fenix.helpers.TestAssetHelper.getGenericAsset
 import org.mozilla.fenix.helpers.TestAssetHelper.mutedVideoPageAsset
 import org.mozilla.fenix.helpers.TestAssetHelper.videoPageAsset
 import org.mozilla.fenix.ui.efficiency.helpers.BaseTest
+import org.mozilla.fenix.ui.efficiency.pageObjects.SystemSettingsPage
 import org.mozilla.fenix.ui.efficiency.selectors.SettingsSiteSettingsAutoplaySelectors
 import org.mozilla.fenix.ui.efficiency.selectors.SettingsSiteSettingsExceptionsSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.SettingsSiteSettingsPermissionsSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.SettingsSiteSettingsSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.SitePermissionsSelectors
 
 /**
@@ -25,6 +30,11 @@ class SettingsSitePermissionsTest : BaseTest() {
 
     private val mockWebServer
         get() = fenixTestRule.mockWebServer
+
+    // SystemSettingsPage is not in PageContext (it is not a Fenix page); the landed UploadPermissionsTest
+    // constructs it the same way.
+    private val systemSettings
+        get() = SystemSettingsPage(composeRule)
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2095125
     // The group check replaces legacy's three withEffectiveVisibility(VISIBLE) assertions: these are UIAutomator
@@ -96,6 +106,38 @@ class SettingsSitePermissionsTest : BaseTest() {
             .mozVerify(SettingsSiteSettingsExceptionsSelectors.EMPTY_EXCEPTIONS_LIST)
     }
 
+    // Verifies that you can go to System settings and change the app's permissions from inside the app.
+    // The legacy test carries no TestRail link, so none is recorded here.
+    @SmokeTest
+    @SdkSuppress(minSdkVersion = 29)
+    @Test
+    fun systemBlockedPermissionsRedirectToSystemAppSettingsTest() {
+        on.settingsSiteSettingsPermissions.navigateToPage().verifyBlockedByAndroidSection().goBackToSiteSettings()
+
+        on.settingsSiteSettings.openPermission(SettingsSiteSettingsSelectors.LOCATION_BUTTON)
+        on.settingsSiteSettingsPermissions.verifyBlockedByAndroidSection().goBackToSiteSettings()
+
+        on.settingsSiteSettings.openPermission(SettingsSiteSettingsSelectors.MICROPHONE_BUTTON)
+        on.settingsSiteSettingsPermissions
+            .verifyBlockedByAndroidSection()
+            .mozClick(SettingsSiteSettingsPermissionsSelectors.GO_TO_SETTINGS_BUTTON)
+
+        systemSettings.openAppPermissions()
+        SYSTEM_PERMISSIONS.forEach { (label, androidPermission) ->
+            systemSettings.allowAppPermission(label)
+            systemSettings.mozPressBack()
+            systemSettings.verifySystemPermissionGranted(label, androidPermission)
+        }
+
+        on.settingsSiteSettingsPermissions.returnFromSystemSettings().verifyUnblockedByAndroid().goBackToSiteSettings()
+
+        on.settingsSiteSettings.openPermission(SettingsSiteSettingsSelectors.LOCATION_BUTTON)
+        on.settingsSiteSettingsPermissions.verifyUnblockedByAndroid().goBackToSiteSettings()
+
+        on.settingsSiteSettings.openPermission(SettingsSiteSettingsSelectors.CAMERA_BUTTON)
+        on.settingsSiteSettingsPermissions.verifyUnblockedByAndroid()
+    }
+
     companion object {
         const val PERMISSIONS_TEST_PAGE = "https://mozilla-mobile.github.io/testapp/v2.0/permissions"
 
@@ -105,5 +147,13 @@ class SettingsSitePermissionsTest : BaseTest() {
         val PERMISSIONS_TEST_PAGE_HOST =
             requireNotNull(PERMISSIONS_TEST_PAGE.toUri().host) { "no host in $PERMISSIONS_TEST_PAGE" }
         val PERMISSIONS_TEST_PAGE_ORIGIN = PERMISSIONS_TEST_PAGE.toUri().let { "${it.scheme}://${it.authority}" }
+
+        // Label as the settings list shows it, paired with the permission the OS is asked about.
+        val SYSTEM_PERMISSIONS =
+            listOf(
+                "Camera" to Manifest.permission.CAMERA,
+                "Location" to Manifest.permission.ACCESS_FINE_LOCATION,
+                "Microphone" to Manifest.permission.RECORD_AUDIO,
+            )
     }
 }

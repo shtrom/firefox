@@ -4,15 +4,18 @@
 
 package org.mozilla.fenix.ui.efficiency.pageObjects
 
+import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.test.uiautomator.By
+import org.junit.Assert.assertTrue
 import org.mozilla.fenix.helpers.AppAndSystemHelper
 import org.mozilla.fenix.helpers.Constants
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.SystemPickerCapabilities
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
+import org.mozilla.fenix.helpers.TestHelper.appContext
 import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
@@ -126,6 +129,23 @@ class SystemSettingsPage(composeRule: AndroidComposeTestRule<HomeActivityIntentT
 
     override fun mozGetSelectorsByGroup(group: String): List<Selector> {
         return SystemSettingsSelectors.all.filter { it.groups.contains(group) }
+    }
+
+    /**
+     * Assert [permissionName] is granted, both in the settings UI and according to the OS.
+     *
+     * Legacy branched on Build.VERSION here: up to API 30 it asserted the row title AND its "Only while app is in use"
+     * summary, and above that only the title -- which is present whether the permission is allowed or denied, so on a
+     * modern release that assertion could not fail. The row check is kept for parity, and the OS's own state is what
+     * decides: it needs no version branch and cannot pass for a denied permission.
+     */
+    fun verifySystemPermissionGranted(permissionName: String, androidPermission: String): SystemSettingsPage {
+        mozVerify(SystemSettingsSelectors.APP_PERMISSION_ROW(permissionName), timeout = waitingTime)
+        assertTrue(
+            "$permissionName still reads as denied from the OS (checked $androidPermission)",
+            appContext.checkSelfPermission(androidPermission) == PackageManager.PERMISSION_GRANTED,
+        )
+        return this
     }
 
     private companion object {
