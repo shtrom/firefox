@@ -35,7 +35,8 @@ shippable-newssite-applink-startup:
         tier: 1
     platform: perftest-android-em-arm64/opt
     attributes:
-        cron: true
+        cron: false
+    run-on-projects: [autoland]
     fetches:
         toolchain:
             - android-sdk-macos
@@ -76,7 +77,8 @@ shippable-first-frame-startup:
         tier: 1
     platform: perftest-android-em-arm64/opt
     attributes:
-        cron: true
+        cron: false
+    run-on-projects: [autoland]
     fetches:
         toolchain:
             - android-sdk-macos
