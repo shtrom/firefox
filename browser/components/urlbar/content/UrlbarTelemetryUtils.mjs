@@ -65,7 +65,7 @@ export class UrlbarTelemetryUtils {
     if (details.selType === "dismiss") {
       return "dismiss";
     }
-    if (MouseEvent.isInstance(event)) {
+    if (UrlbarShared.isInstance(event, MouseEvent)) {
       // TODO (Bug 2018250): Don’t rely on `event` and use `selType` or
       // `details.element` if possible.
       return /** @type {HTMLElement} */ (event.target).classList.contains(

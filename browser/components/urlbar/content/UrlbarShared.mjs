@@ -92,6 +92,22 @@ export const UrlbarShared = {
           element.documentGlobal.windowUtils.getBoundsWithoutFlushing(element)
       : element => element.getBoundingClientRect(),
 
+  /**
+   * Checks whether a value implements a DOM interface. `isInstance` is
+   * chrome-only, and unlike `instanceof` it holds for a value from another
+   * global; a content realm compares against its own interface object.
+   *
+   * @param {any} value
+   *   The value to check.
+   * @param {object} iface
+   *   The interface, e.g. `KeyboardEvent`.
+   * @returns {boolean}
+   */
+  isInstance:
+    typeof ChromeUtils != "undefined"
+      ? (value, iface) => iface.isInstance(value)
+      : (value, iface) => value instanceof iface,
+
   // REGEXP_ constants are duplicated from UrlUtils.sys.mjs
   // Regex matching on whitespaces.
   REGEXP_SPACES: /\s+/,
@@ -647,7 +663,7 @@ export const UrlbarShared = {
         : this.ICON.DEFAULT;
     }
     if (
-      URL.isInstance(url) &&
+      this.isInstance(url, URL) &&
       this.PROTOCOLS_WITH_ICONS.includes(url.protocol)
     ) {
       return "page-icon:" + url.href;

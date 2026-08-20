@@ -787,7 +787,7 @@ ${
     if (this.isPrivate) {
       return "private";
     }
-    return lazy.AIWindow.isAIWindowActive(this.window)
+    return lazy?.AIWindow.isAIWindowActive(this.window)
       ? "smartwindow"
       : "classic";
   }
@@ -1234,7 +1234,7 @@ ${
    * @param {Event} [event] The event triggering the open.
    */
   handleCommand(event = null) {
-    let isMouseEvent = MouseEvent.isInstance(event);
+    let isMouseEvent = UrlbarShared.isInstance(event, MouseEvent);
     if (isMouseEvent && event.button == 2) {
       // Do nothing for right clicks.
       return;
@@ -1406,7 +1406,7 @@ ${
     // been updated yet, because the input event happens after composition end.
     // We can't trust element nor _resultForCurrentValue targets in that case,
     // so we always generate a new heuristic to load.
-    let isComposing = this.editor.composing;
+    let isComposing = this.isComposing;
 
     // Use the selected element if we have one; this is usually the case
     // when the view is open.
@@ -6057,6 +6057,16 @@ ${
     }
   }
 
+  /**
+   * Whether an IME composition is in progress. Mirrors chrome-only
+   * `editor.composing`.
+   *
+   * @returns {boolean}
+   */
+  get isComposing() {
+    return this.#compositionState == UrlbarShared.COMPOSITION.COMPOSING;
+  }
+
   _on_compositionstart() {
     if (this.#compositionState == UrlbarShared.COMPOSITION.COMPOSING) {
       throw new Error("Trying to start a nested composition?");
@@ -6198,7 +6208,7 @@ ${
     if (!droppedData) {
       return;
     }
-    let droppedString = URL.isInstance(droppedData)
+    let droppedString = UrlbarShared.isInstance(droppedData, URL)
       ? droppedData.href
       : droppedData;
     if (droppedString == this.window.gBrowser.currentURI.spec) {

@@ -844,12 +844,15 @@ export class UrlbarChildController {
     if (this.#input.sapName == "searchbar") {
       return false;
     }
+    if (!UrlbarShared.isInstance(event, KeyboardEvent)) {
+      return false;
+    }
+    let keyEvent = /** @type {KeyboardEvent} */ (event);
     return (
-      KeyboardEvent.isInstance(event) &&
-      event.keyCode == KeyEvent.DOM_VK_RETURN &&
+      keyEvent.keyCode == KeyEvent.DOM_VK_RETURN &&
       (UrlbarContentUtils.getPlatform() == "macosx"
-        ? event.metaKey
-        : event.ctrlKey) &&
+        ? keyEvent.metaKey
+        : keyEvent.ctrlKey) &&
       !(/** @type {any} */ (event)._disableCanonization) &&
       UrlbarPrefs.get("ctrlCanonizesURLs")
     );
@@ -866,7 +869,7 @@ export class UrlbarChildController {
    * @returns {"current" | "tabshifted" | "tab" | "save" | "window"}
    */
   whereToOpen(event) {
-    let isKeyboardEvent = KeyboardEvent.isInstance(event);
+    let isKeyboardEvent = UrlbarShared.isInstance(event, KeyboardEvent);
     let reuseEmpty = isKeyboardEvent;
     /** @type {"current" | "tabshifted" | "tab" | "save" | "window"} */
     let where;

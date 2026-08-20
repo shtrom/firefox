@@ -1760,7 +1760,7 @@ export class UrlbarView {
           element.removeAttribute(key);
         } else if (typeof value == "boolean") {
           element.toggleAttribute(key, value);
-        } else if (Blob.isInstance(value) && result) {
+        } else if (UrlbarShared.isInstance(value, Blob) && result) {
           element.setAttribute(key, this.#getBlobUrlForResult(result, value));
         } else {
           element.setAttribute(key, value);
