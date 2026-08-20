@@ -69,7 +69,6 @@ const WINDOW_ATTRIBUTES = ["width", "height", "screenX", "screenY", "sizemode"];
 
 const CHROME_FLAGS_MAP = [
   [Ci.nsIWebBrowserChrome.CHROME_TITLEBAR, "titlebar"],
-  [Ci.nsIWebBrowserChrome.CHROME_WINDOW_CLOSE, "close"],
   [Ci.nsIWebBrowserChrome.CHROME_TOOLBAR, "toolbar"],
   [Ci.nsIWebBrowserChrome.CHROME_PERSONAL_TOOLBAR, "personalbar"],
   [Ci.nsIWebBrowserChrome.CHROME_MENUBAR, "menubar"],

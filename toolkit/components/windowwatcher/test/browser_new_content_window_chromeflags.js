@@ -65,10 +65,6 @@ const DISALLOWED = {
     flag: Ci.nsIWebBrowserChrome.CHROME_TITLEBAR,
     defaults_to: true,
   },
-  close: {
-    flag: Ci.nsIWebBrowserChrome.CHROME_WINDOW_CLOSE,
-    defaults_to: true,
-  },
   resizable: {
     flag: Ci.nsIWebBrowserChrome.CHROME_WINDOW_RESIZE,
     defaults_to: true,

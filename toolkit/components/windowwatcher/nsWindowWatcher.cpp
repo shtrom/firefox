@@ -1949,9 +1949,6 @@ uint32_t nsWindowWatcher::CalculateChromeFlagsForSystem(
   if (aFeatures.GetBoolWithDefault("titlebar", false, &presenceFlag)) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_TITLEBAR;
   }
-  if (aFeatures.GetBoolWithDefault("close", false, &presenceFlag)) {
-    chromeFlags |= nsIWebBrowserChrome::CHROME_WINDOW_CLOSE;
-  }
   if (aFeatures.GetBoolWithDefault("toolbar", false, &presenceFlag)) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_TOOLBAR;
   }
@@ -2017,10 +2014,6 @@ uint32_t nsWindowWatcher::CalculateChromeFlagsForSystem(
   if (!aFeatures.Exists("titlebar")) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_TITLEBAR;
   }
-  if (!aFeatures.Exists("close")) {
-    chromeFlags |= nsIWebBrowserChrome::CHROME_WINDOW_CLOSE;
-  }
-
   if (aDialog && !aFeatures.IsEmpty() && !presenceFlag) {
     chromeFlags = nsIWebBrowserChrome::CHROME_DEFAULT;
   }

@@ -546,9 +546,6 @@ nsresult nsAppShellService::JustCreateTopWindow(
     if (aChromeMask & nsIWebBrowserChrome::CHROME_TITLEBAR) {
       widgetInitData.mBorderStyle |= BorderStyle::Title;
     }
-    if (aChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_CLOSE) {
-      widgetInitData.mBorderStyle |= BorderStyle::Close;
-    }
     if (aChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_RESIZE) {
       widgetInitData.mResizable = true;
       widgetInitData.mBorderStyle |= BorderStyle::ResizeH;
