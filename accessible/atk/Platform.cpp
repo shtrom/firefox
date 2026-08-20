@@ -30,7 +30,6 @@ GType (*gAtkTableCellGetTypeFunc)();
 extern "C" {
 typedef GType (*AtkGetTypeType)(void);
 typedef void (*AtkBridgeAdaptorInit)(int*, char**[]);
-typedef void (*AtkBridgeAdaptorCleanup)(void);
 }
 
 static PRLibrary* sATKLib = nullptr;
@@ -51,13 +50,10 @@ struct AtkBridgeModule {
   PRLibrary* lib;
   const char* initName;
   AtkBridgeAdaptorInit init;
-  const char* cleanupName;
-  AtkBridgeAdaptorCleanup cleanup;
 };
 
-static AtkBridgeModule sAtkBridge = {"libatk-bridge-2.0.so.0",     nullptr,
-                                     "atk_bridge_adaptor_init",    nullptr,
-                                     "atk_bridge_adaptor_cleanup", nullptr};
+static AtkBridgeModule sAtkBridge = {"libatk-bridge-2.0.so.0", nullptr,
+                                     "atk_bridge_adaptor_init", nullptr};
 
 static nsresult LoadGtkModule(AtkBridgeModule& aModule) {
   NS_ENSURE_ARG(aModule.libName);
@@ -68,9 +64,7 @@ static nsresult LoadGtkModule(AtkBridgeModule& aModule) {
 
   // we have loaded the library, try to get the function ptrs
   if (!(aModule.init = (AtkBridgeAdaptorInit)PR_FindFunctionSymbol(
-            aModule.lib, aModule.initName)) ||
-      !(aModule.cleanup = (AtkBridgeAdaptorCleanup)PR_FindFunctionSymbol(
-            aModule.lib, aModule.cleanupName))) {
+            aModule.lib, aModule.initName))) {
     // fail, :(
     PR_UnloadLibrary(aModule.lib);
     aModule.lib = nullptr;
@@ -142,18 +136,11 @@ void a11y::PlatformShutdown() {
   }
 
   if (sAtkBridge.lib) {
-    // Tell atk-bridge to deregister from the AT-SPI registry. Without this, if
-    // the accessibility engine is shut down and later restarted, the later call
-    // to atk_bridge_adaptor_init would be a no-op, so we would never
-    // re-register with AT-SPI.
-    if (sAtkBridge.cleanup) {
-      (*sAtkBridge.cleanup)();
-    }
-    // Do not unload the library itself; an exit function it registers will
-    // take care of that.
+    // Do not shutdown/unload atk-bridge,
+    // an exit function registered will take care of it
+    // PR_UnloadLibrary(sAtkBridge.lib);
     sAtkBridge.lib = nullptr;
     sAtkBridge.init = nullptr;
-    sAtkBridge.cleanup = nullptr;
   }
   // if (sATKLib) {
   //     PR_UnloadLibrary(sATKLib);
