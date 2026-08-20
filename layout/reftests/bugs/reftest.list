@@ -385,15 +385,14 @@ fuzzy-if(Android&&isDebugBuild,0-229,0-45) == 315920-13b.html 315920-13-ref.html
 == 315920-15.html 315920-15-ref.html
 == 315920-16.html 315920-16-ref.html
 fuzzy-if(Android,0-2,0-18) == 315920-17.html 315920-17-ref.html
-# Chrome failed loads trigger a parent process crash on android.
-skip-if(Android) == chrome://reftest/content/bugs/315920-18a.html chrome://reftest/content/bugs/315920-18-ref.html
-skip-if(Android) == chrome://reftest/content/bugs/315920-18b.html chrome://reftest/content/bugs/315920-18-ref.html
-skip-if(Android) == chrome://reftest/content/bugs/315920-18c.html chrome://reftest/content/bugs/315920-18-ref.html
-skip-if(Android) == chrome://reftest/content/bugs/315920-18e.html chrome://reftest/content/bugs/315920-18-ref.html
-skip-if(Android) == chrome://reftest/content/bugs/315920-18f.html chrome://reftest/content/bugs/315920-18-ref.html
-skip-if(Android) == chrome://reftest/content/bugs/315920-18h.html chrome://reftest/content/bugs/315920-18-ref.html
-skip-if(Android) == chrome://reftest/content/bugs/315920-18i.html chrome://reftest/content/bugs/315920-18-ref.html
-skip-if(Android) == chrome://reftest/content/bugs/315920-19.html chrome://reftest/content/bugs/315920-19-ref.html
+== chrome://reftest/content/bugs/315920-18a.html chrome://reftest/content/bugs/315920-18-ref.html
+== chrome://reftest/content/bugs/315920-18b.html chrome://reftest/content/bugs/315920-18-ref.html
+== chrome://reftest/content/bugs/315920-18c.html chrome://reftest/content/bugs/315920-18-ref.html
+== chrome://reftest/content/bugs/315920-18e.html chrome://reftest/content/bugs/315920-18-ref.html
+== chrome://reftest/content/bugs/315920-18f.html chrome://reftest/content/bugs/315920-18-ref.html
+== chrome://reftest/content/bugs/315920-18h.html chrome://reftest/content/bugs/315920-18-ref.html
+== chrome://reftest/content/bugs/315920-18i.html chrome://reftest/content/bugs/315920-18-ref.html
+== chrome://reftest/content/bugs/315920-19.html chrome://reftest/content/bugs/315920-19-ref.html
 fuzzy(0-1,0-1) == chrome://reftest/content/bugs/315920-20.svg chrome://reftest/content/bugs/315920-20-ref.svg
 == chrome://reftest/content/bugs/315920-21.svg chrome://reftest/content/bugs/315920-21-ref.svg
 == 315920-22.html 315920-22-ref.html
