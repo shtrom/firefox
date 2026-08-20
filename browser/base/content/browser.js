@@ -1536,6 +1536,7 @@ function CreateContainerTabMenu(event) {
   createUserContextMenu(event, {
     useAccessKeys: false,
     showDefaultTab: true,
+    containerSource: "new_tab_button",
   });
 }
 
@@ -1918,6 +1919,9 @@ let gFileMenu = {
 function openNewUserContextTab(event) {
   openTrustedLinkIn(BROWSER_NEW_TAB_URL, "tab", {
     userContextId: parseInt(event.target.getAttribute("data-usercontextid")),
+    eventDetail: {
+      containerSource: event.target.dataset.containerEntrypoint,
+    },
   });
 }
 
