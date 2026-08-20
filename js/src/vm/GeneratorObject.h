@@ -51,14 +51,15 @@ class AbstractGeneratorObject : public NativeObject {
                 "RESUME_INDEX_INITIAL_YIELD must match self-hosting define for "
                 "resume index initial yield.");
 
+ private:
+  static JSObject* createModuleGenerator(JSContext* cx, AbstractFramePtr frame);
+
  public:
   static JSObject* createFromFrame(JSContext* cx, AbstractFramePtr frame);
   static AbstractGeneratorObject* create(JSContext* cx, HandleFunction callee,
+                                         HandleScript script,
                                          HandleObject environmentChain,
                                          Handle<ArgumentsObject*> argsObject);
-  static AbstractGeneratorObject* create(JSContext* cx,
-                                         Handle<ModuleObject*> module,
-                                         HandleObject environmentChain);
 
   static void resume(JSContext* cx, InterpreterActivation& activation,
                      Handle<AbstractGeneratorObject*> genObj, HandleValue arg,

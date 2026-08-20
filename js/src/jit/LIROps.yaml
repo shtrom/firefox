@@ -3443,6 +3443,15 @@
   num_temps: 1
   call_instruction: true
 
+- name: Generator
+  result_type: WordSized
+  operands:
+    callee: WordSized
+    environmentChain: WordSized
+    argsObject: WordSized
+  call_instruction: true
+  mir_op: true
+
 - name: MaybeExtractAwaitValue
   result_type: BoxedValue
   operands:

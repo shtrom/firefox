@@ -2729,18 +2729,13 @@ bool WarpBuilder::build_CheckThisReinit(BytecodeLocation loc) {
 bool WarpBuilder::build_Generator(BytecodeLocation loc) {
   MOZ_ASSERT(usesEnvironmentChain());
 
+  MDefinition* callee = getCallee();
   MDefinition* environmentChain = current->environmentChain();
+  MDefinition* argsObj = info().needsArgsObj() ? current->argumentsObject()
+                                               : constant(Int32Value(0));
 
-  MInstruction* generator;
-  if (script_->isModule()) {
-    MDefinition* module = constant(ObjectValue(*script_->module()));
-    generator = MModuleGenerator::New(alloc(), module, environmentChain);
-  } else {
-    MDefinition* callee = getCallee();
-    MDefinition* argsObj = info().needsArgsObj() ? current->argumentsObject()
-                                                 : constant(NullValue());
-    generator = MGenerator::New(alloc(), callee, environmentChain, argsObj);
-  }
+  MGenerator* generator =
+      MGenerator::New(alloc(), callee, environmentChain, argsObj);
 
   current->add(generator);
   current->push(generator);

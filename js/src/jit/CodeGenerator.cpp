@@ -21850,26 +21850,16 @@ void CodeGenerator::visitCheckThisReinit(LCheckThisReinit* ins) {
 void CodeGenerator::visitGenerator(LGenerator* lir) {
   Register callee = ToRegister(lir->callee());
   Register environmentChain = ToRegister(lir->environmentChain());
-  ValueOperand argsObject = ToValue(lir->argsObject());
+  Register argsObject = ToRegister(lir->argsObject());
 
   pushArg(argsObject);
   pushArg(environmentChain);
+  pushArg(ImmGCPtr(current->mir()->info().script()));
   pushArg(callee);
 
-  using Fn =
-      JSObject* (*)(JSContext * cx, HandleFunction, HandleObject, HandleValue);
+  using Fn = JSObject* (*)(JSContext * cx, HandleFunction, HandleScript,
+                           HandleObject, HandleObject);
   callVM<Fn, CreateGenerator>(lir);
-}
-
-void CodeGenerator::visitModuleGenerator(LModuleGenerator* lir) {
-  Register module = ToRegister(lir->module());
-  Register environmentChain = ToRegister(lir->environmentChain());
-
-  pushArg(environmentChain);
-  pushArg(module);
-
-  using Fn = JSObject* (*)(JSContext * cx, Handle<ModuleObject*>, HandleObject);
-  callVM<Fn, CreateModuleGenerator>(lir);
 }
 
 void CodeGenerator::visitAsyncResolve(LAsyncResolve* lir) {
