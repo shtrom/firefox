@@ -1453,8 +1453,12 @@ pref("browser.xul.error_pages.expert_bad_cert", false);
 pref("browser.xul.error_pages.show_safe_browsing_details_on_load", false);
 
 // Enable the one-click search call-to-action on the online dnsNotFound error
-// page. Disabled by default; consumers land in later bugs (meta bug 2055374).
+// page. On in Nightly, off elsewhere until a Nimbus rollout (bug 2055718).
+#ifdef NIGHTLY_BUILD
+pref("browser.netError.searchCTA.enabled", true);
+#else
 pref("browser.netError.searchCTA.enabled", false);
+#endif
 
 // Freshness window for the search CTA's connectivity signal. If the last
 // captive-portal check is older than this, an authoritative re-check runs
