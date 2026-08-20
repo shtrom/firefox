@@ -18,7 +18,6 @@ UNIFIED_SOURCES += [
     "../FFmpegUtils.cpp",
     "../FFmpegVideoDecoder.cpp",
     "../FFmpegVideoEncoder.cpp",
-    "../FFmpegVulkanVideoDecoder.cpp",
 ]
 SOURCES += [
     "FFVPXRuntimeLinker.cpp",
@@ -45,11 +44,7 @@ DEFINES["USING_MOZFFVPX"] = True
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
-if (
-    CONFIG["MOZ_ENABLE_VAAPI"]
-    or CONFIG["MOZ_ENABLE_V4L2"]
-    or CONFIG["MOZ_ENABLE_VULKAN_VIDEO"]
-):
+if CONFIG["MOZ_ENABLE_VAAPI"] or CONFIG["MOZ_ENABLE_V4L2"]:
     UNIFIED_SOURCES += ["../FFmpegVideoFramePool.cpp"]
     CXXFLAGS += CONFIG["MOZ_LIBDRM_CFLAGS"]
     if not CONFIG["MOZ_SYSTEM_LIBDRM"]:
@@ -59,8 +54,6 @@ if (
         ]
     USE_LIBS += ["mozva"]
     DEFINES["MOZ_USE_HWDECODE"] = 1
-    if CONFIG["MOZ_ENABLE_VULKAN_VIDEO"]:
-        DEFINES["MOZ_USE_HWDECODE_VULKAN"] = 1
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
     DEFINES["MOZ_ENABLE_D3D11VA"] = 1
     DEFINES["MOZ_USE_HWDECODE"] = 1

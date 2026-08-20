@@ -62,7 +62,7 @@ class FFmpegDecoderModule : public PlatformDecoderModule {
         AV_HWDEVICE_TYPE_D3D11VA,
 #  endif
 #  ifdef MOZ_WIDGET_GTK
-#    ifdef MOZ_USE_HWDECODE_VULKAN
+#    if LIBAVCODEC_VERSION_MAJOR >= 60
         AV_HWDEVICE_TYPE_VULKAN,
 #    endif
         AV_HWDEVICE_TYPE_VAAPI,
