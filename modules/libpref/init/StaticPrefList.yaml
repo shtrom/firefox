@@ -5716,13 +5716,6 @@
   value: 128
   mirror: always
 
-# Is support for View Transitions Level 1 enabled?
-- name: dom.viewTransitions.enabled
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-  rust: true
-
 - name: dom.viewTransitions.cross-document.enabled
   type: RelaxedAtomicBool
   value: false
