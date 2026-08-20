@@ -4788,8 +4788,11 @@ export class Tabbrowser {
   /**
    * @typedef {object} TabGroupWorkingData
    * @property {TabGroupStateData} stateData
+   *   Session state of the group being restored.
    * @property {MozTabbrowserTabGroup|undefined} node
+   *   The group's element, once the first of its tabs has been created.
    * @property {DocumentFragment} containingTabsFragment
+   *   Fragment collecting the group's tabs until the group is inserted.
    */
 
   /**
@@ -4800,8 +4803,11 @@ export class Tabbrowser {
   /**
    * @typedef {object} SplitViewWorkingData
    * @property {MozTabbrowserTab[]} tabs
+   *   The split view's tabs, collected as they are created.
    * @property {MozTabSplitViewWrapper|undefined} node
+   *   The split view's element, created once all of its tabs exist.
    * @property {number} numberOfTabs
+   *   How many tabs the split view is expected to contain.
    */
 
   /**
@@ -7949,9 +7955,14 @@ export class Tabbrowser {
   /**
    * @typedef {object} TabMoveState
    * @property {number} tabIndex
+   *   The tab's position within the `tabs` array.
    * @property {number} [elementIndex]
+   *   Its position within the `MozTabbrowserTabs::dragAndDropElements` array,
+   *   for a visible tab.
    * @property {string} [tabGroupId]
+   *   ID of the tab group the tab is in, if any.
    * @property {number} [splitViewId]
+   *   ID of the split view the tab is in, if any.
    */
 
   /**
