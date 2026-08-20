@@ -3967,7 +3967,6 @@ export class Tabbrowser {
    * Show the list of tabs <browsers> that are part of a split view.
    *
    * @param {MozTabbrowserTab[]} tabs
-   * @param {boolean} isActive
    */
   showSplitViewPanels(tabs) {
     const panels = [];
@@ -4014,7 +4013,7 @@ export class Tabbrowser {
    * @param {string} id
    * @param {string} color
    * @param {boolean} collapsed
-   * @param {string} [label=]
+   * @param {string} [label]
    * @param {boolean} [isAdoptingGroup=false]
    * @returns {MozTabbrowserTabGroup}
    */
@@ -4033,7 +4032,7 @@ export class Tabbrowser {
   /**
    * Adds a new tab group.
    *
-   * @param {object[]} tabs
+   * @param {object[]} tabsAndSplitViews
    *   The set of tabs or split view to include in the group.
    * @param {object} [options]
    * @param {string} [options.id]
