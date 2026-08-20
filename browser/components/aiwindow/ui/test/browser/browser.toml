@@ -27,6 +27,8 @@ support-files = [
   "test_memories_icon_button.mjs",
   "test_grouped_chips_page.html",
   "test_grouped_chips.mjs",
+  "test_smartwindow_promo_page.html",
+  "test_smartwindow_promo.mjs",
   "test_smartwindow_prompts_page.html",
   "test_smartwindow_prompts.mjs",
   "test_smartwindow_panel_list_page.html",
@@ -173,6 +175,8 @@ skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && tsan",
   "os == 'win' && os_version == '11.26200' && arch == 'x86_64' && ccov",
 ]
+
+["browser_aiwindow_smartwindow_promo.js"]
 
 ["browser_aiwindow_stop_generation.js"]
 
