@@ -197,8 +197,7 @@ ${
 
         <moz-urlbar-slot name="site-info" />
         <xul:moz-input-box tooltip="aHTMLTooltip"
-                           class="urlbar-input-box"
-                           flex="1">
+                           class="urlbar-input-box">
           <!-- In the addressbar, there will be an input with id="urlbar-scheme" here. -->
           <input class="urlbar-input textbox-input"
                  role="combobox"
