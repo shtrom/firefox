@@ -2261,6 +2261,22 @@ EPlatformDisabledState PlatformDisabledState() {
   return ReadPlatformDisabledState();
 }
 
+void MaybeStartForceEnabled() {
+  if (!XRE_IsParentProcess()) {
+    // Accessibility in content processes is driven by the parent process.
+    return;
+  }
+  // This also ensures the pref is being watched, so a later change to force
+  // enabled starts the service even if it wasn't already force enabled here.
+  if (PlatformDisabledState() != ePlatformIsForceEnabled) {
+    return;
+  }
+  if (GetAccService()) {
+    return;
+  }
+  GetOrCreateAccService(nsAccessibilityService::ePlatformAPI);
+}
+
 EPlatformDisabledState ReadPlatformDisabledState() {
   sPlatformDisabledState =
       Preferences::GetInt(PREF_ACCESSIBILITY_FORCE_DISABLED, 0);
