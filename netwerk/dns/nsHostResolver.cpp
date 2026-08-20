@@ -695,6 +695,9 @@ already_AddRefed<nsHostRecord> nsHostResolver::FromCache(
   // put reference to host record on stack...
   RefPtr<nsHostRecord> result = aRec;
 
+  aRec->mFromStaleCache =
+      aRec->CheckExpiration(TimeStamp::NowLoRes()) == nsHostRecord::EXP_GRACE;
+
   // For cached entries that are in the grace period or negative, use the cache
   // but start a new lookup in the background.
   //
@@ -1472,6 +1475,8 @@ nsHostResolver::LookupStatus nsHostResolver::CompleteLookupLocked(
   MOZ_ASSERT(rec->pb == pb);
   MOZ_ASSERT(rec->IsAddrRecord());
 
+  rec->mFromStaleCache = false;
+
   RefPtr<AddrHostRecord> addrRec = do_QueryObject(rec);
   MOZ_ASSERT(addrRec);
 
@@ -1665,6 +1670,8 @@ nsHostResolver::LookupStatus nsHostResolver::CompleteLookupByTypeLocked(
   MOZ_ASSERT(rec);
   MOZ_ASSERT(rec->pb == pb);
   MOZ_ASSERT(!rec->IsAddrRecord());
+
+  rec->mFromStaleCache = false;
 
   if (rec->LoadNative()) {
     // If this was resolved using the native resolver

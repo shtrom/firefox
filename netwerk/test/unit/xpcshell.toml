@@ -698,6 +698,7 @@ skip-if = [
 
 ["test_dns_service.js"]
 
+["test_dns_stale_zero_ttl.js"]
 ["test_dns_stress.js"]
 
 ["test_domain_eviction.js"]
