@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 const NODE_MODE$1 = false;
-// Allows minifiers to rename references to globalThis
-const global$3 = globalThis;
+const global$2 = window;
 /**
  * Whether the current browser supports `adoptedStyleSheets`.
  */
-const supportsAdoptingStyleSheets = global$3.ShadowRoot &&
-    (global$3.ShadyCSS === undefined || global$3.ShadyCSS.nativeShadow) &&
+const supportsAdoptingStyleSheets = global$2.ShadowRoot &&
+    (global$2.ShadyCSS === undefined || global$2.ShadyCSS.nativeShadow) &&
     'adoptedStyleSheets' in Document.prototype &&
     'replace' in CSSStyleSheet.prototype;
 const constructionToken = Symbol();
@@ -96,7 +95,7 @@ const css = (strings, ...values) => {
 /**
  * Applies the given styles to a `shadowRoot`. When Shadow DOM is
  * available but `adoptedStyleSheets` is not, styles are appended to the
- * `shadowRoot` to [mimic the native feature](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot/adoptedStyleSheets).
+ * `shadowRoot` to [mimic spec behavior](https://wicg.github.io/construct-stylesheets/#using-constructed-stylesheets).
  * Note, when shimming is used, any styles that are subsequently placed into
  * the shadowRoot should be placed *before* any shimmed adopted styles. This
  * will match spec behavior that gives adopted sheets precedence over styles in
@@ -107,16 +106,16 @@ const adoptStyles = (renderRoot, styles) => {
         renderRoot.adoptedStyleSheets = styles.map((s) => s instanceof CSSStyleSheet ? s : s.styleSheet);
     }
     else {
-        for (const s of styles) {
+        styles.forEach((s) => {
             const style = document.createElement('style');
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const nonce = global$3['litNonce'];
+            const nonce = global$2['litNonce'];
             if (nonce !== undefined) {
                 style.setAttribute('nonce', nonce);
             }
             style.textContent = s.cssText;
             renderRoot.appendChild(style);
-        }
+        });
     }
 };
 const cssResultFromStyleSheet = (sheet) => {
@@ -127,7 +126,7 @@ const cssResultFromStyleSheet = (sheet) => {
     return unsafeCSS(cssText);
 };
 const getCompatibleStyle = supportsAdoptingStyleSheets ||
-    (NODE_MODE$1)
+    (NODE_MODE$1 )
     ? (s) => s
     : (s) => s instanceof CSSStyleSheet ? cssResultFromStyleSheet(s) : s;
 
@@ -136,25 +135,19 @@ const getCompatibleStyle = supportsAdoptingStyleSheets ||
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-/**
- * Use this module if you want to create your own base class extending
- * {@link ReactiveElement}.
- * @packageDocumentation
- */
-// TODO (justinfagnani): Add `hasOwn` here when we ship ES2022
-const { is, defineProperty, getOwnPropertyDescriptor, getOwnPropertyNames, getOwnPropertySymbols, getPrototypeOf, } = Object;
-// Lets a minifier replace globalThis references with a minified name
-const global$2 = globalThis;
-const trustedTypes$1 = global$2
+var _d$1;
+var _e;
+const global$1 = window;
+const trustedTypes$1 = global$1
     .trustedTypes;
 // Temporary workaround for https://crbug.com/993268
 // Currently, any attribute starting with "on" is considered to be a
 // TrustedScript source. Such boolean attributes must be set to the equivalent
 // trusted emptyScript value.
-const emptyStringForBooleanAttribute = trustedTypes$1
+const emptyStringForBooleanAttribute$1 = trustedTypes$1
     ? trustedTypes$1.emptyScript
     : '';
-const polyfillSupport$2 = global$2.reactiveElementPolyfillSupport;
+const polyfillSupport$2 = global$1.reactiveElementPolyfillSupport;
 /*
  * When using Closure Compiler, JSCompiler_renameProperty(property, object) is
  * replaced at compile time by the munged name for object[property]. We cannot
@@ -162,12 +155,12 @@ const polyfillSupport$2 = global$2.reactiveElementPolyfillSupport;
  * behavior when not compiling.
  */
 /*@__INLINE__*/
-const JSCompiler_renameProperty$1 = (prop, _obj) => prop;
+const JSCompiler_renameProperty = (prop, _obj) => prop;
 const defaultConverter = {
     toAttribute(value, type) {
         switch (type) {
             case Boolean:
-                value = value ? emptyStringForBooleanAttribute : null;
+                value = value ? emptyStringForBooleanAttribute$1 : null;
                 break;
             case Object:
             case Array:
@@ -208,38 +201,52 @@ const defaultConverter = {
  * Change function that returns true if `value` is different from `oldValue`.
  * This method is used as the default for a property's `hasChanged` function.
  */
-const notEqual = (value, old) => !is(value, old);
+const notEqual = (value, old) => {
+    // This ensures (old==NaN, value==NaN) always returns false
+    return old !== value && (old === old || value === value);
+};
 const defaultPropertyDeclaration = {
     attribute: true,
     type: String,
     converter: defaultConverter,
     reflect: false,
-    useDefault: false,
     hasChanged: notEqual,
 };
-// Ensure metadata is enabled. TypeScript does not polyfill
-// Symbol.metadata, so we must ensure that it exists.
-Symbol.metadata ??= Symbol('metadata');
-// Map from a class's metadata object to property options
-// Note that we must use nullish-coalescing assignment so that we only use one
-// map even if we load multiple version of this module.
-global$2.litPropertyMetadata ??= new WeakMap();
+/**
+ * The Closure JS Compiler doesn't currently have good support for static
+ * property semantics where "this" is dynamic (e.g.
+ * https://github.com/google/closure-compiler/issues/3177 and others) so we use
+ * this hack to bypass any rewriting by the compiler.
+ */
+const finalized = 'finalized';
 /**
  * Base element class which manages element properties and attributes. When
  * properties change, the `update` method is asynchronously called. This method
- * should be supplied by subclasses to render updates as desired.
+ * should be supplied by subclassers to render updates as desired.
  * @noInheritDoc
  */
-class ReactiveElement
-// In the Node build, this `extends` clause will be substituted with
-// `(globalThis.HTMLElement ?? HTMLElement)`.
-//
-// This way, we will first prefer any global `HTMLElement` polyfill that the
-// user has assigned, and then fall back to the `HTMLElement` shim which has
-// been imported (see note at the top of this file about how this import is
-// generated by Rollup). Note that the `HTMLElement` variable has been
-// shadowed by this import, so it no longer refers to the global.
- extends HTMLElement {
+class ReactiveElement extends HTMLElement {
+    constructor() {
+        super();
+        this.__instanceProperties = new Map();
+        /**
+         * True if there is a pending update as a result of calling `requestUpdate()`.
+         * Should only be read.
+         * @category updates
+         */
+        this.isUpdatePending = false;
+        /**
+         * Is set to `true` after the first update. The element code cannot assume
+         * that `renderRoot` exists before the element `hasUpdated`.
+         * @category updates
+         */
+        this.hasUpdated = false;
+        /**
+         * Name of currently reflecting property
+         */
+        this.__reflectingProperty = null;
+        this._initialize();
+    }
     /**
      * Adds an initializer function to the class that is called during instance
      * construction.
@@ -274,8 +281,9 @@ class ReactiveElement
      * @nocollapse
      */
     static addInitializer(initializer) {
-        this.__prepare();
-        (this._initializers ??= []).push(initializer);
+        var _a;
+        this.finalize();
+        ((_a = this._initializers) !== null && _a !== void 0 ? _a : (this._initializers = [])).push(initializer);
     }
     /**
      * Returns a list of attributes corresponding to the registered properties.
@@ -283,13 +291,19 @@ class ReactiveElement
      * @category attributes
      */
     static get observedAttributes() {
-        // Ensure we've created all properties
+        // note: piggy backing on this to ensure we're finalized.
         this.finalize();
-        // this.__attributeToPropertyMap is only undefined after finalize() in
-        // ReactiveElement itself. ReactiveElement.observedAttributes is only
-        // accessed with ReactiveElement as the receiver when a subclass or mixin
-        // calls super.observedAttributes
-        return (this.__attributeToPropertyMap && [...this.__attributeToPropertyMap.keys()]);
+        const attributes = [];
+        // Use forEach so this works even if for/of loops are compiled to for loops
+        // expecting arrays
+        this.elementProperties.forEach((v, p) => {
+            const attr = this.__attributeNameForProperty(p, v);
+            if (attr !== undefined) {
+                this.__attributeToPropertyMap.set(attr, p);
+                attributes.push(attr);
+            }
+        });
+        return attributes;
     }
     /**
      * Creates a property accessor on the element prototype if one does not exist
@@ -317,23 +331,26 @@ class ReactiveElement
      * @category properties
      */
     static createProperty(name, options = defaultPropertyDeclaration) {
-        // If this is a state property, force the attribute to false.
+        // if this is a state property, force the attribute to false.
         if (options.state) {
+            // Cast as any since this is readonly.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             options.attribute = false;
         }
-        this.__prepare();
-        // Whether this property is wrapping accessors.
-        // Helps control the initial value change and reflection logic.
-        if (this.prototype.hasOwnProperty(name)) {
-            options = Object.create(options);
-            options.wrapped = true;
-        }
+        // Note, since this can be called by the `@property` decorator which
+        // is called before `finalize`, we ensure finalization has been kicked off.
+        this.finalize();
         this.elementProperties.set(name, options);
-        if (!options.noAccessor) {
-            const key = Symbol();
+        // Do not generate an accessor if the prototype already has one, since
+        // it would be lost otherwise and that would never be the user's intention;
+        // Instead, we expect users to call `requestUpdate` themselves from
+        // user-defined accessors. Note that if the super has an accessor we will
+        // still overwrite it
+        if (!options.noAccessor && !this.prototype.hasOwnProperty(name)) {
+            const key = typeof name === 'symbol' ? Symbol() : `__${name}`;
             const descriptor = this.getPropertyDescriptor(name, key, options);
             if (descriptor !== undefined) {
-                defineProperty(this.prototype, name, descriptor);
+                Object.defineProperty(this.prototype, name, descriptor);
             }
         }
     }
@@ -365,19 +382,14 @@ class ReactiveElement
      * @category properties
      */
     static getPropertyDescriptor(name, key, options) {
-        const { get, set } = getOwnPropertyDescriptor(this.prototype, name) ?? {
+        return {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             get() {
                 return this[key];
             },
-            set(v) {
-                this[key] = v;
-            },
-        };
-        return {
-            get,
             set(value) {
-                const oldValue = get?.call(this);
-                set?.call(this, value);
+                const oldValue = this[name];
+                this[key] = value;
                 this.requestUpdate(name, oldValue, options);
             },
             configurable: true,
@@ -399,26 +411,21 @@ class ReactiveElement
      * @category properties
      */
     static getPropertyOptions(name) {
-        return this.elementProperties.get(name) ?? defaultPropertyDeclaration;
+        return this.elementProperties.get(name) || defaultPropertyDeclaration;
     }
     /**
-     * Initializes static own properties of the class used in bookkeeping
-     * for element properties, initializers, etc.
-     *
-     * Can be called multiple times by code that needs to ensure these
-     * properties exist before using them.
-     *
-     * This method ensures the superclass is finalized so that inherited
-     * property metadata can be copied down.
+     * Creates property accessors for registered properties, sets up element
+     * styling, and ensures any superclasses are also finalized. Returns true if
+     * the element was finalized.
      * @nocollapse
      */
-    static __prepare() {
-        if (this.hasOwnProperty(JSCompiler_renameProperty$1('elementProperties'))) {
-            // Already prepared
-            return;
+    static finalize() {
+        if (this.hasOwnProperty(finalized)) {
+            return false;
         }
-        // Finalize any superclasses
-        const superCtor = getPrototypeOf(this);
+        this[finalized] = true;
+        // finalize any superclasses
+        const superCtor = Object.getPrototypeOf(this);
         superCtor.finalize();
         // Create own set of initializers for this class if any exist on the
         // superclass and copy them down. Note, for a small perf boost, avoid
@@ -426,56 +433,30 @@ class ReactiveElement
         if (superCtor._initializers !== undefined) {
             this._initializers = [...superCtor._initializers];
         }
-        // Initialize elementProperties from the superclass
         this.elementProperties = new Map(superCtor.elementProperties);
-    }
-    /**
-     * Finishes setting up the class so that it's ready to be registered
-     * as a custom element and instantiated.
-     *
-     * This method is called by the ReactiveElement.observedAttributes getter.
-     * If you override the observedAttributes getter, you must either call
-     * super.observedAttributes to trigger finalization, or call finalize()
-     * yourself.
-     *
-     * @nocollapse
-     */
-    static finalize() {
-        if (this.hasOwnProperty(JSCompiler_renameProperty$1('finalized'))) {
-            return;
-        }
-        this.finalized = true;
-        this.__prepare();
-        // Create properties from the static properties block:
-        if (this.hasOwnProperty(JSCompiler_renameProperty$1('properties'))) {
+        // initialize Map populated in observedAttributes
+        this.__attributeToPropertyMap = new Map();
+        // make any properties
+        // Note, only process "own" properties since this element will inherit
+        // any properties defined on the superClass, and finalization ensures
+        // the entire prototype chain is finalized.
+        if (this.hasOwnProperty(JSCompiler_renameProperty('properties'))) {
             const props = this.properties;
+            // support symbols in properties (IE11 does not support this)
             const propKeys = [
-                ...getOwnPropertyNames(props),
-                ...getOwnPropertySymbols(props),
+                ...Object.getOwnPropertyNames(props),
+                ...Object.getOwnPropertySymbols(props),
             ];
+            // This for/of is ok because propKeys is an array
             for (const p of propKeys) {
+                // note, use of `any` is due to TypeScript lack of support for symbol in
+                // index types
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 this.createProperty(p, props[p]);
             }
         }
-        // Create properties from standard decorator metadata:
-        const metadata = this[Symbol.metadata];
-        if (metadata !== null) {
-            const properties = litPropertyMetadata.get(metadata);
-            if (properties !== undefined) {
-                for (const [p, options] of properties) {
-                    this.elementProperties.set(p, options);
-                }
-            }
-        }
-        // Create the attribute-to-property map
-        this.__attributeToPropertyMap = new Map();
-        for (const [p, options] of this.elementProperties) {
-            const attr = this.__attributeNameForProperty(p, options);
-            if (attr !== undefined) {
-                this.__attributeToPropertyMap.set(attr, p);
-            }
-        }
         this.elementStyles = this.finalizeStyles(this.styles);
+        return true;
     }
     /**
      * Takes the styles the user supplied via the `static styles` property and
@@ -522,41 +503,21 @@ class ReactiveElement
                     ? name.toLowerCase()
                     : undefined;
     }
-    constructor() {
-        super();
-        this.__instanceProperties = undefined;
-        /**
-         * True if there is a pending update as a result of calling `requestUpdate()`.
-         * Should only be read.
-         * @category updates
-         */
-        this.isUpdatePending = false;
-        /**
-         * Is set to `true` after the first update. The element code cannot assume
-         * that `renderRoot` exists before the element `hasUpdated`.
-         * @category updates
-         */
-        this.hasUpdated = false;
-        /**
-         * Name of currently reflecting property
-         */
-        this.__reflectingProperty = null;
-        this.__initialize();
-    }
     /**
      * Internal only override point for customizing work done when elements
      * are constructed.
+     *
+     * @internal
      */
-    __initialize() {
+    _initialize() {
+        var _a;
         this.__updatePromise = new Promise((res) => (this.enableUpdating = res));
         this._$changedProperties = new Map();
-        // This enqueues a microtask that must run before the first update, so it
-        // must be called before requestUpdate()
         this.__saveInstanceProperties();
         // ensures first update will be caught by an early access of
         // `updateComplete`
         this.requestUpdate();
-        this.constructor._initializers?.forEach((i) => i(this));
+        (_a = this.constructor._initializers) === null || _a === void 0 ? void 0 : _a.forEach((i) => i(this));
     }
     /**
      * Registers a `ReactiveController` to participate in the element's reactive
@@ -568,13 +529,14 @@ class ReactiveElement
      * @category controllers
      */
     addController(controller) {
-        (this.__controllers ??= new Set()).add(controller);
+        var _a, _b;
+        ((_a = this.__controllers) !== null && _a !== void 0 ? _a : (this.__controllers = [])).push(controller);
         // If a controller is added after the element has been connected,
         // call hostConnected. Note, re-using existence of `renderRoot` here
         // (which is set in connectedCallback) to avoid the need to track a
         // first connected state.
         if (this.renderRoot !== undefined && this.isConnected) {
-            controller.hostConnected?.();
+            (_b = controller.hostConnected) === null || _b === void 0 ? void 0 : _b.call(controller);
         }
     }
     /**
@@ -582,27 +544,32 @@ class ReactiveElement
      * @category controllers
      */
     removeController(controller) {
-        this.__controllers?.delete(controller);
+        var _a;
+        // Note, if the indexOf is -1, the >>> will flip the sign which makes the
+        // splice do nothing.
+        (_a = this.__controllers) === null || _a === void 0 ? void 0 : _a.splice(this.__controllers.indexOf(controller) >>> 0, 1);
     }
     /**
      * Fixes any properties set on the instance before upgrade time.
      * Otherwise these would shadow the accessor and break these properties.
      * The properties are stored in a Map which is played back after the
-     * constructor runs.
+     * constructor runs. Note, on very old versions of Safari (<=9) or Chrome
+     * (<=41), properties created for native platform properties like (`id` or
+     * `name`) may not have default values set in the element constructor. On
+     * these browsers native properties appear on instances and therefore their
+     * default value will overwrite any element default (e.g. if the element sets
+     * this.id = 'id' in the constructor, the 'id' will become '' since this is
+     * the native platform default).
      */
     __saveInstanceProperties() {
-        const instanceProperties = new Map();
-        const elementProperties = this.constructor
-            .elementProperties;
-        for (const p of elementProperties.keys()) {
+        // Use forEach so this works even if for/of loops are compiled to for loops
+        // expecting arrays
+        this.constructor.elementProperties.forEach((_v, p) => {
             if (this.hasOwnProperty(p)) {
-                instanceProperties.set(p, this[p]);
+                this.__instanceProperties.set(p, this[p]);
                 delete this[p];
             }
-        }
-        if (instanceProperties.size > 0) {
-            this.__instanceProperties = instanceProperties;
-        }
+        });
     }
     /**
      * Returns the node into which the element should render and by default
@@ -614,8 +581,8 @@ class ReactiveElement
      * @category rendering
      */
     createRenderRoot() {
-        const renderRoot = this.shadowRoot ??
-            this.attachShadow(this.constructor.shadowRootOptions);
+        var _a;
+        const renderRoot = (_a = this.shadowRoot) !== null && _a !== void 0 ? _a : this.attachShadow(this.constructor.shadowRootOptions);
         adoptStyles(renderRoot, this.constructor.elementStyles);
         return renderRoot;
     }
@@ -625,11 +592,13 @@ class ReactiveElement
      * @category lifecycle
      */
     connectedCallback() {
-        // Create renderRoot before controllers `hostConnected`
-        this.renderRoot ??=
-            this.createRenderRoot();
+        var _a;
+        // create renderRoot before first update.
+        if (this.renderRoot === undefined) {
+            this.renderRoot = this.createRenderRoot();
+        }
         this.enableUpdating(true);
-        this.__controllers?.forEach((c) => c.hostConnected?.());
+        (_a = this.__controllers) === null || _a === void 0 ? void 0 : _a.forEach((c) => { var _a; return (_a = c.hostConnected) === null || _a === void 0 ? void 0 : _a.call(c); });
     }
     /**
      * Note, this method should be considered final and not overridden. It is
@@ -645,7 +614,8 @@ class ReactiveElement
      * @category lifecycle
      */
     disconnectedCallback() {
-        this.__controllers?.forEach((c) => c.hostDisconnected?.());
+        var _a;
+        (_a = this.__controllers) === null || _a === void 0 ? void 0 : _a.forEach((c) => { var _a; return (_a = c.hostDisconnected) === null || _a === void 0 ? void 0 : _a.call(c); });
     }
     /**
      * Synchronizes property values when attributes change.
@@ -655,19 +625,18 @@ class ReactiveElement
      * overridden, `super.attributeChangedCallback(name, _old, value)` must be
      * called.
      *
-     * See [responding to attribute changes](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements#responding_to_attribute_changes)
+     * See [using the lifecycle callbacks](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#using_the_lifecycle_callbacks)
      * on MDN for more information about the `attributeChangedCallback`.
      * @category attributes
      */
     attributeChangedCallback(name, _old, value) {
         this._$attributeToProperty(name, value);
     }
-    __propertyToAttribute(name, value) {
-        const elemProperties = this.constructor.elementProperties;
-        const options = elemProperties.get(name);
+    __propertyToAttribute(name, value, options = defaultPropertyDeclaration) {
+        var _a;
         const attr = this.constructor.__attributeNameForProperty(name, options);
         if (attr !== undefined && options.reflect === true) {
-            const converter = options.converter?.toAttribute !==
+            const converter = ((_a = options.converter) === null || _a === void 0 ? void 0 : _a.toAttribute) !==
                 undefined
                 ? options.converter
                 : defaultConverter;
@@ -693,6 +662,7 @@ class ReactiveElement
     }
     /** @internal */
     _$attributeToProperty(name, value) {
+        var _a;
         const ctor = this.constructor;
         // Note, hint this as an `AttributeMap` so closure clearly understands
         // the type; it has issues with tracking types through statics
@@ -703,17 +673,14 @@ class ReactiveElement
             const options = ctor.getPropertyOptions(propName);
             const converter = typeof options.converter === 'function'
                 ? { fromAttribute: options.converter }
-                : options.converter?.fromAttribute !== undefined
+                : ((_a = options.converter) === null || _a === void 0 ? void 0 : _a.fromAttribute) !== undefined
                     ? options.converter
                     : defaultConverter;
             // mark state reflecting
             this.__reflectingProperty = propName;
-            const convertedValue = converter.fromAttribute(value, options.type);
-            this[propName] =
-                convertedValue ??
-                    this.__defaultValues?.get(propName) ??
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    convertedValue;
+            this[propName] = converter.fromAttribute(value, options.type
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            );
             // mark state not reflecting
             this.__reflectingProperty = null;
         }
@@ -730,76 +697,42 @@ class ReactiveElement
      * @param oldValue old value of requesting property
      * @param options property options to use instead of the previously
      *     configured options
-     * @param useNewValue if true, the newValue argument is used instead of
-     *     reading the property value. This is important to use if the reactive
-     *     property is a standard private accessor, as opposed to a plain
-     *     property, since private members can't be dynamically read by name.
-     * @param newValue the new value of the property. This is only used if
-     *     `useNewValue` is true.
      * @category updates
      */
-    requestUpdate(name, oldValue, options, useNewValue = false, newValue) {
+    requestUpdate(name, oldValue, options) {
+        let shouldRequestUpdate = true;
         // If we have a property key, perform property update steps.
         if (name !== undefined) {
-            const ctor = this.constructor;
-            if (useNewValue === false) {
-                newValue = this[name];
-            }
-            options ??= ctor.getPropertyOptions(name);
-            const changed = (options.hasChanged ?? notEqual)(newValue, oldValue) ||
-                // When there is no change, check a corner case that can occur when
-                // 1. there's a initial value which was not reflected
-                // 2. the property is subsequently set to this value.
-                // For example, `prop: {useDefault: true, reflect: true}`
-                // and el.prop = 'foo'. This should be considered a change if the
-                // attribute is not set because we will now reflect the property to the attribute.
-                (options.useDefault &&
-                    options.reflect &&
-                    newValue === this.__defaultValues?.get(name) &&
-                    !this.hasAttribute(ctor.__attributeNameForProperty(name, options)));
-            if (changed) {
-                this._$changeProperty(name, oldValue, options);
+            options =
+                options ||
+                    this.constructor.getPropertyOptions(name);
+            const hasChanged = options.hasChanged || notEqual;
+            if (hasChanged(this[name], oldValue)) {
+                if (!this._$changedProperties.has(name)) {
+                    this._$changedProperties.set(name, oldValue);
+                }
+                // Add to reflecting properties set.
+                // Note, it's important that every change has a chance to add the
+                // property to `_reflectingProperties`. This ensures setting
+                // attribute + property reflects correctly.
+                if (options.reflect === true && this.__reflectingProperty !== name) {
+                    if (this.__reflectingProperties === undefined) {
+                        this.__reflectingProperties = new Map();
+                    }
+                    this.__reflectingProperties.set(name, options);
+                }
             }
             else {
                 // Abort the request if the property should not be considered changed.
-                return;
+                shouldRequestUpdate = false;
             }
         }
-        if (this.isUpdatePending === false) {
+        if (!this.isUpdatePending && shouldRequestUpdate) {
             this.__updatePromise = this.__enqueueUpdate();
         }
-    }
-    /**
-     * @internal
-     */
-    _$changeProperty(name, oldValue, { useDefault, reflect, wrapped }, initializeValue) {
-        // Record default value when useDefault is used. This allows us to
-        // restore this value when the attribute is removed.
-        if (useDefault && !(this.__defaultValues ??= new Map()).has(name)) {
-            this.__defaultValues.set(name, initializeValue ?? oldValue ?? this[name]);
-            // if this is not wrapping an accessor, it must be an initial setting
-            // and in this case we do not want to record the change or reflect.
-            if (wrapped !== true || initializeValue !== undefined) {
-                return;
-            }
-        }
-        // TODO (justinfagnani): Create a benchmark of Map.has() + Map.set(
-        // vs just Map.set()
-        if (!this._$changedProperties.has(name)) {
-            // On the initial change, the old value should be `undefined`, except
-            // with `useDefault`
-            if (!this.hasUpdated && !useDefault) {
-                oldValue = undefined;
-            }
-            this._$changedProperties.set(name, oldValue);
-        }
-        // Add to reflecting properties set.
-        // Note, it's important that every change has a chance to add the
-        // property to `__reflectingProperties`. This ensures setting
-        // attribute + property reflects correctly.
-        if (reflect === true && this.__reflectingProperty !== name) {
-            (this.__reflectingProperties ??= new Set()).add(name);
-        }
+        // Note, since this no longer returns a promise, in dev mode we return a
+        // thenable which warns if it's called.
+        return undefined;
     }
     /**
      * Sets up the element to asynchronously update.
@@ -845,8 +778,7 @@ class ReactiveElement
      * @category updates
      */
     scheduleUpdate() {
-        const result = this.performUpdate();
-        return result;
+        return this.performUpdate();
     }
     /**
      * Performs an element update. Note, if an exception is thrown during the
@@ -856,51 +788,32 @@ class ReactiveElement
      * generally not be needed, but it can be done in rare cases when you need to
      * update synchronously.
      *
+     * Note: To ensure `performUpdate()` synchronously completes a pending update,
+     * it should not be overridden. In LitElement 2.x it was suggested to override
+     * `performUpdate()` to also customizing update scheduling. Instead, you should now
+     * override `scheduleUpdate()`. For backwards compatibility with LitElement 2.x,
+     * scheduling updates via `performUpdate()` continues to work, but will make
+     * also calling `performUpdate()` to synchronously process updates difficult.
+     *
      * @category updates
      */
     performUpdate() {
+        var _b;
         // Abort any update if one is not pending when this is called.
         // This can happen if `performUpdate` is called early to "flush"
         // the update.
         if (!this.isUpdatePending) {
             return;
         }
-        if (!this.hasUpdated) {
-            // Create renderRoot before first update. This occurs in `connectedCallback`
-            // but is done here to support out of tree calls to `enableUpdating`/`performUpdate`.
-            this.renderRoot ??=
-                this.createRenderRoot();
-            // Mixin instance properties once, if they exist.
-            if (this.__instanceProperties) {
-                // TODO (justinfagnani): should we use the stored value? Could a new value
-                // have been set since we stored the own property value?
-                for (const [p, value] of this.__instanceProperties) {
-                    this[p] = value;
-                }
-                this.__instanceProperties = undefined;
-            }
-            // Trigger initial value reflection and populate the initial
-            // `changedProperties` map, but only for the case of properties created
-            // via `createProperty` on accessors, which will not have already
-            // populated the `changedProperties` map since they are not set.
-            // We can't know if these accessors had initializers, so we just set
-            // them anyway - a difference from experimental decorators on fields and
-            // standard decorators on auto-accessors.
-            // For context see:
-            // https://github.com/lit/lit/pull/4183#issuecomment-1711959635
-            const elementProperties = this.constructor
-                .elementProperties;
-            if (elementProperties.size > 0) {
-                for (const [p, options] of elementProperties) {
-                    const { wrapped } = options;
-                    const value = this[p];
-                    if (wrapped === true &&
-                        !this._$changedProperties.has(p) &&
-                        value !== undefined) {
-                        this._$changeProperty(p, undefined, options, value);
-                    }
-                }
-            }
+        // create renderRoot before first update.
+        if (!this.hasUpdated) ;
+        // Mixin instance properties once, if they exist.
+        if (this.__instanceProperties) {
+            // Use forEach so this works even if for/of loops are compiled to for loops
+            // expecting arrays
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            this.__instanceProperties.forEach((v, p) => (this[p] = v));
+            this.__instanceProperties = undefined;
         }
         let shouldUpdate = false;
         const changedProperties = this._$changedProperties;
@@ -908,7 +821,7 @@ class ReactiveElement
             shouldUpdate = this.shouldUpdate(changedProperties);
             if (shouldUpdate) {
                 this.willUpdate(changedProperties);
-                this.__controllers?.forEach((c) => c.hostUpdate?.());
+                (_b = this.__controllers) === null || _b === void 0 ? void 0 : _b.forEach((c) => { var _a; return (_a = c.hostUpdate) === null || _a === void 0 ? void 0 : _a.call(c); });
                 this.update(changedProperties);
             }
             else {
@@ -953,7 +866,8 @@ class ReactiveElement
     // Note, this is an override point for polyfill-support.
     // @internal
     _$didUpdate(changedProperties) {
-        this.__controllers?.forEach((c) => c.hostUpdated?.());
+        var _a;
+        (_a = this.__controllers) === null || _a === void 0 ? void 0 : _a.forEach((c) => { var _a; return (_a = c.hostUpdated) === null || _a === void 0 ? void 0 : _a.call(c); });
         if (!this.hasUpdated) {
             this.hasUpdated = true;
             this.firstUpdated(changedProperties);
@@ -1030,10 +944,12 @@ class ReactiveElement
      * @category updates
      */
     update(_changedProperties) {
-        // The forEach() expression will only run when __reflectingProperties is
-        // defined, and it returns undefined, setting __reflectingProperties to
-        // undefined
-        this.__reflectingProperties &&= this.__reflectingProperties.forEach((p) => this.__propertyToAttribute(p, this[p]));
+        if (this.__reflectingProperties !== undefined) {
+            // Use forEach so this works even if for/of loops are compiled to for
+            // loops expecting arrays
+            this.__reflectingProperties.forEach((v, k) => this.__propertyToAttribute(k, this[k], v));
+            this.__reflectingProperties = undefined;
+        }
         this.__markUpdated();
     }
     /**
@@ -1065,6 +981,18 @@ class ReactiveElement
      */
     firstUpdated(_changedProperties) { }
 }
+_e = finalized;
+/**
+ * Marks class as having finished creating properties.
+ */
+ReactiveElement[_e] = true;
+/**
+ * Memoized list of all element properties, including any superclass properties.
+ * Created lazily on user subclasses when finalizing the class.
+ * @nocollapse
+ * @category properties
+ */
+ReactiveElement.elementProperties = new Map();
 /**
  * Memoized list of all element styles.
  * Created lazily on user subclasses when finalizing the class.
@@ -1083,29 +1011,23 @@ ReactiveElement.elementStyles = [];
  * @category rendering
  */
 ReactiveElement.shadowRootOptions = { mode: 'open' };
-// Assigned here to work around a jscompiler bug with static fields
-// when compiling to ES5.
-// https://github.com/google/closure-compiler/issues/3177
-ReactiveElement[JSCompiler_renameProperty$1('elementProperties')] = new Map();
-ReactiveElement[JSCompiler_renameProperty$1('finalized')] = new Map();
 // Apply polyfills if available
-polyfillSupport$2?.({ ReactiveElement });
+polyfillSupport$2 === null || polyfillSupport$2 === void 0 ? void 0 : polyfillSupport$2({ ReactiveElement });
 // IMPORTANT: do not change the property name or the assignment expression.
 // This line will be used in regexes to search for ReactiveElement usage.
-(global$2.reactiveElementVersions ??= []).push('2.1.2');
+((_d$1 = global$1.reactiveElementVersions) !== null && _d$1 !== void 0 ? _d$1 : (global$1.reactiveElementVersions = [])).push('1.5.0');
 
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-// Allows minifiers to rename references to globalThis
-const global$1 = globalThis;
-// We use a DOMParser to create the template elements. TS wants this to work for
-// both SSR and regular browser rendering, so we create one conditionally.
-const __moz_domParser = typeof window !== 'undefined' && window.DOMParser ? new DOMParser() : null;
+var _d;
+// Use window for browser builds because IE11 doesn't have globalThis.
+const global = window;
+const __moz_domParser = new DOMParser();
 const wrap$1 = (node) => node;
-const trustedTypes = global$1.trustedTypes;
+const trustedTypes = global.trustedTypes;
 /**
  * Our TrustedTypePolicy for HTML which is declared using the html template
  * tag function.
@@ -1126,7 +1048,7 @@ const boundAttributeSuffix = '$lit$';
 // a valid element name and attribute name. We don't support dynamic names (yet)
 // but this at least ensures that the parse tree is closer to the template
 // intention.
-const marker = `lit$${Math.random().toFixed(9).slice(2)}$`;
+const marker = `lit$${String(Math.random()).slice(9)}$`;
 // String used to tell if a comment is a marker comment
 const markerMatch = '?' + marker;
 // Text used to insert a comment marker node. We use processing instruction
@@ -1134,12 +1056,12 @@ const markerMatch = '?' + marker;
 const nodeMarker = `<${markerMatch}>`;
 const d = document;
 // Creates a dynamic marker. We never have to search for these in the DOM.
-const createMarker$1 = () => d.createComment('');
+const createMarker$1 = (v = '') => d.createComment(v);
 const isPrimitive$1 = (value) => value === null || (typeof value != 'object' && typeof value != 'function');
 const isArray = Array.isArray;
 const isIterable = (value) => isArray(value) ||
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    typeof value?.[Symbol.iterator] === 'function';
+    typeof (value === null || value === void 0 ? void 0 : value[Symbol.iterator]) === 'function';
 const SPACE_CHAR = `[ \t\n\f\r]`;
 const ATTR_VALUE_CHAR = `[^ \t\n\f\r"'\`<>=]`;
 const NAME_CHAR = `[^\\s"'>=/]`;
@@ -1204,7 +1126,6 @@ const rawTextElement = /^(?:script|style|textarea|title)$/i;
 /** TemplateResult types */
 const HTML_RESULT$1 = 1;
 const SVG_RESULT$1 = 2;
-const MATHML_RESULT = 3;
 // TemplatePart types
 // IMPORTANT: these must match the values in PartType
 const ATTRIBUTE_PART = 1;
@@ -1241,8 +1162,8 @@ const tag = (type) => (strings, ...values) => {
  */
 const html$1 = tag(HTML_RESULT$1);
 /**
- * Interprets a template literal as an SVG fragment that can efficiently render
- * to and update a container.
+ * Interprets a template literal as an SVG fragment that can efficiently
+ * render to and update a container.
  *
  * ```ts
  * const rect = svg`<rect width="10" height="10"></rect>`;
@@ -1261,35 +1182,9 @@ const html$1 = tag(HTML_RESULT$1);
  *
  * In LitElement usage, it's invalid to return an SVG fragment from the
  * `render()` method, as the SVG fragment will be contained within the element's
- * shadow root and thus not be properly contained within an `<svg>` HTML
- * element.
+ * shadow root and thus cannot be used within an `<svg>` HTML element.
  */
 const svg$1 = tag(SVG_RESULT$1);
-/**
- * Interprets a template literal as MathML fragment that can efficiently render
- * to and update a container.
- *
- * ```ts
- * const num = mathml`<mn>1</mn>`;
- *
- * const eq = html`
- *   <math>
- *     ${num}
- *   </math>`;
- * ```
- *
- * The `mathml` *tag function* should only be used for MathML fragments, or
- * elements that would be contained **inside** a `<math>` HTML element. A common
- * error is placing a `<math>` *element* in a template tagged with the `mathml`
- * tag function. The `<math>` element is an HTML element and should be used
- * within a template tagged with the {@linkcode html} tag function.
- *
- * In LitElement usage, it's invalid to return an MathML fragment from the
- * `render()` method, as the MathML fragment will be contained within the
- * element's shadow root and thus not be properly contained within a `<math>`
- * HTML element.
- */
-const mathml = tag(MATHML_RESULT);
 /**
  * A sentinel value that signals that a value was handled by a directive and
  * should not be written to the DOM.
@@ -1318,26 +1213,12 @@ const nothing = Symbol.for('lit-nothing');
 /**
  * The cache of prepared templates, keyed by the tagged TemplateStringsArray
  * and _not_ accounting for the specific template tag used. This means that
- * template tags cannot be dynamic - they must statically be one of html, svg,
+ * template tags cannot be dynamic - the must statically be one of html, svg,
  * or attr. This restriction simplifies the cache lookup, which is on the hot
  * path for rendering.
  */
 const templateCache = new WeakMap();
-const walker = d.createTreeWalker(d, 129 /* NodeFilter.SHOW_{ELEMENT|COMMENT} */);
-function trustFromTemplateString(tsa, stringFromTSA) {
-    // A security check to prevent spoofing of Lit template results.
-    // In the future, we may be able to replace this with Array.isTemplateObject,
-    // though we might need to make that check inside of the html and svg
-    // functions, because precompiled templates don't come in as
-    // TemplateStringArray objects.
-    if (!isArray(tsa) || !tsa.hasOwnProperty('raw')) {
-        let message = 'invalid template strings array';
-        throw new Error(message);
-    }
-    return policy !== undefined
-        ? policy.createHTML(stringFromTSA)
-        : stringFromTSA;
-}
+const walker = d.createTreeWalker(d, 129 /* NodeFilter.SHOW_{ELEMENT|COMMENT} */, null, false);
 /**
  * Returns an HTML string for the given TemplateStringsArray and result type
  * (HTML or SVG), along with the case-sensitive bound attribute names in
@@ -1362,7 +1243,7 @@ const getTemplateHtml = (strings, type) => {
     // parts. ElementParts are also reflected in this array as undefined
     // rather than a string, to disambiguate from attribute bindings.
     const attrNames = [];
-    let html = type === SVG_RESULT$1 ? '<svg>' : type === MATHML_RESULT ? '<math>' : '';
+    let html = type === SVG_RESULT$1 ? '<svg>' : '';
     // When we're inside a raw text tag (not it's text content), the regex
     // will still be tagRegex so we can find attributes, but will switch to
     // this regex when the tag ends.
@@ -1415,7 +1296,7 @@ const getTemplateHtml = (strings, type) => {
                 if (match[ENTIRE_MATCH] === '>') {
                     // End of a tag. If we had started a raw-text element, use that
                     // regex
-                    regex = rawTextEndRegex ?? textEndRegex;
+                    regex = rawTextEndRegex !== null && rawTextEndRegex !== void 0 ? rawTextEndRegex : textEndRegex;
                     // We may be ending an unquoted attribute value, so make sure we
                     // clear any pending attrNameEndIndex
                     attrNameEndIndex = -1;
@@ -1472,18 +1353,33 @@ const getTemplateHtml = (strings, type) => {
                             s.slice(attrNameEndIndex)) +
                         marker +
                         end
-                    : s + marker + (attrNameEndIndex === -2 ? i : end);
+                    : s +
+                        marker +
+                        (attrNameEndIndex === -2 ? (attrNames.push(undefined), i) : end);
     }
-    const htmlResult = html +
-        (strings[l] || '<?>') +
-        (type === SVG_RESULT$1 ? '</svg>' : type === MATHML_RESULT ? '</math>' : '');
+    const htmlResult = html + (strings[l] || '<?>') + (type === SVG_RESULT$1 ? '</svg>' : '');
+    // A security check to prevent spoofing of Lit template results.
+    // In the future, we may be able to replace this with Array.isTemplateObject,
+    // though we might need to make that check inside of the html and svg
+    // functions, because precompiled templates don't come in as
+    // TemplateStringArray objects.
+    if (!Array.isArray(strings) || !strings.hasOwnProperty('raw')) {
+        let message = 'invalid template strings array';
+        throw new Error(message);
+    }
     // Returned as an array for terseness
-    return [trustFromTemplateString(strings, htmlResult), attrNames];
+    return [
+        policy !== undefined
+            ? policy.createHTML(htmlResult)
+            : htmlResult,
+        attrNames,
+    ];
 };
 class Template {
     constructor(
     // This property needs to remain unminified.
     { strings, ['_$litType$']: type }, options) {
+        /** @internal */
         this.parts = [];
         let node;
         let nodeIndex = 0;
@@ -1494,10 +1390,12 @@ class Template {
         const [html, attrNames] = getTemplateHtml(strings, type);
         this.el = Template.createElement(html, options);
         walker.currentNode = this.el.content;
-        // Re-parent SVG or MathML nodes into template root
-        if (type === SVG_RESULT$1 || type === MATHML_RESULT) {
-            const wrapper = this.el.content.firstChild;
-            wrapper.replaceWith(...wrapper.childNodes);
+        // Reparent SVG nodes into template root
+        if (type === SVG_RESULT$1) {
+            const content = this.el.content;
+            const svgElement = content.firstChild;
+            svgElement.remove();
+            content.append(...svgElement.childNodes);
         }
         // Walk the template to find binding markers and create TemplateParts
         while ((node = walker.nextNode()) !== null && parts.length < partCount) {
@@ -1506,34 +1404,51 @@ class Template {
                 // increment the bindingIndex, and it'll be off by 1 in the element
                 // and off by two after it.
                 if (node.hasAttributes()) {
+                    // We defer removing bound attributes because on IE we might not be
+                    // iterating attributes in their template order, and would sometimes
+                    // remove an attribute that we still need to create a part for.
+                    const attrsToRemove = [];
                     for (const name of node.getAttributeNames()) {
-                        if (name.endsWith(boundAttributeSuffix)) {
+                        // `name` is the name of the attribute we're iterating over, but not
+                        // _neccessarily_ the name of the attribute we will create a part
+                        // for. They can be different in browsers that don't iterate on
+                        // attributes in source order. In that case the attrNames array
+                        // contains the attribute name we'll process next. We only need the
+                        // attribute name here to know if we should process a bound attribute
+                        // on this element.
+                        if (name.endsWith(boundAttributeSuffix) ||
+                            name.startsWith(marker)) {
                             const realName = attrNames[attrNameIndex++];
-                            const value = node.getAttribute(name);
-                            const statics = value.split(marker);
-                            const m = /([.?@])?(.*)/.exec(realName);
-                            parts.push({
-                                type: ATTRIBUTE_PART,
-                                index: nodeIndex,
-                                name: m[2],
-                                strings: statics,
-                                ctor: m[1] === '.'
-                                    ? PropertyPart
-                                    : m[1] === '?'
-                                        ? BooleanAttributePart
-                                        : m[1] === '@'
-                                            ? EventPart
-                                            : AttributePart,
-                            });
-                            node.removeAttribute(name);
+                            attrsToRemove.push(name);
+                            if (realName !== undefined) {
+                                // Lowercase for case-sensitive SVG attributes like viewBox
+                                const value = node.getAttribute(realName.toLowerCase() + boundAttributeSuffix);
+                                const statics = value.split(marker);
+                                const m = /([.?@])?(.*)/.exec(realName);
+                                parts.push({
+                                    type: ATTRIBUTE_PART,
+                                    index: nodeIndex,
+                                    name: m[2],
+                                    strings: statics,
+                                    ctor: m[1] === '.'
+                                        ? PropertyPart
+                                        : m[1] === '?'
+                                            ? BooleanAttributePart
+                                            : m[1] === '@'
+                                                ? EventPart
+                                                : AttributePart,
+                                });
+                            }
+                            else {
+                                parts.push({
+                                    type: ELEMENT_PART,
+                                    index: nodeIndex,
+                                });
+                            }
                         }
-                        else if (name.startsWith(marker)) {
-                            parts.push({
-                                type: ELEMENT_PART,
-                                index: nodeIndex,
-                            });
-                            node.removeAttribute(name);
-                        }
+                    }
+                    for (const name of attrsToRemove) {
+                        node.removeAttribute(name);
                     }
                 }
                 // TODO (justinfagnani): benchmark the regex against testing for each
@@ -1549,7 +1464,10 @@ class Template {
                             ? trustedTypes.emptyScript
                             : '';
                         // Generate a new text node for each literal section
-                        // These nodes are also used as the markers for child parts
+                        // These nodes are also used as the markers for node parts
+                        // We can't use empty text nodes as markers because they're
+                        // normalized when cloning in IE (could simplify when
+                        // IE is no longer supported)
                         for (let i = 0; i < lastIndex; i++) {
                             node.append(strings[i], createMarker$1());
                             // Walk past the marker node we just added
@@ -1585,33 +1503,28 @@ class Template {
     // Overridden via `litHtmlPolyfillSupport` to provide platform support.
     /** @nocollapse */
     static createElement(html, _options) {
-        if (__moz_domParser) {
-            // DOMParser is available (browser rendering).
-            const doc = __moz_domParser.parseFromString(`<template>${html}</template>`, 'text/html');
-            return document.importNode(doc.querySelector('template'), true);
-        }
-        // SSR mode.
-        const el = d.createElement('template');
-        el.innerHTML = html;
-        return el;
+        const doc = __moz_domParser.parseFromString(`<template>${html}</template>`, 'text/html');
+        return document.importNode(doc.querySelector('template'), true);
     }
 }
 function resolveDirective(part, value, parent = part, attributeIndex) {
+    var _a, _b, _c;
+    var _d;
     // Bail early if the value is explicitly noChange. Note, this means any
     // nested directive is still attached and is not run.
     if (value === noChange) {
         return value;
     }
     let currentDirective = attributeIndex !== undefined
-        ? parent.__directives?.[attributeIndex]
+        ? (_a = parent.__directives) === null || _a === void 0 ? void 0 : _a[attributeIndex]
         : parent.__directive;
     const nextDirectiveConstructor = isPrimitive$1(value)
         ? undefined
         : // This property needs to remain unminified.
             value['_$litDirective$'];
-    if (currentDirective?.constructor !== nextDirectiveConstructor) {
+    if ((currentDirective === null || currentDirective === void 0 ? void 0 : currentDirective.constructor) !== nextDirectiveConstructor) {
         // This property needs to remain unminified.
-        currentDirective?.['_$notifyDirectiveConnectionChanged']?.(false);
+        (_b = currentDirective === null || currentDirective === void 0 ? void 0 : currentDirective['_$notifyDirectiveConnectionChanged']) === null || _b === void 0 ? void 0 : _b.call(currentDirective, false);
         if (nextDirectiveConstructor === undefined) {
             currentDirective = undefined;
         }
@@ -1620,7 +1533,7 @@ function resolveDirective(part, value, parent = part, attributeIndex) {
             currentDirective._$initialize(part, parent, attributeIndex);
         }
         if (attributeIndex !== undefined) {
-            (parent.__directives ??= [])[attributeIndex] =
+            ((_c = (_d = parent).__directives) !== null && _c !== void 0 ? _c : (_d.__directives = []))[attributeIndex] =
                 currentDirective;
         }
         else {
@@ -1638,7 +1551,8 @@ function resolveDirective(part, value, parent = part, attributeIndex) {
  */
 class TemplateInstance {
     constructor(template, parent) {
-        this._$parts = [];
+        /** @internal */
+        this._parts = [];
         /** @internal */
         this._$disconnectableChildren = undefined;
         this._$template = template;
@@ -1655,8 +1569,9 @@ class TemplateInstance {
     // This method is separate from the constructor because we need to return a
     // DocumentFragment and we don't want to hold onto it with an instance field.
     _clone(options) {
+        var _a;
         const { el: { content }, parts: parts, } = this._$template;
-        const fragment = (options?.creationScope ?? d).importNode(content, true);
+        const fragment = ((_a = options === null || options === void 0 ? void 0 : options.creationScope) !== null && _a !== void 0 ? _a : d).importNode(content, true);
         walker.currentNode = fragment;
         let node = walker.nextNode();
         let nodeIndex = 0;
@@ -1674,23 +1589,19 @@ class TemplateInstance {
                 else if (templatePart.type === ELEMENT_PART) {
                     part = new ElementPart(node, this, options);
                 }
-                this._$parts.push(part);
+                this._parts.push(part);
                 templatePart = parts[++partIndex];
             }
-            if (nodeIndex !== templatePart?.index) {
+            if (nodeIndex !== (templatePart === null || templatePart === void 0 ? void 0 : templatePart.index)) {
                 node = walker.nextNode();
                 nodeIndex++;
             }
         }
-        // We need to set the currentNode away from the cloned tree so that we
-        // don't hold onto the tree even if the tree is detached and should be
-        // freed.
-        walker.currentNode = d;
         return fragment;
     }
     _update(values) {
         let i = 0;
-        for (const part of this._$parts) {
+        for (const part of this._parts) {
             if (part !== undefined) {
                 if (part.strings !== undefined) {
                     part._$setValue(values, part, i);
@@ -1707,15 +1618,9 @@ class TemplateInstance {
         }
     }
 }
-let ChildPart$1 = class ChildPart {
-    // See comment in Disconnectable interface for why this is a getter
-    get _$isConnected() {
-        // ChildParts that are not at the root should always be created with a
-        // parent; only RootChildNode's won't, so they return the local isConnected
-        // state
-        return this._$parent?._$isConnected ?? this.__isConnected;
-    }
+class ChildPart$1 {
     constructor(startNode, endNode, parent, options) {
+        var _a;
         this.type = CHILD_PART;
         this._$committedValue = nothing;
         // The following fields will be patched onto ChildParts when required by
@@ -1729,7 +1634,15 @@ let ChildPart$1 = class ChildPart {
         // Note __isConnected is only ever accessed on RootParts (i.e. when there is
         // no _$parent); the value on a non-root-part is "don't care", but checking
         // for parent would be more code
-        this.__isConnected = options?.isConnected ?? true;
+        this.__isConnected = (_a = options === null || options === void 0 ? void 0 : options.isConnected) !== null && _a !== void 0 ? _a : true;
+    }
+    // See comment in Disconnectable interface for why this is a getter
+    get _$isConnected() {
+        var _a, _b;
+        // ChildParts that are not at the root should always be created with a
+        // parent; only RootChildNode's won't, so they return the local isConnected
+        // state
+        return (_b = (_a = this._$parent) === null || _a === void 0 ? void 0 : _a._$isConnected) !== null && _b !== void 0 ? _b : this.__isConnected;
     }
     /**
      * The parent node into which the part renders its content.
@@ -1753,7 +1666,7 @@ let ChildPart$1 = class ChildPart {
         let parentNode = wrap$1(this._$startNode).parentNode;
         const parent = this._$parent;
         if (parent !== undefined &&
-            parentNode?.nodeType === 11 /* Node.DOCUMENT_FRAGMENT */) {
+            parentNode.nodeType === 11 /* Node.DOCUMENT_FRAGMENT */) {
             // If the parentNode is a DocumentFragment, it may be because the DOM is
             // still in the cloned fragment during initial render; if so, get the real
             // parentNode the part will be committed into by asking the parent.
@@ -1806,8 +1719,8 @@ let ChildPart$1 = class ChildPart {
             this._commitText(value);
         }
     }
-    _insert(node) {
-        return wrap$1(wrap$1(this._$startNode).parentNode).insertBefore(node, this._$endNode);
+    _insert(node, ref = this._$endNode) {
+        return wrap$1(wrap$1(this._$startNode).parentNode).insertBefore(node, ref);
     }
     _commitNode(value) {
         if (this._$committedValue !== value) {
@@ -1832,6 +1745,7 @@ let ChildPart$1 = class ChildPart {
         this._$committedValue = value;
     }
     _commitTemplateResult(result) {
+        var _a;
         // This property needs to remain unminified.
         const { values, ['_$litType$']: type } = result;
         // If $litType$ is a number, result is a plain TemplateResult and we get
@@ -1841,9 +1755,9 @@ let ChildPart$1 = class ChildPart {
         const template = typeof type === 'number'
             ? this._$getTemplate(result)
             : (type.el === undefined &&
-                (type.el = Template.createElement(trustFromTemplateString(type.h, type.h[0]), this.options)),
+                (type.el = Template.createElement(type.h, this.options)),
                 type);
-        if (this._$committedValue?._$template === template) {
+        if (((_a = this._$committedValue) === null || _a === void 0 ? void 0 : _a._$template) === template) {
             this._$committedValue._update(values);
         }
         else {
@@ -1888,7 +1802,7 @@ let ChildPart$1 = class ChildPart {
                 // TODO (justinfagnani): test perf impact of always creating two parts
                 // instead of sharing parts between nodes
                 // https://github.com/lit/lit/issues/1266
-                itemParts.push((itemPart = new ChildPart(this._insert(createMarker$1()), this._insert(createMarker$1()), this, this.options)));
+                itemParts.push((itemPart = new ChildPart$1(this._insert(createMarker$1()), this._insert(createMarker$1()), this, this.options)));
             }
             else {
                 // Reuse an existing part
@@ -1910,44 +1824,36 @@ let ChildPart$1 = class ChildPart {
      * @param start Start node to clear from, for clearing a subset of the part's
      *     DOM (used when truncating iterables)
      * @param from  When `start` is specified, the index within the iterable from
-     *     which ChildParts are being removed, used for disconnecting directives
-     *     in those Parts.
+     *     which ChildParts are being removed, used for disconnecting directives in
+     *     those Parts.
      *
      * @internal
      */
     _$clear(start = wrap$1(this._$startNode).nextSibling, from) {
-        this._$notifyConnectionChanged?.(false, true, from);
-        while (start !== this._$endNode) {
-            // The non-null assertion is safe because if _$startNode.nextSibling is
-            // null, then _$endNode is also null, and we would not have entered this
-            // loop.
+        var _a;
+        (_a = this._$notifyConnectionChanged) === null || _a === void 0 ? void 0 : _a.call(this, false, true, from);
+        while (start && start !== this._$endNode) {
             const n = wrap$1(start).nextSibling;
             wrap$1(start).remove();
             start = n;
         }
     }
     /**
-     * Implementation of RootPart's `isConnected`. Note that this method
+     * Implementation of RootPart's `isConnected`. Note that this metod
      * should only be called on `RootPart`s (the `ChildPart` returned from a
      * top-level `render()` call). It has no effect on non-root ChildParts.
      * @param isConnected Whether to set
      * @internal
      */
     setConnected(isConnected) {
+        var _a;
         if (this._$parent === undefined) {
             this.__isConnected = isConnected;
-            this._$notifyConnectionChanged?.(isConnected);
+            (_a = this._$notifyConnectionChanged) === null || _a === void 0 ? void 0 : _a.call(this, isConnected);
         }
     }
-};
+}
 class AttributePart {
-    get tagName() {
-        return this.element.tagName;
-    }
-    // See comment in Disconnectable interface for why this is a getter
-    get _$isConnected() {
-        return this._$parent._$isConnected;
-    }
     constructor(element, name, strings, parent, options) {
         this.type = ATTRIBUTE_PART;
         /** @internal */
@@ -1965,6 +1871,13 @@ class AttributePart {
         else {
             this._$committedValue = nothing;
         }
+    }
+    get tagName() {
+        return this.element.tagName;
+    }
+    // See comment in Disconnectable interface for why this is a getter
+    get _$isConnected() {
+        return this._$parent._$isConnected;
     }
     /**
      * Sets the value of this part by resolving the value from possibly multiple
@@ -2013,13 +1926,12 @@ class AttributePart {
                     // If the user-provided value is `noChange`, use the previous value
                     v = this._$committedValue[i];
                 }
-                change ||=
-                    !isPrimitive$1(v) || v !== this._$committedValue[i];
+                change || (change = !isPrimitive$1(v) || v !== this._$committedValue[i]);
                 if (v === nothing) {
                     value = nothing;
                 }
                 else if (value !== nothing) {
-                    value += (v ?? '') + strings[i + 1];
+                    value += (v !== null && v !== void 0 ? v : '') + strings[i + 1];
                 }
                 // We always record each value, even if one is `nothing`, for future
                 // change detection.
@@ -2036,7 +1948,7 @@ class AttributePart {
             wrap$1(this.element).removeAttribute(this.name);
         }
         else {
-            wrap$1(this.element).setAttribute(this.name, (value ?? ''));
+            wrap$1(this.element).setAttribute(this.name, (value !== null && value !== void 0 ? value : ''));
         }
     }
 }
@@ -2051,6 +1963,13 @@ class PropertyPart extends AttributePart {
         this.element[this.name] = value === nothing ? undefined : value;
     }
 }
+// Temporary workaround for https://crbug.com/993268
+// Currently, any attribute starting with "on" is considered to be a
+// TrustedScript source. Such boolean attributes must be set to the equivalent
+// trusted emptyScript value.
+const emptyStringForBooleanAttribute = trustedTypes
+    ? trustedTypes.emptyScript
+    : '';
 class BooleanAttributePart extends AttributePart {
     constructor() {
         super(...arguments);
@@ -2058,7 +1977,12 @@ class BooleanAttributePart extends AttributePart {
     }
     /** @internal */
     _commitValue(value) {
-        wrap$1(this.element).toggleAttribute(this.name, !!value && value !== nothing);
+        if (value && value !== nothing) {
+            wrap$1(this.element).setAttribute(this.name, emptyStringForBooleanAttribute);
+        }
+        else {
+            wrap$1(this.element).removeAttribute(this.name);
+        }
     }
 }
 class EventPart extends AttributePart {
@@ -2070,8 +1994,9 @@ class EventPart extends AttributePart {
     // since the dirty checking is more complex
     /** @internal */
     _$setValue(newListener, directiveParent = this) {
+        var _a;
         newListener =
-            resolveDirective(this, newListener, directiveParent, 0) ?? nothing;
+            (_a = resolveDirective(this, newListener, directiveParent, 0)) !== null && _a !== void 0 ? _a : nothing;
         if (newListener === noChange) {
             return;
         }
@@ -2093,13 +2018,17 @@ class EventPart extends AttributePart {
             this.element.removeEventListener(this.name, this, oldListener);
         }
         if (shouldAddListener) {
+            // Beware: IE11 and Chrome 41 don't like using the listener as the
+            // options object. Figure out how to deal w/ this in IE11 - maybe
+            // patch addEventListener?
             this.element.addEventListener(this.name, this, newListener);
         }
         this._$committedValue = newListener;
     }
     handleEvent(event) {
+        var _a, _b;
         if (typeof this._$committedValue === 'function') {
-            this._$committedValue.call(this.options?.host ?? this.element, event);
+            this._$committedValue.call((_b = (_a = this.options) === null || _a === void 0 ? void 0 : _a.host) !== null && _b !== void 0 ? _b : this.element, event);
         }
         else {
             this._$committedValue.handleEvent(event);
@@ -2130,7 +2059,7 @@ class ElementPart {
  * external users.
  *
  * We currently do not make a mangled rollup build of the lit-ssr code. In order
- * to keep a number of (otherwise private) top-level exports mangled in the
+ * to keep a number of (otherwise private) top-level exports  mangled in the
  * client side code, we export a _$LH object containing those members (or
  * helper methods for accessing private fields of those members), and then
  * re-export them for use in lit-ssr. This keeps lit-ssr agnostic to whether the
@@ -2148,10 +2077,11 @@ const _$LH = {
     _markerMatch: markerMatch,
     _HTML_RESULT: HTML_RESULT$1,
     _getTemplateHtml: getTemplateHtml,
-    // Used in tests and private-ssr-support
+    // Used in hydrate
     _TemplateInstance: TemplateInstance,
     _isIterable: isIterable,
     _resolveDirective: resolveDirective,
+    // Used in tests and private-ssr-support
     _ChildPart: ChildPart$1,
     _AttributePart: AttributePart,
     _BooleanAttributePart: BooleanAttributePart,
@@ -2160,11 +2090,11 @@ const _$LH = {
     _ElementPart: ElementPart,
 };
 // Apply polyfills if available
-const polyfillSupport$1 = global$1.litHtmlPolyfillSupport;
-polyfillSupport$1?.(Template, ChildPart$1);
+const polyfillSupport$1 = global.litHtmlPolyfillSupport;
+polyfillSupport$1 === null || polyfillSupport$1 === void 0 ? void 0 : polyfillSupport$1(Template, ChildPart$1);
 // IMPORTANT: do not change the property name or the assignment expression.
 // This line will be used in regexes to search for lit-html usage.
-(global$1.litHtmlVersions ??= []).push('3.3.3');
+((_d = global.litHtmlVersions) !== null && _d !== void 0 ? _d : (global.litHtmlVersions = [])).push('2.5.0');
 /**
  * Renders a value, usually a lit-html TemplateResult, to the container.
  *
@@ -2191,15 +2121,16 @@ polyfillSupport$1?.(Template, ChildPart$1);
  * {@link https://lit.dev/docs/libraries/standalone-templates/#rendering-lit-html-templates| Rendering Lit HTML Templates}
  */
 const render = (value, container, options) => {
-    const partOwnerNode = options?.renderBefore ?? container;
+    var _a, _b;
+    const partOwnerNode = (_a = options === null || options === void 0 ? void 0 : options.renderBefore) !== null && _a !== void 0 ? _a : container;
     // This property needs to remain unminified.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let part = partOwnerNode['_$litPart$'];
     if (part === undefined) {
-        const endNode = options?.renderBefore ?? null;
+        const endNode = (_b = options === null || options === void 0 ? void 0 : options.renderBefore) !== null && _b !== void 0 ? _b : null;
         // This property needs to remain unminified.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        partOwnerNode['_$litPart$'] = part = new ChildPart$1(container.insertBefore(createMarker$1(), endNode), endNode, undefined, options ?? {});
+        partOwnerNode['_$litPart$'] = part = new ChildPart$1(container.insertBefore(createMarker$1(), endNode), endNode, undefined, options !== null && options !== void 0 ? options : {});
     }
     part._$setValue(value);
     return part;
@@ -2210,58 +2141,10 @@ const render = (value, container, options) => {
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-/**
- * The main LitElement module, which defines the {@linkcode LitElement} base
- * class and related APIs.
- *
- * LitElement components can define a template and a set of observed
- * properties. Changing an observed property triggers a re-render of the
- * element.
- *
- * Import {@linkcode LitElement} and {@linkcode html} from this module to
- * create a component:
- *
- *  ```js
- * import {LitElement, html} from 'lit-element';
- *
- * class MyElement extends LitElement {
- *
- *   // Declare observed properties
- *   static get properties() {
- *     return {
- *       adjective: {}
- *     }
- *   }
- *
- *   constructor() {
- *     this.adjective = 'awesome';
- *   }
- *
- *   // Define the element's template
- *   render() {
- *     return html`<p>your ${adjective} template here</p>`;
- *   }
- * }
- *
- * customElements.define('my-element', MyElement);
- * ```
- *
- * `LitElement` extends {@linkcode ReactiveElement} and adds lit-html
- * templating. The `ReactiveElement` class is provided for users that want to
- * build their own custom element base classes that don't use lit-html.
- *
- * @packageDocumentation
- */
-/*
- * When using Closure Compiler, JSCompiler_renameProperty(property, object) is
- * replaced at compile time by the munged name for object[property]. We cannot
- * alias this function, so we have to use a small shim that has the same
- * behavior when not compiling.
- */
-/*@__INLINE__*/
-const JSCompiler_renameProperty = (prop, _obj) => prop;
-// Allows minifiers to rename references to globalThis
-const global = globalThis;
+var _b, _c;
+// For backwards compatibility export ReactiveElement as UpdatingElement. Note,
+// IE transpilation requires exporting like this.
+const UpdatingElement = ReactiveElement;
 /**
  * Base element class that manages element properties and attributes, and
  * renders a lit-html template.
@@ -2284,13 +2167,15 @@ class LitElement extends ReactiveElement {
      * @category rendering
      */
     createRenderRoot() {
+        var _a;
+        var _b;
         const renderRoot = super.createRenderRoot();
         // When adoptedStyleSheets are shimmed, they are inserted into the
         // shadowRoot by createRenderRoot. Adjust the renderBefore node so that
         // any styles in Lit content render before adoptedStyleSheets. This is
         // important so that adoptedStyleSheets have precedence over styles in
         // the shadowRoot.
-        this.renderOptions.renderBefore ??= renderRoot.firstChild;
+        (_a = (_b = this.renderOptions).renderBefore) !== null && _a !== void 0 ? _a : (_b.renderBefore = renderRoot.firstChild);
         return renderRoot;
     }
     /**
@@ -2332,8 +2217,9 @@ class LitElement extends ReactiveElement {
      * @category lifecycle
      */
     connectedCallback() {
+        var _a;
         super.connectedCallback();
-        this.__childPart?.setConnected(true);
+        (_a = this.__childPart) === null || _a === void 0 ? void 0 : _a.setConnected(true);
     }
     /**
      * Invoked when the component is removed from the document's DOM.
@@ -2355,8 +2241,9 @@ class LitElement extends ReactiveElement {
      * @category lifecycle
      */
     disconnectedCallback() {
+        var _a;
         super.disconnectedCallback();
-        this.__childPart?.setConnected(false);
+        (_a = this.__childPart) === null || _a === void 0 ? void 0 : _a.setConnected(false);
     }
     /**
      * Invoked on each update to perform rendering tasks. This method may return
@@ -2369,8 +2256,6 @@ class LitElement extends ReactiveElement {
         return noChange;
     }
 }
-// This property needs to remain unminified.
-LitElement['_$litElement$'] = true;
 /**
  * Ensure this class is marked as `finalized` as an optimization ensuring
  * it will not needlessly try to `finalize`.
@@ -2378,12 +2263,14 @@ LitElement['_$litElement$'] = true;
  * Note this property name is a string to prevent breaking Closure JS Compiler
  * optimizations. See @lit/reactive-element for more information.
  */
-LitElement[JSCompiler_renameProperty('finalized')] = true;
+LitElement['finalized'] = true;
+// This property needs to remain unminified.
+LitElement['_$litElement$'] = true;
 // Install hydration if available
-global.litElementHydrateSupport?.({ LitElement });
+(_b = globalThis.litElementHydrateSupport) === null || _b === void 0 ? void 0 : _b.call(globalThis, { LitElement });
 // Apply polyfills if available
-const polyfillSupport = global.litElementPolyfillSupport;
-polyfillSupport?.({ LitElement });
+const polyfillSupport = globalThis.litElementPolyfillSupport;
+polyfillSupport === null || polyfillSupport === void 0 ? void 0 : polyfillSupport({ LitElement });
 /**
  * END USERS SHOULD NOT RELY ON THIS OBJECT.
  *
@@ -2412,7 +2299,7 @@ const _$LE = {
 };
 // IMPORTANT: do not change the property name or the assignment expression.
 // This line will be used in regexes to search for LitElement usage.
-(global.litElementVersions ??= []).push('4.2.2');
+((_c = globalThis.litElementVersions) !== null && _c !== void 0 ? _c : (globalThis.litElementVersions = [])).push('3.2.2');
 
 /**
  * @license
@@ -2452,33 +2339,26 @@ const isPrimitive = (value) => value === null || (typeof value != 'object' && ty
 const TemplateResultType = {
     HTML: 1,
     SVG: 2,
-    MATHML: 3,
 };
 /**
- * Tests if a value is a TemplateResult or a CompiledTemplateResult.
+ * Tests if a value is a TemplateResult.
  */
 const isTemplateResult = (value, type) => type === undefined
     ? // This property needs to remain unminified.
-        value?.['_$litType$'] !== undefined
-    : value?.['_$litType$'] === type;
-/**
- * Tests if a value is a CompiledTemplateResult.
- */
-const isCompiledTemplateResult = (value) => {
-    return value?.['_$litType$']?.h != null;
-};
+        (value === null || value === void 0 ? void 0 : value['_$litType$']) !== undefined
+    : (value === null || value === void 0 ? void 0 : value['_$litType$']) === type;
 /**
  * Tests if a value is a DirectiveResult.
  */
 const isDirectiveResult = (value) => 
 // This property needs to remain unminified.
-value?.['_$litDirective$'] !== undefined;
+(value === null || value === void 0 ? void 0 : value['_$litDirective$']) !== undefined;
 /**
  * Retrieves the Directive class for a DirectiveResult
  */
 const getDirectiveClass = (value) => 
 // This property needs to remain unminified.
-value?.['_$litDirective$'];
+value === null || value === void 0 ? void 0 : value['_$litDirective$'];
 /**
  * Tests whether a part has only a single-expression with no strings to
  * interpolate between.
@@ -2502,6 +2382,7 @@ const createMarker = () => document.createComment('');
  * @param part Part to insert, or undefined to create a new part
  */
 const insertPart = (containerPart, refPart, part) => {
+    var _a;
     const container = wrap(containerPart._$startNode).parentNode;
     const refNode = refPart === undefined ? containerPart._$endNode : refPart._$startNode;
     if (part === undefined) {
@@ -2514,7 +2395,7 @@ const insertPart = (containerPart, refPart, part) => {
         const oldParent = part._$parent;
         const parentChanged = oldParent !== containerPart;
         if (parentChanged) {
-            part._$reparentDisconnectables?.(containerPart);
+            (_a = part._$reparentDisconnectables) === null || _a === void 0 ? void 0 : _a.call(part, containerPart);
             // Note that although `_$reparentDisconnectables` updates the part's
             // `_$parent` reference after unlinking from its current parent, that
             // method only exists if Disconnectables are present, so we need to
@@ -2561,7 +2442,7 @@ const setChildPartValue = (part, value, directiveParent = part) => {
     part._$setValue(value, directiveParent);
     return part;
 };
-// A sentinel value that can never appear as a part value except when set by
+// A sentinal value that can never appear as a part value except when set by
 // live(). Used to force a dirty-check to fail and cause a re-render.
 const RESET_VALUE = {};
 /**
@@ -2581,7 +2462,7 @@ const setCommittedValue = (part, value = RESET_VALUE) => (part._$committedValue 
  *
  * The committed value is used for change detection and efficient updates of
  * the part. It can differ from the value set by the template or directive in
- * cases where the template value is transformed before being committed.
+ * cases where the template value is transformed before being commited.
  *
  * - `TemplateResult`s are committed as a `TemplateInstance`
  * - Iterables are committed as `Array<ChildPart>`
@@ -2592,18 +2473,20 @@ const setCommittedValue = (part, value = RESET_VALUE) => (part._$committedValue 
  */
 const getCommittedValue = (part) => part._$committedValue;
 /**
- * Removes a ChildPart from the DOM, including any of its content and markers.
- *
- * Note: The only difference between this and clearPart() is that this also
- * removes the part's start node. This means that the ChildPart must own its
- * start node, ie it must be a marker node specifically for this part and not an
- * anchor from surrounding content.
+ * Removes a ChildPart from the DOM, including any of its content.
  *
  * @param part The Part to remove
  */
 const removePart = (part) => {
-    part._$clear();
-    part._$startNode.remove();
+    var _a;
+    (_a = part._$notifyConnectionChanged) === null || _a === void 0 ? void 0 : _a.call(part, false, true);
+    let start = part._$startNode;
+    const end = wrap(part._$endNode).nextSibling;
+    while (start !== end) {
+        const n = wrap(start).nextSibling;
+        wrap(start).remove();
+        start = n;
+    }
 };
 const clearPart = (part) => {
     part._$clear();
@@ -2670,6 +2553,7 @@ class Directive {
  * @return True if there were children to disconnect; false otherwise
  */
 const notifyChildrenConnectedChanged = (parent, isConnected) => {
+    var _a, _b;
     const children = parent._$disconnectableChildren;
     if (children === undefined) {
         return false;
@@ -2683,7 +2567,7 @@ const notifyChildrenConnectedChanged = (parent, isConnected) => {
         // this list
         // Disconnect Directive (and any nested directives contained within)
         // This property needs to remain unminified.
-        obj['_$notifyDirectiveConnectionChanged']?.(isConnected, false);
+        (_b = (_a = obj)['_$notifyDirectiveConnectionChanged']) === null || _b === void 0 ? void 0 : _b.call(_a, isConnected, false);
         // Disconnect Part/TemplateInstance
         notifyChildrenConnectedChanged(obj, isConnected);
     }
@@ -2704,7 +2588,7 @@ const removeDisconnectableFromParent = (obj) => {
         children = parent._$disconnectableChildren;
         children.delete(obj);
         obj = parent;
-    } while (children?.size === 0);
+    } while ((children === null || children === void 0 ? void 0 : children.size) === 0);
 };
 const addDisconnectableToParent = (obj) => {
     // Climb the parent tree, creating a sparse tree of children needing
@@ -2793,10 +2677,11 @@ function notifyChildPartConnectedChanged(isConnected, isClearingValue = false, f
  * Patches disconnection API onto ChildParts.
  */
 const installDisconnectAPI = (obj) => {
+    var _a, _b;
+    var _c, _d;
     if (obj.type == PartType.CHILD) {
-        obj._$notifyConnectionChanged ??=
-            notifyChildPartConnectedChanged;
-        obj._$reparentDisconnectables ??= reparentDisconnectables;
+        (_a = (_c = obj)._$notifyConnectionChanged) !== null && _a !== void 0 ? _a : (_c._$notifyConnectionChanged = notifyChildPartConnectedChanged);
+        (_b = (_d = obj)._$reparentDisconnectables) !== null && _b !== void 0 ? _b : (_d._$reparentDisconnectables = reparentDisconnectables);
     }
 };
 /**
@@ -2847,13 +2732,14 @@ class AsyncDirective extends Directive {
      * @internal
      */
     ['_$notifyDirectiveConnectionChanged'](isConnected, isClearingDirective = true) {
+        var _a, _b;
         if (isConnected !== this.isConnected) {
             this.isConnected = isConnected;
             if (isConnected) {
-                this.reconnected?.();
+                (_a = this.reconnected) === null || _a === void 0 ? void 0 : _a.call(this);
             }
             else {
-                this.disconnected?.();
+                (_b = this.disconnected) === null || _b === void 0 ? void 0 : _b.call(this);
             }
         }
         if (isClearingDirective) {
@@ -2952,7 +2838,7 @@ class Pauser {
     /**
      * When paused, returns a promise to be awaited; when unpaused, returns
      * undefined. Note that in the microtask between the pauser being resumed
-     * an await of this promise resolving, the pauser could be paused again,
+     * an an await of this promise resolving, the pauser could be paused again,
      * hence callers should check the promise in a loop when awaiting.
      * @returns A promise to be awaited when paused or undefined
      */
@@ -2963,13 +2849,15 @@ class Pauser {
      * Creates a promise to be awaited
      */
     pause() {
-        this._promise ??= new Promise((resolve) => (this._resolve = resolve));
+        var _a;
+        (_a = this._promise) !== null && _a !== void 0 ? _a : (this._promise = new Promise((resolve) => (this._resolve = resolve)));
     }
     /**
      * Resolves the promise which may be awaited
      */
     resume() {
-        this._resolve?.();
+        var _a;
+        (_a = this._resolve) === null || _a === void 0 ? void 0 : _a.call(this);
         this._promise = this._resolve = undefined;
     }
 }
@@ -2999,7 +2887,7 @@ class AsyncReplaceDirective extends AsyncDirective {
         // If we've already set up this particular iterable, we don't need
         // to do anything.
         if (value === this.__value) {
-            return noChange;
+            return;
         }
         this.__value = value;
         let i = 0;
@@ -3126,12 +3014,6 @@ const asyncAppend = directive(AsyncAppendDirective);
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-/**
- * The template strings array contents are not compatible between the two
- * template result types as the compiled template contains a prepared string;
- * only use the returned template strings array as a cache key.
- */
-const getStringsFromTemplateResult = (result) => isCompiledTemplateResult(result) ? result['_$litType$'].h : result.strings;
 class CacheDirective extends Directive {
     constructor(partInfo) {
         super(partInfo);
@@ -3143,23 +3025,20 @@ class CacheDirective extends Directive {
         return [v];
     }
     update(containerPart, [v]) {
-        const _valueKey = isTemplateResult(this._value)
-            ? getStringsFromTemplateResult(this._value)
-            : null;
-        const vKey = isTemplateResult(v) ? getStringsFromTemplateResult(v) : null;
         // If the previous value is a TemplateResult and the new value is not,
         // or is a different Template as the previous value, move the child part
         // into the cache.
-        if (_valueKey !== null && (vKey === null || _valueKey !== vKey)) {
+        if (isTemplateResult(this._value) &&
+            (!isTemplateResult(v) || this._value.strings !== v.strings)) {
             // This is always an array because we return [v] in render()
             const partValue = getCommittedValue(containerPart);
             const childPart = partValue.pop();
-            let cachedContainerPart = this._templateCache.get(_valueKey);
+            let cachedContainerPart = this._templateCache.get(this._value.strings);
             if (cachedContainerPart === undefined) {
                 const fragment = document.createDocumentFragment();
                 cachedContainerPart = render(nothing, fragment);
                 cachedContainerPart.setConnected(false);
-                this._templateCache.set(_valueKey, cachedContainerPart);
+                this._templateCache.set(this._value.strings, cachedContainerPart);
             }
             // Move into cache
             setCommittedValue(cachedContainerPart, [childPart]);
@@ -3168,9 +3047,9 @@ class CacheDirective extends Directive {
         // If the new value is a TemplateResult and the previous value is not,
         // or is a different Template as the previous value, restore the child
         // part from the cache.
-        if (vKey !== null) {
-            if (_valueKey === null || _valueKey !== vKey) {
-                const cachedContainerPart = this._templateCache.get(vKey);
+        if (isTemplateResult(v)) {
+            if (!isTemplateResult(this._value) || this._value.strings !== v.strings) {
+                const cachedContainerPart = this._templateCache.get(v.strings);
                 if (cachedContainerPart !== undefined) {
                     // Move the cached part back into the container part value
                     const partValue = getCommittedValue(cachedContainerPart);
@@ -3181,7 +3060,6 @@ class CacheDirective extends Directive {
                     setCommittedValue(containerPart, [cachedPart]);
                 }
             }
-            // Because vKey is non null, v must be a TemplateResult.
             this._value = v;
         }
         else {
@@ -3244,7 +3122,7 @@ const choose = (value, cases, defaultCase) => {
             return fn();
         }
     }
-    return defaultCase?.();
+    return defaultCase === null || defaultCase === void 0 ? void 0 : defaultCase();
 };
 
 /**
@@ -3254,10 +3132,11 @@ const choose = (value, cases, defaultCase) => {
  */
 class ClassMapDirective extends Directive {
     constructor(partInfo) {
+        var _a;
         super(partInfo);
         if (partInfo.type !== PartType.ATTRIBUTE ||
             partInfo.name !== 'class' ||
-            partInfo.strings?.length > 2) {
+            ((_a = partInfo.strings) === null || _a === void 0 ? void 0 : _a.length) > 2) {
             throw new Error('`classMap()` can only be used in the `class` attribute ' +
                 'and must be the only part in the attribute.');
         }
@@ -3271,6 +3150,7 @@ class ClassMapDirective extends Directive {
             ' ');
     }
     update(part, [classInfo]) {
+        var _a, _b;
         // Remember dynamic classes on the first render
         if (this._previousClasses === undefined) {
             this._previousClasses = new Set();
@@ -3281,7 +3161,7 @@ class ClassMapDirective extends Directive {
                     .filter((s) => s !== ''));
             }
             for (const name in classInfo) {
-                if (classInfo[name] && !this._staticClasses?.has(name)) {
+                if (classInfo[name] && !((_a = this._staticClasses) === null || _a === void 0 ? void 0 : _a.has(name))) {
                     this._previousClasses.add(name);
                 }
             }
@@ -3289,19 +3169,21 @@ class ClassMapDirective extends Directive {
         }
         const classList = part.element.classList;
         // Remove old classes that no longer apply
-        for (const name of this._previousClasses) {
+        // We use forEach() instead of for-of so that we don't require down-level
+        // iteration.
+        this._previousClasses.forEach((name) => {
             if (!(name in classInfo)) {
                 classList.remove(name);
                 this._previousClasses.delete(name);
             }
-        }
+        });
         // Add or remove classes based on their classMap value
         for (const name in classInfo) {
             // We explicitly want a loose truthy check of `value` because it seems
             // more convenient that '' and 0 are skipped.
             const value = !!classInfo[name];
             if (value !== this._previousClasses.has(name) &&
-                !this._staticClasses?.has(name)) {
+                !((_b = this._staticClasses) === null || _b === void 0 ? void 0 : _b.has(name))) {
                 if (value) {
                     classList.add(name);
                     this._previousClasses.add(name);
@@ -3321,7 +3203,7 @@ class ClassMapDirective extends Directive {
  * This must be used in the `class` attribute and must be the only part used in
  * the attribute. It takes each property in the `classInfo` argument and adds
  * the property name to the element's `classList` if the property value is
- * truthy; if the property value is falsy, the property name is removed from
+ * truthy; if the property value is falsey, the property name is removed from
  * the element's `class`.
  *
  * For example `{foo: bar}` applies the class `foo` if the value of `bar` is
@@ -3336,7 +3218,7 @@ const classMap = directive(ClassMapDirective);
  * Copyright 2018 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-// A sentinel that indicates guard() hasn't rendered anything yet
+// A sentinal that indicates guard() hasn't rendered anything yet
 const initialValue = {};
 class GuardDirective extends Directive {
     constructor() {
@@ -3420,7 +3302,7 @@ const guard = directive(GuardDirective);
  *
  * For other part types, this directive is a no-op.
  */
-const ifDefined = (value) => value ?? nothing;
+const ifDefined = (value) => value !== null && value !== void 0 ? value : nothing;
 
 /**
  * @license
@@ -3588,7 +3470,7 @@ function* map(items, f) {
  */
 function* range(startOrEnd, end, step = 1) {
     const start = end === undefined ? 0 : startOrEnd;
-    end ??= startOrEnd;
+    end !== null && end !== void 0 ? end : (end = startOrEnd);
     for (let i = start; step > 0 ? i < end : end < i; i += step) {
         yield i;
     }
@@ -3619,8 +3501,9 @@ class RefDirective extends AsyncDirective {
         return nothing;
     }
     update(part, [ref]) {
+        var _a;
         const refChanged = ref !== this._ref;
-        if (refChanged) {
+        if (refChanged && this._ref !== undefined) {
             // The ref passed to the directive has changed;
             // unset the previous ref's value
             this._updateRefValue(undefined);
@@ -3629,18 +3512,13 @@ class RefDirective extends AsyncDirective {
             // We either got a new ref or this is the first render;
             // store the ref/element & update the ref value
             this._ref = ref;
-            this._context = part.options?.host;
+            this._context = (_a = part.options) === null || _a === void 0 ? void 0 : _a.host;
             this._updateRefValue((this._element = part.element));
         }
         return nothing;
     }
     _updateRefValue(element) {
-        if (this._ref === undefined) {
-            return;
-        }
-        if (!this.isConnected) {
-            element = undefined;
-        }
+        var _a;
         if (typeof this._ref === 'function') {
             // If the current ref was called with a previous value, call with
             // `undefined`; We do this to ensure callbacks are called in a consistent
@@ -3651,7 +3529,7 @@ class RefDirective extends AsyncDirective {
             // both the context and the callback, since we allow passing unbound
             // functions that are called on options.host, and we want to treat
             // these as unique "instances" of a function.
-            const context = this._context ?? globalThis;
+            const context = (_a = this._context) !== null && _a !== void 0 ? _a : globalThis;
             let lastElementForCallback = lastElementForContextAndCallback.get(context);
             if (lastElementForCallback === undefined) {
                 lastElementForCallback = new WeakMap();
@@ -3671,11 +3549,11 @@ class RefDirective extends AsyncDirective {
         }
     }
     get _lastElementForRef() {
+        var _a, _b, _c;
         return typeof this._ref === 'function'
-            ? lastElementForContextAndCallback
-                .get(this._context ?? globalThis)
-                ?.get(this._ref)
-            : this._ref?.value;
+            ? (_b = lastElementForContextAndCallback
+                .get((_a = this._context) !== null && _a !== void 0 ? _a : globalThis)) === null || _b === void 0 ? void 0 : _b.get(this._ref)
+            : (_c = this._ref) === null || _c === void 0 ? void 0 : _c.value;
     }
     disconnected() {
         // Only clear the box if our element is still the one in it (i.e. another
@@ -3766,6 +3644,7 @@ class RepeatDirective extends Directive {
         return this._getValuesAndKeys(items, keyFnOrTemplate, template).values;
     }
     update(containerPart, [items, keyFnOrTemplate, template]) {
+        var _a;
         // Old part & key lists are retrieved from the last update (which may
         // be primed by hydration)
         const oldParts = getCommittedValue(containerPart);
@@ -3779,12 +3658,12 @@ class RepeatDirective extends Directive {
             this._itemKeys = newKeys;
             return newValues;
         }
-        // In SSR hydration it's possible for oldParts to be an array but for us
+        // In SSR hydration it's possible for oldParts to be an arrray but for us
         // to not have item keys because the update() hasn't run yet. We set the
         // keys to an empty array. This will cause all oldKey/newKey comparisons
         // to fail and execution to fall to the last nested brach below which
         // reuses the oldPart.
-        const oldKeys = (this._itemKeys ??= []);
+        const oldKeys = ((_a = this._itemKeys) !== null && _a !== void 0 ? _a : (this._itemKeys = []));
         // New part list will be built up as we go (either reused from
         // old parts or created for new keys in this update). This is
         // saved in the above cache at the end of the update.
@@ -3980,7 +3859,7 @@ class RepeatDirective extends Directive {
         //   come first (to ensure we're always working on valid old
         //   parts) and that the final else clause comes last (since
         //   that's where the expensive moves occur). The order of
-        //   remaining clauses is just a simple guess at which cases
+        //   remaining clauses is is just a simple guess at which cases
         //   will be most common.
         //
         // * Note, we could calculate the longest
@@ -4134,24 +4013,19 @@ const repeat = directive(RepeatDirective);
  * Copyright 2018 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const important = 'important';
-// The leading space is important
-const importantFlag = ' !' + important;
-// How many characters to remove from a value, as a negative number
-const flagTrim = 0 - importantFlag.length;
 class StyleMapDirective extends Directive {
     constructor(partInfo) {
+        var _a;
         super(partInfo);
         if (partInfo.type !== PartType.ATTRIBUTE ||
             partInfo.name !== 'style' ||
-            partInfo.strings?.length > 2) {
+            ((_a = partInfo.strings) === null || _a === void 0 ? void 0 : _a.length) > 2) {
             throw new Error('The `styleMap` directive must be used in the `style` attribute ' +
                 'and must be the only part in the attribute.');
         }
     }
     render(styleInfo) {
         return Object.keys(styleInfo).reduce((style, prop) => {
-            // Make sure we use `styleInfo` so the TypeScript checker is happy. This is really a no-op.
             return style + prop.slice(0, 0);
         }, '');
     }
@@ -4161,7 +4035,9 @@ class StyleMapDirective extends Directive {
             this._previousStyleProperties = new Set();
         }
         // Remove old properties that no longer exist in styleInfo
-        for (const name of this._previousStyleProperties) {
+        // We use forEach() instead of for-of so that re don't require down-level
+        // iteration.
+        this._previousStyleProperties.forEach((name) => {
             // If the name isn't in styleInfo or it's null/undefined
             if (styleInfo[name] == null) {
                 this._previousStyleProperties.delete(name);
@@ -4169,21 +4045,20 @@ class StyleMapDirective extends Directive {
                     style.removeProperty(name);
                 }
                 else {
+                    // Note reset using empty string (vs null) as IE11 does not always
+                    // reset via null (https://developer.mozilla.org/en-US/docs/Web/API/ElementCSSInlineStyle/style#setting_styles)
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    style[name] = null;
+                    style[name] = '';
                 }
             }
-        }
+        });
         // Add or update properties
         for (const name in styleInfo) {
             const value = styleInfo[name];
             if (value != null) {
                 this._previousStyleProperties.add(name);
-                const isImportant = typeof value === 'string' && value.endsWith(importantFlag);
-                if (name.includes('-') || isImportant) {
-                    style.setProperty(name, isImportant
-                        ? value.slice(0, flagTrim)
-                        : value, isImportant ? important : '');
+                if (name.includes('-')) {
+                    style.setProperty(name, value);
                 }
                 else {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -4199,10 +4074,8 @@ class StyleMapDirective extends Directive {
  *
  * `styleMap` can only be used in the `style` attribute and must be the only
  * expression in the attribute. It takes the property names in the
- * {@link StyleInfo styleInfo} object and adds the properties to the inline
- * style of the element.
- *
- * Property names with dashes (`-`) are assumed to be valid CSS
+ * {@link StyleInfo styleInfo} object and adds the property values as CSS
+ * properties. Property names with dashes (`-`) are assumed to be valid CSS
  * property names and set on the element's style object using `setProperty()`.
  * Names without dashes are assumed to be camelCased JavaScript property names
  * and set on the element's style object using property assignment, allowing the
@@ -4345,7 +4218,8 @@ class UntilDirective extends AsyncDirective {
         this.__pauser = new Pauser();
     }
     render(...args) {
-        return (args.find((x) => !isPromise(x)) ?? noChange);
+        var _a;
+        return (_a = args.find((x) => !isPromise(x))) !== null && _a !== void 0 ? _a : noChange;
     }
     update(_part, args) {
         const previousValues = this.__values;
@@ -4451,7 +4325,7 @@ const until = directive(UntilDirective);
  * SPDX-License-Identifier: BSD-3-Clause
  */
 function when(condition, trueCase, falseCase) {
-    return condition ? trueCase(condition) : falseCase?.(condition);
+    return condition ? trueCase() : falseCase === null || falseCase === void 0 ? void 0 : falseCase();
 }
 
 /**
@@ -4459,8 +4333,6 @@ function when(condition, trueCase, falseCase) {
  * Copyright 2020 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-// Any new exports need to be added to the export statement in
-// `packages/lit/src/index.all.ts`.
 /**
  * Prevents JSON injection attacks.
  *
@@ -4479,10 +4351,10 @@ function when(condition, trueCase, falseCase) {
 const brand = Symbol.for('');
 /** Safely extracts the string part of a StaticValue. */
 const unwrapStaticValue = (value) => {
-    if (value?.r !== brand) {
+    if ((value === null || value === void 0 ? void 0 : value.r) !== brand) {
         return undefined;
     }
-    return value?.['_$litStatic$'];
+    return value === null || value === void 0 ? void 0 : value['_$litStatic$'];
 };
 /**
  * Wraps a string so that it behaves like part of the static template
@@ -4553,10 +4425,7 @@ const withStatic = (coreTag) => (strings, ...values) => {
             s += staticValue + strings[++i];
             hasStatics = true;
         }
-        // If the last value is static, we don't need to push it.
-        if (i !== l) {
-            dynamicValues.push(dynamicValue);
-        }
+        dynamicValues.push(dynamicValue);
         staticStrings.push(s);
         i++;
     }
@@ -4595,4 +4464,4 @@ const html = withStatic(html$1);
  */
 const svg = withStatic(svg$1);
 
-export { AsyncDirective, AsyncReplaceDirective, CSSResult, Directive, LitElement, PartType, ReactiveElement, TemplateResultType, UnsafeHTMLDirective, UntilDirective, _$LE, _$LH, adoptStyles, asyncAppend, asyncReplace, cache, choose, classMap, clearPart, createRef, css, defaultConverter, directive, getCommittedValue, getCompatibleStyle, getDirectiveClass, guard, html$1 as html, ifDefined, insertPart, isCompiledTemplateResult, isDirectiveResult, isPrimitive, isServer, isSingleExpression, isTemplateResult, join, keyed, literal, live, map, mathml, noChange, notEqual, nothing, range, ref, removePart, render, repeat, setChildPartValue, setCommittedValue, html as staticHtml, svg as staticSvg, styleMap, supportsAdoptingStyleSheets, svg$1 as svg, templateContent, unsafeCSS, unsafeHTML, unsafeSVG, unsafeStatic, until, when, withStatic };
+export { AsyncDirective, AsyncReplaceDirective, CSSResult, Directive, LitElement, PartType, ReactiveElement, TemplateResultType, UnsafeHTMLDirective, UntilDirective, UpdatingElement, _$LE, _$LH, adoptStyles, asyncAppend, asyncReplace, cache, choose, classMap, clearPart, createRef, css, defaultConverter, directive, getCommittedValue, getCompatibleStyle, getDirectiveClass, guard, html$1 as html, ifDefined, insertPart, isDirectiveResult, isPrimitive, isServer, isSingleExpression, isTemplateResult, join, keyed, literal, live, map, noChange, notEqual, nothing, range, ref, removePart, render, repeat, setChildPartValue, setCommittedValue, html as staticHtml, svg as staticSvg, styleMap, supportsAdoptingStyleSheets, svg$1 as svg, templateContent, unsafeCSS, unsafeHTML, unsafeSVG, unsafeStatic, until, when, withStatic };
