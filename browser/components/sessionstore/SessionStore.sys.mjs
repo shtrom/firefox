@@ -6254,7 +6254,6 @@ export var SessionStore = {
     aWinData,
     aOptions = {}
   ) {
-    var hidden = aWinData.hidden ? aWinData.hidden.split(",") : [];
     var isTaskbarTab =
       aWindow.document.documentElement.hasAttribute("taskbartab");
 
@@ -6281,12 +6280,6 @@ export var SessionStore = {
       lazy.AIWindow.toggleAIWindow(aWindow, shouldBeAIWindow, trigger);
     } else if (shouldBeAIWindow) {
       lazy.AIWindow.recordOpenWindowTelemetry(trigger);
-    }
-
-    if (!isTaskbarTab) {
-      WINDOW_HIDEABLE_FEATURES.forEach(function (aItem) {
-        aWindow[aItem].visible = !hidden.includes(aItem);
-      });
     }
 
     if (aWinData.isPopup) {
