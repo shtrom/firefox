@@ -3389,38 +3389,48 @@ void nsFocusManager::MoveCaretToFocus(PresShell* aPresShell,
     return;
   }
   nsCOMPtr<Document> doc = aPresShell->GetDocument();
-  if (doc) {
-    RefPtr<nsFrameSelection> frameSelection = aPresShell->FrameSelection();
-    RefPtr<Selection> domSelection = &frameSelection->NormalSelection();
-    MOZ_ASSERT(domSelection);
-
-    // First clear the selection. This way, if there is no currently focused
-    // content, the selection will just be cleared.
-    domSelection->RemoveAllRanges(IgnoreErrors());
-    if (aContent) {
-      ErrorResult rv;
-      RefPtr<nsRange> newRange = doc->CreateRange(rv);
-      if (NS_WARN_IF(rv.Failed())) {
-        rv.SuppressException();
-        return;
-      }
-
-      // Set the range to the start of the currently focused node
-      // Make sure it's collapsed
-      newRange->SelectNodeContents(*aContent, IgnoreErrors());
-
-      if (!aContent->GetFirstChild() || aContent->IsHTMLFormControlElement()) {
-        // If current focus node is a leaf, set range to before the
-        // node by using the parent as a container.
-        // This prevents it from appearing as selected.
-        newRange->SetStartBefore(*aContent, IgnoreErrors());
-        newRange->SetEndBefore(*aContent, IgnoreErrors());
-      }
-      domSelection->AddRangeAndSelectFramesAndNotifyListeners(*newRange,
-                                                              IgnoreErrors());
-      domSelection->CollapseToStart(IgnoreErrors());
-    }
+  if (!doc) {
+    return;
   }
+
+  RefPtr<nsFrameSelection> frameSelection = aPresShell->FrameSelection();
+  RefPtr<Selection> domSelection = &frameSelection->NormalSelection();
+  MOZ_ASSERT(domSelection);
+
+  if (!aContent) {
+    // If there is no currently focused content, the selection is just cleared.
+    domSelection->RemoveAllRanges(IgnoreErrors());
+    return;
+  }
+
+  ErrorResult rv;
+  RefPtr<nsRange> newRange = doc->CreateRange(rv);
+  if (NS_WARN_IF(rv.Failed())) {
+    rv.SuppressException();
+    domSelection->RemoveAllRanges(IgnoreErrors());
+    return;
+  }
+
+  // Set the range to the start of the currently focused node
+  // Make sure it's collapsed
+  newRange->SelectNodeContents(*aContent, IgnoreErrors());
+
+  if (!aContent->GetFirstChild() || aContent->IsHTMLFormControlElement()) {
+    // If current focus node is a leaf, set range to before the
+    // node by using the parent as a container.
+    // This prevents it from appearing as selected.
+    newRange->SetStartBefore(*aContent, IgnoreErrors());
+    newRange->SetEndBefore(*aContent, IgnoreErrors());
+  }
+  // Adding newRange to the selection first would mark, and then immediately
+  // unmark, every node in the flattened subtree of its closest common
+  // inclusive ancestor, so collapse to its start directly.  Adding it also set
+  // the interline position to StartOfNextLine, which is what we want here too:
+  // the caret belongs at the focused element, not trailing at the end of the
+  // preceding line when that element starts one.
+  domSelection->SetInterlinePosition(
+      Selection::InterlinePosition::StartOfNextLine);
+  domSelection->CollapseToStartOf(*newRange, IgnoreErrors());
 }
 
 nsresult nsFocusManager::SetCaretVisible(PresShell* aPresShell, bool aVisible,

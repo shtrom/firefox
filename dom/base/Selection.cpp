@@ -2960,22 +2960,27 @@ void Selection::CollapseToStart(ErrorResult& aRv) {
   }
 
   // Get the first range
-  const AbstractRange* firstRange = mStyledRanges.GetAbstractRangeAt(0);
+  const RefPtr<AbstractRange> firstRange = mStyledRanges.GetAbstractRangeAt(0);
   if (!firstRange) {
     aRv.Throw(NS_ERROR_FAILURE);
     return;
   }
 
+  CollapseToStartOf(*firstRange, aRv);
+}
+
+void Selection::CollapseToStartOf(const AbstractRange& aRange,
+                                  ErrorResult& aRv) {
   if (mFrameSelection) {
     mFrameSelection->AddChangeReasons(
         nsISelectionListener::COLLAPSETOSTART_REASON);
   }
-  nsINode* container = firstRange->GetStartContainer();
+  nsINode* container = aRange.GetStartContainer();
   if (!container) {
     aRv.Throw(NS_ERROR_FAILURE);
     return;
   }
-  const uint32_t offset = firstRange->StartOffset();
+  const uint32_t offset = aRange.StartOffset();
   if (MOZ_UNLIKELY(!IsValidNodeAndOffsetForBoundary(*container, offset, aRv))) {
     return;
   }
