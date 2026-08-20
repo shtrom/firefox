@@ -12,7 +12,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   MacOSLaunchOnLogin:
     "resource://gre/modules/launchonlogin/MacOSLaunchOnLogin.sys.mjs",
   UnsupportedLaunchOnLogin:
-    "resouce://gre/modules/launchonlogin/UnsupportedLaunchOnLogin.sys.mjs",
+    "resource://gre/modules/launchonlogin/UnsupportedLaunchOnLogin.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "gImpl", () => {
