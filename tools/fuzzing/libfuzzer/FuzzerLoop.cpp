@@ -252,20 +252,12 @@ void Fuzzer::ExitCallback() {
   _Exit(Options.ErrorExitCode);
 }
 
-bool Fuzzer::MaybeExitGracefully() {
-  if (!F->GracefulExitRequested) return false;
+void Fuzzer::MaybeExitGracefully() {
+  if (!F->GracefulExitRequested) return;
   Printf("==%lu== INFO: libFuzzer: exiting as requested\n", GetPid());
   RmDirRecursive(TempPath("FuzzWithFork", ".dir"));
   F->PrintFinalStats();
-  return true;
-}
-
-void Fuzzer::GracefullyExit() {
-  F->GracefulExitRequested = true;
-}
-
-bool Fuzzer::isGracefulExitRequested() {
-  return F->GracefulExitRequested;
+  _Exit(0);
 }
 
 int Fuzzer::InterruptExitCode() {
@@ -627,6 +619,7 @@ ATTRIBUTE_NOINLINE bool Fuzzer::ExecuteCallback(const uint8_t *Data,
     CBRes = CB(DataCopy, Size);
     RunningUserCallback = false;
     UnitStopTime = system_clock::now();
+    assert(CBRes == 0 || CBRes == -1);
     HasMoreMallocsThanFrees = AllocTracer.Stop();
   }
   if (!LooseMemeq(DataCopy, Data, Size))
@@ -727,7 +720,7 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
   }
 }
 
-bool Fuzzer::MutateAndTestOne() {
+void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
   auto &II = Corpus.ChooseUnitToMutate(MD.GetRand());
@@ -752,7 +745,7 @@ bool Fuzzer::MutateAndTestOne() {
   for (int i = 0; i < Options.MutateDepth; i++) {
     if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)
       break;
-    if (MaybeExitGracefully()) return true;
+    MaybeExitGracefully();
     size_t NewSize = 0;
     if (II.HasFocusFunction && !II.DataFlowTraceForFocusFunction.empty() &&
         Size <= CurrentMaxMutationLen)
@@ -762,10 +755,6 @@ bool Fuzzer::MutateAndTestOne() {
     // If MutateWithMask either failed or wasn't called, call default Mutate.
     if (!NewSize)
       NewSize = MD.Mutate(CurrentUnitData, Size, CurrentMaxMutationLen);
-
-    if (!NewSize)
-      continue;
-
     assert(NewSize > 0 && "Mutator returned empty unit");
     assert(NewSize <= CurrentMaxMutationLen && "Mutator return oversized unit");
     Size = NewSize;
@@ -786,7 +775,6 @@ bool Fuzzer::MutateAndTestOne() {
   }
 
   II.NeedsEnergyUpdate = true;
-  return false;
 }
 
 void Fuzzer::PurgeAllocator() {
@@ -804,7 +792,7 @@ void Fuzzer::PurgeAllocator() {
   LastAllocatorPurgeAttemptTime = system_clock::now();
 }
 
-int Fuzzer::ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles) {
+void Fuzzer::ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles) {
   const size_t kMaxSaneLen = 1 << 20;
   const size_t kMinDefaultLen = 4096;
   size_t MaxSize = 0;
@@ -874,21 +862,14 @@ int Fuzzer::ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles) {
                        /*TimeOfUnit=*/duration_cast<microseconds>(0s), {0}, DFT,
                        /*BaseII*/ nullptr);
   }
-  return 0;
 }
 
-int Fuzzer::Loop(std::vector<SizedFile> &CorporaFiles) {
+void Fuzzer::Loop(std::vector<SizedFile> &CorporaFiles) {
   auto FocusFunctionOrAuto = Options.FocusFunction;
-  int Res = DFT.Init(Options.DataFlowTrace, &FocusFunctionOrAuto, CorporaFiles,
+  DFT.Init(Options.DataFlowTrace, &FocusFunctionOrAuto, CorporaFiles,
            MD.GetRand());
-  if (Res != 0)
-    return Res;
-  Res = TPC.SetFocusFunction(FocusFunctionOrAuto);
-  if (Res != 0)
-    return Res;
-  Res = ReadAndExecuteSeedCorpora(CorporaFiles);
-  if (Res != 0)
-    return Res;
+  TPC.SetFocusFunction(FocusFunctionOrAuto);
+  ReadAndExecuteSeedCorpora(CorporaFiles);
   DFT.Clear();  // No need for DFT any more.
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);
@@ -926,15 +907,13 @@ int Fuzzer::Loop(std::vector<SizedFile> &CorporaFiles) {
     }
 
     // Perform several mutations and runs.
-    if (MutateAndTestOne())
-      return 0;
+    MutateAndTestOne();
 
     PurgeAllocator();
   }
 
   PrintStats("DONE  ", "\n");
   MD.PrintRecommendedDictionary();
-  return 0;
 }
 
 void Fuzzer::MinimizeCrashLoop(const Unit &U) {
@@ -945,9 +924,7 @@ void Fuzzer::MinimizeCrashLoop(const Unit &U) {
     memcpy(CurrentUnitData, U.data(), U.size());
     for (int i = 0; i < Options.MutateDepth; i++) {
       size_t NewSize = MD.Mutate(CurrentUnitData, U.size(), MaxMutationLen);
-      assert(NewSize <= MaxMutationLen);
-      if (!NewSize)
-        continue;
+      assert(NewSize > 0 && NewSize <= MaxMutationLen);
       ExecuteCallback(CurrentUnitData, NewSize);
       PrintPulseAndReportSlowInput(CurrentUnitData, NewSize);
       TryDetectingAMemoryLeak(CurrentUnitData, NewSize,

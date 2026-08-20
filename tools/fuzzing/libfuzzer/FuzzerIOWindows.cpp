@@ -110,11 +110,11 @@ size_t FileSize(const std::string &Path) {
   return size.QuadPart;
 }
 
-int ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
+void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                              std::vector<std::string> *V, bool TopDir) {
   auto E = GetEpoch(Dir);
   if (Epoch)
-    if (E && *Epoch >= E) return 0;
+    if (E && *Epoch >= E) return;
 
   std::string Path(Dir);
   assert(!Path.empty());
@@ -128,9 +128,9 @@ int ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
   if (FindHandle == INVALID_HANDLE_VALUE)
   {
     if (GetLastError() == ERROR_FILE_NOT_FOUND)
-      return 0;
+      return;
     Printf("No such file or directory: %s; exiting\n", Dir.c_str());
-    return 1;
+    exit(1);
   }
 
   do {
@@ -143,9 +143,7 @@ int ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                                FindInfo.cFileName[1] == '.'))
         continue;
 
-      int Res = ListFilesInDirRecursive(FileName, Epoch, V, false);
-      if (Res != 0)
-        return Res;
+      ListFilesInDirRecursive(FileName, Epoch, V, false);
     }
     else if (IsFile(FileName, FindInfo.dwFileAttributes))
       V->push_back(FileName);
@@ -159,7 +157,6 @@ int ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
 
   if (Epoch && TopDir)
     *Epoch = E;
-  return 0;
 }
 
 void IterateDirRecursive(const std::string &Dir,

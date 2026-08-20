@@ -81,7 +81,7 @@ void WriteToFile(const uint8_t *Data, size_t Size, const std::string &Path) {
   // Use raw C interface because this function may be called from a sig handler.
   FILE *Out = fopen(Path.c_str(), "wb");
   if (!Out) return;
-  (void)fwrite(Data, sizeof(Data[0]), Size, Out);
+  fwrite(Data, sizeof(Data[0]), Size, Out);
   fclose(Out);
 }
 
@@ -103,9 +103,7 @@ void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V, long *Epoch,
                             std::vector<std::string> *VPaths) {
   long E = Epoch ? *Epoch : 0;
   std::vector<std::string> Files;
-  int Res = ListFilesInDirRecursive(Path, Epoch, &Files, /*TopDir*/true);
-  if (ExitOnError && Res != 0)
-    exit(Res);
+  ListFilesInDirRecursive(Path, Epoch, &Files, /*TopDir*/true);
   size_t NumLoaded = 0;
   for (size_t i = 0; i < Files.size(); i++) {
     auto &X = Files[i];
@@ -122,15 +120,12 @@ void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V, long *Epoch,
   }
 }
 
-int GetSizedFilesFromDir(const std::string &Dir, std::vector<SizedFile> *V) {
+void GetSizedFilesFromDir(const std::string &Dir, std::vector<SizedFile> *V) {
   std::vector<std::string> Files;
-  int Res = ListFilesInDirRecursive(Dir, 0, &Files, /*TopDir*/true);
-  if (Res != 0)
-    return Res;
+  ListFilesInDirRecursive(Dir, 0, &Files, /*TopDir*/true);
   for (auto &File : Files)
     if (size_t Size = FileSize(File))
       V->push_back({File, Size});
-  return 0;
 }
 
 std::string DirPlusFile(const std::string &DirPath,

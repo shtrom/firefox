@@ -53,16 +53,16 @@ std::string Basename(const std::string &Path) {
   return Path.substr(Pos + 1);
 }
 
-int ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
+void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                              std::vector<std::string> *V, bool TopDir) {
   auto E = GetEpoch(Dir);
   if (Epoch)
-    if (E && *Epoch >= E) return 0;
+    if (E && *Epoch >= E) return;
 
   DIR *D = opendir(Dir.c_str());
   if (!D) {
     Printf("%s: %s; exiting\n", strerror(errno), Dir.c_str());
-    return 1;
+    exit(1);
   }
   while (auto E = readdir(D)) {
     std::string Path = DirPlusFile(Dir, E->d_name);
@@ -71,16 +71,12 @@ int ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
       V->push_back(Path);
     else if ((E->d_type == DT_DIR ||
              (E->d_type == DT_UNKNOWN && IsDirectory(Path))) &&
-             *E->d_name != '.') {
-      int Res = ListFilesInDirRecursive(Path, Epoch, V, false);
-      if (Res != 0)
-        return Res;
-    }
+             *E->d_name != '.')
+      ListFilesInDirRecursive(Path, Epoch, V, false);
   }
   closedir(D);
   if (Epoch && TopDir)
     *Epoch = E;
-  return 0;
 }
 
 void IterateDirRecursive(const std::string &Dir,

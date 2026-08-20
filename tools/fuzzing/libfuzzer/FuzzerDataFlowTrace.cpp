@@ -103,11 +103,9 @@ std::vector<double> BlockCoverage::FunctionWeights(size_t NumFunctions) const {
   return Res;
 }
 
-int DataFlowTrace::ReadCoverage(const std::string &DirPath) {
+void DataFlowTrace::ReadCoverage(const std::string &DirPath) {
   std::vector<SizedFile> Files;
-  int Res = GetSizedFilesFromDir(DirPath, &Files);
-  if (Res != 0)
-    return Res;
+  GetSizedFilesFromDir(DirPath, &Files);
   for (auto &SF : Files) {
     auto Name = Basename(SF.File);
     if (Name == kFunctionsTxt) continue;
@@ -115,7 +113,6 @@ int DataFlowTrace::ReadCoverage(const std::string &DirPath) {
     std::ifstream IF(SF.File);
     Coverage.AppendCoverage(IF);
   }
-  return 0;
 }
 
 static void DFTStringAppendToVector(std::vector<uint8_t> *DFT,
@@ -161,14 +158,12 @@ static bool ParseDFTLine(const std::string &Line, size_t *FunctionNum,
   return true;
 }
 
-int DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
+bool DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
                          std::vector<SizedFile> &CorporaFiles, Random &Rand) {
-  if (DirPath.empty()) return 0;
+  if (DirPath.empty()) return false;
   Printf("INFO: DataFlowTrace: reading from '%s'\n", DirPath.c_str());
   std::vector<SizedFile> Files;
-  int Res = GetSizedFilesFromDir(DirPath, &Files);
-  if (Res != 0)
-    return Res;
+  GetSizedFilesFromDir(DirPath, &Files);
   std::string L;
   size_t FocusFuncIdx = SIZE_MAX;
   std::vector<std::string> FunctionNames;
@@ -187,16 +182,14 @@ int DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
       FocusFuncIdx = NumFunctions - 1;
   }
   if (!NumFunctions)
-    return 0;
+    return false;
 
   if (*FocusFunction == "auto") {
     // AUTOFOCUS works like this:
     // * reads the coverage data from the DFT files.
     // * assigns weights to functions based on coverage.
     // * chooses a random function according to the weights.
-    Res = ReadCoverage(DirPath);
-    if (Res != 0)
-      return Res;
+    ReadCoverage(DirPath);
     auto Weights = Coverage.FunctionWeights(NumFunctions);
     std::vector<double> Intervals(NumFunctions + 1);
     std::iota(Intervals.begin(), Intervals.end(), 0);
@@ -218,7 +211,7 @@ int DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
   }
 
   if (!NumFunctions || FocusFuncIdx == SIZE_MAX || Files.size() <= 1)
-    return 0;
+    return false;
 
   // Read traces.
   size_t NumTraceFiles = 0;
@@ -237,10 +230,8 @@ int DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
           FunctionNum == FocusFuncIdx) {
         NumTracesWithFocusFunction++;
 
-        if (FunctionNum >= NumFunctions) {
-          ParseError("N is greater than the number of functions", L);
-          return 0;
-        }
+        if (FunctionNum >= NumFunctions)
+          return ParseError("N is greater than the number of functions", L);
         Traces[Name] = DFTStringToVector(DFTString);
         // Print just a few small traces.
         if (NumTracesWithFocusFunction <= 3 && DFTString.size() <= 16)
@@ -252,7 +243,7 @@ int DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
   Printf("INFO: DataFlowTrace: %zd trace files, %zd functions, "
          "%zd traces with focus function\n",
          NumTraceFiles, NumFunctions, NumTracesWithFocusFunction);
-  return 0;
+  return NumTraceFiles > 0;
 }
 
 int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,

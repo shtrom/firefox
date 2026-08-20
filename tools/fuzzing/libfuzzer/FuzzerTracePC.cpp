@@ -251,13 +251,13 @@ void TracePC::IterateCoveredFunctions(CallBack CB) {
   }
 }
 
-int TracePC::SetFocusFunction(const std::string &FuncName) {
+void TracePC::SetFocusFunction(const std::string &FuncName) {
   // This function should be called once.
   assert(!FocusFunctionCounterPtr);
   // "auto" is not a valid function name. If this function is called with "auto"
   // that means the auto focus functionality failed.
   if (FuncName.empty() || FuncName == "auto")
-    return 0;
+    return;
   for (size_t M = 0; M < NumModules; M++) {
     auto &PCTE = ModulePCTable[M];
     size_t N = PCTE.Stop - PCTE.Start;
@@ -269,13 +269,13 @@ int TracePC::SetFocusFunction(const std::string &FuncName) {
       if (FuncName != Name) continue;
       Printf("INFO: Focus function is set to '%s'\n", Name.c_str());
       FocusFunctionCounterPtr = Modules[M].Start() + I;
-      return 0;
+      return;
     }
   }
 
   Printf("ERROR: Failed to set focus function. Make sure the function name is "
          "valid (%s) and symbolization is enabled.\n", FuncName.c_str());
-  return 1;
+  exit(1);
 }
 
 bool TracePC::ObservedFocusFunction() {
