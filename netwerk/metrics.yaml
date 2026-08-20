@@ -290,13 +290,14 @@ networking:
       Counts cookies loaded from the DB grouped by validation result.
     bugs:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1972513
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2064977
     data_reviews:
       - https://bugzilla.mozilla.org/show_bug.cgi?id=1972513
     notification_emails:
       - necko@mozilla.com
       - edgul@mozilla.com
       - baku@mozilla.com
-    expires: 157
+    expires: 167
     labels:
       - eOK
       - eRejectedEmptyNameAndValue
