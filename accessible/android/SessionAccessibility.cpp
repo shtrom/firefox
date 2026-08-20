@@ -682,14 +682,31 @@ void SessionAccessibility::PopulateNodeInfo(
     hint.Append(accDesc);
   }
 
-  if ((state & states::REQUIRED) != 0) {
-    nsAutoString requiredString;
-    if (LocalizeString(u"stateRequired"_ns, requiredString)) {
+  if (mozilla::jni::GetAPIVersion() < 36) {
+    // Version 36 introduces isFieldRequired and partial checked states,
+    // but for older devices we add these states to the hint string.
+    AutoTArray<nsString, 1> stateStrings;
+    if ((state & states::REQUIRED) != 0) {
+      nsAutoString requiredString;
+      if (LocalizeString(u"stateRequired"_ns, requiredString)) {
+        stateStrings.AppendElement(requiredString);
+      }
+    }
+
+    if ((state & states::MIXED) != 0 && (state & states::CHECKABLE) != 0) {
+      // A checkable widget is in a "mixed" state.
+      nsAutoString partiallyCheckedString;
+      if (LocalizeString(u"statePartiallyChecked"_ns, partiallyCheckedString)) {
+        stateStrings.AppendElement(partiallyCheckedString);
+      }
+    }
+
+    if (!stateStrings.IsEmpty()) {
       if (!hint.IsEmpty()) {
         // If the hint is non-empty, concatenate with a comma for a brief pause.
         hint.AppendLiteral(", ");
       }
-      hint.Append(requiredString);
+      StringJoinAppend(hint, u" "_ns, stateStrings);
     }
   }
 

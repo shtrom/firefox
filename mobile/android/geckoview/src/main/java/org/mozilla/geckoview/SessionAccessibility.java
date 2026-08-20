@@ -68,6 +68,8 @@ public class SessionAccessibility {
   @WrapForJNI static final int FLAG_SELECTABLE = 1 << 16;
   @WrapForJNI static final int FLAG_EXPANDABLE = 1 << 17;
   @WrapForJNI static final int FLAG_EXPANDED = 1 << 18;
+  @WrapForJNI static final int FLAG_MIXED = 1 << 19;
+  @WrapForJNI static final int FLAG_REQUIRED = 1 << 20;
 
   static final int CLASSNAME_UNKNOWN = -1;
   @WrapForJNI static final int CLASSNAME_VIEW = 0;
@@ -808,7 +810,6 @@ public class SessionAccessibility {
 
       // Set boolean properties
       node.setCheckable((flags & FLAG_CHECKABLE) != 0);
-      node.setChecked((flags & FLAG_CHECKED) != 0);
       node.setClickable((flags & FLAG_CLICKABLE) != 0);
       node.setEnabled((flags & FLAG_ENABLED) != 0);
       node.setFocusable((flags & FLAG_FOCUSABLE) != 0);
@@ -820,6 +821,21 @@ public class SessionAccessibility {
       // Other boolean properties to consider later:
       // setHeading, setImportantForAccessibility, setScreenReaderFocusable, setShowingHintText,
       // setDismissable
+
+      if (Build.VERSION.SDK_INT >= 36) {
+        node.setFieldRequired((flags & FLAG_REQUIRED) != 0);
+      }
+
+      // Use proper setChecked for API version.
+      if (Build.VERSION.SDK_INT >= 36) {
+        if ((flags & FLAG_CHECKED) != 0) {
+          node.setChecked(AccessibilityNodeInfo.CHECKED_STATE_TRUE);
+        } else if ((flags & FLAG_MIXED) != 0) {
+          node.setChecked(AccessibilityNodeInfo.CHECKED_STATE_PARTIAL);
+        }
+      } else {
+        node.setChecked((flags & FLAG_CHECKED) != 0);
+      }
 
       if (mAccessibilityFocusedNode == id) {
         node.addAction(AccessibilityNodeInfo.ACTION_CLEAR_ACCESSIBILITY_FOCUS);
