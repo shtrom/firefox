@@ -1946,8 +1946,11 @@ UrlbarUtils.RESULT_PAYLOAD_SCHEMA = {
         type: "string",
       },
       // Set by UrlbarProvidersManager when the result is finalized,
-      // so it's not present initially.
+      // so they're not present initially.
       viewTemplate: {
+        type: "object",
+      },
+      viewUpdate: {
         type: "object",
       },
     },
@@ -2331,8 +2334,7 @@ export class UrlbarProvider {
    *   An optional mapping from attribute names to values.  For each
    *   name-value pair, an attribute is added to the element created for the
    *   object. The `id` attribute is reserved and cannot be set by the
-   *   provider. Element IDs are passed back to the provider in getViewUpdate
-   *   if they are needed.
+   *   provider.
    *
    * @property {ViewTemplateElement[]} [children]
    *   An optional list of children.  Each item in the array must be an object
@@ -2362,9 +2364,8 @@ export class UrlbarProvider {
   }
 
   /**
-   * This is called only for dynamic result types, when the urlbar view updates
-   * the view of one of the results of the provider.  It should return an object
-   * describing the view update that looks like this:
+   * This is called only for dynamic result types by the providers manager. It
+   * should return an object describing the view update that looks like this:
    *
    *   {
    *     nodeNameFoo: {
@@ -2401,12 +2402,6 @@ export class UrlbarProvider {
    *
    * @param {UrlbarResult} _result
    *   The result whose view will be updated.
-   * @param {Map} _idsByName
-   *   A Map from an element's name, as defined by the provider; to its ID in
-   *   the DOM, as defined by the browser. The browser manages element IDs for
-   *   dynamic results to prevent collisions. However, a provider may need to
-   *   access the IDs of the elements created for its results. For example, to
-   *   set various `aria` attributes.
    * @returns {object}
    *   A view update object as described above.  The names of properties are the
    *   the names of elements declared in the view template.  The values of
@@ -2435,7 +2430,7 @@ export class UrlbarProvider {
    *   {string} [textContent]
    *     A string that will be set as `element.textContent`.
    */
-  getViewUpdate(_result, _idsByName) {
+  getViewUpdate(_result) {
     return null;
   }
 

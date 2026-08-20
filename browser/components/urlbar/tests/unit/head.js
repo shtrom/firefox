@@ -1237,6 +1237,7 @@ async function check_results({
     suggestionObject: { ignore: true },
     // Set by the providers manager on dynamic results, not by their provider.
     viewTemplate: { optional: true },
+    viewUpdate: { optional: true },
     ...conditionalPayloadProperties,
   };
 

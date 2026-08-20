@@ -191,9 +191,6 @@ export class UrlbarChildController {
   setView(view) {
     this.#view = view;
   }
-  getViewUpdate(result, idsByName) {
-    return this.#parentController.getViewUpdate(result, idsByName);
-  }
   onBeforeSelection(result, element) {
     return this.#parentController.onBeforeSelection(result, element);
   }
