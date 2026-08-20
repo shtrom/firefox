@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
+import * as UrlbarContentUtils from "chrome://browser/content/urlbar/UrlbarContentUtils.mjs";
 import { UrlbarResult } from "chrome://browser/content/urlbar/UrlbarResult.mjs";
 import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
 import { L10nCache } from "chrome://browser/content/urlbar/L10nCache.mjs";
@@ -2678,7 +2679,7 @@ export class UrlbarView {
         });
       this.#updateOverflowTooltip(url, displayedUrl);
 
-      if (this.controller.isTextDirectionRTL(displayedUrl)) {
+      if (UrlbarContentUtils.isTextDirectionRTL(displayedUrl, this.window)) {
         // Stripping the url prefix may change the initial text directionality,
         // causing parts of it to jump to the end. To prevent that we insert a
         // LRM character in place of the prefix.
@@ -4508,7 +4509,7 @@ export class UrlbarView {
       case RESULT_MENU_COMMANDS.HELP:
         menuitem.dataset.url =
           result.payload.helpUrl ||
-          this.controller.getSupportUrl("awesome-bar-result-menu");
+          UrlbarContentUtils.getSupportUrl("awesome-bar-result-menu");
         break;
     }
     this.input.pickResult({ result, event, element: menuitem });

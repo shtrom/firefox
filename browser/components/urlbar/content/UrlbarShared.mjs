@@ -9,7 +9,7 @@
  * its own copy of the module).
  */
 
-import UrlbarContentURIUtils from "chrome://browser/content/urlbar/UrlbarContentURIUtils.mjs";
+import * as UrlbarContentUtils from "chrome://browser/content/urlbar/UrlbarContentUtils.mjs";
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 
 /**
@@ -746,7 +746,7 @@ export const UrlbarShared = {
   unEscapeURIForUI(uri) {
     return uri.length > this.MAX_TEXT_LENGTH
       ? uri
-      : UrlbarContentURIUtils.unEscapeURIForUI(uri);
+      : UrlbarContentUtils.unEscapeURIForUI(uri);
   },
 
   /**
@@ -765,7 +765,7 @@ export const UrlbarShared = {
     // the url in utf-8. If the url can't be parsed we fall back to using the
     // string as-is.
     let spec = typeof url == "string" ? url : url.href;
-    let displayString = UrlbarContentURIUtils.getDisplaySpec(spec) ?? spec;
+    let displayString = UrlbarContentUtils.getDisplaySpec(spec) ?? spec;
 
     if (displayString) {
       if (schemeless) {
@@ -882,7 +882,7 @@ export const UrlbarShared = {
    *   Fixup info for `clipboardData`, or null if it couldn't be fixed up. URI
    *   fixup is parent-only, so the caller supplies it, either from
    *   `UrlbarUtils.getFixupPrimitives()` or, from an input, from
-   *   `controller.getFixupPrimitives()`.
+   *   `UrlbarContentUtils.getFixupPrimitives()`.
    * @returns {string}
    *   The sanitized paste data, ready to use.
    */
