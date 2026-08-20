@@ -24,8 +24,13 @@
 using namespace js;
 
 AbstractGeneratorObject* AbstractGeneratorObject::create(
-    JSContext* cx, HandleFunction callee, HandleScript script,
-    HandleObject environmentChain, Handle<ArgumentsObject*> argsObject) {
+    JSContext* cx, HandleFunction callee, HandleObject environmentChain,
+    Handle<ArgumentsObject*> argsObject) {
+  // Create a new generator object for a generator or async function. This is
+  // called by createFromFrame and (for Ion) jit::CreateGenerator. Ion frames
+  // can't be debuggee frames, so we call DebugAPI::onNewGenerator only in
+  // createFromFrame.
+
   Rooted<AbstractGeneratorObject*> genObj(cx);
   if (!callee->isAsync()) {
     genObj = GeneratorObject::create(cx, callee);
@@ -44,58 +49,32 @@ AbstractGeneratorObject* AbstractGeneratorObject::create(
     genObj->setArgsObj(*argsObject.get());
   }
 
-  ArrayObject* stack = NewDenseFullyAllocatedArray(cx, script->nslots());
+  ArrayObject* stack =
+      NewDenseFullyAllocatedArray(cx, callee->nonLazyScript()->nslots());
   if (!stack) {
     return nullptr;
   }
 
   genObj->setStackStorage(*stack);
-
-  // Note: This assumes that a Warp frame cannot be the target of
-  //       the debugger, as we do not call OnNewGenerator.
   return genObj;
 }
 
-JSObject* AbstractGeneratorObject::createFromFrame(JSContext* cx,
-                                                   AbstractFramePtr frame) {
-  MOZ_ASSERT(frame.isGeneratorFrame());
-  MOZ_ASSERT(!frame.isConstructing());
+AbstractGeneratorObject* AbstractGeneratorObject::create(
+    JSContext* cx, Handle<ModuleObject*> module,
+    HandleObject environmentChain) {
+  // Create a new generator object for an async module. This is called by
+  // createFromFrame and (for Ion) jit::CreateModuleGenerator. Ion frames can't
+  // be debuggee frames, so we call DebugAPI::onNewGenerator only in
+  // createFromFrame.
 
-  if (frame.isModuleFrame()) {
-    return createModuleGenerator(cx, frame);
-  }
-
-  RootedFunction fun(cx, frame.callee());
-  Rooted<ArgumentsObject*> maybeArgs(
-      cx, frame.script()->needsArgsObj() ? &frame.argsObj() : nullptr);
-  RootedObject environmentChain(cx, frame.environmentChain());
-
-  RootedScript script(cx, frame.script());
   Rooted<AbstractGeneratorObject*> genObj(
-      cx, AbstractGeneratorObject::create(cx, fun, script, environmentChain,
-                                          maybeArgs));
-  if (!genObj) {
-    return nullptr;
-  }
-
-  if (!DebugAPI::onNewGenerator(cx, frame, genObj)) {
-    return nullptr;
-  }
-
-  return genObj;
-}
-
-JSObject* AbstractGeneratorObject::createModuleGenerator(
-    JSContext* cx, AbstractFramePtr frame) {
-  Rooted<ModuleObject*> module(cx, frame.script()->module());
-  Rooted<AbstractGeneratorObject*> genObj(cx);
-  genObj = AsyncFunctionGeneratorObject::create(cx, module);
+      cx, AsyncFunctionGeneratorObject::create(cx, module));
   if (!genObj) {
     return nullptr;
   }
 
   genObj->setModule(*module);
-  genObj->setEnvironmentChain(*frame.environmentChain());
+  genObj->setEnvironmentChain(*environmentChain);
 
   ArrayObject* stack =
       NewDenseFullyAllocatedArray(cx, module->script()->nslots());
@@ -104,6 +83,33 @@ JSObject* AbstractGeneratorObject::createModuleGenerator(
   }
 
   genObj->setStackStorage(*stack);
+  return genObj;
+}
+
+JSObject* AbstractGeneratorObject::createFromFrame(JSContext* cx,
+                                                   AbstractFramePtr frame) {
+  MOZ_ASSERT(frame.isGeneratorFrame());
+  MOZ_ASSERT(!frame.isConstructing());
+
+  RootedObject environmentChain(cx, frame.environmentChain());
+  Rooted<AbstractGeneratorObject*> genObj(cx);
+
+  if (frame.isModuleFrame()) {
+    Rooted<ModuleObject*> module(cx, frame.script()->module());
+    genObj = AbstractGeneratorObject::create(cx, module, environmentChain);
+    if (!genObj) {
+      return nullptr;
+    }
+  } else {
+    RootedFunction fun(cx, frame.callee());
+    Rooted<ArgumentsObject*> maybeArgs(
+        cx, frame.script()->needsArgsObj() ? &frame.argsObj() : nullptr);
+    genObj =
+        AbstractGeneratorObject::create(cx, fun, environmentChain, maybeArgs);
+    if (!genObj) {
+      return nullptr;
+    }
+  }
 
   if (!DebugAPI::onNewGenerator(cx, frame, genObj)) {
     return nullptr;

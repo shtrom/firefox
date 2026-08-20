@@ -1192,12 +1192,10 @@ JSObject* CreateGeneratorFromFrame(JSContext* cx, BaselineFrame* frame) {
 }
 
 JSObject* CreateGenerator(JSContext* cx, HandleFunction callee,
-                          HandleScript script, HandleObject environmentChain,
-                          HandleObject args) {
+                          HandleObject environmentChain, HandleObject args) {
   Rooted<ArgumentsObject*> argsObj(
       cx, args ? &args->as<ArgumentsObject>() : nullptr);
-  return AbstractGeneratorObject::create(cx, callee, script, environmentChain,
-                                         argsObj);
+  return AbstractGeneratorObject::create(cx, callee, environmentChain, argsObj);
 }
 
 bool NormalSuspend(JSContext* cx, HandleObject obj, BaselineFrame* frame,

@@ -21854,11 +21854,10 @@ void CodeGenerator::visitGenerator(LGenerator* lir) {
 
   pushArg(argsObject);
   pushArg(environmentChain);
-  pushArg(ImmGCPtr(current->mir()->info().script()));
   pushArg(callee);
 
-  using Fn = JSObject* (*)(JSContext * cx, HandleFunction, HandleScript,
-                           HandleObject, HandleObject);
+  using Fn =
+      JSObject* (*)(JSContext * cx, HandleFunction, HandleObject, HandleObject);
   callVM<Fn, CreateGenerator>(lir);
 }
 

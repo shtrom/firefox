@@ -442,8 +442,8 @@ JSObject* WrapObjectPure(JSContext* cx, JSObject* obj);
 void FrameIsDebuggeeCheck(BaselineFrame* frame);
 
 JSObject* CreateGeneratorFromFrame(JSContext* cx, BaselineFrame* frame);
-JSObject* CreateGenerator(JSContext* cx, HandleFunction, HandleScript,
-                          HandleObject, HandleObject);
+JSObject* CreateGenerator(JSContext* cx, HandleFunction, HandleObject,
+                          HandleObject);
 
 [[nodiscard]] bool NormalSuspend(JSContext* cx, HandleObject obj,
                                  BaselineFrame* frame, uint32_t frameSize,
