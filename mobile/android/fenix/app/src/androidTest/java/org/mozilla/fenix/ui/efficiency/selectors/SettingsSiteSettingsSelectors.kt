@@ -4,6 +4,8 @@
 
 package org.mozilla.fenix.ui.efficiency.selectors
 
+import org.mozilla.fenix.R
+import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.helpers.SelectorStrategy
 
@@ -25,9 +27,18 @@ object SettingsSiteSettingsSelectors {
             groups = listOf("exceptions"),
         )
 
+    val AUTOPLAY_BUTTON =
+        Selector(
+            strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT,
+            value = getStringResource(R.string.preference_browser_feature_autoplay),
+            description = "Site settings Autoplay button",
+            groups = listOf("autoplay"),
+        )
+
     val all =
         listOf(
             TOOLBAR_TITLE,
             EXCEPTIONS_BUTTON,
+            AUTOPLAY_BUTTON,
         )
 }

@@ -49,6 +49,7 @@ import org.mozilla.fenix.ui.efficiency.pageObjects.SettingsSearchAddSearchEngine
 import org.mozilla.fenix.ui.efficiency.pageObjects.SettingsSearchDefaultSearchEnginePage
 import org.mozilla.fenix.ui.efficiency.pageObjects.SettingsSearchManageShortcutsPage
 import org.mozilla.fenix.ui.efficiency.pageObjects.SettingsSearchPage
+import org.mozilla.fenix.ui.efficiency.pageObjects.SettingsSiteSettingsAutoplayPage
 import org.mozilla.fenix.ui.efficiency.pageObjects.SettingsSiteSettingsExceptionsPage
 import org.mozilla.fenix.ui.efficiency.pageObjects.SettingsSiteSettingsPage
 import org.mozilla.fenix.ui.efficiency.pageObjects.SettingsTabsPage
@@ -111,6 +112,7 @@ class PageContext(val composeRule: AndroidComposeTestRule<HomeActivityIntentTest
     val settingsSearchDefaultSearchEngine = SettingsSearchDefaultSearchEnginePage(composeRule)
     val settingsSearchManageShortcuts = SettingsSearchManageShortcutsPage(composeRule)
     val settingsSiteSettings = SettingsSiteSettingsPage(composeRule)
+    val settingsSiteSettingsAutoplay = SettingsSiteSettingsAutoplayPage(composeRule)
     val settingsSiteSettingsExceptions = SettingsSiteSettingsExceptionsPage(composeRule)
     val settingsTabs = SettingsTabsPage(composeRule)
     val settingsTurnOnSync = SettingsTurnOnSyncPage(composeRule)

@@ -11,6 +11,7 @@ import androidx.test.filters.SdkSuppress
 import mozilla.components.concept.engine.mediasession.MediaSession
 import org.junit.Rule
 import org.junit.Test
+import org.mozilla.fenix.customannotations.Converted
 import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.helpers.AppAndSystemHelper.grantSystemPermission
 import org.mozilla.fenix.helpers.FenixTestRule
@@ -129,6 +130,14 @@ class SettingsSitePermissionsTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2095125
+    @Converted(
+        replacedBy =
+            [
+                "org.mozilla.fenix.ui.efficiency.tests.SettingsSitePermissionsTest#verifyAutoplayBlockAudioOnlySettingOnNotMutedVideoTest"
+            ],
+        bug = 2064810,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyAutoplayBlockAudioOnlySettingOnNotMutedVideoTest() {
@@ -166,6 +175,14 @@ class SettingsSitePermissionsTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/2286807
+    @Converted(
+        replacedBy =
+            [
+                "org.mozilla.fenix.ui.efficiency.tests.SettingsSitePermissionsTest#verifyAutoplayBlockAudioOnlySettingOnMutedVideoTest"
+            ],
+        bug = 2064810,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyAutoplayBlockAudioOnlySettingOnMutedVideoTest() {
