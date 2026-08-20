@@ -95,10 +95,11 @@ instance.
 ### 2. Implement the provider's getViewTemplate method
 
 `getViewTemplate` is a provider method particular to dynamic result type
-providers. It is called by the view for each result the provider produces and
-returns a **view template**: a plain object that declaratively describes the
-DOM subtree to build for the result. See [View Templates] for the shape of
-this object.
+providers. It is called by the providers manager for each result the provider
+produces and returns a **view template**: a plain object that declaratively
+describes the DOM subtree to build for the result. The manager stores it on the
+result as `payload.viewTemplate` and the view uses it when it builds the row.
+See [View Templates] for the shape of this object.
 
 Add the `getViewTemplate` method to the provider:
 

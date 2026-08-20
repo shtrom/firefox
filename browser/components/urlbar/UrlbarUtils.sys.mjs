@@ -1945,6 +1945,11 @@ UrlbarUtils.RESULT_PAYLOAD_SCHEMA = {
       dynamicType: {
         type: "string",
       },
+      // Set by UrlbarProvidersManager when the result is finalized,
+      // so it's not present initially.
+      viewTemplate: {
+        type: "object",
+      },
     },
   },
   [UrlbarShared.RESULT_TYPE.RESTRICT]: {
@@ -2344,8 +2349,7 @@ export class UrlbarProvider {
    */
 
   /**
-   * This is called only for dynamic result types, when the urlbar view creates
-   * the view of one of the results of the provider.
+   * This is called only for dynamic result types.
    *
    * @param {UrlbarResult} _result
    *   The result whose view will be created.
