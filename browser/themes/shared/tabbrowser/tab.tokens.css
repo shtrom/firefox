@@ -26,11 +26,11 @@
     --tab-group-cyan-invert: light-dark(var(--color-cyan-10), var(--color-cyan-50));
     --tab-group-cyan-text: light-dark(var(--color-white), var(--color-cyan-60));
     --tab-group-cyan-text-invert: light-dark(var(--color-cyan-60), var(--color-white));
-    --tab-group-gray: light-dark(var(--color-gray-55), var(--color-gray-0));
-    --tab-group-gray-hover: light-dark(var(--color-gray-65), var(--color-gray-10));
-    --tab-group-gray-invert: light-dark(var(--color-gray-0), var(--color-gray-55));
-    --tab-group-gray-text: light-dark(var(--color-white), var(--color-gray-65));
-    --tab-group-gray-text-invert: light-dark(var(--color-gray-65), var(--color-white));
+    --tab-group-gray: light-dark(var(--color-gray-55), var(--color-gray-40));
+    --tab-group-gray-hover: light-dark(var(--color-gray-65), var(--color-gray-50));
+    --tab-group-gray-invert: light-dark(var(--color-gray-40), var(--color-gray-55));
+    --tab-group-gray-text: light-dark(var(--color-white), var(--color-gray-90));
+    --tab-group-gray-text-invert: light-dark(var(--color-gray-90), var(--color-white));
     --tab-group-green: light-dark(var(--color-green-50), var(--color-green-10));
     --tab-group-green-hover: light-dark(var(--color-green-60), var(--color-green-20));
     --tab-group-green-invert: light-dark(var(--color-green-10), var(--color-green-50));
