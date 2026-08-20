@@ -1013,12 +1013,18 @@ export class Tabbrowser {
 
   /**
    * throws exception for unknown schemes
+   *
+   * @param {nsIURI} uri
+   * @param {LoadURIOptions} [params]
    */
   loadURI(uri, params) {
     return this.selectedBrowser.loadURI(uri, params);
   }
   /**
    * throws exception for unknown schemes
+   *
+   * @param {string} uriString
+   * @param {LoadURIOptions} [params]
    */
   fixupAndLoadURIString(uriString, params) {
     return this.selectedBrowser.fixupAndLoadURIString(uriString, params);
@@ -1127,6 +1133,9 @@ export class Tabbrowser {
 
   /**
    * Get the already constructed findbar
+   *
+   * @param {MozTabbrowserTab} [aTab]
+   *   Defaults to the selected tab.
    */
   getCachedFindBar(aTab = this.selectedTab) {
     return aTab._findBar;
@@ -1135,6 +1144,8 @@ export class Tabbrowser {
   /**
    * Get the findbar, and create it if it doesn't exist.
    *
+   * @param {MozTabbrowserTab} [aTab]
+   *   Defaults to the selected tab.
    * @return the find bar (or null if the window or tab is closed/closing in the interim).
    */
   async getFindBar(aTab = this.selectedTab) {
@@ -1153,7 +1164,7 @@ export class Tabbrowser {
   /**
    * Create a findbar instance.
    *
-   * @param aTab the tab to create the find bar for.
+   * @param {MozTabbrowserTab} aTab the tab to create the find bar for.
    * @return the created findbar, or null if the window or tab is closed/closing.
    */
   async _createFindBar(aTab) {
@@ -1467,6 +1478,9 @@ export class Tabbrowser {
 
   /**
    * Sets an icon for the tab if the URI is defined in FAVICON_DEFAULTS.
+   *
+   * @param {MozTabbrowserTab} aTab
+   * @param {nsIURI} [aURI]
    */
   setDefaultIcon(aTab, aURI) {
     if (aURI && aURI.spec in FAVICON_DEFAULTS) {
@@ -1635,6 +1649,8 @@ export class Tabbrowser {
    * If no Taskbar Tab is in use, the profile is added by
    * getWindowTitleForBrowser and this returns null.
    *
+   * @param {string} [aProfile]
+   *   Name of the current profile, if it should appear in the title.
    * @returns {string|null} The part of the title that was determined from
    * the Taskbar Tab, or null if nothing is needed.
    */
@@ -2534,6 +2550,39 @@ export class Tabbrowser {
    * @param {string[]} aURIs
    *   Array of URIs to load.
    * @param {object} [options]
+   * @param {boolean} [options.allowInheritPrincipal]
+   *   Allow the loads to inherit the triggering principal.
+   * @param {boolean} [options.allowThirdPartyFixup]
+   *   Allow transforming a URI into a search query.
+   * @param {boolean} [options.inBackground]
+   *   Leave the current tab selected instead of switching to the first tab
+   *   that was opened.
+   * @param {number} [options.newIndex]
+   *   The position to open the first tab at, expressed as an index within the
+   *   `tabs` array. The remaining tabs follow it.
+   * @param {number} [options.elementIndex]
+   *   The same position, expressed as an index within the
+   *   `MozTabbrowserTabs::dragAndDropElements` array.
+   * @param {nsIInputStream[]} [options.postDatas]
+   *   Data to post as part of each request, in the same order as `aURIs`.
+   * @param {boolean} [options.replace]
+   *   Load the first URI in an existing tab rather than opening a tab for it.
+   * @param {MozTabbrowserTabGroup} [options.tabGroup]
+   *   A tab group to open the tabs in.
+   * @param {MozTabbrowserTab} [options.targetTab]
+   *   The tab to load the first URI in when `replace` is set. Defaults to the
+   *   selected tab.
+   * @param {nsIPrincipal} [options.triggeringPrincipal]
+   *   Triggering principal to pass to docshell for the loads.
+   * @param {nsIPolicyContainer} [options.policyContainer]
+   *   The policy container that should apply to the loads.
+   * @param {number} [options.userContextId]
+   *   The userContextId (container identifier) to open the tabs in.
+   * @param {boolean} [options.fromExternal]
+   *   Whether the URIs were supplied to Firefox from an external application.
+   * @param {boolean} [options.newWindowLoad]
+   *   Whether the load initiates a new window, which is not web-controlled.
+   *   Only honoured together with `replace`.
    * @returns {MozTabbrowserTab[]}
    *   Array of tabs that were opened or reused, in the same order as aURIs.
    */
@@ -3399,16 +3448,114 @@ export class Tabbrowser {
   /**
    * @param {string} uriString
    * @param {object} options
+   * @param {boolean} [options.allowInheritPrincipal]
+   *   Allow the load to inherit the triggering principal.
+   * @param {boolean} [options.allowThirdPartyFixup]
+   *   Allow transforming the URI into a search query.
+   * @param {boolean} [options.bulkOrderedOpen]
+   *   Keep the tab in the order it was opened in rather than inserting it
+   *   next to the current tab, as wanted when opening a set of tabs at once.
+   * @param {string} [options.charset]
+   *   Character set to use for the load. Legacy argument - do not use.
+   * @param {boolean} [options.createLazyBrowser]
+   *   Create the tab with a lazy browser, which only loads its URI once the
+   *   tab is first selected.
    * @param {object} [options.eventDetail]
    *   Additional information to include in the `CustomEvent.detail`
    *   of the resulting TabOpen event.
+   * @param {boolean} [options.focusUrlBar]
+   *   Focus the address bar when the tab is selected.
+   * @param {boolean} [options.forceNotRemote]
+   *   Create the tab's browser in the parent process.
+   * @param {boolean} [options.forceAllowDataURI]
+   *   Force allow a data URI to load as a toplevel load.
    * @param {boolean} [options.fromExternal]
    *   Whether this tab was opened from a URL supplied to Firefox from an
    *   external application.
+   * @param {boolean} [options.inBackground=true]
+   *   Whether the tab is being opened in the background. This does not
+   *   select the tab - it only decides whether the selected tab becomes the
+   *   new tab's owner, i.e. the tab to select when the new tab is closed.
+   * @param {boolean} [options.isCaptivePortalTab]
+   *   Whether the tab loads a captive portal login page, whose load must not
+   *   use DNS over HTTPS.
+   * @param {number} [options.elementIndex]
+   *   The position to open the tab at, expressed as an index within the
+   *   `MozTabbrowserTabs::dragAndDropElements` array.
+   * @param {number} [options.tabIndex]
+   *   The same position, expressed as an index within the `tabs` array.
+   * @param {string} [options.lazyTabTitle]
+   *   Title to give a lazy browser's tab until its URI loads.
+   * @param {string} [options.name]
+   *   Name of the window the tab's browser represents, as passed to
+   *   `window.open()`.
+   * @param {boolean} [options.noInitialLabel]
+   *   Leave the tab's label empty until the load provides a title, rather
+   *   than labelling it with its URI.
+   * @param {nsIOpenWindowInfo} [options.openWindowInfo]
+   *   Information about the content window that asked for this tab, when it
+   *   comes from a `window.open()` call.
+   * @param {MozBrowser} [options.openerBrowser]
+   *   The browser that started the load, used to position the tab and to
+   *   inherit attributes such as the user context ID from.
+   * @param {nsIPrincipal} [options.originPrincipal]
+   *   Origin principal to inherit when `uriString` is given and no preloaded
+   *   browser is used.
+   * @param {nsIPrincipal} [options.originStoragePrincipal]
+   *   Origin storage principal to inherit when `uriString` is given and no
+   *   preloaded browser is used.
+   * @param {MozTabbrowserTab} [options.ownerTab]
+   *   The tab to select when this tab is closed. Defaults to the selected
+   *   tab for a foreground tab, and to none for a background tab.
+   * @param {boolean} [options.pinned]
+   *   Open the tab pinned.
+   * @param {nsIInputStream} [options.postData]
+   *   Data to post as part of the request.
+   * @param {string} [options.preferredRemoteType]
+   *   Remote type to prefer for the tab's browser, when the URI can load in
+   *   more than one.
+   * @param {nsIReferrerInfo} [options.referrerInfo]
+   *   Referrer info for the request.
+   * @param {boolean} [options.relatedToCurrent]
+   *   Whether the tab is related to the current tab, e.g. because a link in
+   *   it was clicked, which lets it open next to it. Defaults to whether
+   *   `referrerInfo` carries a referrer.
+   * @param {number} [options.initialBrowsingContextGroupId]
+   *   Browsing context group to create the tab's browser in, which can
+   *   place it in the same process as another window.
+   * @param {boolean} [options.skipAnimation]
+   *   Skip the tab opening animation.
+   * @param {boolean} [options.skipBackgroundNotify]
+   *   Don't draw attention to the tab when it wants to be selected while
+   *   loading in the background.
    * @param {MozTabbrowserTabGroup} [options.tabGroup]
    *   A related tab group where this tab should be added, when applicable.
    *   When present, the tab is expected to reside in this tab group. When
    *   absent, the tab is expected to be a standalone tab.
+   * @param {nsIPrincipal} options.triggeringPrincipal
+   *   Triggering principal to pass to docshell for the load.
+   * @param {number} [options.userContextId]
+   *   The userContextId (container identifier) to open the tab in.
+   *   Inherited from the opener tab when absent.
+   * @param {nsIPolicyContainer} [options.policyContainer]
+   *   The policy container that should apply to the load.
+   * @param {boolean} [options.skipLoad]
+   *   Create the tab's browser without starting a load in it. Defaults to
+   *   `createLazyBrowser`.
+   * @param {boolean} [options.insertTab=true]
+   *   Insert the tab into the tab strip.
+   * @param {object} [options.globalHistoryOptions]
+   *   Used by :doc:`Places </browser/places/index>` to keep track of search
+   *   related metadata for the load.
+   * @param {string} [options.triggeringRemoteType]
+   *   The remoteType triggering this load.
+   * @param {nsILoadInfo_SchemelessInputType} [options.schemelessInput]
+   *   Whether the search/URL term was without an explicit scheme.
+   * @param {boolean} [options.hasValidUserGestureActivation=false]
+   *   Indicates if a valid user gesture caused this load. This informs
+   *   e.g. popup blocker decisions.
+   * @param {boolean} [options.textDirectiveUserActivation=false]
+   *   Whether a user gesture allows the load to scroll to a text fragment.
    * @returns {MozTabbrowserTab|null}
    *    The new tab. The return value will be null if the tab couldn't be
    *    created; this shouldn't normally happen, and an error will be logged
@@ -4037,7 +4184,7 @@ export class Tabbrowser {
    * Removes a tab from a group. This has no effect on tabs that are not
    * already in a group.
    *
-   * @param tab The tab to ungroup
+   * @param {MozTabbrowserTab} tab The tab to ungroup
    */
   ungroupTab(tab) {
     if (!tab.group) {
@@ -4242,6 +4389,22 @@ export class Tabbrowser {
 
   /**
    * @param {object} options
+   * @param {string} [options.uriString]
+   *   URI the tab is going to load, used as its initial label.
+   * @param {number} [options.userContextId]
+   *   The userContextId (container identifier) to open the tab in. Inherited
+   *   from the opener tab when absent.
+   * @param {MozTabbrowserTab} [options.openerTab]
+   *   The tab that opened this one.
+   * @param {boolean} [options.pinned]
+   *   Create the tab pinned.
+   * @param {boolean} [options.noInitialLabel]
+   *   Leave the tab's label empty until the load provides a title.
+   * @param {boolean} [options.skipBackgroundNotify]
+   *   Don't draw attention to the tab when it wants to be selected while
+   *   loading in the background.
+   * @param {boolean} [options.animate]
+   *   Whether the tab is going to be animated into place.
    * @returns {MozTabbrowserTab}
    */
   _createTab({
@@ -4325,14 +4488,38 @@ export class Tabbrowser {
   }
 
   /**
-   *
+   * @param {MozTabbrowserTab} tab
+   *   The tab to create the browser for.
    * @param {object} options
-   * @param {nsIPrincipal} [options.originPrincipal]
-   *   If uriString is given, uri might inherit principals, and no preloaded browser is used,
-   *   this is the origin principal to be inherited by the initial about:blank.
-   * @param {nsIPrincipal} [options.originStoragePrincipal]
-   *   If uriString is given, uri might inherit principals, and no preloaded browser is used,
-   *   this is the origin storage principal to be inherited by the initial about:blank.
+   * @param {string} [options.uriString]
+   *   URI the browser is going to load, which decides its remote type.
+   * @param {nsIURI} [options.uri]
+   *   The same URI, used to pick a default icon for the tab.
+   * @param {string} [options.name]
+   *   Name of the window the browser represents, as passed to `window.open()`.
+   * @param {string} [options.preferredRemoteType]
+   *   Remote type to prefer, when the URI can load in more than one.
+   * @param {MozBrowser} [options.openerBrowser]
+   *   The browser that started the load, whose remote type is preferred when
+   *   no other preference applies.
+   * @param {boolean} [options.uriIsAboutBlank]
+   *   Whether the browser starts out on about:blank.
+   * @param {nsIReferrerInfo} [options.referrerInfo]
+   *   Referrer info for the load, which decides the remote type of an
+   *   about:blank load.
+   * @param {boolean} [options.forceNotRemote]
+   *   Create the browser in the parent process.
+   * @param {number} [options.initialBrowsingContextGroupId]
+   *   Browsing context group to create the browser in, which can place it in
+   *   the same process as another window.
+   * @param {nsIOpenWindowInfo} [options.openWindowInfo]
+   *   Information about the content window that asked for this browser, when
+   *   it comes from a `window.open()` call.
+   * @param {boolean} [options.skipLoad]
+   *   Create the browser without starting a load in it.
+   * @param {string} [options.triggeringRemoteType]
+   *   The remoteType triggering this load, preferred over predicting one.
+   * @returns {{browser: MozBrowser, usingPreloadedContent: boolean}}
    */
   _createBrowserForTab(
     tab,
@@ -4432,6 +4619,61 @@ export class Tabbrowser {
     return { browser: b, usingPreloadedContent };
   }
 
+  /**
+   * @param {MozBrowser} browser
+   *   The browser to start the load in.
+   * @param {object} options
+   * @param {nsIURI} [options.uri]
+   *   The URI to load, when it could be parsed.
+   * @param {string} [options.uriString]
+   *   The URI to load, as given by the caller.
+   * @param {boolean} [options.usingPreloadedContent]
+   *   Whether the browser already holds preloaded content for this URI, in
+   *   which case there is nothing left to load.
+   * @param {nsIPrincipal} options.triggeringPrincipal
+   *   Triggering principal to pass to docshell for the load.
+   * @param {nsIPrincipal} [options.originPrincipal]
+   *   Origin principal to inherit when `uriString` is given and no preloaded
+   *   browser is used.
+   * @param {nsIPrincipal} [options.originStoragePrincipal]
+   *   Origin storage principal to inherit when `uriString` is given and no
+   *   preloaded browser is used.
+   * @param {boolean} [options.uriIsAboutBlank]
+   *   Whether the URI to load is about:blank, which the browser already shows.
+   * @param {boolean} [options.allowInheritPrincipal]
+   *   Allow the load to inherit the triggering principal.
+   * @param {boolean} [options.allowThirdPartyFixup]
+   *   Allow transforming the URI into a search query.
+   * @param {boolean} [options.fromExternal]
+   *   Whether the URI was supplied to Firefox from an external application.
+   * @param {boolean} [options.forceAllowDataURI]
+   *   Force allow a data URI to load as a toplevel load.
+   * @param {boolean} [options.isCaptivePortalTab]
+   *   Whether the tab loads a captive portal login page, whose load must not
+   *   use DNS over HTTPS.
+   * @param {boolean} [options.skipLoad]
+   *   Leave the browser on its initial about:blank.
+   * @param {nsIReferrerInfo} [options.referrerInfo]
+   *   Referrer info for the request.
+   * @param {string} [options.charset]
+   *   Character set to use for the load. Legacy argument - do not use.
+   * @param {nsIInputStream} [options.postData]
+   *   Data to post as part of the request.
+   * @param {nsIPolicyContainer} [options.policyContainer]
+   *   The policy container that should apply to the load.
+   * @param {object} [options.globalHistoryOptions]
+   *   Used by :doc:`Places </browser/places/index>` to keep track of search
+   *   related metadata for the load.
+   * @param {string} [options.triggeringRemoteType]
+   *   The remoteType triggering this load.
+   * @param {nsILoadInfo_SchemelessInputType} [options.schemelessInput]
+   *   Whether the search/URL term was without an explicit scheme.
+   * @param {boolean} [options.hasValidUserGestureActivation]
+   *   Indicates if a valid user gesture caused this load. This informs
+   *   e.g. popup blocker decisions.
+   * @param {boolean} [options.textDirectiveUserActivation]
+   *   Whether a user gesture allows the load to scroll to a text fragment.
+   */
   _kickOffBrowserLoad(
     browser,
     {
@@ -4950,6 +5192,16 @@ export class Tabbrowser {
    * @param {object} [options]
    * @param {number} [options.elementIndex]
    * @param {number} [options.tabIndex]
+   * @param {MozTabbrowserTab} [options.ownerTab]
+   *   The tab to select when this tab is closed.
+   * @param {MozTabbrowserTab} [options.openerTab]
+   *   The tab that opened this one, next to which it goes when the
+   *   `browser.tabs.insertRelatedAfterCurrent` pref is set.
+   * @param {boolean} [options.pinned]
+   *   Whether the tab is pinned.
+   * @param {boolean} [options.bulkOrderedOpen]
+   *   Keep the tab in the order it was opened in rather than inserting it
+   *   next to the current tab, as wanted when opening a set of tabs at once.
    * @param {MozTabbrowserTabGroup} [options.tabGroup]
    *   A related tab group where this tab should be added, when applicable.
    */
@@ -5110,6 +5362,10 @@ export class Tabbrowser {
    * Dispatch a new tab event. This should be called when things are in a
    * consistent state, such that listeners of this event can again open
    * or close tabs.
+   *
+   * @param {MozTabbrowserTab} tab
+   * @param {object} [eventDetail]
+   *   Additional information to include in the event's `detail`.
    */
   _fireTabOpen(tab, eventDetail) {
     delete tab.initializingTab;
@@ -5303,6 +5559,10 @@ export class Tabbrowser {
   /**
    * In a multi-select context, the tabs (except pinned tabs) that are located to the
    * left of the leftmost selected tab will be removed.
+   *
+   * @param {MozTabbrowserTab} aTab
+   * @param {object} [options]
+   *   Options to use when removing tabs. @see removeTabs for more info.
    */
   removeTabsToTheStartFrom(aTab, options) {
     let tabs = this._getTabsToTheStartFrom(aTab);
@@ -5318,6 +5578,10 @@ export class Tabbrowser {
   /**
    * In a multi-select context, the tabs (except pinned tabs) that are located to the
    * right of the rightmost selected tab will be removed.
+   *
+   * @param {MozTabbrowserTab} aTab
+   * @param {object} [options]
+   *   Options to use when removing tabs. @see removeTabs for more info.
    */
   removeTabsToTheEndFrom(aTab, options) {
     let tabs = this._getTabsToTheEndFrom(aTab);
@@ -6471,8 +6735,9 @@ export class Tabbrowser {
   /**
    * Handles opening a new tab with mouse middleclick.
    *
-   * @param node
-   * @param event
+   * @param {Element} node
+   *        The element that was clicked
+   * @param {MouseEvent} event
    *        The click event
    */
   handleNewTabMiddleClick(node, event) {
@@ -6586,6 +6851,12 @@ export class Tabbrowser {
   }
 
   /**
+   * Swaps the browsers of two tabs, then closes the other tab.
+   *
+   * @param {MozTabbrowserTab} aOurTab
+   *   The tab in this window, which takes over the other tab's browser.
+   * @param {MozTabbrowserTab} aOtherTab
+   *   The tab to take the browser from, which may be in another window.
    * @returns {boolean}
    *   False if swapping isn't permitted, true otherwise.
    */
@@ -7157,6 +7428,11 @@ export class Tabbrowser {
    * Move contextTab (or selected tabs in a mutli-select context)
    * to a new browser window, unless it is (they are) already the only tab(s)
    * in the current window, in which case this will do nothing.
+   *
+   * @param {MozTabbrowserTab} contextTab
+   *   The tab the command applies to, which need not be selected.
+   * @param {object} [aOptions]
+   *   Key-value pairs that will be serialized into the features string.
    */
   replaceTabsWithWindow(contextTab, aOptions = {}) {
     if (this.isTabGroupLabel(contextTab)) {
@@ -7747,7 +8023,13 @@ export class Tabbrowser {
     }
   }
 
-  /** public API to the below private method */
+  /**
+   * @param {MozTabbrowserTab|MozTabbrowserTabGroup|MozTabSplitViewWrapper} element
+   * @param {function():void} moveActionCallback
+   * @param {object} [options]
+   * @param {TabMetricsContext} [options.metricsContext]
+   *   The context for the operation for telemetry purposes.
+   */
   handleTabMove(element, moveActionCallback, { metricsContext } = {}) {
     this.#handleTabMove(element, moveActionCallback, { metricsContext });
   }
@@ -7825,6 +8107,16 @@ export class Tabbrowser {
   /**
    * Adopts a tab from another browser window, and inserts it at the given index.
    *
+   * @param {MozTabbrowserTab} aTab
+   *   The tab to adopt, which belongs to another window.
+   * @param {object} [options]
+   * @param {number} [options.elementIndex]
+   *   The desired position, expressed as the index within the
+   *   `MozTabbrowserTabs::dragAndDropElements` array.
+   * @param {number} [options.tabIndex]
+   *   The desired position, expressed as the index within the `tabs` array.
+   * @param {boolean} [options.selectTab=false]
+   *   Whether to make the adopted tab the new active tab.
    * @returns {object}
    *    The new tab in the current window, null if the tab couldn't be adopted.
    */
@@ -7989,12 +8281,14 @@ export class Tabbrowser {
   }
 
   /**
-   * @param   aTab
+   * @param   {MozTabbrowserTab} aTab
    *          Can be from a different window as well
-   * @param   aRestoreTabImmediately
+   * @param   {boolean} aRestoreTabImmediately
    *          Can defer loading of the tab contents
-   * @param   aOptions
-   *          The new index of the tab
+   * @param   {object} [aOptions]
+   *          Takes `inBackground` and `tabIndex`, as
+   *          `SessionStore.duplicateTab` does
+   * @returns {MozTabbrowserTab}
    */
   duplicateTab(aTab, aRestoreTabImmediately, aOptions) {
     let newTab = lazy.SessionStore.duplicateTab(
@@ -8073,6 +8367,9 @@ export class Tabbrowser {
 
   /**
    * Adds two given tabs and all tabs between them into the (multi) selected tabs collection
+   *
+   * @param {MozTabbrowserTab} aTab1
+   * @param {MozTabbrowserTab} aTab2
    */
   addRangeToMultiSelectedTabs(aTab1, aTab2) {
     if (aTab1 == aTab2) {
@@ -8386,6 +8683,8 @@ export class Tabbrowser {
 
   /**
    * Returns true if a given browser's docshell should be active.
+   *
+   * @param {MozBrowser} aBrowser
    */
   shouldActivateDocShell(aBrowser) {
     if (this._switcher) {
@@ -8416,7 +8715,7 @@ export class Tabbrowser {
    * _maybeRequestReplyFromRemoteContent may call
    * aEvent.requestReplyFromRemoteContent if necessary.
    *
-   * @param aEvent    The handling event.
+   * @param {Event} aEvent    The handling event.
    * @return          true if the handler should wait a reply event.
    *                  false if the handle can handle the immediately.
    */
@@ -9534,6 +9833,9 @@ export class Tabbrowser {
   /**
    * For all tabs with aTab as a successor, set the successor to aOtherTab
    * instead.
+   *
+   * @param {MozTabbrowserTab} aTab
+   * @param {MozTabbrowserTab} aOtherTab
    */
   replaceInSuccession(aTab, aOtherTab) {
     if (aTab.predecessors) {
@@ -9545,6 +9847,8 @@ export class Tabbrowser {
 
   /**
    * Get the triggering principal for the last navigation in the session history.
+   *
+   * @param {MozBrowser} aBrowser
    */
   _getTriggeringPrincipalFromHistory(aBrowser) {
     let sessionHistory = aBrowser?.browsingContext?.sessionHistory;
