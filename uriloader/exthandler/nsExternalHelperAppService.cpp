@@ -2000,7 +2000,7 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest* request) {
 bool nsExternalAppHandler::IsDownloadSpam(nsIChannel* aChannel) {
   nsCOMPtr<nsILoadInfo> loadInfo = aChannel->LoadInfo();
   nsCOMPtr<nsIPermissionManager> permissionManager =
-      mozilla::services::GetPermissionManager();
+      mozilla::components::PermissionManager::Service();
   nsCOMPtr<nsIPrincipal> principal = loadInfo->TriggeringPrincipal();
   bool exactHostMatch = false;
   constexpr auto type = "automatic-download"_ns;
