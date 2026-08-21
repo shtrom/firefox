@@ -111,9 +111,6 @@ class LoopControl : public BreakableControl {
   // The bytecode offset of JSOp::LoopHead.
   JumpTarget head_;
 
-  // Stack depth when this loop was pushed on the control stack.
-  int32_t stackDepth_;
-
   // The loop nesting depth. Used as a hint to Ion.
   uint32_t loopDepth_;
 

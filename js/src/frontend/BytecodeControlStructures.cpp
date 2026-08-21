@@ -40,8 +40,6 @@ LoopControl::LoopControl(BytecodeEmitter* bce, StatementKind loopKind)
   MOZ_ASSERT(is<LoopControl>());
 
   LoopControl* enclosingLoop = findNearest<LoopControl>(enclosing());
-
-  stackDepth_ = bce->bytecodeSection().stackDepth();
   loopDepth_ = enclosingLoop ? enclosingLoop->loopDepth_ + 1 : 1;
 }
 
