@@ -3894,13 +3894,6 @@
   value: @IS_NIGHTLY_BUILD@
   mirror: always
 
-# Media element pseudo-classes
-- name: dom.media.pseudo-classes.enabled
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-  rust: true
-
 # WebCodecs API
 - name: dom.media.webcodecs.enabled
   type: RelaxedAtomicBool
