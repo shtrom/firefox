@@ -179,7 +179,7 @@ bool gfxFontEntry::TestCharacterMap(uint32_t aCh) {
   }
   AutoReadLock lock(mLock);
   gfxCharacterMap* map = mCharacterMap;
-  return map ? map->test(aCh) : 0;
+  return map ? map->test(aCh) : false;
 }
 
 void gfxFontEntry::EnsureUVSMapInitialized() {
