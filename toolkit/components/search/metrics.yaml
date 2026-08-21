@@ -676,7 +676,6 @@ browser.searchinit:
       - https://bugzil.la/1984248
       - https://bugzil.la/1984462
       - https://bugzil.la/2019474
-      - https://bugzil.la/2064969
     data_reviews:
       - https://bugzil.la/1789438
       - https://bugzil.la/1811158
@@ -685,10 +684,9 @@ browser.searchinit:
       - https://bugzil.la/1916866
       - https://bugzil.la/1984248
       - https://bugzil.la/2019474
-      - https://bugzil.la/2064969
     notification_emails:
       - fx-search-telemetry@mozilla.com
-    expires: 169
+    expires: 157
     unit: engines
 
   insecure_opensearch_engine_count:
@@ -705,7 +703,6 @@ browser.searchinit:
       - https://bugzil.la/1984248
       - https://bugzil.la/1984462
       - https://bugzil.la/2019474
-      - https://bugzil.la/2064969
     data_reviews:
       - https://bugzil.la/1789438
       - https://bugzil.la/1811158
@@ -714,10 +711,9 @@ browser.searchinit:
       - https://bugzil.la/1916866
       - https://bugzil.la/1984248
       - https://bugzil.la/2019474
-      - https://bugzil.la/2064969
     notification_emails:
       - fx-search-telemetry@mozilla.com
-    expires: 169
+    expires: 157
     unit: engines
 
   secure_opensearch_update_count:
@@ -734,7 +730,6 @@ browser.searchinit:
       - https://bugzil.la/1984248
       - https://bugzil.la/1984462
       - https://bugzil.la/2019474
-      - https://bugzil.la/2064969
     data_reviews:
       - https://bugzil.la/1789438
       - https://bugzil.la/1811158
@@ -743,10 +738,9 @@ browser.searchinit:
       - https://bugzil.la/1916866
       - https://bugzil.la/1984248
       - https://bugzil.la/2019474
-      - https://bugzil.la/2064969
     notification_emails:
       - fx-search-telemetry@mozilla.com
-    expires: 169
+    expires: 157
     unit: updates
 
   insecure_opensearch_update_count:
@@ -763,7 +757,6 @@ browser.searchinit:
       - https://bugzil.la/1984248
       - https://bugzil.la/1984462
       - https://bugzil.la/2019474
-      - https://bugzil.la/2064969
     data_reviews:
       - https://bugzil.la/1789438
       - https://bugzil.la/1811158
@@ -772,10 +765,9 @@ browser.searchinit:
       - https://bugzil.la/1916866
       - https://bugzil.la/1984248
       - https://bugzil.la/2019474
-      - https://bugzil.la/2064969
     notification_emails:
       - fx-search-telemetry@mozilla.com
-    expires: 169
+    expires: 157
     unit: updates
 
 search.suggestions:
