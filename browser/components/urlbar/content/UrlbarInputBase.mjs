@@ -2756,7 +2756,7 @@ ${
             source: UrlbarShared.RESULT_SOURCE.SEARCH,
             isPreview: false,
           },
-          this.window.gBrowser.selectedBrowser
+          this.window.gBrowser?.selectedBrowser
         );
       }
       this.controller.openSERP(
@@ -2940,8 +2940,12 @@ ${
       searchMode.restrictType = restrictType;
     }
 
-    // Enter search mode if the browser is selected.
-    if (browser == this.window.gBrowser.selectedBrowser) {
+    // The address bar keeps a search mode per browser, so it only enters search
+    // mode for the selected one. Every other input keeps a single search mode.
+    if (
+      !this.#isAddressbar ||
+      browser == this.window.gBrowser.selectedBrowser
+    ) {
       this._updateSearchModeUI(searchMode);
       if (searchMode) {
         // Set userTypedValue to the query string so that it's properly restored
@@ -2953,7 +2957,7 @@ ${
         }
       }
     }
-    lazy.UrlbarSearchTermsPersistence.onSearchModeChanged(this.window);
+    lazy?.UrlbarSearchTermsPersistence.onSearchModeChanged(this.window);
     this.dispatchEvent(new Event("searchmodechanged"));
   }
 
@@ -3000,7 +3004,7 @@ ${
    */
   restoreSearchModeState() {
     this.searchMode = this.#getSearchModesObject(
-      this.window.gBrowser.selectedBrowser
+      this.window.gBrowser?.selectedBrowser
     ).confirmed;
   }
 
@@ -3101,17 +3105,19 @@ ${
   #searchModeApplied = Promise.resolve();
 
   get searchMode() {
-    if (!this.window.gBrowser) {
-      // This only happens before DOMContentLoaded.
+    if (this.#isAddressbar && !this.window.gBrowser) {
+      // Only the address bar keys search mode by browser, and it has no
+      // browser before DOMContentLoaded; #browserStates is a WeakMap, so
+      // there'd be nothing to look up.
       return null;
     }
-    return this.getSearchMode(this.window.gBrowser.selectedBrowser);
+    return this.getSearchMode(this.window.gBrowser?.selectedBrowser);
   }
 
   set searchMode(searchMode) {
     this.#searchModeApplied = this.setSearchMode(
       searchMode,
-      this.window.gBrowser.selectedBrowser
+      this.window.gBrowser?.selectedBrowser
     );
 
     this.controller.engineStore
@@ -3589,15 +3595,18 @@ ${
       actionType = undefined,
     } = {}
   ) {
-    // Don't expose internal about:reader URLs to the user.
-    let originalUrl = lazy.ReaderMode.getOriginalUrlObjectForDisplay(val);
+    // Don't expose internal about:reader URLs to the user. `ReaderMode` is
+    // chrome-only, so a content realm shows such a URL as it is (bug 2064583).
+    let originalUrl = lazy?.ReaderMode.getOriginalUrlObjectForDisplay(val);
     if (originalUrl) {
       val = originalUrl.displaySpec;
     }
     this._untrimmedValue = untrimmedValue ?? val;
     this._protocolIsTrimmed = false;
     this._wwwIsTrimmed = false;
-    if (allowTrim) {
+    // `_trimValue` only trims in the address bar, so elsewhere there is no
+    // prefix to derive and `BrowserUIUtils` (chrome-only) is not needed.
+    if (allowTrim && this.#isAddressbar) {
       let oldVal = val;
       val = this._trimValue(val);
       // Derive what was trimmed from the authoritative prefix logic (a "www."
@@ -4988,7 +4997,7 @@ ${
       this.setPageProxyState("invalid", true);
     }
 
-    lazy.UrlbarSearchTermsPersistence.onSearchModeChanged(this.window);
+    lazy?.UrlbarSearchTermsPersistence.onSearchModeChanged(this.window);
     this.dispatchEvent(new Event("searchmodechanged"));
   }
 
@@ -5190,9 +5199,13 @@ ${
     } else {
       switcher.setAttribute("aria-hidden", "true");
     }
-    this.getBrowserState(
-      this.window.gBrowser.selectedBrowser
-    ).isUnifiedSearchButtonAvailable = available;
+    // Only the address bar keeps the availability per tab, to restore it on a
+    // tab switch.
+    if (this.#isAddressbar) {
+      this.getBrowserState(
+        this.window.gBrowser.selectedBrowser
+      ).isUnifiedSearchButtonAvailable = available;
+    }
   }
 
   /**
