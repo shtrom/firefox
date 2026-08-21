@@ -4818,7 +4818,7 @@ export class Tabbrowser {
 
   /**
    * @param {boolean} restoreTabsLazily
-   * @param {number} selectTab see SessionStore.restoreTabs { aSelectTab }
+   * @param {number} selectTab see SessionStore's #restoreTabs { aSelectTab }
    * @param {TabStateData[]} tabDataList
    * @param {TabGroupStateData[]} tabGroupDataList
    * @param {TabSplitViewStateData[]} splitViewDataList
