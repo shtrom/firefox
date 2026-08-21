@@ -151,6 +151,12 @@ static nsTArray<uint8_t> SerializeRecord(Span<const uint8_t> aToken,
   return buf;
 }
 
+// Records are compressed on the socket thread during the handshake. Quality 1
+// encodes ~3.5x faster than 5 for ~5% larger output, and the cache is bounded
+// in bytes, so that costs cached sessions rather than memory. Quality 2 to 4
+// compress this data worse than 1 for no speed gain.
+static constexpr int kRecordCompressionQuality = 1;
+
 // Returns empty array on failure.
 static nsTArray<uint8_t> CompressRecord(Span<const uint8_t> aPayload) {
   size_t bound = BrotliEncoderMaxCompressedSize(aPayload.Length());
@@ -161,9 +167,10 @@ static nsTArray<uint8_t> CompressRecord(Span<const uint8_t> aPayload) {
   uint32_t originalLen = AssertedCast<uint32_t>(aPayload.Length());
   LittleEndian::writeUint32(result.Elements(), originalLen);
   size_t encodedSize = bound;
-  if (!BrotliEncoderCompress(5, BROTLI_DEFAULT_WINDOW, BROTLI_MODE_GENERIC,
-                             aPayload.Length(), aPayload.Elements(),
-                             &encodedSize, result.Elements() + 4)) {
+  if (!BrotliEncoderCompress(kRecordCompressionQuality, BROTLI_DEFAULT_WINDOW,
+                             BROTLI_MODE_GENERIC, aPayload.Length(),
+                             aPayload.Elements(), &encodedSize,
+                             result.Elements() + 4)) {
     return {};
   }
   result.TruncateLength(4 + encodedSize);
