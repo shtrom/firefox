@@ -112,6 +112,10 @@ var gBrowserInit = {
   onBeforeInitialXULLayout() {
     this._setupFirstContentWindowPaintPromise();
 
+    if (!window.toolbar.visible) {
+      document.documentElement.setAttribute("popup-window", true);
+    }
+
     updateBookmarkToolbarVisibility();
 
     // Set a sane starting width/height for all resolutions on new profiles.

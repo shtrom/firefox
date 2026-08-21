@@ -1421,7 +1421,7 @@ var gMainPane = {
     win.toOpenWindowByType(
       "about:profilemanager",
       "about:profilemanager",
-      "chrome,extrachrome,menubar,resizable,status,toolbar,centerscreen"
+      "chrome,resizable,toolbar,centerscreen"
     );
   },
 

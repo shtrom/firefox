@@ -45,10 +45,6 @@ const DISALLOWED = {
     flag: Ci.nsIWebBrowserChrome.CHROME_SUPPRESS_INITIAL_FULLSCREEN,
     defaults_to: false,
   },
-  extrachrome: {
-    flag: Ci.nsIWebBrowserChrome.CHROME_EXTRA,
-    defaults_to: false,
-  },
   centerscreen: {
     flag: Ci.nsIWebBrowserChrome.CHROME_CENTER_SCREEN,
     defaults_to: false,

@@ -102,7 +102,7 @@ MenubarProp::MenubarProp(nsGlobalWindowInner* aWindow) : BarProp(aWindow) {}
 MenubarProp::~MenubarProp() = default;
 
 bool MenubarProp::GetVisible(CallerType aCallerType, ErrorResult& aRv) {
-  return BarProp::GetVisibleByFlag(nsIWebBrowserChrome::CHROME_MENUBAR,
+  return BarProp::GetVisibleByFlag(nsIWebBrowserChrome::CHROME_TOOLBAR,
                                    aCallerType, aRv);
 }
 
@@ -145,7 +145,7 @@ PersonalbarProp::PersonalbarProp(nsGlobalWindowInner* aWindow)
 PersonalbarProp::~PersonalbarProp() = default;
 
 bool PersonalbarProp::GetVisible(CallerType aCallerType, ErrorResult& aRv) {
-  return BarProp::GetVisibleByFlag(nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR,
+  return BarProp::GetVisibleByFlag(nsIWebBrowserChrome::CHROME_TOOLBAR,
                                    aCallerType, aRv);
 }
 

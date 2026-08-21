@@ -89,18 +89,14 @@ const WINDOW_CHROME_FLAGS = {
   CHROME_WINDOW_RESIZE: true,
   CHROME_TITLEBAR: true,
 
-  CHROME_MENUBAR: true,
   CHROME_TOOLBAR: true,
-  CHROME_PERSONAL_TOOLBAR: true,
 };
 
 const POPUP_CHROME_FLAGS = {
   CHROME_WINDOW_RESIZE: true,
   CHROME_TITLEBAR: true,
 
-  CHROME_MENUBAR: false,
   CHROME_TOOLBAR: false,
-  CHROME_PERSONAL_TOOLBAR: false,
 };
 
 async function testPopupPatterns(nonPopup) {
