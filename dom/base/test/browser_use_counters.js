@@ -271,6 +271,43 @@ add_task(async function test_page_counters() {
       ],
     },
 
+    // Check that use counters are incremented for every Sanitizer API entry
+    // point, including the static Document.parseHTML{,Unsafe} methods.
+    {
+      type: "direct",
+      filename: "file_use_counter_sanitizer.html",
+      counters: [
+        {
+          name: "SANITIZER_CONSTRUCTOR",
+          glean: ["", "sanitizerConstructor"],
+        },
+        {
+          name: "ELEMENT_SETHTML",
+          glean: ["", "elementSethtml"],
+        },
+        {
+          name: "ELEMENT_SETHTMLUNSAFE",
+          glean: ["", "elementSethtmlunsafe"],
+        },
+        {
+          name: "SHADOWROOT_SETHTML",
+          glean: ["", "shadowrootSethtml"],
+        },
+        {
+          name: "SHADOWROOT_SETHTMLUNSAFE",
+          glean: ["", "shadowrootSethtmlunsafe"],
+        },
+        {
+          name: "DOCUMENT_PARSEHTML",
+          glean: ["", "documentParsehtml"],
+        },
+        {
+          name: "DOCUMENT_PARSEHTMLUNSAFE",
+          glean: ["", "documentParsehtmlunsafe"],
+        },
+      ],
+    },
+
     // // data: URLs don't correctly propagate to their referring document yet.
     // {
     //   type: "direct",
