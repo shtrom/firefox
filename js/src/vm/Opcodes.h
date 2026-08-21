@@ -2058,16 +2058,6 @@
      */ \
     MACRO(Yield, yield, NULL, 4, 2, 3, JOF_RESUMEINDEX) \
     /*
-     * Pushes a boolean indicating whether the top of the stack is
-     * `MagicValue(JS_GENERATOR_CLOSING)`.
-     *
-     *   Category: Functions
-     *   Type: Generators and async functions
-     *   Operands:
-     *   Stack: val => val, res
-     */ \
-    MACRO(IsGenClosing, is_gen_closing, NULL, 1, 1, 2, JOF_BYTE) \
-    /*
      * Arrange for this async function to resume asynchronously when `value`
      * becomes resolved.
      *
@@ -2230,21 +2220,6 @@
      *   Stack: => resumeKind
      */ \
     MACRO(ResumeKind, resume_kind, NULL, 2, 0, 1, JOF_UINT8) \
-    /*
-     * Handle Throw and Return resumption.
-     *
-     * `gen` must be the generator object for the current frame. `resumeKind`
-     * must be a `GeneratorResumeKind` stored as an `Int32` value. If it is
-     * `Next`, continue to the next instruction. If `resumeKind` is `Throw` or
-     * `Return`, these completions are handled by throwing an exception. See
-     * `GeneratorThrowOrReturn`.
-     *
-     *   Category: Functions
-     *   Type: Generators and async functions
-     *   Operands:
-     *   Stack: rval, gen, resumeKind => rval
-     */ \
-    MACRO(CheckResumeKind, check_resume_kind, NULL, 1, 3, 1, JOF_BYTE) \
     /*
      * Resume execution of a generator function. Async functions and modules are
      * resumed without going through this op.
@@ -3618,6 +3593,8 @@
  */
 
 #define FOR_EACH_TRAILING_UNUSED_OPCODE(MACRO) \
+  MACRO(239)                                   \
+  MACRO(240)                                   \
   MACRO(241)                                   \
   MACRO(242)                                   \
   MACRO(243)                                   \

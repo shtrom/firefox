@@ -20656,19 +20656,6 @@ void CodeGenerator::visitIsObject(LIsObject* ins) {
   masm.testObjectSet(Assembler::Equal, value, output);
 }
 
-void CodeGenerator::visitIsGenClosing(LIsGenClosing* lir) {
-  Register output = ToRegister(lir->output());
-  ValueOperand value = ToValue(lir->value());
-  Label isClosing, done;
-  masm.branchTestMagicValue(Assembler::Equal, value, JS_GENERATOR_CLOSING,
-                            &isClosing);
-  masm.move32(Imm32(0), output);
-  masm.jump(&done);
-  masm.bind(&isClosing);
-  masm.move32(Imm32(1), output);
-  masm.bind(&done);
-}
-
 void CodeGenerator::visitIsSuspendedGenerator(LIsSuspendedGenerator* lir) {
   Register obj = ToRegister(lir->object());
   Register output = ToRegister(lir->output());

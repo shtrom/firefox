@@ -165,13 +165,13 @@
 //   Await 0                         # RVAL GENERATOR RESUMEKIND
 //
 //   AfterYield                      # RVAL GENERATOR RESUMEKIND
-//   CheckResumeKind                 # RVAL
+//   [resume-kind check]             # RVAL
 // ```
 //
 // JSOp::AsyncAwait corresponds to Await steps 1-9, and JSOp::Await corresponds
 // to Await steps 10-12 in the spec.
 //
-// See the next section for JSOp::CheckResumeKind.
+// See the next section for the resume-kind check.
 //
 // After them, the async function is suspended, and if this is the first await
 // in the execution, the async function's result promise is returned to the
@@ -226,7 +226,7 @@
 // and the resume kind, either normal or throw, corresponds to fulfillment or
 // rejection, on the stack.
 //
-// The resume kind is handled by JSOp::CheckResumeKind after that.
+// The resume kind is handled by the resume-kind check after that.
 //
 // If the resume kind is normal (=fulfillment), the async function resumes
 // the execution with the resolved value as the result of `await`.
@@ -264,7 +264,7 @@
 //   GetAliasedVar ".generator"      # VALUE .generator
 //   Await 0                         # RVAL GENERATOR RESUMEKIND
 //   AfterYield                      # RVAL GENERATOR RESUMEKIND
-//   CheckResumeKind                 # RVAL
+//   [resume-kind check]             # RVAL
 //
 // END:
 //   JumpTarget                      # RVAL

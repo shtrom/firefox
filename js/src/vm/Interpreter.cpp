@@ -2449,12 +2449,6 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
     }
     END_CASE(OptimizeGetIterator)
 
-    CASE(IsGenClosing) {
-      bool b = REGS.sp[-1].isMagic(JS_GENERATOR_CLOSING);
-      PUSH_BOOLEAN(b);
-    }
-    END_CASE(IsGenClosing)
-
     CASE(Dup) {
       MOZ_ASSERT(REGS.stackDepth() >= 1);
       const Value& rref = REGS.sp[-1];
@@ -4257,21 +4251,6 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
       PUSH_INT32(int32_t(resumeKind));
     }
     END_CASE(ResumeKind)
-
-    CASE(CheckResumeKind) {
-      int32_t kindInt = REGS.sp[-1].toInt32();
-      GeneratorResumeKind resumeKind = IntToResumeKind(kindInt);
-      if (MOZ_UNLIKELY(resumeKind != GeneratorResumeKind::Next)) {
-        ReservedRooted<Value> val(&rootValue0, REGS.sp[-3]);
-        Rooted<AbstractGeneratorObject*> gen(
-            cx, &REGS.sp[-2].toObject().as<AbstractGeneratorObject>());
-        MOZ_ALWAYS_FALSE(GeneratorThrowOrReturn(cx, activation.regs().fp(), gen,
-                                                val, resumeKind));
-        goto error;
-      }
-      REGS.sp -= 2;
-    }
-    END_CASE(CheckResumeKind)
 
     CASE(Resume) {
       {

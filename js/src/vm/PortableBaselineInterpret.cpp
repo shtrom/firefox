@@ -8093,12 +8093,6 @@ PBIResult PortableBaselineInterpret(
         goto do_return;
       }
 
-      CASE(IsGenClosing) {
-        bool result = VIRTSP(0).asValue() == MagicValue(JS_GENERATOR_CLOSING);
-        VIRTPUSH(StackVal(BooleanValue(result)));
-        END_OP(IsGenClosing);
-      }
-
       CASE(AsyncAwait) {
         // value, gen => promise
         JSObject* promise;
@@ -8199,27 +8193,6 @@ PBIResult PortableBaselineInterpret(
         GeneratorResumeKind resumeKind = ResumeKindFromPC(pc);
         VIRTPUSH(StackVal(Int32Value(int32_t(resumeKind))));
         END_OP(ResumeKind);
-      }
-
-      CASE(CheckResumeKind) {
-        // rval, gen, resumeKind => rval
-        {
-          GeneratorResumeKind resumeKind =
-              IntToResumeKind(VIRTPOP().asValue().toInt32());
-          ReservedRooted<JSObject*> obj0(
-              &state.obj0,
-              &VIRTPOP().asValue().toObject());  // gen
-          ReservedRooted<Value> value0(&state.value0,
-                                       VIRTSP(0).asValue());  // rval
-          if (resumeKind != GeneratorResumeKind::Next) {
-            PUSH_EXIT_FRAME();
-            MOZ_ALWAYS_FALSE(GeneratorThrowOrReturn(
-                cx, frame, obj0.as<AbstractGeneratorObject>(), value0,
-                resumeKind));
-            GOTO_ERROR();
-          }
-        }
-        END_OP(CheckResumeKind);
       }
 
       CASE(Resume) {

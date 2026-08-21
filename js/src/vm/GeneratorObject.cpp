@@ -238,25 +238,6 @@ AbstractGeneratorObject* js::GetGeneratorObjectForEnvironment(
   return call ? GetGeneratorObjectForCall(cx, *call) : nullptr;
 }
 
-bool js::GeneratorThrowOrReturn(JSContext* cx, AbstractFramePtr frame,
-                                Handle<AbstractGeneratorObject*> genObj,
-                                HandleValue arg,
-                                GeneratorResumeKind resumeKind) {
-  MOZ_ASSERT(genObj->isRunning());
-  if (resumeKind == GeneratorResumeKind::Throw) {
-    cx->setPendingException(arg, ShouldCaptureStack::Maybe);
-  } else {
-    MOZ_ASSERT(resumeKind == GeneratorResumeKind::Return);
-
-    MOZ_ASSERT_IF(genObj->is<GeneratorObject>(), arg.isObject());
-    frame.setReturnValue(arg);
-
-    RootedValue closing(cx, MagicValue(JS_GENERATOR_CLOSING));
-    cx->setPendingException(closing, nullptr);
-  }
-  return false;
-}
-
 void AbstractGeneratorObject::resume(JSContext* cx,
                                      InterpreterActivation& activation,
                                      Handle<AbstractGeneratorObject*> genObj,

@@ -5997,11 +5997,6 @@ bool BaselineCodeGen<Handler>::emit_OptimizeGetIterator() {
 }
 
 template <typename Handler>
-bool BaselineCodeGen<Handler>::emit_IsGenClosing() {
-  return emitIsMagicValue(JS_GENERATOR_CLOSING);
-}
-
-template <typename Handler>
 bool BaselineCodeGen<Handler>::emit_IsNullOrUndefined() {
   frame.syncStack(0);
 
@@ -6544,7 +6539,7 @@ bool BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
   masm.bind(&noStackStorage);
 
   // Push the resume operands (value, generator, resumeKind) on the operand
-  // stack, where JSOp::AfterYield and JSOp::CheckResumeKind expect them.
+  // stack, where JSOp::AfterYield expects them.
   masm.pushValue(argValue);
   masm.pushValue(argGen);
   masm.pushValue(argResumeKind);
@@ -6720,47 +6715,6 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   restoreInterpreterPCReg();
   frame.popn(3);
   frame.push(R0);
-  return true;
-}
-
-template <typename Handler>
-bool BaselineCodeGen<Handler>::emit_CheckResumeKind() {
-  // Load resumeKind in R1, generator in R0.
-  frame.popRegsAndSync(2);
-
-#ifdef DEBUG
-  Label ok;
-  masm.branchTestInt32(Assembler::Equal, R1, &ok);
-  masm.assumeUnreachable("Expected int32 resumeKind");
-  masm.bind(&ok);
-#endif
-
-  // If resumeKind is 'next' we don't have to do anything.
-  Label done;
-  masm.unboxInt32(R1, R1.scratchReg());
-  masm.branch32(Assembler::Equal, R1.scratchReg(),
-                Imm32(int32_t(GeneratorResumeKind::Next)), &done);
-
-  prepareVMCall();
-
-  pushArg(R1.scratchReg());  // resumeKind
-
-  masm.loadValue(frame.addressOfStackValue(-1), R2);
-  pushArg(R2);  // arg
-
-  masm.unboxObject(R0, R0.scratchReg());
-  pushArg(R0.scratchReg());  // genObj
-
-  masm.loadBaselineFramePtr(FramePointer, R2.scratchReg());
-  pushArg(R2.scratchReg());  // frame
-
-  using Fn = bool (*)(JSContext*, BaselineFrame*,
-                      Handle<AbstractGeneratorObject*>, HandleValue, int32_t);
-  if (!callVM<Fn, jit::GeneratorThrowOrReturn>()) {
-    return false;
-  }
-
-  masm.bind(&done);
   return true;
 }
 
