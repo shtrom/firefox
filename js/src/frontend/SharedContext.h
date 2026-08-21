@@ -63,6 +63,7 @@ enum class StatementKind : uint8_t {
   Class,
 
   // Used only by BytecodeEmitter.
+  Destructuring,
   Spread,
   YieldStar,
 };

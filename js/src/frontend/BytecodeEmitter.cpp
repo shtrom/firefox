@@ -3147,6 +3147,10 @@ template <typename InnerEmitter>
 bool BytecodeEmitter::wrapWithDestructuringTryNote(int32_t iterDepth,
                                                    InnerEmitter emitter) {
   MOZ_ASSERT(bytecodeSection().stackDepth() >= iterDepth);
+#ifdef DEBUG
+  auto* control = findInnermostNestableControl<DestructuringControl>();
+  MOZ_ASSERT(*control->nonLocalExitStackDepth() == iterDepth);
+#endif
 
   // Pad a nop at the beginning of the bytecode covered by the trynote so
   // that when unwinding environments, we may unwind to the scope
@@ -3569,6 +3573,12 @@ bool BytecodeEmitter::emitDestructuringOpsArray(ListNode* pattern,
   // IteratorClose is called upon exception only if done is false.
   int32_t tryNoteDepth = bytecodeSection().stackDepth();
 
+  // A forced return from a `yield` will jump out of the destructuring region,
+  // so in that case DestructuringControl emits the IteratorClose after the
+  // loop.
+  DestructuringControl control(this, selfHostedIter);
+  control.setNonLocalExitStackDepth(tryNoteDepth);
+
   for (ParseNode* member : pattern->contents()) {
     bool isFirst = member == pattern->head();
     DebugOnly<bool> hasNext = !!member->pn_next;
@@ -3832,8 +3842,7 @@ bool BytecodeEmitter::emitDestructuringOpsArray(ListNode* pattern,
   // The last DONE value is on top of the stack. If not DONE, call
   // IteratorClose.
   //                [stack] ... OBJ NEXT ITER DONE
-
-  if (!emitDestructuringIteratorClose(selfHostedIter)) {
+  if (!control.emitEnd(this)) {
     //              [stack] ... OBJ
     return false;
   }

@@ -4,6 +4,8 @@
 
 #include "frontend/BytecodeControlStructures.h"
 
+#include "mozilla/DebugOnly.h"
+
 #include "frontend/BytecodeEmitter.h"   // BytecodeEmitter
 #include "frontend/EmitterScope.h"      // EmitterScope
 #include "frontend/ForOfLoopControl.h"  // ForOfLoopControl
@@ -101,6 +103,63 @@ bool LoopControl::emitLoopEnd(BytecodeEmitter* bce, JSOp op,
     return false;
   }
   return true;
+}
+
+DestructuringControl::DestructuringControl(BytecodeEmitter* bce,
+                                           SelfHostedIter selfHostedIter)
+    : NestableControl(bce, StatementKind::Destructuring),
+      selfHostedIter_(selfHostedIter) {
+  //                [stack] ... OBJ NEXT ITER DONE
+  MOZ_ASSERT(bce->bytecodeSection().stackDepth() >= 4);
+}
+
+bool DestructuringControl::emitJumpToIteratorClose(BytecodeEmitter* bce) {
+  MOZ_ASSERT(bce->bytecodeSection().stackDepth() == *nonLocalExitStackDepth());
+  return bce->emitJump(JSOp::Goto, &returnJumps_);
+}
+
+bool DestructuringControl::emitEnd(BytecodeEmitter* bce) {
+  //                [stack] ... OBJ NEXT ITER DONE
+
+  // The last DONE value is on top of the stack. If not DONE, call
+  // IteratorClose.
+  if (!bce->emitDestructuringIteratorClose(selfHostedIter_)) {
+    //              [stack] ... OBJ
+    return false;
+  }
+
+  // If the pattern contains a `yield` expression (eg `[x, y = yield z] = o;`),
+  // we have to emit the non-local exit code used for forced returns. We can
+  // skip this in the common case when there are no yields.
+
+  if (!returnJumps_.offset.valid()) {
+    return true;
+  }
+
+  mozilla::DebugOnly<int32_t> normalDepth = bce->bytecodeSection().stackDepth();
+  JumpList done;
+  if (!bce->emitJumpNoFallthrough(JSOp::Goto, &done)) {
+    return false;
+  }
+
+  bce->bytecodeSection().setStackDepth(*nonLocalExitStackDepth());
+  if (!bce->emitJumpTargetAndPatch(returnJumps_)) {
+    return false;
+  }
+
+  if (!bce->emitDestructuringIteratorClose(selfHostedIter_)) {
+    return false;
+  }
+
+  {
+    NonLocalExitControl nle(bce, NonLocalExitKind::Return);
+    if (!nle.emitNonLocalJump(nullptr, this)) {
+      return false;
+    }
+  }
+
+  MOZ_ASSERT(bce->bytecodeSection().stackDepth() == normalDepth);
+  return bce->emitJumpTargetAndPatch(done);
 }
 
 TryFinallyControl::TryFinallyControl(BytecodeEmitter* bce, StatementKind kind)
@@ -253,13 +312,13 @@ bool NonLocalExitControl::emitNonLocalJump(NestableControl* target,
   // iterator, and continues until the actual jump.
   Vector<BytecodeOffset, 4> forOfIterCloseScopeStarts(bce_->fc);
 
-  // If we have to execute a finally block, then we will jump there now and
-  // continue the non-local jump from the end of the finally block.
-  bool jumpingToFinally = false;
+  // If we have to execute a finally block or close a destructuring iterator,
+  // we jump there now and continue the non-local jump from there.
+  bool jumpingToCleanup = false;
 
   // Walk the nestable control stack and patch jumps.
   for (NestableControl* control = startingControl;
-       control != target && !jumpingToFinally; control = control->enclosing()) {
+       control != target && !jumpingToCleanup; control = control->enclosing()) {
     // Walk the scope stack and leave the scopes we entered. Leaving a scope
     // may emit administrative ops like JSOp::PopLexicalEnv but never anything
     // that manipulates the stack.
@@ -277,7 +336,7 @@ bool NonLocalExitControl::emitNonLocalJump(NestableControl* target,
           return false;
         }
         if (!finallyControl.emittingSubroutine()) {
-          jumpingToFinally = true;
+          jumpingToCleanup = true;
 
           uint32_t idx;
           if (!finallyControl.allocateContinuation(target, kind_, &idx)) {
@@ -287,6 +346,20 @@ bool NonLocalExitControl::emitNonLocalJump(NestableControl* target,
             return false;
           }
         }
+        break;
+      }
+
+      case StatementKind::Destructuring: {
+        MOZ_ASSERT(kind_ == NonLocalExitKind::Return);
+        MOZ_ASSERT(!target);
+        if (!popToStackDepth(*control->nonLocalExitStackDepth())) {
+          return false;
+        }
+        auto& destructuringControl = control->as<DestructuringControl>();
+        if (!destructuringControl.emitJumpToIteratorClose(bce_)) {
+          return false;
+        }
+        jumpingToCleanup = true;
         break;
       }
 
@@ -325,7 +398,7 @@ bool NonLocalExitControl::emitNonLocalJump(NestableControl* target,
     }
   }
 
-  if (!jumpingToFinally) {
+  if (!jumpingToCleanup) {
     // Leave intermediate scopes before emitting any iterator close and the
     // final jump. This must run before the ForOfLoopControl iterator close
     // below so that JSOp::TakeDisposeCapability (emitted for `using`

@@ -15,6 +15,7 @@
 #include "frontend/BytecodeOffset.h"  // BytecodeOffset
 #include "frontend/JumpList.h"        // JumpList, JumpTarget
 #include "frontend/ParserAtom.h"      // TaggedParserAtomIndex
+#include "frontend/SelfHostedIter.h"  // SelfHostedIter
 #include "frontend/SharedContext.h"  // StatementKind, StatementKindIsLoop, StatementKindIsUnlabeledBreakTarget
 #include "frontend/TDZCheckCache.h"  // TDZCheckCache
 #include "vm/StencilEnums.h"         // TryNoteKind
@@ -159,6 +160,23 @@ class LoopControl : public BreakableControl {
 template <>
 inline bool NestableControl::is<LoopControl>() const {
   return StatementKindIsLoop(kind_);
+}
+
+class MOZ_STACK_CLASS DestructuringControl : public NestableControl {
+  SelfHostedIter selfHostedIter_;
+
+  // IteratorClose is emitted after the enclosing destructuring try-note.
+  JumpList returnJumps_;
+
+ public:
+  DestructuringControl(BytecodeEmitter* bce, SelfHostedIter selfHostedIter);
+
+  [[nodiscard]] bool emitJumpToIteratorClose(BytecodeEmitter* bce);
+  [[nodiscard]] bool emitEnd(BytecodeEmitter* bce);
+};
+template <>
+inline bool NestableControl::is<DestructuringControl>() const {
+  return kind_ == StatementKind::Destructuring;
 }
 
 enum class NonLocalExitKind { Continue, Break, Return };
