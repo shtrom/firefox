@@ -358,7 +358,10 @@ void HTMLSlotElement::RemoveAssignedNode(nsIContent& aNode) {
 }
 
 void HTMLSlotElement::ClearAssignedNodes() {
-  for (RefPtr<nsINode>& node : mAssignedNodes.AsSpan()) {
+  FastFrontRemovableArray<RefPtr<nsINode>> assignedNodes =
+      std::move(mAssignedNodes);
+
+  for (RefPtr<nsINode>& node : assignedNodes.AsSpan()) {
     MOZ_ASSERT(!node->AsContent()->GetAssignedSlot() ||
                    node->AsContent()->GetAssignedSlot() == this,
                "How exactly?");
@@ -366,9 +369,9 @@ void HTMLSlotElement::ClearAssignedNodes() {
     if (StaticPrefs::dom_headingoffset_enabled()) {
       node->AsContent()->UpdateHeadingElementsOffsetChange();
     }
+    SlotAssignedNodeRemoved(this, *node->AsContent());
   }
 
-  mAssignedNodes.Clear();
   RecalculateHasSlottedState();
 }
 
