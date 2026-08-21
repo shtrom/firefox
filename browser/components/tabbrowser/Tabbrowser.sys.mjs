@@ -373,7 +373,7 @@ export class Tabbrowser {
 
   #previewMode = false;
 
-  _lastFindValue = "";
+  #lastFindValue = "";
 
   _tabLayerCache = [];
 
@@ -1147,6 +1147,13 @@ export class Tabbrowser {
   }
 
   /**
+   * Forget the find value that newly created findbars are prefilled with.
+   */
+  clearLastFindValue() {
+    this.#lastFindValue = "";
+  }
+
+  /**
    * Get the findbar, and create it if it doesn't exist.
    *
    * @param {MozTabbrowserTab} [aTab]
@@ -1185,7 +1192,7 @@ export class Tabbrowser {
     }
 
     findBar.browser = browser;
-    findBar._findField.value = this._lastFindValue;
+    findBar._findField.value = this.#lastFindValue;
 
     aTab._findBar = findBar;
 
@@ -1947,7 +1954,7 @@ export class Tabbrowser {
         oldFindBar.findMode == oldFindBar.FIND_NORMAL &&
         !oldFindBar.hidden
       ) {
-        this._lastFindValue = oldFindBar._findField.value;
+        this.#lastFindValue = oldFindBar._findField.value;
       }
 
       this.updateTitlebar();
