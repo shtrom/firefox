@@ -1211,38 +1211,6 @@ browser.search.content:
     expires: never
     telemetry_mirror: BROWSER_SEARCH_CONTENT_WEBEXTENSION
 
-  smartwindow_assistant:
-    type: labeled_counter
-    description: >
-      Records counts for in-content searches where the search was most
-      likely started from the AI window assistant. The key format is
-      <provider>:[tagged|tagged-follow-on|organic]:[code|other|none]
-      See https://firefox-source-docs.mozilla.org/browser/search/telemetry.html#browser-search-content
-    bugs:
-      - https://bugzil.la/2001519
-    data_reviews:
-      - https://bugzil.la/2001519
-    notification_emails:
-      - fx-search-telemetry@mozilla.com
-      - rev-data@mozilla.com
-    expires: never
-
-  smartbar:
-    type: labeled_counter
-    description: >
-      Records counts for in-content searches where the search was most
-      likely started from the smartbar. The key format is
-      <provider>:[tagged|tagged-follow-on|organic]:[code|other|none]
-      See https://firefox-source-docs.mozilla.org/browser/search/telemetry.html#browser-search-content
-    bugs:
-      - https://bugzil.la/2008925
-    data_reviews:
-      - https://bugzil.la/2008925
-    notification_emails:
-      - fx-search-telemetry@mozilla.com
-      - rev-data@mozilla.com
-    expires: never
-
   system:
     type: labeled_counter
     description: >
@@ -1523,38 +1491,6 @@ browser.search.withads:
     expires: never
     telemetry_mirror: BROWSER_SEARCH_WITHADS_WEBEXTENSION
 
-  smartwindow_assistant:
-    type: labeled_counter
-    description: >
-      Records counts of SERP pages with adverts displayed where the search
-      was started from the AI window assistant. The key format is
-      ‘<provider>:<tagged|organic>’. See
-      https://firefox-source-docs.mozilla.org/browser/search/telemetry.html#browser-search-content
-    bugs:
-      - https://bugzil.la/2001519
-    data_reviews:
-      - https://bugzil.la/2001519
-    notification_emails:
-      - fx-search-telemetry@mozilla.com
-      - rev-data@mozilla.com
-    expires: never
-
-  smartbar:
-    type: labeled_counter
-    description: >
-      Records counts of SERP pages with adverts displayed where the search
-      was started from the smartbar. The key format is
-      ‘<provider>:<tagged|organic>’. See
-      https://firefox-source-docs.mozilla.org/browser/search/telemetry.html#browser-search-content
-    bugs:
-      - https://bugzil.la/2008925
-    data_reviews:
-      - https://bugzil.la/2008925
-    notification_emails:
-      - fx-search-telemetry@mozilla.com
-      - rev-data@mozilla.com
-    expires: never
-
   system:
     type: labeled_counter
     description: >
@@ -1812,36 +1748,6 @@ browser.search.adclicks:
       - rev-data@mozilla.com
     expires: never
     telemetry_mirror: BROWSER_SEARCH_ADCLICKS_WEBEXTENSION
-
-  smartwindow_assistant:
-    type: labeled_counter
-    description: >
-      Records clicks of adverts on SERP pages where the search was started
-      from the AI window assistant. The key format is ‘<provider>:<tagged|organic>’
-      See https://firefox-source-docs.mozilla.org/browser/search/telemetry.html#browser-search-content
-    bugs:
-      - https://bugzil.la/2001519
-    data_reviews:
-      - https://bugzil.la/2001519
-    notification_emails:
-      - fx-search-telemetry@mozilla.com
-      - rev-data@mozilla.com
-    expires: never
-
-  smartbar:
-    type: labeled_counter
-    description: >
-      Records clicks of adverts on SERP pages where the search was started
-      from the smartbar. The key format is ‘<provider>:<tagged|organic>’
-      See https://firefox-source-docs.mozilla.org/browser/search/telemetry.html#browser-search-content
-    bugs:
-      - https://bugzil.la/2008925
-    data_reviews:
-      - https://bugzil.la/2008925
-    notification_emails:
-      - fx-search-telemetry@mozilla.com
-      - rev-data@mozilla.com
-    expires: never
 
   system:
     type: labeled_counter

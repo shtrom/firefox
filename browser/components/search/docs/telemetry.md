@@ -183,8 +183,6 @@ They are broken down by the originating SAP where known:
   was in a Persisted Search state.
 - `urlbar_searchmode` Used when the Urlbar is in search mode.
 - `searchbar`
-- `smartbar` Used when searching from Smart Window.
-- `smartwindow_assistant` Used for search hand-off from Smart Window assistant.
 - `about_home`
 - `about_newtab`
 - `contextmenu`
@@ -193,6 +191,11 @@ They are broken down by the originating SAP where known:
 - `tabhistory` Indicates a search was counted as a result of the user loading it from the tab history.
 - `reload` Indicates a search was counted as a result of reloading the page.
 - `unknown` Indicates the origin was unknown.
+
+Note that some newer SAPs will be reported as `unknown` for these
+probes. We do not wish to add further probes to legacy telemetry for these, but
+we do need to keep the legacy telemetry probes counting all SERPs, hence the
+redirection to `unknown`.
 
 #### browser.search.withads.\*
 
