@@ -2194,6 +2194,20 @@ creditcards-autofill-enabled:
         branch: default
         pref: extensions.formautofill.creditCards.supported
 
+autofill-ml:
+  description: Machine-learning based form field detection for autofill
+  owner: dlee@mozilla.com
+  hasExposure: false
+  variables:
+    enabled:
+      description: >-
+        If true, use the ML model instead of the regular expression based
+        heuristics to classify form fields. Has no effect on Android.
+      type: boolean
+      setPref:
+        branch: default
+        pref: extensions.formautofill.useml
+
 shellService:
   description: "Interface with OS, e.g., pinning and set default"
   owner: desktop-integrations@mozilla.com
