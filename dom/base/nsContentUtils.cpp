@@ -115,6 +115,7 @@
 #include "mozilla/StaticPrefs_clipboard.h"
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_network.h"
+#include "mozilla/StaticPrefs_pdfjs.h"
 #include "mozilla/dom/ReportDeliver.h"
 #include "mozilla/extensions/WebExtensionPolicy.h"
 #include "nsIOService.h"
@@ -8692,11 +8693,7 @@ bool nsContentUtils::AllowXULXBLForPrincipal(nsIPrincipal* aPrincipal) {
   return xpc::IsInAutomation() && IsSitePermAllow(aPrincipal, "allowXULXBL"_ns);
 }
 
-bool nsContentUtils::IsPDFJSEnabled() {
-  nsCOMPtr<nsIStreamConverter> conv = do_CreateInstance(
-      "@mozilla.org/streamconv;1?from=application/pdf&to=text/html");
-  return conv;
-}
+bool nsContentUtils::IsPDFJSEnabled() { return !StaticPrefs::pdfjs_disabled(); }
 
 bool nsContentUtils::IsPDFJS(nsIPrincipal* aPrincipal) {
   if (!aPrincipal || !aPrincipal->SchemeIs("resource")) {
@@ -12939,9 +12936,10 @@ uint32_t nsContentUtils::HtmlObjectContentTypeForMIMEType(
     return nsIObjectLoadingContent::TYPE_DOCUMENT;
   }
 
-  // Faking support of the PDF content as a document for EMBED tags
-  // when internal PDF viewer is enabled.
-  if (aMIMEType.LowerCaseEqualsLiteral(APPLICATION_PDF) && IsPDFJSEnabled()) {
+  // Faking support of the PDF content as a document for EMBED tags when the
+  // internal PDF viewer or the embedded PDF fallback is enabled.
+  if (aMIMEType.LowerCaseEqualsLiteral(APPLICATION_PDF) &&
+      (IsPDFJSEnabled() || StaticPrefs::pdfjs_embedFallback())) {
     // Sandboxed iframes are just never allowed to display plugins. In the
     // modern world, this just means "application/pdf".
     return aIsSandboxed ? nsIObjectLoadingContent::TYPE_FALLBACK

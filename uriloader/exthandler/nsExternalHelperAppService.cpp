@@ -70,6 +70,7 @@
 
 #include "nsIApplicationReputation.h"
 
+#include "nsContentUtils.h"
 #include "nsDSURIContentListener.h"
 #include "nsMimeTypes.h"
 #include "nsMIMEInfoImpl.h"
@@ -1871,6 +1872,16 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest* request) {
 
   bool shouldAutomaticallyHandleInternally =
       action == nsIMIMEInfo::handleInternally;
+
+  // The built-in viewer is the only way to handle a PDF internally, so when it
+  // is disabled the user has to be asked instead: launching the file would fail
+  // because nsIMIMEInfo::handleInternally has no application to launch.
+  if (shouldAutomaticallyHandleInternally &&
+      MIMEType.EqualsLiteral(APPLICATION_PDF) &&
+      !nsContentUtils::IsPDFJSEnabled()) {
+    shouldAutomaticallyHandleInternally = false;
+    alwaysAsk = true;
+  }
 
   if (aChannel) {
     uint32_t disposition = -1;
