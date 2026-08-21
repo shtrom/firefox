@@ -1613,6 +1613,9 @@ export class TelemetryFeed {
       case at.WIDGETS_TIMER_USER_IMPRESSION:
         this.handleWidgetsUserEvent(action);
         break;
+      case at.SPACES_USER_EVENT:
+        this.handleSpacesUserEvent(action);
+        break;
       case at.WIDGETS_USER_EVENT:
         this.handleUnifiedWidgetUserEvent(action);
         break;
@@ -1702,6 +1705,18 @@ export class TelemetryFeed {
           Glean.newtab.widgetsTimerImpression.record(payload);
           break;
       }
+    }
+  }
+
+  handleSpacesUserEvent(action) {
+    const session = this.sessions.get(au.getPortIdOfSender(action));
+    if (session) {
+      Glean.newtab.spacesSwitch.record({
+        newtab_visit_id: session.session_id,
+        space: action.data.space,
+        previous_space: action.data.previous_space,
+        method: action.data.method,
+      });
     }
   }
 

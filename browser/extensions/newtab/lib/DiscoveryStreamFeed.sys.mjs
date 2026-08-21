@@ -37,6 +37,11 @@ import {
   actionTypes as at,
   actionCreators as ac,
 } from "resource://newtab/common/Actions.mjs";
+import {
+  isSpaceOverridden,
+  isSpacesAssigned,
+  SPACE_IDS,
+} from "resource://newtab/common/PageLayoutVariants.mjs";
 
 import { scoreItemInferred } from "resource://newtab/lib/InferredModel/GreedyContentRanker.mjs";
 
@@ -280,9 +285,11 @@ export class DiscoveryStreamFeed {
 
   get showStories() {
     // Combine user-set stories opt-out with Mozilla-set config
+    const prefs = this.store.getState().Prefs.values;
     return (
-      this.store.getState().Prefs.values[PREF_SYSTEM_TOPSTORIES] &&
-      this.store.getState().Prefs.values[PREF_USER_TOPSTORIES]
+      prefs[PREF_SYSTEM_TOPSTORIES] &&
+      (prefs[PREF_USER_TOPSTORIES] ||
+        isSpaceOverridden(SPACE_IDS.STORIES, prefs))
     );
   }
 
@@ -2585,6 +2592,13 @@ export class DiscoveryStreamFeed {
 
   async onTrainhopConfigChanged() {
     this.resetSpocsOnDemand();
+    // The spaces experiment turns stories on without the user pref changing, so
+    // the config arriving is what starts the feed. Scoped to the experiment, so
+    // an unrelated train-hop config does not trigger a refresh.
+    const prefs = this.store.getState().Prefs.values;
+    if (isSpacesAssigned(prefs) && this.showStories) {
+      this.enableStories();
+    }
   }
 
   async onPrefChangedAction(action) {

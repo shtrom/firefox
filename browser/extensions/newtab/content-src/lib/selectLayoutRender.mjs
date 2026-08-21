@@ -2,6 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import {
+  isSpaceOverridden,
+  SPACE_IDS,
+} from "resource://newtab/common/PageLayoutVariants.mjs";
+
 export const selectLayoutRender = ({ state = {}, prefs = {} }) => {
   const { layout, feeds, spocs } = state;
   let spocIndexPlacementMap = {};
@@ -81,7 +86,9 @@ export const selectLayoutRender = ({ state = {}, prefs = {} }) => {
 
   // Filter sections is Recommended Stories are turned off
   const pocketEnabled =
-    prefs["feeds.section.topstories"] && prefs["feeds.system.topstories"];
+    (prefs["feeds.section.topstories"] ||
+      isSpaceOverridden(SPACE_IDS.STORIES, prefs)) &&
+    prefs["feeds.system.topstories"];
   if (!pocketEnabled) {
     filterArray.push(
       // Bug 1980459 - Do not remove Widgets if DS is disabled

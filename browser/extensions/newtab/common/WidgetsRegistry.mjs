@@ -540,9 +540,14 @@ export function resolveWidgetHasSidebar(widget, prefs) {
  * even when the user has hidden every widget.
  *
  * @param {object} prefs - current pref values from the Redux store
+ * @param {boolean} [widgetsEnabled] - the master toggle, passed explicitly when
+ *   the spaces experiment is overriding it
  * @returns {boolean}
  */
-export function hasContentAreaWidgets(prefs) {
+export function hasContentAreaWidgets(
+  prefs,
+  widgetsEnabled = prefs["widgets.enabled"]
+) {
   const weatherWidget = WIDGET_REGISTRY.find(w => w.id === "weather");
   const weatherGoesToSidebar =
     resolveWidgetHasSidebar(weatherWidget, prefs) &&
@@ -550,7 +555,7 @@ export function hasContentAreaWidgets(prefs) {
 
   return WIDGET_REGISTRY.some(
     w =>
-      isWidgetEnabled(w, prefs, prefs["widgets.enabled"]) &&
+      isWidgetEnabled(w, prefs, widgetsEnabled) &&
       !(w.id === "weather" && weatherGoesToSidebar)
   );
 }
