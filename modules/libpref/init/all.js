@@ -3919,6 +3919,13 @@ pref("services.common.log.logger.tokenserverclient", "Debug");
     pref("remote.experimental.dynamicstart.enabled", false);
   #endif
 
+  // Display a banner while the servers are running after a dynamic start, and
+  // another one while an application is connected to them. Both banners are
+  // only relevant when the servers were started dynamically, so they are
+  // enabled on all channels.
+  pref("remote.experimental.dynamicstart.banner.enabled", true);
+  pref("remote.experimental.dynamicstart.connectionbanner.enabled", true);
+
   // Defines the verbosity of the internal logger.
   //
   // Available levels are, in descending order of severity, "Trace", "Debug",
