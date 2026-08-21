@@ -1476,7 +1476,6 @@ ArenaPurgeResult arena_t::PurgeDirtyPages(
     // potentially expensive operation.
     keep_going = aKeepGoing ? (*aKeepGoing)() : true;
 
-    arena_chunk_t* chunk_to_release = nullptr;
     bool arena_is_dying;
     {
       // Phase 2: Mark the pages with their final state (madvised or
@@ -1501,17 +1500,9 @@ ArenaPurgeResult arena_t::PurgeDirtyPages(
         if (!continue_purge_arena) {
           purge_info.mArena.mIsPurgePending = false;
         }
-
-        chunk_to_release = purge_info.mArena.RemoveOldestSpareChunk();
       }
     }  // MaybeMutexAutoLock
 
-    // Phase 2 can release the spare chunk (not always == chunk) so an extra
-    // parameter is used to return that chunk.
-    if (chunk_to_release) {
-      arena_chunk_dealloc(purge_info.mArena.mChunkAllocator,
-                          (void*)chunk_to_release, kChunkSize);
-    }
     if (arena_is_dying) {
       return Dying;
     }
@@ -2737,7 +2728,6 @@ static inline void arena_dalloc(void* aPtr, size_t aOffset, arena_t* aArena) {
     MaybePoison(aPtr, info.Size());
   }
 
-  arena_chunk_t* chunk_dealloc_delay = nullptr;
   purge_action_t purge_action;
   {
     MOZ_DIAGNOSTIC_ASSERT(arena->mLock.SafeOnThisThread());
@@ -2758,30 +2748,9 @@ static inline void arena_dalloc(void* aPtr, size_t aOffset, arena_t* aArena) {
     }
 
     purge_action = arena->ShouldStartPurge();
-    chunk_dealloc_delay = arena->RemoveOldestSpareChunk();
-  }
-
-  if (chunk_dealloc_delay) {
-    arena_chunk_dealloc(arena->mChunkAllocator, (void*)chunk_dealloc_delay,
-                        kChunkSize);
   }
 
   arena->MayDoOrQueuePurge(purge_action, "arena_dalloc");
-}
-
-arena_chunk_t* arena_t::RemoveOldestSpareChunk() {
-  // There may be 0, 1 or 2 spare chunks.  If there are 2 remove the last
-  // one.
-  if (mSpares.isEmpty() || mSpares.isSingle()) {
-    return nullptr;
-  }
-
-  arena_chunk_t* last_chunk = mSpares.popBack();
-  RemoveChunk(last_chunk);
-
-  MOZ_ASSERT(mSpares.isSingle());
-
-  return last_chunk;
 }
 
 static inline void idalloc(void* ptr, arena_t* aArena) {
