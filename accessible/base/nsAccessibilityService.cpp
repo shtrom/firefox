@@ -1013,21 +1013,6 @@ void nsAccessibilityService::UpdateImageMap(nsImageFrame* aImageFrame) {
   }
 }
 
-void nsAccessibilityService::UpdateLabelValue(PresShell* aPresShell,
-                                              nsIContent* aLabelElm,
-                                              const nsString& aNewValue) {
-  DocAccessible* document = GetDocAccessible(aPresShell);
-  if (document) {
-    LocalAccessible* accessible = document->GetAccessible(aLabelElm);
-    if (accessible) {
-      XULLabelAccessible* xulLabel = accessible->AsXULLabel();
-      NS_ASSERTION(xulLabel,
-                   "UpdateLabelValue was called for wrong accessible!");
-      if (xulLabel) xulLabel->UpdateLabelValue(aNewValue);
-    }
-  }
-}
-
 void nsAccessibilityService::PresShellActivated(PresShell* aPresShell) {
   DocAccessible* document = aPresShell->GetDocAccessible();
   if (document) {
