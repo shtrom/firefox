@@ -292,7 +292,7 @@ struct arena_t : public BaseAllocClass {
 
   // A per-arena cache of recently used but now empty chunks.
   //
-  // Currently it may have 0 or 1 members.
+  // Currently it may have 0, 1 or briefly 2 members.
   //
   // Now it is a list of chunks that operate as a cache (for small and large
   // allocations only),
@@ -435,12 +435,12 @@ struct arena_t : public BaseAllocClass {
   // from mSpare as necessary.
   bool RemoveChunk(arena_chunk_t* aChunk) MOZ_REQUIRES(mLock);
 
-  // This may return a chunk that should be destroyed with chunk_dealloc outside
-  // of the arena lock.  It is not the same chunk as was passed in (since that
-  // chunk now becomes mSpare).
-  [[nodiscard]] arena_chunk_t* DemoteChunkToSpare(arena_chunk_t* aChunk)
-      MOZ_REQUIRES(mLock);
+  void DemoteChunkToSpare(arena_chunk_t* aChunk) MOZ_REQUIRES(mLock);
 
+ public:
+  arena_chunk_t* RemoveOldestSpareChunk() MOZ_REQUIRES(mLock);
+
+ private:
   // Try to merge the run with its neighbours. Returns the new index of the run
   // (since it may have merged with an earlier one).
   size_t TryCoalesce(arena_chunk_t* aChunk, size_t run_ind, size_t run_pages,
@@ -449,7 +449,7 @@ struct arena_t : public BaseAllocClass {
   arena_run_t* AllocRun(size_t aSize, bool aLarge, bool aZero)
       MOZ_REQUIRES(mLock);
 
-  arena_chunk_t* DallocRun(arena_run_t* aRun, bool aDirty) MOZ_REQUIRES(mLock);
+  void DallocRun(arena_run_t* aRun, bool aDirty) MOZ_REQUIRES(mLock);
 
 #ifndef MALLOC_DECOMMIT
   // Mark an madvised page as dirty, this is required when a allocating a
@@ -523,16 +523,10 @@ struct arena_t : public BaseAllocClass {
 
   void* Palloc(size_t aAlignment, size_t aSize) MOZ_EXCLUDES(mLock);
 
-  // This may return a chunk that should be destroyed with chunk_dealloc outside
-  // of the arena lock.  It is not the same chunk as was passed in (since that
-  // chunk now becomes mSpare).
-  [[nodiscard]] inline arena_chunk_t* DallocSmall(arena_chunk_t* aChunk,
-                                                  void* aPtr,
-                                                  arena_chunk_map_t* aMapElm)
-      MOZ_REQUIRES(mLock);
+  inline void DallocSmall(arena_chunk_t* aChunk, void* aPtr,
+                          arena_chunk_map_t* aMapElm) MOZ_REQUIRES(mLock);
 
-  [[nodiscard]] arena_chunk_t* DallocLarge(arena_chunk_t* aChunk, void* aPtr)
-      MOZ_REQUIRES(mLock);
+  void DallocLarge(arena_chunk_t* aChunk, void* aPtr) MOZ_REQUIRES(mLock);
 
   void* Ralloc(void* aPtr, size_t aSize, size_t aOldSize) MOZ_EXCLUDES(mLock);
 
@@ -640,11 +634,9 @@ struct arena_t : public BaseAllocClass {
     // last dirty page within the same run.
     bool ScanForLastDirtyPage() MOZ_REQUIRES(mArena.mLock);
 
-    // Returns a pair, the first field indicates if there are more dirty pages
-    // remaining in the current chunk. The second field if non-null points to a
-    // chunk that must be released by the caller.
-    std::pair<bool, arena_chunk_t*> UpdatePagesAndCounts()
-        MOZ_REQUIRES(mArena.mLock);
+    // Returns true if there are more dirty pages remaining in the current
+    // chunk.
+    bool UpdatePagesAndCounts() MOZ_REQUIRES(mArena.mLock);
 
     // FinishPurgingInChunk() is used whenever we decide to stop purging in a
     // chunk, This could be because there are no more dirty pages, or the chunk
