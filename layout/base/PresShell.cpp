@@ -2427,10 +2427,7 @@ PresShell::CompleteMove(bool aForward, bool aExtend) {
     if (!frame) [[unlikely]] {
       return Nothing{};
     }
-    // Don't return content in the native anonymous subtree because it's not
-    // managed by selection for the document.
-    return Some(frame->GetExtremeCaretPosition(
-        !aForward, nsIFrame::IGNORE_NATIVE_ANONYMOUS_SUBTREE));
+    return Some(frame->GetExtremeCaretPosition(!aForward));
   }();
   if (pos.isNothing()) [[unlikely]] {
     return NS_ERROR_FAILURE;

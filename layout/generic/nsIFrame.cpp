@@ -5960,7 +5960,6 @@ static bool SelfIsSelectable(nsIFrame* aFrame, nsIFrame* aParentFrame,
   if (aFrame->IsGeneratedContentFrame()) {
     return false;
   }
-  // XXX Why do we ignore `aFlag & nsIFrame::IGNORE_SELECTION_STYLE`?
   if (aFrame->Style()->UserSelect() == StyleUserSelect::None) {
     return false;
   }
@@ -9758,11 +9757,10 @@ static nsresult GetNextPrevLineFromBlockFrame(PeekOffsetStruct* aPos,
   return NS_OK;
 }
 
-nsIFrame::CaretPosition nsIFrame::GetExtremeCaretPosition(bool aStart,
-                                                          uint32_t aFlags) {
+nsIFrame::CaretPosition nsIFrame::GetExtremeCaretPosition(bool aStart) {
   CaretPosition result;
 
-  FrameTarget targetFrame = DrillDownToSelectionFrame(this, !aStart, aFlags);
+  FrameTarget targetFrame = DrillDownToSelectionFrame(this, !aStart, 0);
   FrameContentRange range = GetRangeForFrame(targetFrame.frame);
   result.mResultContent = range.content;
   result.mContentOffset = aStart ? range.start : range.end;
