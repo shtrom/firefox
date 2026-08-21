@@ -26,6 +26,10 @@ export type GetTextOptions = Partial<{
   _forceRemoveBoilerplate: boolean;
   // The URL of the page being extracted. Used to apply custom extraction strategies for specific sites.
   sourceUrl: string;
+  // Return plain prose instead of the default markdown-annotated text. Anchors
+  // keep their text but lose their target, and whitespace within a block
+  // collapses to single spaces. Paragraph breaks between blocks are preserved.
+  useSimpleText: boolean;
 }>;
 
 export type CanvasSnapshot = {
