@@ -97,7 +97,8 @@ class IPProtection(
 
     private val snackbarMessages by lazy {
         IPProtectionSnackbarMessages(
-            connectionError = context.getString(R.string.ip_protection_connection_error_snackbar)
+            connectionError = context.getString(R.string.ip_protection_connection_error_snackbar),
+            locationSelectionReset = context.getString(R.string.ip_protection_location_selection_reset_snackbar),
         )
     }
 }
