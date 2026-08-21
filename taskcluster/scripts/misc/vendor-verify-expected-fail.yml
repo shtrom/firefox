@@ -21,7 +21,6 @@ expected-fail:
     modules/xz-embedded/moz.yaml: "TODO bug: re-vendoring fails"
     netwerk/sctp/src/moz.yaml: "TODO bug: sources differ after re-vendoring"
     security/sandbox/linux/launch/glibc_hack/moz.yaml: "TODO bug: re-vendoring fails"
-    testing/mochitest/pywebsocket3/moz.yaml: "TODO bug: sources differ after re-vendoring"
     third_party/js/cfworker/moz.yaml: "TODO bug: re-vendoring fails"
     third_party/libepoxy/moz.yaml: "TODO bug: re-vendoring fails"
     third_party/libsrtp/moz.yaml: "TODO bug: re-vendoring fails"
