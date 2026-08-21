@@ -36,18 +36,6 @@ enum VersionError {
     MissingBinary,
 }
 
-/// Firefox for Android packages (release, beta, nightly) plus the debug variant
-const FENIX_FAMILY_PACKAGES: &[&str] = &[
-    "org.mozilla.fenix",
-    "org.mozilla.fenix.debug",
-    "org.mozilla.firefox",
-    "org.mozilla.firefox_beta",
-];
-
-fn is_fenix_family(package: &str) -> bool {
-    FENIX_FAMILY_PACKAGES.contains(&package)
-}
-
 impl From<VersionError> for WebDriverError {
     fn from(err: VersionError) -> WebDriverError {
         WebDriverError::new(ErrorStatus::SessionNotCreated, err.to_string())
@@ -743,7 +731,11 @@ impl FirefoxOptions {
                 }
                 None => {
                     match package.as_str() {
-                        p if is_fenix_family(p) || p == "org.mozilla.reference.browser" => {
+                        "org.mozilla.firefox"
+                        | "org.mozilla.firefox_beta"
+                        | "org.mozilla.fenix"
+                        | "org.mozilla.fenix.debug"
+                        | "org.mozilla.reference.browser" => {
                             Some("org.mozilla.fenix.IntentReceiverActivity".to_string())
                         }
                         "org.mozilla.focus"
@@ -796,23 +788,12 @@ impl FirefoxOptions {
                 None => {
                     // All GeckoView based applications support this view,
                     // and allow to open a blank page in a Gecko window.
-                    let mut args = vec![
+                    Some(vec![
                         "-a".to_string(),
                         "android.intent.action.VIEW".to_string(),
                         "-d".to_string(),
                         "about:blank".to_string(),
-                    ];
-                    // Fenix-family builds honor this extra to bypass the onboarding
-                    // flow and other startup interruptions that would otherwise
-                    // block automation (bug 2064609).
-                    if is_fenix_family(package.as_str()) {
-                        args.extend([
-                            "--ez".to_string(),
-                            "automationtest".to_string(),
-                            "true".to_string(),
-                        ]);
-                    }
-                    Some(args)
+                    ])
                 }
             };
 
