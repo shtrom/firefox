@@ -47,9 +47,9 @@
 // ```
 //   (operand here)                  # VALUE
 //   GetAliasedVar ".generator"      # VALUE .generator
-//   Await 0                         # RVAL GENERATOR RESUMEKIND
+//   Await 0                         # RVAL RESUMEKIND
 //
-//   AfterYield                      # RVAL GENERATOR RESUMEKIND
+//   AfterYield                      # RVAL RESUMEKIND
 //   [resume-kind check]             # RVAL
 // ```
 //
@@ -78,14 +78,14 @@
 // ```
 //   (operand here)                  # VALUE
 //   GetAliasedVar ".generator"      # VALUE .generator
-//   Await 1                         # RVAL GENERATOR RESUMEKIND
-//   AfterYield                      # RVAL GENERATOR RESUMEKIND
+//   Await 1                         # RVAL RESUMEKIND
+//   AfterYield                      # RVAL RESUMEKIND
 //   [resume-kind check]             # RVAL
 //
 //   GetAliasedVar ".generator"      # RVAL .generator
-//   Yield 2                         # RVAL2 GENERATOR RESUMEKIND
+//   Yield 2                         # RVAL2 RESUMEKIND
 //
-//   AfterYield                      # RVAL2 GENERATOR RESUMEKIND
+//   AfterYield                      # RVAL2 RESUMEKIND
 //   [resume-kind check]             # RVAL2
 // ```
 //
@@ -160,8 +160,8 @@
 // ```
 //   (operand here)                  # VALUE
 //   GetAliasedVar ".generator"      # VALUE .generator
-//   Await 0                         # RVAL GENERATOR RESUMEKIND
-//   AfterYield                      # RVAL GENERATOR RESUMEKIND
+//   Await 0                         # RVAL RESUMEKIND
+//   AfterYield                      # RVAL RESUMEKIND
 //   [resume-kind check]             # RVAL
 //
 //   SetRval                         #

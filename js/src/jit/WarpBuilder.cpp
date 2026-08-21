@@ -2817,11 +2817,10 @@ bool WarpBuilder::build_AfterYield(BytecodeLocation loc) {
                                             /* needsPreBarrier = */ true));
   }
 
-  // Push the [rval, gen, resumeKind] values on top of the stack. Only a Next
-  // resume enters Ion, so the resume kind is a constant instead of a read of
-  // the ResumeFrameArgs slot.
+  // Push the [rval, resumeKind] values on top of the stack. Only a Next resume
+  // enters Ion, so the resume kind is a constant instead of a read of the
+  // ResumeFrameArgs slot.
   current->push(resumeFrameArg(ResumeFrameArgs::ResumeValueSlot));
-  current->push(genObj);
 #ifdef DEBUG
   current->add(MAssertResumeKindIsNext::New(alloc()));
 #endif

@@ -8050,7 +8050,7 @@ PBIResult PortableBaselineInterpret(
       }
 
       CASE(InitialYield) {
-        // gen => rval, gen, resumeKind
+        // gen => rval, resumeKind
         ReservedRooted<JSObject*> obj0(&state.obj0,
                                        &VIRTSP(0).asValue().toObject());
         uint32_t frameSize = ctx.stack.frameSize(sp, frame);
@@ -8066,7 +8066,7 @@ PBIResult PortableBaselineInterpret(
 
       CASE(Await)
       CASE(Yield) {
-        // rval1, gen => rval2, gen, resumeKind
+        // rval1, gen => rval2, resumeKind
         ReservedRooted<JSObject*> obj0(&state.obj0,
                                        &VIRTPOP().asValue().toObject());
         uint32_t frameSize = ctx.stack.frameSize(sp, frame);

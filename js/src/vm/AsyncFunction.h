@@ -162,9 +162,9 @@
 //   AsyncAwait                      # PROMISE
 //
 //   GetAliasedVar ".generator"      # PROMISE .generator
-//   Await 0                         # RVAL GENERATOR RESUMEKIND
+//   Await 0                         # RVAL RESUMEKIND
 //
-//   AfterYield                      # RVAL GENERATOR RESUMEKIND
+//   AfterYield                      # RVAL RESUMEKIND
 //   [resume-kind check]             # RVAL
 // ```
 //
@@ -262,8 +262,8 @@
 //
 //   JumpTarget                      # VALUE
 //   GetAliasedVar ".generator"      # VALUE .generator
-//   Await 0                         # RVAL GENERATOR RESUMEKIND
-//   AfterYield                      # RVAL GENERATOR RESUMEKIND
+//   Await 0                         # RVAL RESUMEKIND
+//   AfterYield                      # RVAL RESUMEKIND
 //   [resume-kind check]             # RVAL
 //
 // END:

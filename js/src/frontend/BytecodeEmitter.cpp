@@ -6621,33 +6621,29 @@ bool BytecodeEmitter::emitCheckYieldResumeKind() {
   static_assert(uint8_t(GeneratorResumeKind::Return) != 0);
 
   const int32_t startDepth = bytecodeSection().stackDepth();
-  //                [stack] RVAL GENERATOR RESUMEKIND
+  //                [stack] RVAL RESUMEKIND
 
   if (!emit1(JSOp::Dup)) {
-    //              [stack] RVAL GENERATOR RESUMEKIND RESUMEKIND
+    //              [stack] RVAL RESUMEKIND RESUMEKIND
     return false;
   }
   InternalIfEmitter ifNotNext(this);
   if (!ifNotNext.emitThen()) {
-    //              [stack] RVAL GENERATOR RESUMEKIND
+    //              [stack] RVAL RESUMEKIND
     return false;
   }
 
   // Handle Throw and Return.
   if (!emitPushResumeKind(GeneratorResumeKind::Throw)) {
-    //              [stack] RVAL GENERATOR RESUMEKIND THROW
+    //              [stack] RVAL RESUMEKIND THROW
     return false;
   }
   if (!emit1(JSOp::StrictEq)) {
-    //              [stack] RVAL GENERATOR (RESUMEKIND==Throw)
+    //              [stack] RVAL (RESUMEKIND==Throw)
     return false;
   }
   InternalIfEmitter ifThrow(this);
   if (!ifThrow.emitThen()) {
-    //              [stack] RVAL GENERATOR
-    return false;
-  }
-  if (!emit1(JSOp::Pop)) {
     //              [stack] RVAL
     return false;
   }
@@ -6657,10 +6653,6 @@ bool BytecodeEmitter::emitCheckYieldResumeKind() {
   }
   bytecodeSection().setStackDepth(startDepth - 1);
   if (!ifThrow.emitEnd()) {
-    //              [stack] RVAL GENERATOR
-    return false;
-  }
-  if (!emit1(JSOp::Pop)) {
     //              [stack] RVAL
     return false;
   }
@@ -6677,10 +6669,10 @@ bool BytecodeEmitter::emitCheckYieldResumeKind() {
 
   bytecodeSection().setStackDepth(startDepth);
   if (!ifNotNext.emitEnd()) {
-    //              [stack] RVAL GENERATOR RESUMEKIND
+    //              [stack] RVAL RESUMEKIND
     return false;
   }
-  if (!emitPopN(2)) {
+  if (!emit1(JSOp::Pop)) {
     //              [stack] RVAL
     return false;
   }
@@ -6697,14 +6689,10 @@ bool BytecodeEmitter::emitCheckAwaitResumeKind() {
   static_assert(uint8_t(GeneratorResumeKind::Throw) != 0);
 
   const int32_t startDepth = bytecodeSection().stackDepth();
-  //                [stack] RVAL GENERATOR RESUMEKIND
+  //                [stack] RVAL RESUMEKIND
 
   InternalIfEmitter ifThrow(this);
   if (!ifThrow.emitThen()) {
-    //              [stack] RVAL GENERATOR
-    return false;
-  }
-  if (!emit1(JSOp::Pop)) {
     //              [stack] RVAL
     return false;
   }
@@ -6714,10 +6702,6 @@ bool BytecodeEmitter::emitCheckAwaitResumeKind() {
   }
   bytecodeSection().setStackDepth(startDepth - 1);
   if (!ifThrow.emitEnd()) {
-    //              [stack] RVAL GENERATOR
-    return false;
-  }
-  if (!emit1(JSOp::Pop)) {
     //              [stack] RVAL
     return false;
   }
@@ -6744,7 +6728,7 @@ bool BytecodeEmitter::emitInitialYield(UnaryNode* yieldNode) {
   }
 
   if (!emitYieldOp(JSOp::InitialYield)) {
-    //              [stack] RVAL GENERATOR RESUMEKIND
+    //              [stack] RVAL RESUMEKIND
     return false;
   }
   if (!emitCheckYieldResumeKind()) {
@@ -6807,7 +6791,7 @@ bool BytecodeEmitter::emitYield(UnaryNode* yieldNode) {
   }
 
   if (!emitYieldOp(JSOp::Yield)) {
-    //              [stack] YIELDRESULT GENERATOR RESUMEKIND
+    //              [stack] YIELDRESULT RESUMEKIND
     return false;
   }
 
@@ -6868,7 +6852,7 @@ bool BytecodeEmitter::emitAwaitInScope(EmitterScope& currentScope) {
     return false;
   }
   if (!emitYieldOp(JSOp::Await)) {
-    //              [stack] RESOLVED GENERATOR RESUMEKIND
+    //              [stack] RESOLVED RESUMEKIND
     return false;
   }
   if (!emitCheckAwaitResumeKind()) {
@@ -7316,14 +7300,6 @@ bool BytecodeEmitter::emitYieldStar(ParseNode* iter) {
     return false;
   }
   if (!emitYieldOp(JSOp::Yield)) {
-    //              [stack] NEXT ITER RVAL GENOBJ RESUMEKIND
-    return false;
-  }
-  if (!emit1(JSOp::Swap)) {
-    //              [stack] NEXT ITER RVAL RESUMEKIND GENOBJ
-    return false;
-  }
-  if (!emit1(JSOp::Pop)) {
     //              [stack] NEXT ITER RVAL RESUMEKIND
     return false;
   }

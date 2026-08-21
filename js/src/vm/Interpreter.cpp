@@ -4299,8 +4299,8 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
 
 #ifdef DEBUG
       // The generator must be marked as running.
-      auto& genObj = REGS.sp[-2].toObject().as<AbstractGeneratorObject>();
-      MOZ_ASSERT(genObj.isRunning());
+      auto* genObj = GetGeneratorObjectForFrame(cx, REGS.fp());
+      MOZ_ASSERT(genObj->isRunning());
 #endif
 
       // Clear the isResumingGenerator flag so the frame is treated as an
@@ -4312,9 +4312,8 @@ bool MOZ_NEVER_INLINE JS_HAZ_JSNATIVE_CALLER js::Interpret(JSContext* cx,
 
       if (MOZ_UNLIKELY(script->isDebuggee())) {
         if (!DebugAPI::onResumeFrame(cx, REGS.fp())) {
-          MOZ_ASSERT_IF(
-              cx->isPropagatingForcedReturn(),
-              REGS.sp[-2].toObject().as<AbstractGeneratorObject>().isClosed());
+          MOZ_ASSERT_IF(cx->isPropagatingForcedReturn(),
+                        GetGeneratorObjectForFrame(cx, REGS.fp())->isClosed());
           goto error;
         }
       }

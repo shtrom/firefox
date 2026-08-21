@@ -2099,10 +2099,7 @@ bool ExpressionDecompiler::decompilePC(jsbytecode* pc, uint8_t defIndex) {
         if (defIndex == 0) {
           return write("RVAL");
         }
-        if (defIndex == 1) {
-          return write("GENERATOR");
-        }
-        MOZ_ASSERT(defIndex == 2);
+        MOZ_ASSERT(defIndex == 1);
         return write("RESUMEKIND");
 
       case JSOp::ResumeKind:

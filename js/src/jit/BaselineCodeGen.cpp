@@ -6307,9 +6307,9 @@ bool BaselineCodeGen<Handler>::emitSuspend(JSOp op) {
     return false;
   }
 
-  // Three values are pushed onto the stack when resuming the generator,
+  // Two values are pushed onto the stack when resuming the generator,
   // replacing the one slot that holds the return value.
-  frame.incStackDepth(2);
+  frame.incStackDepth(1);
   return true;
 }
 
@@ -6538,10 +6538,9 @@ bool BaselineCodeGen<Handler>::emitGeneratorResumePrologueBody() {
   }
   masm.bind(&noStackStorage);
 
-  // Push the resume operands (value, generator, resumeKind) on the operand
-  // stack, where JSOp::AfterYield expects them.
+  // Push the resume operands (value, resumeKind) on the operand stack, where
+  // JSOp::AfterYield expects them.
   masm.pushValue(argValue);
-  masm.pushValue(argGen);
   masm.pushValue(argResumeKind);
 
   // Jump to the resume point.
