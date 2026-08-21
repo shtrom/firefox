@@ -141,6 +141,7 @@ class MarionetteParentProcess {
       lazy.logger.trace(`Received observer notification ${topic}`);
     }
 
+    let hasBeforeCancelObserver = false;
     switch (topic) {
       case "profile-after-change":
         Services.obs.addObserver(this, "command-line-startup");
@@ -201,9 +202,13 @@ class MarionetteParentProcess {
       case "final-ui-startup":
         Services.obs.removeObserver(this, topic);
 
-        Services.obs.addObserver(this, "before-cancel-download-prompt");
         Services.obs.addObserver(this, "browser-idle-startup-tasks-finished");
         Services.obs.addObserver(this, "mail-idle-startup-tasks-finished");
+
+        // startAtRuntime will not hit this path, and the observer should not
+        // be removed on quit-application.
+        Services.obs.addObserver(this, "before-cancel-download-prompt");
+        hasBeforeCancelObserver = true;
 
         Services.obs.addObserver(this, "quit-application");
         Services.obs.addObserver(this, "xpcom-shutdown");
@@ -225,10 +230,13 @@ class MarionetteParentProcess {
 
       case "quit-application":
         Services.obs.removeObserver(this, topic);
-        // Remove this observer here rather than inside the handler itself,
-        // because on some platforms the notification fires multiple times
-        // and removing an already-removed observer would throw.
-        Services.obs.removeObserver(this, "before-cancel-download-prompt");
+
+        if (hasBeforeCancelObserver) {
+          // Remove this observer here rather than inside the handler itself,
+          // because on some platforms the notification fires multiple times
+          // and removing an already-removed observer would throw.
+          Services.obs.removeObserver(this, "before-cancel-download-prompt");
+        }
 
         lazy.logger.trace(
           `Application is shutting down with reason: "${data || "unknown"}"`
