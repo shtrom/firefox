@@ -236,3 +236,11 @@ smartbar-command-watch-description = Get notified when pages change
 # Footer note shown at the bottom of the command palette, hinting that more
 # task command types will be added later.
 smartbar-command-coming-soon = More types of tasks are coming soon
+
+## Smart Form Fill
+
+ai-smart-form-fill-autocomplete-label = Smart Form Fill
+ai-smart-form-fill-autocomplete-loading = Loading…
+ai-smart-form-fill-autocomplete-sources-label = Sources:
+ai-smart-form-fill-autocomplete-choose-tabs = You need to choose some relevant tabs
+ai-smart-form-fill-autocomplete-open-tabs = You need to open some tabs
