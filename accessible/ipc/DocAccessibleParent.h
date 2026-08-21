@@ -20,8 +20,6 @@ namespace mozilla {
 namespace dom {
 class BrowserParent;
 class CanonicalBrowsingContext;
-class WindowContext;
-class WindowGlobalParent;
 }  // namespace dom
 
 namespace a11y {
@@ -96,28 +94,21 @@ class DocAccessibleParent : public RemoteAccessible,
   void MarkAsShutdown() {
     MOZ_ASSERT(mChildDocs.IsEmpty());
     MOZ_ASSERT(mAccessibles.Count() == 0);
+    MOZ_ASSERT(!mBrowsingContext);
     mShutdown = true;
   }
 
-  /**
-   * Return the BrowsingContext of the WindowGlobal which manages this
-   * document, or null if this document has been shut down.
-   */
-  dom::CanonicalBrowsingContext* GetBrowsingContext() const;
+  void SetBrowsingContext(dom::CanonicalBrowsingContext* aBrowsingContext);
+
+  dom::CanonicalBrowsingContext* GetBrowsingContext() const {
+    return mBrowsingContext;
+  }
 
   /**
-   * Return our manager as a WindowGlobalParent. This document's manager is
-   * always a WindowGlobalParent since PDocAccessible is managed by
-   * PWindowGlobal.
+   * Return our manager as a BrowserParent. This document's manager is always
+   * a BrowserParent since PDocAccessible is managed by PBrowser.
    */
-  dom::WindowGlobalParent* Manager() const;
-
-  /**
-   * Return the BrowserParent for the PBrowser connection hosting this
-   * document's content process, regardless of how deeply this document is
-   * nested via in-process iframes.
-   */
-  dom::BrowserParent* GetBrowserParent() const;
+  dom::BrowserParent* Manager() const;
 
   /*
    * Called when a message from a document in a child process notifies the main
@@ -336,8 +327,7 @@ class DocAccessibleParent : public RemoteAccessible,
   Maybe<LayoutDeviceIntRect> mFocusedAccBounds;
 #endif
 
-  static DocAccessibleParent* GetFrom(dom::WindowContext* aWindowContext,
-                                      bool aAllowShutdown = false);
+  static DocAccessibleParent* GetFrom(dom::BrowsingContext* aBrowsingContext);
 
   size_t SizeOfExcludingThis(MallocSizeOf aMallocSizeOf) override;
 
@@ -449,6 +439,7 @@ class DocAccessibleParent : public RemoteAccessible,
   bool mShutdown : 1;
   bool mIsPrintDoc : 1 = false;
   bool mIsInitialTreeDone : 1 = false;
+  RefPtr<dom::CanonicalBrowsingContext> mBrowsingContext;
 
   nsTHashSet<RefPtr<dom::BrowserBridgeParent>> mPendingOOPChildDocs;
 

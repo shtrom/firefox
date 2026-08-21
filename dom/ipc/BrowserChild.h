@@ -437,6 +437,13 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
   mozilla::ipc::IPCResult RecvInitSupportsUnadjustedMovement(
       const bool& aSupportsUnadjustedMovement);
 
+#ifdef ACCESSIBILITY
+  PDocAccessibleChild* AllocPDocAccessibleChild(
+      PDocAccessibleChild*, const uint64_t&,
+      const MaybeDiscardedBrowsingContext&, const bool&);
+  bool DeallocPDocAccessibleChild(PDocAccessibleChild*);
+#endif
+
   RefPtr<VsyncMainChild> GetVsyncChild();
 
   nsIWebNavigation* WebNavigation() const { return mWebNav; }

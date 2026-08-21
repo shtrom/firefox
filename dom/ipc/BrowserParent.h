@@ -435,6 +435,18 @@ class BrowserParent final : public PBrowserParent,
 
   mozilla::ipc::IPCResult RecvPVsyncConstructor(PVsyncParent* aActor) override;
 
+#ifdef ACCESSIBILITY
+  PDocAccessibleParent* AllocPDocAccessibleParent(
+      PDocAccessibleParent*, const uint64_t&,
+      const MaybeDiscardedBrowsingContext&, const bool&);
+  bool DeallocPDocAccessibleParent(PDocAccessibleParent*);
+  virtual mozilla::ipc::IPCResult RecvPDocAccessibleConstructor(
+      PDocAccessibleParent* aDoc, PDocAccessibleParent* aParentDoc,
+      const uint64_t& aParentID,
+      const MaybeDiscardedBrowsingContext& aBrowsingContext,
+      const bool& aIsPrintDoc) override;
+#endif
+
   already_AddRefed<PSessionStoreParent> AllocPSessionStoreParent();
 
   mozilla::ipc::IPCResult RecvNewWindowGlobal(

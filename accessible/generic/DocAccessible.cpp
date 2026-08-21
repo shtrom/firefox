@@ -25,6 +25,7 @@
 #include "mozilla/a11y/DocAccessibleChild.h"
 #include "mozilla/a11y/Role.h"
 #include "mozilla/dom/AncestorIterator.h"
+#include "mozilla/dom/BrowserChild.h"
 #include "mozilla/dom/BrowsingContext.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/DocumentType.h"
@@ -32,7 +33,6 @@
 #include "mozilla/dom/ElementInlines.h"
 #include "mozilla/dom/HTMLSelectElement.h"
 #include "mozilla/dom/UserActivation.h"
-#include "mozilla/dom/WindowGlobalChild.h"
 #include "nsAccUtils.h"
 #include "nsAccessibilityService.h"
 #include "nsEventShell.h"
@@ -1807,15 +1807,18 @@ void DocAccessible::DoInitialUpdate() {
   if (nsCoreUtils::IsTopLevelContentDocInProcess(mDocumentNode)) {
     mDocFlags |= eTopLevelContentDocInProcess;
     if (ShouldSendToParentProcess()) {
-      if (dom::WindowGlobalChild* wgc = mDocumentNode->GetWindowGlobalChild()) {
+      nsIDocShell* docShell = mDocumentNode->GetDocShell();
+      if (RefPtr<dom::BrowserChild> browserChild =
+              dom::BrowserChild::GetFrom(docShell)) {
         // In content processes, top level content documents are always
         // RootAccessibles.
         MOZ_ASSERT(IsRoot());
         DocAccessibleChild* ipcDoc = IPCDoc();
         if (!ipcDoc) {
-          ipcDoc = new DocAccessibleChild(this, wgc);
-          MOZ_RELEASE_ASSERT(
-              wgc->SendPDocAccessibleConstructor(ipcDoc, 0, IsPrintDoc()));
+          ipcDoc = new DocAccessibleChild(this, browserChild);
+          MOZ_RELEASE_ASSERT(browserChild->SendPDocAccessibleConstructor(
+              ipcDoc, nullptr, 0, mDocumentNode->GetBrowsingContext(),
+              IsPrintDoc()));
           // trying to recover from this failing is problematic
           SetIPCDoc(ipcDoc);
         }
@@ -3136,13 +3139,6 @@ bool DocAccessible::IsLoadEventTarget() const {
 
 void DocAccessible::SetIPCDoc(DocAccessibleChild* aIPCDoc) {
   MOZ_ASSERT(!mIPCDoc || !aIPCDoc, "Clobbering an attached IPCDoc!");
-  if (!aIPCDoc) {
-    // If our IPC actor dies (e.g. because its WindowGlobalChild dies), clear
-    // any queued cache updates, since we can never send them.
-    mQueuedCacheUpdatesArray.Clear();
-    mQueuedCacheUpdatesHash.Clear();
-    mViewportCacheDirty = false;
-  }
   mIPCDoc = aIPCDoc;
 }
 
@@ -3379,13 +3375,15 @@ void DocAccessible::BindChildDocument(DocAccessible* aDocument) {
         AppendChildDocument(aDocument);
         if (mIPCDoc) {
           MOZ_ASSERT(!aDocument->IPCDoc());
-          dom::WindowGlobalChild* wgc =
-              aDocument->DocumentNode()->GetWindowGlobalChild();
-          MOZ_ASSERT(wgc);
-          DocAccessibleChild* ipcDoc = new DocAccessibleChild(aDocument, wgc);
+          DocAccessibleChild* ipcDoc =
+              new DocAccessibleChild(aDocument, mIPCDoc->Manager());
           aDocument->SetIPCDoc(ipcDoc);
-          wgc->SendPDocAccessibleConstructor(ipcDoc, embedderAcc->ID(),
-                                             aDocument->IsPrintDoc());
+          auto* bc = dom::BrowserChild::GetFrom(mDocumentNode->GetDocShell());
+          MOZ_ASSERT(bc);
+          bc->SendPDocAccessibleConstructor(
+              ipcDoc, mIPCDoc, embedderAcc->ID(),
+              aDocument->DocumentNode()->GetBrowsingContext(),
+              aDocument->IsPrintDoc());
         }
       }
     }
