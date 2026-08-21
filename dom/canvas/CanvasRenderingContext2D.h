@@ -1208,6 +1208,8 @@ class CanvasRenderingContext2D : public nsICanvasRenderingContextInternal,
   class FontStyleCache
       : public MruCache<FontStyleCacheKey, FontStyleData, FontStyleCache> {
    public:
+    // A cached failure has a null mStyle, but every live entry has a lang.
+    static bool IsEmpty(const FontStyleData& aVal) { return !aVal.mKey.mLang; }
     static HashNumber Hash(const FontStyleCacheKey& aKey) {
       HashNumber hash = HashString(aKey.mFont);
       hash = AddToHash(hash, aKey.mLang->hash());
@@ -1250,6 +1252,9 @@ class CanvasRenderingContext2D : public nsICanvasRenderingContextInternal,
   class FontGroupCache
       : public MruCache<FontGroupCacheKey, FontGroupCacheData, FontGroupCache> {
    public:
+    static bool IsEmpty(const FontGroupCacheData& aVal) {
+      return !aVal.mFontGroup;
+    }
     static HashNumber Hash(const FontGroupCacheKey& aKey) {
       HashNumber hash = HashString(aKey.mSpecifiedFont);
       hash = AddToHash(hash, aKey.mGeneration);
@@ -1277,6 +1282,9 @@ class CanvasRenderingContext2D : public nsICanvasRenderingContextInternal,
   class ColorStyleCache
       : public MruCache<nsACString, ColorStyleCacheEntry, ColorStyleCache> {
    public:
+    static bool IsEmpty(const ColorStyleCacheEntry& aVal) {
+      return aVal.mKey.IsEmpty();
+    }
     static HashNumber Hash(const nsACString& aKey) { return HashString(aKey); }
     static bool Match(const nsACString& aKey,
                       const ColorStyleCacheEntry& aVal) {
