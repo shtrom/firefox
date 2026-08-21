@@ -982,6 +982,28 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "discoverystream.carousel.enabled",
+    {
+      title: "Boolean flag to enable the story carousel",
+      value: false,
+    },
+  ],
+  [
+    "discoverystream.carousel.paused",
+    {
+      title:
+        "Whether the user stopped the story carousel from rotating on its own",
+      value: false,
+    },
+  ],
+  [
+    "discoverystream.carousel.slideCount",
+    {
+      title: "Number of stories shown in the story carousel",
+      value: 5,
+    },
+  ],
+  [
     "discoverystream.sections.ordering",
     {
       title: "Name of the sections ordering to render from Remote Settings",

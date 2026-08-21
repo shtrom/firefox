@@ -244,6 +244,28 @@ newtab-discovery-empty-section-topstories-loading = Loading…
 # Displays when a layout in a section took too long to fetch articles.
 newtab-discovery-empty-section-topstories-timed-out = Oops! We almost loaded this section, but not quite.
 
+## Strings for the story cards carousel
+
+# Identifies the current carousel slide to screen reader users.
+# Variables:
+#   $index - the position of this slide
+#   $total - how many slides there are
+newtab-carousel-slide =
+    .aria-label = { $index } of { $total }
+
+# Button that goes to the previous carousel slide.
+newtab-carousel-previous =
+    .aria-label = Previous
+# Button that goes to the next carousel slide.
+newtab-carousel-next =
+    .aria-label = Next
+# Button that pauses autoplay on the carousel.
+newtab-carousel-pause =
+    .aria-label = Pause autoplay
+# Button that resumes autoplay on the carousel.
+newtab-carousel-play =
+    .aria-label = Resume autoplay
+
 ## Error Fallback Content.
 ## This message and suggested action link are shown in each section of UI that fails to render.
 

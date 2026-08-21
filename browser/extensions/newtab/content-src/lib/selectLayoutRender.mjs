@@ -250,9 +250,25 @@ export const selectLayoutRender = ({ state = {}, prefs = {} }) => {
                     // We can then move it from there via breakpoints.
                     .find(item => item.columnCount === 1);
 
+                // A carousel fills one tile with several recommendations, so each
+                // tile after it reads from an index offset by the number of slides.
+                const carouselTile = smallestBreakpointLayout.tiles.find(
+                  tile => tile.carousel
+                );
+                const carouselSlideCount =
+                  prefs.trainhopConfig?.carousel?.slideCount ??
+                  prefs["discoverystream.carousel.slideCount"];
+                // The carousel's own tile accounts for one of those slides.
+                const carouselExtra = carouselTile ? carouselSlideCount - 1 : 0;
+
                 smallestBreakpointLayout.tiles.forEach(tile => {
                   if (tile.hasAd && section.allowAds !== false) {
-                    sectionsSpocsPositions.push({ index: tile.position });
+                    const isAfterCarousel =
+                      carouselTile && tile.position > carouselTile.position;
+                    sectionsSpocsPositions.push({
+                      index:
+                        tile.position + (isAfterCarousel ? carouselExtra : 0),
+                    });
                   }
                 });
                 return {
