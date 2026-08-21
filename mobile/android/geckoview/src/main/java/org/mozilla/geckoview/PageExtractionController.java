@@ -27,22 +27,32 @@ public class PageExtractionController {
     public final boolean isReaderable;
 
     /**
+     * Whether the page declares its content to be gated, for example behind a paywall or a
+     * registration wall. Derived from the page's Schema.org {@code isAccessibleForFree} markup, so
+     * this is only ever true for pages that annotate themselves.
+     */
+    public final boolean isGated;
+
+    /**
      * Construct a new page metadata object.
      *
      * @param structuredDataTypes JSON-LD types as defined by Schema.org
      * @param wordCount word count of all the content on the page
      * @param language BCP 47 language tag of the page
      * @param isReaderable whether the page is likely readable by reader mode
+     * @param isGated whether the page declares its content to be gated
      */
     public PageMetadata(
         @NonNull final String[] structuredDataTypes,
         final int wordCount,
         @NonNull final String language,
-        final boolean isReaderable) {
+        final boolean isReaderable,
+        final boolean isGated) {
       this.structuredDataTypes = structuredDataTypes;
       this.wordCount = wordCount;
       this.language = language;
       this.isReaderable = isReaderable;
+      this.isGated = isGated;
     }
 
     /* package */ static PageMetadata fromBundle(@NonNull final GeckoBundle bundle) {
@@ -50,8 +60,9 @@ public class PageExtractionController {
       final int wordCount = bundle.getInt("wordCount", -1);
       final String language = bundle.getString("language");
       final boolean isReaderable = bundle.getBoolean("isReaderable", false);
+      final boolean isGated = bundle.getBoolean("isGated", false);
 
-      return new PageMetadata(structuredDataTypes, wordCount, language, isReaderable);
+      return new PageMetadata(structuredDataTypes, wordCount, language, isReaderable, isGated);
     }
   }
 
