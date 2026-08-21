@@ -1234,11 +1234,6 @@ static HandleErrorContinuation ProcessTryNotes(JSContext* cx,
 
     switch (tn->kind()) {
       case TryNoteKind::Catch:
-        /* Catch cannot intercept the closing of a generator. */
-        if (cx->isClosingGenerator()) {
-          break;
-        }
-
         SettleOnTryNote(cx, tn, ei, regs);
         return CatchContinuation;
 
@@ -1287,21 +1282,6 @@ static HandleErrorContinuation ProcessTryNotes(JSContext* cx,
   return SuccessfulReturnContinuation;
 }
 
-bool js::HandleClosingGeneratorReturn(JSContext* cx, AbstractFramePtr frame,
-                                      bool ok) {
-  /*
-   * Propagate the exception or error to the caller unless the exception
-   * is an asynchronous return from a generator.
-   */
-  if (cx->isClosingGenerator()) {
-    cx->clearPendingException();
-    ok = true;
-    auto* genObj = GetGeneratorObjectForFrame(cx, frame);
-    genObj->setClosed(cx);
-  }
-  return ok;
-}
-
 static HandleErrorContinuation HandleError(JSContext* cx,
                                            InterpreterRegs& regs) {
   MOZ_ASSERT(regs.fp()->script()->containsPC(regs.pc));
@@ -1322,16 +1302,14 @@ static HandleErrorContinuation HandleError(JSContext* cx,
 again:
   if (cx->isExceptionPending()) {
     /* Call debugger throw hooks. */
-    if (!cx->isClosingGenerator()) {
-      if (!DebugAPI::onExceptionUnwind(cx, regs.fp())) {
-        if (!cx->isExceptionPending()) {
-          goto again;
-        }
+    if (!DebugAPI::onExceptionUnwind(cx, regs.fp())) {
+      if (!cx->isExceptionPending()) {
+        goto again;
       }
-      // Ensure that the debugger hasn't returned 'true' while clearing the
-      // exception state.
-      MOZ_ASSERT(cx->isExceptionPending());
     }
+    // Ensure that the debugger hasn't returned 'true' while clearing the
+    // exception state.
+    MOZ_ASSERT(cx->isExceptionPending());
 
     HandleErrorContinuation res = ProcessTryNotes(cx, ei, regs);
     switch (res) {
@@ -1347,8 +1325,6 @@ again:
                       regs.fp()->script()->maybeGetPCCounts(regs.pc));
         return res;
     }
-
-    ok = HandleClosingGeneratorReturn(cx, regs.fp(), ok);
   } else {
     UnwindIteratorsForUncatchableException(cx, regs);
 
