@@ -186,7 +186,8 @@ export class UrlbarInputBase extends HTMLElement {
           </span>
         </moz-button>
         <!-- In XUL windows, this will be wrapped in a panel with class="searchmode-switcher-panel". -->
-        <panel-list class="searchmode-switcher-panel-list">
+        <panel-list class="searchmode-switcher-panel-list"
+                    click-on-mouseup="">
           <div class="searchmode-switcher-panel-description" role="heading" />
 ${
   UrlbarPrefs.get("browser.nova.enabled")
