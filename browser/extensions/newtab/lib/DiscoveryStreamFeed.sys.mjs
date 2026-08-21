@@ -1578,12 +1578,17 @@ export class DiscoveryStreamFeed {
             lastUpdated: Date.now(),
             spocs: {},
           };
-    await this.cache.set("spocs", {
-      lastUpdated: spocsState.lastUpdated,
-      spocs: spocsState.spocs,
-      spocsOnDemand: this.spocsOnDemand,
-      spocsCacheUpdateTime: this.spocsCacheUpdateTime,
-    });
+    // The ads-client has its own HTTP response cache, so it is the only cache
+    // on that path. Leaving this one unwritten also bypasses the freshness
+    // window, since isExpired() treats a missing entry as expired.
+    if (!lazy.AdsClient.isEnabled(this.store.getState().Prefs.values)) {
+      await this.cache.set("spocs", {
+        lastUpdated: spocsState.lastUpdated,
+        spocs: spocsState.spocs,
+        spocsOnDemand: this.spocsOnDemand,
+        spocsCacheUpdateTime: this.spocsCacheUpdateTime,
+      });
+    }
 
     sendUpdate({
       type: at.DISCOVERY_STREAM_SPOCS_UPDATE,
