@@ -342,7 +342,17 @@ GeneratorResumeState::GeneratorResumeState(
       genObj_(genObj),
       resumeValue_(resumeValue),
       resumeKind_(resumeKind),
-      result_(result) {}
+      result_(result) {
+#ifdef DEBUG
+  // An `await` is only resumed by a promise reaction, which never forces a
+  // return. BytecodeEmitter::emitCheckAwaitResumeKind relies on this.
+  JSScript* script = genObj->script();
+  jsbytecode* pc =
+      script->offsetToPC(script->resumeOffsets()[genObj->resumeIndex()]);
+  MOZ_ASSERT_IF(JSOp(*SuspendPCForAfterYield(pc)) == JSOp::Await,
+                resumeKind != GeneratorResumeKind::Return);
+#endif
+}
 
 InterpreterFrame* GeneratorResumeState::pushInterpreterFrame(JSContext* cx) {
   RootedObject envChain(cx, &genObj_->environmentChain());

@@ -6600,6 +6600,43 @@ bool BytecodeEmitter::finishReturn(BytecodeOffset setRvalOffset) {
   return emitReturnRval();
 }
 
+bool BytecodeEmitter::emitCheckAwaitResumeKind() {
+  // An `await` is only resumed by a promise reaction, so we don't have to
+  // handle the Return resume kind here, only Next and Throw.
+  // See https://tc39.es/ecma262/#await.
+
+  // The bytecode below relies on Next being falsy and Throw being truthy.
+  static_assert(uint8_t(GeneratorResumeKind::Next) == 0);
+  static_assert(uint8_t(GeneratorResumeKind::Throw) != 0);
+
+  const int32_t startDepth = bytecodeSection().stackDepth();
+  //                [stack] RVAL GENERATOR RESUMEKIND
+
+  InternalIfEmitter ifThrow(this);
+  if (!ifThrow.emitThen()) {
+    //              [stack] RVAL GENERATOR
+    return false;
+  }
+  if (!emit1(JSOp::Pop)) {
+    //              [stack] RVAL
+    return false;
+  }
+  if (!emit1(JSOp::Throw)) {
+    //              [stack]
+    return false;
+  }
+  bytecodeSection().setStackDepth(startDepth - 1);
+  if (!ifThrow.emitEnd()) {
+    //              [stack] RVAL GENERATOR
+    return false;
+  }
+  if (!emit1(JSOp::Pop)) {
+    //              [stack] RVAL
+    return false;
+  }
+  return true;
+}
+
 bool BytecodeEmitter::emitGetDotGeneratorInScope(EmitterScope& currentScope) {
   if (!sc->isFunction() && sc->isModuleContext() &&
       sc->asModuleContext()->isAsync()) {
@@ -6747,7 +6784,7 @@ bool BytecodeEmitter::emitAwaitInScope(EmitterScope& currentScope) {
     //              [stack] RESOLVED GENERATOR RESUMEKIND
     return false;
   }
-  if (!emit1(JSOp::CheckResumeKind)) {
+  if (!emitCheckAwaitResumeKind()) {
     //              [stack] RESOLVED
     return false;
   }
