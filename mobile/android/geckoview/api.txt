@@ -2481,8 +2481,9 @@ package org.mozilla.geckoview {
   }
 
   public static class PageExtractionController.ContentParams {
-    ctor public ContentParams(boolean);
+    ctor public ContentParams(boolean, boolean);
     field public final boolean removeBoilerplate;
+    field public final boolean useSimpleText;
   }
 
   public static class PageExtractionController.PageExtractionException extends Exception {

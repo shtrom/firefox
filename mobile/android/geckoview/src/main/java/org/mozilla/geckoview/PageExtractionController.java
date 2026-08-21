@@ -65,17 +65,27 @@ public class PageExtractionController {
     public final boolean removeBoilerplate;
 
     /**
+     * When true, returns plain prose instead of the default markdown-annotated text. Links
+     * contribute their text but not their target, and whitespace within a paragraph is collapsed,
+     * while the breaks between paragraphs are kept.
+     */
+    public final boolean useSimpleText;
+
+    /**
      * Construct a new ContentParams.
      *
      * @param removeBoilerplate whether to remove boilerplate using reader mode
+     * @param useSimpleText whether to return plain prose instead of markdown-annotated text
      */
-    public ContentParams(final boolean removeBoilerplate) {
+    public ContentParams(final boolean removeBoilerplate, final boolean useSimpleText) {
       this.removeBoilerplate = removeBoilerplate;
+      this.useSimpleText = useSimpleText;
     }
 
     /* package */ GeckoBundle toBundle() {
-      final GeckoBundle bundle = new GeckoBundle(1);
+      final GeckoBundle bundle = new GeckoBundle(2);
       bundle.putBoolean("removeBoilerplate", removeBoilerplate);
+      bundle.putBoolean("useSimpleText", useSimpleText);
       return bundle;
     }
   }
@@ -113,7 +123,7 @@ public class PageExtractionController {
      */
     @HandlerThread
     public @NonNull GeckoResult<String> getPageContent() {
-      return getPageContent(new ContentParams(false));
+      return getPageContent(new ContentParams(false, false));
     }
 
     /**
