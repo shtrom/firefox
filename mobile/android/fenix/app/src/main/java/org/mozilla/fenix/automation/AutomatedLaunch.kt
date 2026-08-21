@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.mozilla.fenix.perf
+package org.mozilla.fenix.automation
 
 import android.content.Context
 import android.content.Intent
@@ -11,32 +11,35 @@ import android.os.BatteryManager
 import android.os.Build
 import android.provider.Settings as AndroidSettings
 import androidx.core.content.ContextCompat
-import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.utils.ext.registerReceiverCompat
 import org.mozilla.fenix.R
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.onboarding.FenixOnboarding
 
-/** A collection of objects related to app performance. */
-object Performance {
-    const val TAG = "FenixPerf"
-    val logger = Logger(TAG)
+/**
+ * Processes launch intents that indicate the app is being started under automation (performance tests, WebDriver /
+ * Marionette) and disables user-facing interruptions like onboarding and CFR prompts so tests can proceed without human
+ * interaction.
+ */
+object AutomatedLaunch {
 
     private const val EXTRA_IS_PERFORMANCE_TEST = "performancetest"
+    private const val EXTRA_IS_AUTOMATION = "automationtest"
 
     /**
-     * Processes intent for Performance testing to remove protection pop up ( but keeps the TP on) and removes the
-     * onboarding screen.
+     * Processes launch intents that mark the app as running under a performance test or generic test automation
+     * (Marionette / WebDriver BiDi). In both cases the onboarding flow and other startup interruptions are disabled so
+     * drivers and measurement runs can proceed without human interaction.
+     *
+     * The two modes are differentiated by their intent extras and gates:
+     * - Performance test (`performancetest` extra): requires the device to be USB/AC plugged and ADB enabled.
+     * - Automation (`automationtest` extra): requires ADB debugging enabled on the device so a third-party app on a
+     *   normal user's phone cannot silently suppress onboarding.
      */
-    fun processIntentIfPerformanceTest(intent: Intent, context: Context) {
-        if (!isPerformanceTest(intent, context)) {
-            return
+    fun processIntentIfPerformanceTestOrAutomation(intent: Intent, context: Context) {
+        if (isPerformanceTest(intent, context) || isAutomation(intent, context)) {
+            disableStartupInterruptions(context)
         }
-
-        disableOnboarding(context)
-        disableTrackingProtectionPopups(context)
-        disableOpenInApp(context)
-        disableS2SCfr(context)
     }
 
     /**
@@ -68,16 +71,24 @@ object Performance {
             val isPhonePlugged =
                 extraPlugged == BatteryManager.BATTERY_PLUGGED_USB || extraPlugged == BatteryManager.BATTERY_PLUGGED_AC
 
-            val isAdbEnabled =
-                AndroidSettings.Global.getInt(
-                    context.contentResolver,
-                    AndroidSettings.Global.ADB_ENABLED,
-                    0,
-                ) == 1
-            return isPhonePlugged && isAdbEnabled
+            return isPhonePlugged && isAdbEnabled(context)
         }
         return false
     }
+
+    private fun isAutomation(intent: Intent, context: Context): Boolean {
+        if (!intent.getBooleanExtra(EXTRA_IS_AUTOMATION, false)) {
+            return false
+        }
+        return isAdbEnabled(context)
+    }
+
+    private fun isAdbEnabled(context: Context): Boolean =
+        AndroidSettings.Global.getInt(
+            context.contentResolver,
+            AndroidSettings.Global.ADB_ENABLED,
+            0,
+        ) == 1
 
     /**
      * Returns whether Fenix is running on an Android emulator rather than a physical device. Regular charging checks
@@ -91,6 +102,13 @@ object Performance {
             Build.PRODUCT.contains("sdk") ||
             Build.PRODUCT.contains("emulator") ||
             Build.MODEL.contains("Android SDK built for")
+
+    private fun disableStartupInterruptions(context: Context) {
+        disableOnboarding(context)
+        disableTrackingProtectionPopups(context)
+        disableOpenInApp(context)
+        disableS2SCfr(context)
+    }
 
     /** Bypasses the onboarding screen on launch */
     private fun disableOnboarding(context: Context) {
