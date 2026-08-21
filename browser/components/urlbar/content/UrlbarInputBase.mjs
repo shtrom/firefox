@@ -3324,8 +3324,8 @@ ${
    * @param {string} data
    */
   observe = (subject, _topic, data) => {
-    // nav-bar-visible event is unique to Smart Window and emits when the urlbar is shown on new tab.
-    // This ensures consistent height and padding around the urlbar
+    // nav-bar-visible event is unique to Smart Window and emits when the urlbar
+    // is revealed after completing onboarding.
     if (
       subject == this.window &&
       (data == "classic" || data == "nav-bar-visible")

@@ -1870,8 +1870,8 @@ popupnotificationcontent {
   padding-inline-end: var(--toolbar-padding-inline);
 }
 
-/* AI window: hide nav bar on new window or firstrun */
-:root[ai-window][aiwindow-new-window],
+/* AI window: hide nav bar on firstrun only; the address bar is shown at all
+   other times, including the Smart Window new tab and about:home. */
 :root[ai-window][aiwindow-first-run] {
   #nav-bar:not(.browser-titlebar) {
     height: 0;
@@ -1881,27 +1881,11 @@ popupnotificationcontent {
 
   #urlbar-container,
   #nav-bar-customization-target > *:not(#sidebar-button, #ai-window-toggle),
-  #nav-bar-overflow-button {
+  #nav-bar-overflow-button,
+  #smartwindow-group-tabs-button {
     visibility: hidden;
   }
-}
 
-/* Show back/forward buttons when navigating back to the Smart Window from a page */
-:root[ai-window][aiwindow-new-window][aiwindow-has-nav-forward] {
-  #nav-bar:not(.browser-titlebar) {
-    height: unset;
-    min-height: unset;
-    visibility: visible;
-  }
-
-  #nav-bar-customization-target > #back-button,
-  #nav-bar-customization-target > #forward-button {
-    visibility: visible;
-    -moz-user-focus: normal;
-  }
-}
-
-:root[ai-window][aiwindow-first-run] {
   #sidebar-button,
   #PanelUI-button {
     display: none;
