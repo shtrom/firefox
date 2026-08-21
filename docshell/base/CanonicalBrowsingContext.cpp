@@ -474,14 +474,14 @@ CanonicalBrowsingContext::GetBrowserDOMWindow() {
   return nullptr;
 }
 
-already_AddRefed<WindowGlobalParent>
-CanonicalBrowsingContext::GetEmbedderWindowGlobal() const {
-  uint64_t windowId = GetEmbedderInnerWindowId();
-  if (windowId == 0) {
-    return nullptr;
+WindowGlobalParent* CanonicalBrowsingContext::GetEmbedderWindowGlobal() {
+  if (auto* parent = GetParentWindowContext()) {
+    return parent;
   }
-
-  return WindowGlobalParent::GetByInnerWindowId(windowId);
+  if (auto* embedder = GetEmbedderElement()) {
+    return WindowGlobalParent::Cast(embedder->OwnerDoc()->GetWindowContext());
+  }
+  return nullptr;
 }
 
 CanonicalBrowsingContext*

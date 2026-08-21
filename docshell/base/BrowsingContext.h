@@ -133,8 +133,6 @@ struct EmbedderColorSchemes {
   /* Current opener for the BrowsingContext. Weak reference */                \
   FIELD(OpenerId, uint64_t)                                                   \
   FIELD(OnePermittedSandboxedNavigatorId, uint64_t)                           \
-  /* WindowID of the inner window which embeds this BC */                     \
-  FIELD(EmbedderInnerWindowId, uint64_t)                                      \
   FIELD(CurrentInnerWindowId, uint64_t)                                       \
   FIELD(HadOriginalOpener, bool)                                              \
   /* Was this window created by a webpage through window.open or an anchor    \
@@ -1448,9 +1446,6 @@ class BrowsingContext : public nsILoadContext, public nsWrapperCache {
   bool CanSet(FieldIndex<IDX_OverrideDPPX>, const float& aValue,
               ContentParent* aSource);
   void DidSet(FieldIndex<IDX_OverrideDPPX>, float aOldValue);
-
-  bool CanSet(FieldIndex<IDX_EmbedderInnerWindowId>, const uint64_t& aValue,
-              ContentParent* aSource);
 
   CanSetResult CanSet(FieldIndex<IDX_CurrentInnerWindowId>,
                       const uint64_t& aValue, ContentParent* aSource);

@@ -267,8 +267,8 @@ WindowGlobalChild::WindowGlobalChild(dom::WindowContext* aWindowContext,
   // loaded, the first url loaded in it will be about:blank. This call keeps the
   // first non-about:blank registration of window and discards the previous one.
   uint64_t embedderInnerWindowID = 0;
-  if (BrowsingContext()->GetParent()) {
-    embedderInnerWindowID = BrowsingContext()->GetEmbedderInnerWindowId();
+  if (auto* parent = WindowContext()->GetParentWindowContext()) {
+    embedderInnerWindowID = parent->InnerWindowId();
   }
   profiler_register_page(
       BrowsingContext()->BrowserId(), InnerWindowId(),
@@ -1058,8 +1058,8 @@ void WindowGlobalChild::SetDocumentURI(nsIURI* aDocumentURI) {
   // loaded, the first url loaded in it will be about:blank. This call keeps the
   // first non-about:blank registration of window and discards the previous one.
   uint64_t embedderInnerWindowID = 0;
-  if (BrowsingContext()->GetParent()) {
-    embedderInnerWindowID = BrowsingContext()->GetEmbedderInnerWindowId();
+  if (auto* parent = WindowContext()->GetParentWindowContext()) {
+    embedderInnerWindowID = parent->InnerWindowId();
   }
   profiler_register_page(
       BrowsingContext()->BrowserId(), InnerWindowId(),
