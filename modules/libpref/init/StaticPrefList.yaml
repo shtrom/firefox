@@ -11169,13 +11169,6 @@
   mirror: always
   rust: true
 
-# Enable relative color syntax: https://drafts.csswg.org/css-color-5/#relative-colors
-- name: layout.css.relative-color-syntax.enabled
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-  rust: true
-
 # Enable revert-rule: https://drafts.csswg.org/css-cascade-5/#revert-rule-keyword
 - name: layout.css.revert-rule.enabled
   type: RelaxedAtomicBool
