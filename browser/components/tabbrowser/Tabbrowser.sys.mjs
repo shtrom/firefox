@@ -388,7 +388,7 @@ export class Tabbrowser {
    * `_createLazyBrowser` will define properties on the unbound lazy browser
    * which correspond to properties defined in MozBrowser which will be bound to
    * the browser when it is inserted into the document.  If any of these
-   * properties are accessed by consumers, `_insertBrowser` is called and
+   * properties are accessed by consumers, `insertBrowser()` is called and
    * the browser is inserted to ensure that things don't break.  This list
    * provides the names of properties that may be called while the browser
    * is in its unbound (lazy) state.
@@ -950,7 +950,7 @@ export class Tabbrowser {
             () => loadBrowserURI(browser, url, principal),
             { once: true }
           );
-          this._insertBrowser(tab);
+          this.#insertBrowser(tab);
         }
       } else {
         unchangedRemoteness.push(tab);
@@ -1000,7 +1000,7 @@ export class Tabbrowser {
             once: true,
           }
         );
-        tabbrowser._insertBrowser(tab);
+        tabbrowser.#insertBrowser(tab);
       }
     }
 
@@ -2773,7 +2773,7 @@ export class Tabbrowser {
 
     let tab = this.getTabForBrowser(aBrowser);
     // aBrowser needs to be inserted now if it hasn't been already.
-    this._insertBrowser(tab);
+    this.#insertBrowser(tab);
 
     let evt = this.document.createEvent("Events");
     evt.initEvent("BeforeTabRemotenessChange", true, false);
@@ -3090,7 +3090,7 @@ export class Tabbrowser {
               },
               { once: true }
             );
-            this._insertBrowser(aTab);
+            this.#insertBrowser(aTab);
           };
           break;
         case "remoteType":
@@ -3113,7 +3113,7 @@ export class Tabbrowser {
               let message = `[bug 1345098] Lazy browser prematurely inserted via '${name}' property access:\n`;
               Services.console.logStringMessage(message + new Error().stack);
             }
-            this._insertBrowser(aTab);
+            this.#insertBrowser(aTab);
             return browser[name];
           };
           setter = value => {
@@ -3121,7 +3121,7 @@ export class Tabbrowser {
               let message = `[bug 1345098] Lazy browser prematurely inserted via '${name}' property access:\n`;
               Services.console.logStringMessage(message + new Error().stack);
             }
-            this._insertBrowser(aTab);
+            this.#insertBrowser(aTab);
             return (browser[name] = value);
           };
       }
@@ -3134,7 +3134,18 @@ export class Tabbrowser {
     }
   }
 
-  _insertBrowser(aTab, aInsertedOnTabCreation) {
+  /**
+   * Gives a lazy tab the browser it was created without, so that its content
+   * can load. Tabs restored by the session store start out lazy, and normally
+   * get their browser when they are first selected.
+   *
+   * @param {MozTabbrowserTab} tab
+   */
+  insertBrowser(tab) {
+    this.#insertBrowser(tab);
+  }
+
+  #insertBrowser(aTab, aInsertedOnTabCreation) {
     // If browser is already inserted or window is closed don't do anything.
     if (aTab.linkedPanel || this.documentGlobal.closed) {
       return;
@@ -3755,7 +3766,7 @@ export class Tabbrowser {
           });
         }
       } else {
-        this._insertBrowser(t, true);
+        this.#insertBrowser(t, true);
         // If we were called by frontend and don't have openWindowInfo,
         // but we were opened from another browser, set the cross group
         // opener ID:
@@ -3976,7 +3987,7 @@ export class Tabbrowser {
   showSplitViewPanels(tabs) {
     const panels = [];
     for (const tab of tabs) {
-      this._insertBrowser(tab);
+      this.#insertBrowser(tab);
       this.#insertSplitViewFooter(tab);
       if (tab.linkedBrowser) {
         tab.linkedBrowser.docShellIsActive = true;
@@ -7130,7 +7141,7 @@ export class Tabbrowser {
 
   _swapBrowserDocShells(aOurTab, aOtherBrowser, aStateFlags) {
     // aOurTab's browser needs to be inserted now if it hasn't already.
-    this._insertBrowser(aOurTab);
+    this.#insertBrowser(aOurTab);
 
     // Unhook our progress listener
     const filter = this.#tabFilters.get(aOurTab);
