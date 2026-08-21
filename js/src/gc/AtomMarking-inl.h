@@ -8,7 +8,6 @@
 #include "gc/AtomMarking.h"
 
 #include "mozilla/Assertions.h"
-#include "mozilla/Maybe.h"
 
 #include <type_traits>
 
@@ -30,7 +29,7 @@ inline size_t AtomRefRuntime::getAtomBit(TenuredCell* thing) {
   return arena->atomBitmapStart() * JS_BITS_PER_WORD + arenaBit;
 }
 
-template <typename T, bool Fallible>
+template <typename T>
 MOZ_ALWAYS_INLINE bool AtomRefRuntime::inlinedRecordRefInternal(Zone* zone,
                                                                 T* thing) {
   static_assert(std::is_same_v<T, JSAtom> || std::is_same_v<T, JS::Symbol>,
@@ -58,39 +57,34 @@ MOZ_ALWAYS_INLINE bool AtomRefRuntime::inlinedRecordRefInternal(Zone* zone,
   size_t grayOrBlackBit = bit + size_t(ColorBit::GrayOrBlackBit);
   MOZ_ASSERT(grayOrBlackBit / JS_BITS_PER_WORD < allocatedWords);
 
-  {
-    mozilla::Maybe<AutoEnterOOMUnsafeRegion> oomUnsafe;
-    if constexpr (!Fallible) {
-      oomUnsafe.emplace();
-    }
+  SparseBitmap& bitmap = zone->referencedAtoms();
 
-    SparseBitmap& bitmap = zone->referencedAtoms();
-    if (!bitmap.ensureBitExists(grayOrBlackBit)) {
-      if constexpr (!Fallible) {
-        oomUnsafe->crash("AtomRefRuntime::inlinedRecordRefInternal");
-      } else {
-        return false;
-      }
-      return false;
-    }
+  if (!bitmap.ensureBitExists(grayOrBlackBit)) {
+    return false;
+  }
 
 #ifdef JS_GC_CONCURRENT_MARKING
-    bitmap.atomicSetExistingBit(blackBit);
-    if constexpr (std::is_same_v<T, JS::Symbol>) {
-      bitmap.atomicSetExistingBit(grayOrBlackBit);
-    }
-#else
-    MOZ_ALWAYS_TRUE(bitmap.setBit(blackBit));
-    if constexpr (std::is_same_v<T, JS::Symbol>) {
-      MOZ_ALWAYS_TRUE(bitmap.setBit(grayOrBlackBit));
-    }
-#endif
+  bitmap.atomicSetExistingBit(blackBit);
+  if constexpr (std::is_same_v<T, JS::Symbol>) {
+    bitmap.atomicSetExistingBit(grayOrBlackBit);
   }
+#else
+  MOZ_ALWAYS_TRUE(bitmap.setBit(blackBit));
+  if constexpr (std::is_same_v<T, JS::Symbol>) {
+    MOZ_ALWAYS_TRUE(bitmap.setBit(grayOrBlackBit));
+  }
+#endif
 
   // Children of the thing also need to be marked in the context's zone.
   // We don't have a JSTracer for this so manually handle the cases in which
   // an atom can reference other atoms.
-  recordChildren(zone, thing);
+  if constexpr (std::is_same_v<T, JS::Symbol>) {
+    if (JSAtom* description = thing->description()) {
+      if (!inlinedRecordRefInternal(zone, description)) {
+        return false;
+      }
+    }
+  }
 
   return true;
 }
@@ -194,23 +188,19 @@ inline CellColor GCRuntime::isAtomReferencedByUncollectedZone(
   return CellColor::White;
 }
 
-void AtomRefRuntime::recordChildren(Zone* zone, JSAtom*) {}
-
-void AtomRefRuntime::recordChildren(Zone* zone, JS::Symbol* symbol) {
-  if (JSAtom* description = symbol->description()) {
-    inlinedRecordRef(zone, description);
-  }
-}
-
 template <typename T>
-MOZ_ALWAYS_INLINE void AtomRefRuntime::inlinedRecordRef(Zone* zone, T* thing) {
-  MOZ_ALWAYS_TRUE((inlinedRecordRefInternal<T, false>(zone, thing)));
+MOZ_ALWAYS_INLINE void AtomRefRuntime::inlinedRecordRefInfallible(Zone* zone,
+                                                                  T* thing) {
+  AutoEnterOOMUnsafeRegion oomUnsafe;
+  if (!inlinedRecordRefInternal(zone, thing)) {
+    oomUnsafe.crash("AtomRefRuntime::inlinedRecordRefInfallible");
+  }
 }
 
 template <typename T>
 MOZ_ALWAYS_INLINE bool AtomRefRuntime::inlinedRecordRefFallible(Zone* zone,
                                                                 T* thing) {
-  return inlinedRecordRefInternal<T, true>(zone, thing);
+  return inlinedRecordRefInternal(zone, thing);
 }
 
 }  // namespace gc

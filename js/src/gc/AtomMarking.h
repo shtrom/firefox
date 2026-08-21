@@ -33,9 +33,6 @@ class AtomRefRuntime {
   js::GCLockData<Vector<size_t, 0, SystemAllocPolicy>> pendingFreeArenaIndexes;
   mozilla::Atomic<bool, mozilla::Relaxed> hasPendingFreeArenaIndexes;
 
-  inline void recordChildren(Zone* zone, JSAtom*);
-  inline void recordChildren(Zone* zone, JS::Symbol* symbol);
-
  public:
   // The extent of all allocated and free words in atom reference bitmaps. This
   // monotonically increases and may be read from without locking.
@@ -88,17 +85,18 @@ class AtomRefRuntime {
   // As above but called per-arena and using the mark bits directly.
   void refineZoneBitmapForCollectedZone(Zone* zone, Arena* arena);
 
+  template <typename T>
+  MOZ_ALWAYS_INLINE bool inlinedRecordRefInternal(Zone* zone, T* thing);
+
  public:
   // Record a reference from the context's zone to an atom or id.
   template <typename T>
   void recordRef(JSContext* cx, T* thing);
 
-  // Version of recordRef that's always inlined, for performance-sensitive
+  // Versions of recordRef that are always inlined, for performance-sensitive
   // callers.
-  template <typename T, bool Fallible>
-  MOZ_ALWAYS_INLINE bool inlinedRecordRefInternal(Zone* zone, T* thing);
   template <typename T>
-  MOZ_ALWAYS_INLINE void inlinedRecordRef(Zone* zone, T* thing);
+  MOZ_ALWAYS_INLINE void inlinedRecordRefInfallible(Zone* zone, T* thing);
   template <typename T>
   [[nodiscard]] MOZ_ALWAYS_INLINE bool inlinedRecordRefFallible(Zone* zone,
                                                                 T* thing);
