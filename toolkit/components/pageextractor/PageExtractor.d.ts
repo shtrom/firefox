@@ -70,6 +70,10 @@ export type PageMetadata = {
   language: string;
   // whether the page is likely readable by reader mode
   isReaderable: boolean;
+  // whether the page declares that its content is gated, e.g. behind a paywall
+  // or a registration wall. Derived from the schema.org `isAccessibleForFree`
+  // markup, so this is only ever true for pages that annotate themselves.
+  isGated: boolean;
 };
 
 /**
