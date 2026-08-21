@@ -8,15 +8,7 @@ ChromeUtils.defineLazyGetter(lazy, "console", function () {
   return console.createInstance({ prefix: "SmartFormFillChild" });
 });
 
-ChromeUtils.defineLazyGetter(lazy, "formFillController", function () {
-  return Cc["@mozilla.org/satchel/form-fill-controller;1"].getService(
-    Ci.nsIFormFillController
-  );
-});
-
 ChromeUtils.defineESModuleGetters(lazy, {
-  FormHistoryAutoCompleteResult:
-    "resource://gre/modules/FormHistoryAutoComplete.sys.mjs",
   SmartFormFillDocument:
     "moz-src:///browser/components/aiwindow/ui/modules/SmartFormFillDocument.sys.mjs",
 });
@@ -37,7 +29,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
  * } |
  * {
  *  data?: undefined,
- *  name: "SmartFormFill:RefreshAutocomplete"
+ *  name: "SmartFormFill:GetFormData"
  * }} SmartFormFillMessage
  */
 
@@ -60,23 +52,23 @@ export class SmartFormFillChild extends JSWindowActorChild {
   #destroyed = false;
 
   /**
-   * Current document preparation request.
+   * Current document initialization request.
    *
    * @type {Promise<void> | null}
    */
-  #documentPreparationPromise = null;
+  #initializationPromise = null;
 
   /**
-   * Prepares the child actor's document.
+   * Ensures the child actor gets initialized
    */
   actorCreated() {
     if (this.document.readyState !== "loading") {
-      this.#prepareDocument();
+      this.#ensureInitialized();
     }
   }
 
   /**
-   * Prepares Smart Form Fill after the document loads.
+   * Initializes Smart Form Fill after the document loads.
    *
    * @param {Event} event
    * @returns {Promise<void>}
@@ -86,51 +78,48 @@ export class SmartFormFillChild extends JSWindowActorChild {
       return;
     }
 
-    await this.#prepareDocument();
+    await this.#ensureInitialized();
   }
 
   /**
-   * Ensures document preparation has completed.
+   * Ensures document initialization has completed.
    *
    * @returns {Promise<void>}
    */
-  #prepareDocument() {
-    if (this.#documentPreparationPromise) {
-      return this.#documentPreparationPromise;
+  #ensureInitialized() {
+    if (this.#initializationPromise) {
+      return this.#initializationPromise;
     }
 
     if (this.#smartFormFillDocument || this.#destroyed) {
       return Promise.resolve();
     }
 
-    const documentPreparationPromise = this.#setUpDocument()
+    const initializationPromise = this.#initializeDocument()
       .catch(error => {
         this.#smartFormFillDocument?.destroy();
         this.#smartFormFillDocument = null;
 
         if (!this.#destroyed) {
-          lazy.console.error(
-            "Smart Form Fill document preparation failed",
-            error
-          );
+          lazy.console.error("Smart Form Fill initialization failed", error);
         }
       })
       .finally(() => {
-        if (this.#documentPreparationPromise === documentPreparationPromise) {
-          this.#documentPreparationPromise = null;
+        if (this.#initializationPromise === initializationPromise) {
+          this.#initializationPromise = null;
         }
       });
 
-    this.#documentPreparationPromise = documentPreparationPromise;
-    return documentPreparationPromise;
+    this.#initializationPromise = initializationPromise;
+    return initializationPromise;
   }
 
   /**
-   * Sets up Smart Form Fill for the current document.
+   * Initializes Smart Form Fill for the current document.
    *
    * @returns {Promise<void>}
    */
-  async #setUpDocument() {
+  async #initializeDocument() {
     if (this.#destroyed) {
       return;
     }
@@ -151,21 +140,34 @@ export class SmartFormFillChild extends JSWindowActorChild {
 
     this.#smartFormFillDocument = new lazy.SmartFormFillDocument(this.document);
     await this.#smartFormFillDocument.initialize(this.#onFormUpdate.bind(this));
-    this.#registerAutocompleteFields();
+
+    if (this.#destroyed) {
+      return;
+    }
+
+    await this.sendQuery(
+      "SmartFormFill:Initialize",
+      this.#smartFormFillDocument.getFormData()
+    ).catch(error => {
+      if (!this.#destroyed) {
+        lazy.console.error("Smart Form Fill initialization failed", error);
+      }
+    });
   }
 
   /**
    * Forwards parent messages to the document manager.
    *
    * @param {SmartFormFillMessage} message
-   * @returns {Promise<FocusedForm | null | undefined>}
+   * @returns {Promise<FocusedForm | Array<FormData> | null |
+   * undefined>}
    */
   async receiveMessage({ data, name }) {
     if (
       !this.#smartFormFillDocument &&
       this.document.readyState !== "loading"
     ) {
-      await this.#prepareDocument();
+      await this.#ensureInitialized();
     }
 
     if (!this.#smartFormFillDocument) {
@@ -180,9 +182,8 @@ export class SmartFormFillChild extends JSWindowActorChild {
       case "SmartFormFill:GetFocusedForm":
         return this.#smartFormFillDocument.getFocusedForm();
 
-      case "SmartFormFill:RefreshAutocomplete":
-        this.#refreshAutocomplete();
-        return undefined;
+      case "SmartFormFill:GetFormData":
+        return this.#smartFormFillDocument.getFormData();
     }
 
     return null;
@@ -194,7 +195,7 @@ export class SmartFormFillChild extends JSWindowActorChild {
   didDestroy() {
     this.#smartFormFillDocument?.destroy();
     this.#smartFormFillDocument = null;
-    this.#documentPreparationPromise = null;
+    this.#initializationPromise = null;
     this.#destroyed = true;
   }
 
@@ -209,121 +210,6 @@ export class SmartFormFillChild extends JSWindowActorChild {
       return;
     }
 
-    this.#registerAutocompleteFields();
     this.sendAsyncMessage("SmartFormFill:FormUpdate", formDataList);
-  }
-
-  /**
-   * Reruns an open autocomplete search after Smart Form Fill changes state.
-   */
-  #refreshAutocomplete() {
-    const autocompleteActor = this.manager.getActor("AutoComplete");
-    const focusedElement = this.document.activeElement;
-
-    if (
-      !autocompleteActor?.popupOpen ||
-      !this.#smartFormFillDocument?.isSupportedField(focusedElement) ||
-      lazy.formFillController.controlledElement !== focusedElement
-    ) {
-      return;
-    }
-
-    const autocompleteInput = lazy.formFillController.QueryInterface(
-      Ci.nsIAutoCompleteInput
-    );
-    autocompleteInput.controller.startSearch(
-      autocompleteInput.controller.searchString
-    );
-  }
-
-  /*
-   * AutoComplete-related functions
-   */
-
-  /**
-   * Registers each supported Smart Form Fill field with AutoCompleteChild.
-   *
-   * Registration allows the form-fill controller to start autocomplete searches
-   * for the field and associates this actor with the field as a result provider.
-   *
-   * Called after document preparation and when tracked forms change.
-   *
-   * @private
-   */
-  #registerAutocompleteFields() {
-    const autocompleteActor = this.manager.getActor("AutoComplete");
-    if (!autocompleteActor) {
-      return;
-    }
-
-    for (const field of this.#smartFormFillDocument.getSupportedFields()) {
-      autocompleteActor.markAsAutoCompletableField(field, this);
-    }
-  }
-
-  /**
-   * Determines whether AutoCompleteChild should request Smart Form Fill results
-   * for the focused input.
-   *
-   * AutoCompleteChild calls this before sending an autocomplete search to the
-   * parent process.
-   *
-   * @param {HTMLInputElement | HTMLTextAreaElement} input
-   *   The input associated with the autocomplete search.
-   * @returns {boolean}
-   *   Whether Smart Form Fill supports the input.
-   */
-  shouldSearchForAutoComplete(input) {
-    return this.#smartFormFillDocument?.isSupportedField(input) ?? false;
-  }
-
-  /**
-   * Provides the options object required by the autocomplete provider contract.
-   *
-   * @returns {object} Empty provider options.
-   */
-  getAutoCompleteSearchOption() {
-    return {};
-  }
-
-  /**
-   * Converts results returned by SmartFormFillParent into an
-   * nsIAutoCompleteResult that AutoCompleteChild can give to the autocomplete
-   * controller.
-   *
-   * AutoCompleteChild calls this after the parent-process search completes.
-   *
-   * @param {string} searchString
-   *   The current value used for the autocomplete search.
-   * @param {HTMLInputElement | HTMLTextAreaElement} input
-   *   The input associated with the search.
-   * @param {{ entries: Array<object> } | null | undefined} records
-   *   Results returned by SmartFormFillParent.searchAutoCompleteEntries().
-   * @returns {FormHistoryAutoCompleteResult | null}
-   *   The autocomplete result, or null when no Smart Form Fill entry is available.
-   */
-  searchResultToAutoCompleteResult(searchString, input, records) {
-    if (!records?.entries?.length) {
-      return null;
-    }
-
-    const result = new lazy.FormHistoryAutoCompleteResult(
-      input,
-      [],
-      input.name,
-      searchString
-    );
-    result.externalEntries.push(...records.entries);
-    return result;
-  }
-
-  /**
-   * Name used by AutoCompleteChild to identify this autocomplete provider and
-   * route searches to the corresponding parent actor.
-   *
-   * @returns {string}
-   */
-  get actorName() {
-    return "SmartFormFill";
   }
 }

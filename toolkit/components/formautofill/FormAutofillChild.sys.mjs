@@ -11,7 +11,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   AutofillFormFactory:
     "resource://gre/modules/shared/AutofillFormFactory.sys.mjs",
   AutofillTelemetry: "resource://gre/modules/shared/AutofillTelemetry.sys.mjs",
-  adaptExternalAutocompleteItem: "resource://gre/modules/FillHelpers.sys.mjs",
+  GenericAutocompleteItem: "resource://gre/modules/FillHelpers.sys.mjs",
   ProfileAutoCompleteResult:
     "resource://autofill/ProfileAutoCompleteResult.sys.mjs",
   InsecurePasswordUtils: "resource://gre/modules/InsecurePasswordUtils.sys.mjs",
@@ -1112,7 +1112,6 @@ export class FormAutofillChild extends JSWindowActorChild {
     return {
       fieldName: fieldDetail?.fieldName,
       elementId: fieldDetail?.elementId,
-      inputType: input.type,
       scenarioName,
     };
   }
@@ -1190,7 +1189,16 @@ export class FormAutofillChild extends JSWindowActorChild {
     const externalEntries = records.externalEntries;
 
     acResult.externalEntries.push(
-      ...externalEntries.map(lazy.adaptExternalAutocompleteItem)
+      ...externalEntries.map(
+        entry =>
+          new lazy.GenericAutocompleteItem(
+            entry.image,
+            entry.label,
+            entry.secondary,
+            entry.fillMessageName,
+            entry.fillMessageData
+          )
+      )
     );
 
     return acResult;
