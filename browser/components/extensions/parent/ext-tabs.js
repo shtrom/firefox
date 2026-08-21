@@ -903,7 +903,7 @@ this.tabs = class extends ExtensionAPIPersistent {
                 () => browser.fixupAndLoadURIString(url, options),
                 { once: true }
               );
-              tabbrowser.insertBrowser(nativeTab);
+              tabbrowser._insertBrowser(nativeTab);
             }
           }
 

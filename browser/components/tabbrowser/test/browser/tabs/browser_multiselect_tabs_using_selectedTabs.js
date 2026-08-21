@@ -10,12 +10,16 @@ add_task(async function () {
       "tabbrowser should be marked as aria-multiselectable"
     );
     gBrowser.selectedTabs = tabs;
-    let { selectedTab, selectedTabs } = gBrowser;
+    let { selectedTab, selectedTabs, _multiSelectedTabsSet } = gBrowser;
     is(selectedTab, tabs[0], "The selected tab should be the expected one");
     if (tabs.length == 1) {
       ok(
         !selectedTab.multiselected,
         "Selected tab shouldn't be multi-selected because we are not in multi-select context yet"
+      );
+      ok(
+        !_multiSelectedTabsSet.has(selectedTab),
+        "Selected tab shouldn't be in _multiSelectedTabsSet"
       );
       is(selectedTabs.length, 1, "selectedTabs should contain a single tab");
       is(
@@ -36,6 +40,10 @@ add_task(async function () {
       );
       for (let tab of uniqueTabs) {
         ok(tab.multiselected, "Tab should be multi-selected");
+        ok(
+          _multiSelectedTabsSet.has(tab),
+          "Tab should be in _multiSelectedTabsSet"
+        );
         ok(selectedTabs.includes(tab), "Tab should be in selectedTabs");
         is(
           tab.getAttribute("aria-selected"),

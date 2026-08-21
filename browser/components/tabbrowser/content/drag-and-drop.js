@@ -2508,7 +2508,7 @@
           dropElementSize
         );
 
-        moveOverThreshold = gBrowser.tabGroupsEnabled
+        moveOverThreshold = gBrowser._tabGroupsEnabled
           ? Services.prefs.getIntPref(
               "browser.tabs.dragDrop.moveOverThresholdPercent"
             ) / 100
@@ -2581,7 +2581,7 @@
       }
 
       if (
-        gBrowser.tabGroupsEnabled &&
+        gBrowser._tabGroupsEnabled &&
         (isTab(draggedTab) || isSplitViewWrapper(draggedTab)) &&
         !isPinned &&
         (!numPinned || newDropElementIndex >= numPinned)

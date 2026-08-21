@@ -517,7 +517,7 @@ export var BrowserTestUtils = {
     if (tabbrowser && tabbrowser.getTabForBrowser) {
       let tab = tabbrowser.getTabForBrowser(browser);
       if (tab) {
-        tabbrowser.insertBrowser(tab);
+        tabbrowser._insertBrowser(tab);
       }
     }
 
@@ -1243,7 +1243,7 @@ export var BrowserTestUtils = {
         // Ensure all browsers have been inserted or we won't get
         // messages back from them.
         browserSet.forEach(browser => {
-          win.gBrowser.insertBrowser(win.gBrowser.getTabForBrowser(browser));
+          win.gBrowser._insertBrowser(win.gBrowser.getTabForBrowser(browser));
         });
 
         let observer = subject => {
