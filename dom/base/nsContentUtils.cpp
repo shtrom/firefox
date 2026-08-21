@@ -108,7 +108,6 @@
 #include "mozilla/Result.h"
 #include "mozilla/ScopeExit.h"
 #include "mozilla/ScrollContainerFrame.h"
-#include "mozilla/ScrollbarPreferences.h"
 #include "mozilla/ShutdownPhase.h"
 #include "mozilla/Span.h"
 #include "mozilla/StaticAnalysisFunctions.h"
@@ -11868,16 +11867,6 @@ bool nsContentUtils::IsSpecificAboutPage(JSObject* aGlobal, const char* aUri) {
   principal->GetAsciiSpec(spec);
 
   return spec.EqualsASCII(aUri);
-}
-
-/* static */
-void nsContentUtils::SetScrollbarsVisibility(nsIDocShell* aDocShell,
-                                             bool aVisible) {
-  if (!aDocShell) {
-    return;
-  }
-  auto pref = aVisible ? ScrollbarPreference::Auto : ScrollbarPreference::Never;
-  nsDocShell::Cast(aDocShell)->SetScrollbarPreference(pref);
 }
 
 /* static */

@@ -74,7 +74,6 @@ const CHROME_FLAGS_MAP = [
   [Ci.nsIWebBrowserChrome.CHROME_MENUBAR, "menubar"],
   [Ci.nsIWebBrowserChrome.CHROME_WINDOW_RESIZE, "resizable"],
   [Ci.nsIWebBrowserChrome.CHROME_WINDOW_MINIMIZE, "minimizable"],
-  [Ci.nsIWebBrowserChrome.CHROME_SCROLLBARS, "", "scrollbars=0"],
   [Ci.nsIWebBrowserChrome.CHROME_PRIVATE_WINDOW, "private"],
   [Ci.nsIWebBrowserChrome.CHROME_NON_PRIVATE_WINDOW, "non-private"],
   // Do not inherit remoteness and fissionness from the previous session.
@@ -98,7 +97,6 @@ const WINDOW_HIDEABLE_FEATURES = [
   "toolbar",
   "locationbar",
   "personalbar",
-  "scrollbars",
 ];
 
 const WINDOW_OPEN_FEATURES_MAP = {

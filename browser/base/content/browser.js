@@ -1708,7 +1708,7 @@ function toOpenWindowByType(inType, uri, features) {
     window.open(
       uri,
       "_blank",
-      "chrome,extrachrome,menubar,resizable,scrollbars,status,toolbar"
+      "chrome,extrachrome,menubar,resizable,status,toolbar"
     );
   }
 }

@@ -2275,31 +2275,10 @@ void AppWindow::EnableParent(bool aEnable) {
   }
 }
 
-void AppWindow::SetContentScrollbarVisibility(bool aVisible) {
-  nsCOMPtr<nsPIDOMWindowOuter> contentWin(
-      do_GetInterface(mPrimaryContentShell));
-  if (!contentWin) {
-    return;
-  }
-
-  nsContentUtils::SetScrollbarsVisibility(contentWin->GetDocShell(), aVisible);
-}
-
 void AppWindow::ApplyChromeFlags() {
   nsCOMPtr<dom::Element> root = GetWindowDOMElement();
   if (!root) {
     return;
-  }
-
-  if (mChromeLoaded) {
-    // The two calls in this block don't need to happen early because they
-    // don't cause a global restyle on the document.  Not only that, but the
-    // scrollbar stuff needs a content area to toggle the scrollbars on anyway.
-    // So just don't do these until mChromeLoaded is true.
-
-    // Scrollbars have their own special treatment.
-    SetContentScrollbarVisibility(mChromeFlags &
-                                  nsIWebBrowserChrome::CHROME_SCROLLBARS);
   }
 
   /* the other flags are handled together. we have style rules

@@ -1964,9 +1964,6 @@ uint32_t nsWindowWatcher::CalculateChromeFlagsForSystem(
   if (aFeatures.GetBoolWithDefault("minimizable", false, &presenceFlag)) {
     chromeFlags |= nsIWebBrowserChrome::CHROME_WINDOW_MINIMIZE;
   }
-  if (aFeatures.GetBoolWithDefault("scrollbars", true, &presenceFlag)) {
-    chromeFlags |= nsIWebBrowserChrome::CHROME_SCROLLBARS;
-  }
 
   // Determine whether the window is a private browsing window
   if (aFeatures.GetBoolWithDefault("private", false, &presenceFlag)) {
