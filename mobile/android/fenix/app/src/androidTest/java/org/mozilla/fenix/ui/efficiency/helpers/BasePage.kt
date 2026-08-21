@@ -16,6 +16,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasAnyAncestor
@@ -1619,6 +1621,10 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
                 is ViewInteraction -> element.check(matches(isChecked()))
                 is UiObject -> if (!element.isChecked) throw AssertionError("'${selector.description}' is not checked")
                 is UiObject2 -> if (!element.isChecked) throw AssertionError("'${selector.description}' is not checked")
+                is SemanticsNodeInteraction -> {
+                    element.assertExists()
+                    element.assertIsOn()
+                }
                 else ->
                     throw AssertionError(
                         "Unsupported element type (${element::class.simpleName}) for selector: ${selector.description}"
@@ -1657,6 +1663,10 @@ abstract class BasePage(protected val composeRule: AndroidComposeTestRule<HomeAc
                 is ViewInteraction -> element.check(matches(isNotChecked()))
                 is UiObject -> if (element.isChecked) throw AssertionError("'${selector.description}' is checked")
                 is UiObject2 -> if (element.isChecked) throw AssertionError("'${selector.description}' is checked")
+                is SemanticsNodeInteraction -> {
+                    element.assertExists()
+                    element.assertIsOff()
+                }
                 else ->
                     throw AssertionError(
                         "Unsupported element type (${element::class.simpleName}) for selector: ${selector.description}"
