@@ -4222,7 +4222,6 @@ bool CanvasRenderingContext2D::SetFontInternal(const nsACString& aFont,
   }
 
   if (!mFontStyleCache) {
-    mFontGroupCache.reset(nullptr);
     mFontStyleCache = MakeUnique<FontStyleCache>();
   }
 
@@ -4454,7 +4453,6 @@ bool CanvasRenderingContext2D::SetFontInternalDisconnected(
 
   // Do we have a cached fontgroup that corresponds to this `font` value?
   if (!mFontGroupCache) {
-    mFontStyleCache.reset(nullptr);
     mFontGroupCache = MakeUnique<FontGroupCache>();
   }
 
