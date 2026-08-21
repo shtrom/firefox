@@ -400,6 +400,7 @@ already_AddRefed<BrowsingContext> BrowsingContext::CreateDetached(
   if (aParent) {
     MOZ_DIAGNOSTIC_ASSERT(parentBC->Group() == group);
     MOZ_DIAGNOSTIC_ASSERT(parentBC->mType == aType);
+    fields.Get<IDX_EmbedderInnerWindowId>() = aParent->WindowID();
     // Non-toplevel content documents are always embededed within content.
     fields.Get<IDX_EmbeddedInContentDocument>() =
         parentBC->mType == Type::Content;
@@ -801,6 +802,10 @@ void BrowsingContext::SetEmbedderElement(Element* aEmbedder) {
     txn.SetEmbedderElementType(Some(aEmbedder->LocalName()));
     txn.SetEmbeddedInContentDocument(
         aEmbedder->OwnerDoc()->IsContentDocument());
+    if (nsCOMPtr<nsPIDOMWindowInner> inner =
+            do_QueryInterface(aEmbedder->GetDocumentGlobal())) {
+      txn.SetEmbedderInnerWindowId(inner->WindowID());
+    }
     txn.SetFullscreenAllowedByOwner(OwnerAllowsFullscreen(*aEmbedder));
     if (XRE_IsParentProcess() && aEmbedder->IsXULElement() && IsTopContent()) {
       nsAutoString messageManagerGroup;
@@ -3933,6 +3938,18 @@ bool BrowsingContext::CheckOnlyEmbedderCanSet(ContentParent* aSource) {
     return Canonical()->IsEmbeddedInProcess(childId);
   }
   return mEmbeddedByThisProcess;
+}
+
+bool BrowsingContext::CanSet(FieldIndex<IDX_EmbedderInnerWindowId>,
+                             const uint64_t& aValue, ContentParent* aSource) {
+  // If we have a parent window, our embedder inner window ID must match it.
+  if (mParentWindow) {
+    return mParentWindow->Id() == aValue;
+  }
+
+  // For toplevel BrowsingContext instances, this value may only be set by the
+  // parent process, or initialized to `0`.
+  return CheckOnlyEmbedderCanSet(aSource);
 }
 
 bool BrowsingContext::CanSet(FieldIndex<IDX_EmbedderElementType>,

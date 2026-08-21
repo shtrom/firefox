@@ -121,7 +121,7 @@ class CanonicalBrowsingContext final : public BrowsingContext {
 
   // Same as `GetParentWindowContext`, but will also cross <browser> and
   // content/chrome boundaries.
-  WindowGlobalParent* GetEmbedderWindowGlobal();
+  already_AddRefed<WindowGlobalParent> GetEmbedderWindowGlobal() const;
 
   CanonicalBrowsingContext* GetParentCrossChromeBoundary();
   CanonicalBrowsingContext* TopCrossChromeBoundary();

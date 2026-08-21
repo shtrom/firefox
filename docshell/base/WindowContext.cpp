@@ -64,7 +64,7 @@ BrowsingContextGroup* WindowContext::Group() const {
 
 WindowGlobalParent* WindowContext::Canonical() {
   MOZ_RELEASE_ASSERT(XRE_IsParentProcess());
-  return WindowGlobalParent::Cast(this);
+  return static_cast<WindowGlobalParent*>(this);
 }
 
 bool WindowContext::IsCurrent() const {

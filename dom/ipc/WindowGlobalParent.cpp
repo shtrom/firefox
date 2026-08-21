@@ -219,6 +219,12 @@ void WindowGlobalParent::Init() {
     processId = cp->ChildID();
   }
 
+  MOZ_DIAGNOSTIC_ASSERT(
+      !BrowsingContext()->GetParent() ||
+          BrowsingContext()->GetEmbedderInnerWindowId(),
+      "When creating a non-root WindowGlobalParent, the WindowGlobalParent "
+      "for our embedder should've already been created.");
+
   // Ensure we have a document URI
   if (!mDocumentURI) {
     NS_NewURI(getter_AddRefs(mDocumentURI), "about:blank");
@@ -309,12 +315,6 @@ already_AddRefed<WindowGlobalParent> WindowGlobalParent::GetByInnerWindowId(
   }
 
   return WindowContext::GetById(aInnerWindowId).downcast<WindowGlobalParent>();
-}
-
-/* static */
-WindowGlobalParent* WindowGlobalParent::Cast(WindowContext* aContext) {
-  MOZ_RELEASE_ASSERT(XRE_IsParentProcess());
-  return static_cast<WindowGlobalParent*>(aContext);
 }
 
 already_AddRefed<WindowGlobalChild> WindowGlobalParent::GetChildActor() {
@@ -1363,7 +1363,8 @@ mozilla::ipc::IPCResult WindowGlobalParent::RecvExpectPageUseCounters(
   // page use counters.  This causes us to wait for this window to go away
   // (in WindowGlobalParent::ActorDestroy) before reporting the page use
   // counters via Telemetry.
-  RefPtr<WindowGlobalParent> page = Cast(aTop.GetMaybeDiscarded());
+  RefPtr<WindowGlobalParent> page =
+      static_cast<WindowGlobalParent*>(aTop.GetMaybeDiscarded());
   if (!page || page->mSentPageUseCounters) {
     MOZ_LOG(gUseCountersLog, LogLevel::Debug,
             (" > too late, won't report page use counters for this straggler"));
