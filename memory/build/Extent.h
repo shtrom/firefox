@@ -17,13 +17,7 @@
 
 struct arena_t;
 
-enum ChunkType {
-  UNKNOWN_CHUNK,
-  ZEROED_CHUNK,    // chunk only contains zeroes.
-  ARENA_CHUNK,     // used to back arena runs created by arena_t::AllocRun.
-  HUGE_CHUNK,      // used to back huge allocations (e.g. arena_t::MallocHuge).
-  RECYCLED_CHUNK,  // chunk has been stored for future use by chunk_recycle.
-};
+enum ChunkType;
 
 // Tree of extents.
 struct extent_node_t : public BaseAllocClass {
