@@ -336,7 +336,8 @@ class DocAccessibleParent : public RemoteAccessible,
   Maybe<LayoutDeviceIntRect> mFocusedAccBounds;
 #endif
 
-  static DocAccessibleParent* GetFrom(dom::WindowContext* aWindowContext);
+  static DocAccessibleParent* GetFrom(dom::WindowContext* aWindowContext,
+                                      bool aAllowShutdown = false);
 
   size_t SizeOfExcludingThis(MallocSizeOf aMallocSizeOf) override;
 

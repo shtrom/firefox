@@ -1086,8 +1086,7 @@ void NotificationController::WillRefresh(mozilla::TimeStamp aTime) {
               childDoc->DocumentNode()->GetWindowGlobalChild()) {
         ipcDoc = new DocAccessibleChild(childDoc, wgc);
         childDoc->SetIPCDoc(ipcDoc);
-        wgc->SendPDocAccessibleConstructor(ipcDoc, parentIPCDoc, id,
-                                           childDoc->IsPrintDoc());
+        wgc->SendPDocAccessibleConstructor(ipcDoc, id, childDoc->IsPrintDoc());
       }
     }
   }

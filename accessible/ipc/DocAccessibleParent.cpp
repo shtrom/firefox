@@ -1492,14 +1492,17 @@ Relation DocAccessibleParent::RelationByType(RelationType aType) const {
 }
 
 DocAccessibleParent* DocAccessibleParent::GetFrom(
-    dom::WindowContext* aWindowContext) {
+    dom::WindowContext* aWindowContext, bool aAllowShutdown) {
   if (!aWindowContext) {
     return nullptr;
   }
   dom::WindowGlobalParent* wgp = aWindowContext->Canonical();
   auto* doc = static_cast<DocAccessibleParent*>(
       LoneManagedOrNullAsserts(wgp->ManagedPDocAccessibleParent()));
-  return doc && !doc->IsShutdown() ? doc : nullptr;
+  if (!doc || (!aAllowShutdown && doc->IsShutdown())) {
+    return nullptr;
+  }
+  return doc;
 }
 
 size_t DocAccessibleParent::SizeOfExcludingThis(MallocSizeOf aMallocSizeOf) {

@@ -630,7 +630,7 @@ bool WindowGlobalChild::IsProcessRoot() {
 
 #ifdef ACCESSIBILITY
 a11y::PDocAccessibleChild* WindowGlobalChild::AllocPDocAccessibleChild(
-    a11y::PDocAccessibleChild*, const uint64_t&, const bool&) {
+    const uint64_t&, const bool&) {
   MOZ_ASSERT_UNREACHABLE("should never call this!");
   return nullptr;
 }

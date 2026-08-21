@@ -1814,8 +1814,8 @@ void DocAccessible::DoInitialUpdate() {
         DocAccessibleChild* ipcDoc = IPCDoc();
         if (!ipcDoc) {
           ipcDoc = new DocAccessibleChild(this, wgc);
-          MOZ_RELEASE_ASSERT(wgc->SendPDocAccessibleConstructor(
-              ipcDoc, nullptr, 0, IsPrintDoc()));
+          MOZ_RELEASE_ASSERT(
+              wgc->SendPDocAccessibleConstructor(ipcDoc, 0, IsPrintDoc()));
           // trying to recover from this failing is problematic
           SetIPCDoc(ipcDoc);
         }
@@ -3384,7 +3384,7 @@ void DocAccessible::BindChildDocument(DocAccessible* aDocument) {
           MOZ_ASSERT(wgc);
           DocAccessibleChild* ipcDoc = new DocAccessibleChild(aDocument, wgc);
           aDocument->SetIPCDoc(ipcDoc);
-          wgc->SendPDocAccessibleConstructor(ipcDoc, mIPCDoc, embedderAcc->ID(),
+          wgc->SendPDocAccessibleConstructor(ipcDoc, embedderAcc->ID(),
                                              aDocument->IsPrintDoc());
         }
       }
