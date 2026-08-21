@@ -3027,7 +3027,6 @@ dependencies = [
  "shell_windows",
  "signature_cache",
  "sitecategories",
- "ssl_tokens_cache",
  "static_prefs",
  "storage",
  "trust-anchors",
@@ -7629,20 +7628,6 @@ dependencies = [
  "tempfile",
  "text-table",
  "thiserror 2.0.12",
-]
-
-[[package]]
-name = "ssl_tokens_cache"
-version = "0.1.0"
-dependencies = [
- "adler2",
- "bincode",
- "log",
- "nsstring",
- "serde",
- "static_assertions",
- "tempfile",
- "thin-vec",
 ]
 
 [[package]]
