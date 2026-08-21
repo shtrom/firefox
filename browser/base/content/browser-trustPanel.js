@@ -382,7 +382,9 @@ class TrustPanel {
       triggerEvent: opts.event,
     });
 
-    const applicableBreaches = await this.#getApplicableBreaches(this.#host);
+    const applicableBreaches = await this.#getApplicableBreaches(
+      this.#asciiHost
+    );
     const [hasMonitorAccountOrStoredPasswords, blockedTrackersCount] =
       await Promise.all([
         this.#hasMonitorAccountOrStoredPasswords(),
@@ -566,7 +568,7 @@ class TrustPanel {
     const capturedUri = uri;
     const [applicableBreaches, hasMonitorAccountOrStoredPasswords] =
       await Promise.all([
-        this.#getApplicableBreaches(this.#host),
+        this.#getApplicableBreaches(this.#asciiHost),
         this.#hasMonitorAccountOrStoredPasswords(),
       ]);
 
@@ -711,7 +713,9 @@ class TrustPanel {
       "trustpanel-breach-alert-section"
     );
 
-    const applicableBreaches = await this.#getApplicableBreaches(this.#host);
+    const applicableBreaches = await this.#getApplicableBreaches(
+      this.#asciiHost
+    );
     const hasMonitorAccountOrStoredPasswords =
       await this.#hasMonitorAccountOrStoredPasswords();
     const breachedStatus = getBreachedStatus({
@@ -743,12 +747,12 @@ class TrustPanel {
       this.#trackingProtectionEnabled
         ? "trustpanel-etp-toggle-on"
         : "trustpanel-etp-toggle-off",
-      { host: this.#host }
+      { host: this.#displayHost }
     );
 
     let hostElement = document.getElementById("trustpanel-popup-host");
-    hostElement.setAttribute("value", this.#host);
-    hostElement.setAttribute("tooltiptext", this.#host);
+    hostElement.setAttribute("value", this.#displayHost);
+    hostElement.setAttribute("tooltiptext", this.#displayHost);
 
     document.l10n.setAttributes(
       document.getElementById("trustpanel-etp-label"),
@@ -996,7 +1000,7 @@ class TrustPanel {
     document.l10n.setAttributes(
       document.getElementById("trustpanel-securityInformationView"),
       "trustpanel-site-information-header",
-      { host: this.#host }
+      { host: this.#displayHost }
     );
 
     let connection = this.#connectionState();
@@ -1040,7 +1044,7 @@ class TrustPanel {
     document.l10n.setAttributes(
       document.getElementById("trustpanel-blockerView"),
       "trustpanel-blocker-header",
-      { host: this.#host }
+      { host: this.#displayHost }
     );
     await this.#updateBlockerView();
     document
@@ -1090,7 +1094,7 @@ class TrustPanel {
     document.l10n.setAttributes(
       document.getElementById("trustpanel-clearcookiesView"),
       "trustpanel-clear-cookies-header",
-      { host: this.#host }
+      { host: this.#displayHost }
     );
     document
       .getElementById("trustpanel-popup-multiView")
@@ -1352,16 +1356,30 @@ class TrustPanel {
     );
   }
 
-  // Using a getter rather than a method reduces call-site noise (this.#host vs
-  // this.#host()) and avoids churn when the implementation changes. Semantically,
+  // Using a getter rather than a method reduces call-site noise (this.#displayHost vs
+  // this.#displayHost()) and avoids churn when the implementation changes. Semantically,
   // this behaves like a property derived from #uri, so a getter is the right fit.
-  get #host() {
+  get #displayHost() {
     if (!this.#uri) {
       return null;
     }
     return BrowserUtils.formatURIForDisplay(this.#uri, {
       onlyBaseDomain: true,
     });
+  }
+
+  // #displayHost is a display string (IDN hosts are shown decoded, and it can carry a
+  // port), so it must not be compared against stored data. This is the host in
+  // its ASCII form, for matching against e.g. the breach list.
+  get #asciiHost() {
+    if (!this.#uri) {
+      return null;
+    }
+    try {
+      return this.#uri.asciiHost;
+    } catch (ex) {
+      return null;
+    }
   }
 
   get #isEV() {
