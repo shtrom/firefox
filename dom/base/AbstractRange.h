@@ -273,7 +273,10 @@ class AbstractRange : public nsISupports,
 
   static void UpdateDescendantsInFlattenedTree(nsINode& aNode,
                                                bool aMarkDescendants);
-  friend class HTMLSlotElement;
+  friend void mozilla::SlotAssignedNodeAdded(dom::HTMLSlotElement* aSlot,
+                                             nsIContent& aAssignedNode);
+  friend void mozilla::SlotAssignedNodeRemoved(dom::HTMLSlotElement* aSlot,
+                                               nsIContent& aUnassignedNode);
 
   already_AddRefed<DOMRectList> GetClientRectsInner(
       AllowRangeCrossShadowBoundary = AllowRangeCrossShadowBoundary::No,
