@@ -45,7 +45,6 @@ WEAKER_EVENT_COMPATIBILITY_PROBES = [
     "pwmgr#mgmt_interaction",
     "relay_integration#popup_option",
     "relay_integration#mask_panel",
-    "security.ui.certerror#click",
     "security.ui.certerror#load",
 ]
 
