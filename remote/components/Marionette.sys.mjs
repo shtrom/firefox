@@ -54,6 +54,7 @@ const isRemote =
 class MarionetteParentProcess {
   #browserStartupFinished;
   #isBrowserAutomation;
+  #portFilePath;
 
   constructor() {
     this.server = null;
@@ -65,6 +66,11 @@ class MarionetteParentProcess {
     // Whether the running instance belongs to a browser automation session.
     // True for command line startup. Optional for startAtRuntime.
     this.#isBrowserAutomation = true;
+
+    // Path to the file where the Marionette port should be saved, in addition
+    // to the one saved in the profile. This path is only used when starting
+    // Marionette dynamically via startAtRuntime().
+    this.#portFilePath = null;
 
     this.#browserStartupFinished = lazy.Deferred();
   }
@@ -310,12 +316,16 @@ class MarionetteParentProcess {
    * @param {boolean=} options.isBrowserAutomation
    *     True if the server is started for regular browser automation (as
    *     opposed to tooling, agentic assisted browsing etc.). Defaults to true.
+   * @param {string=} options.portFilePath
+   *     Path to a file where the Marionette port should be written once the
+   *     server is listening. The parent directory has to exist.
+   *     Defaults to null, in which case no additional file is written.
    *
    * @returns {number}
    *     The port on which Marionette was started. -1 if it could not be started.
    */
   async startAtRuntime(options = {}) {
-    const { isBrowserAutomation = true } = options;
+    const { isBrowserAutomation = true, portFilePath = null } = options;
 
     if (!Services.prefs.getBoolPref(PREF_DYNAMIC_START_ENABLED, false)) {
       lazy.logger.debug(
@@ -376,6 +386,20 @@ class MarionetteParentProcess {
       throw Error(`Unable to start Marionette: ${e}`);
     }
 
+    this.#portFilePath = portFilePath;
+    if (this.#portFilePath !== null) {
+      try {
+        await IOUtils.write(
+          this.#portFilePath,
+          lazy.textEncoder.encode(`${this.server.port}`)
+        );
+      } catch (e) {
+        lazy.logger.warn(
+          `Failed to create ${this.#portFilePath} (${e.message})`
+        );
+      }
+    }
+
     return this.server.port;
   }
 
@@ -409,6 +433,16 @@ class MarionetteParentProcess {
         lazy.logger.warn(
           `Failed to remove ${this._activePortPath} (${e.message})`
         );
+      }
+
+      if (this.#portFilePath !== null) {
+        try {
+          await IOUtils.remove(this.#portFilePath, { ignoreAbsent: true });
+        } catch (e) {
+          lazy.logger.warn(
+            `Failed to remove ${this.#portFilePath} (${e.message})`
+          );
+        }
       }
 
       lazy.logger.debug("Marionette stopped listening");
