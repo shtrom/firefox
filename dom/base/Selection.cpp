@@ -4228,6 +4228,11 @@ void Selection::Modify(const nsAString& aAlter, const nsAString& aDirection,
     return;
   }
 
+  // If you need to make this API work on independent selection, you need to
+  // change the call of PresShell::CompleteMove() because independent selection
+  // should move complete in its limiter.
+  MOZ_ASSERT(!mFrameSelection->IsIndependentSelection());
+
   if (!GetAnchorFocusRange() || !GetFocusNode()) {
     return;
   }
@@ -4340,6 +4345,9 @@ void Selection::Modify(const nsAString& aAlter, const nsAString& aDirection,
     if (!presShell) {
       return;
     }
+    // XXX This won't move caret into non-selectable node by `user-select`
+    // style. However, it's for user's operation, not for Selection API. So, we
+    // may need to add an option to ignore `user-select` style.
     presShell->CompleteMove(forward, extend);
   }
 }
