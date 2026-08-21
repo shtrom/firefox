@@ -6757,10 +6757,6 @@ void LIRGenerator::visitResumeFrameArg(MResumeFrameArg* ins) {
   defineBox(new (alloc()) LResumeFrameArg(), ins);
 }
 
-void LIRGenerator::visitAssertResumeKindIsNext(MAssertResumeKindIsNext* ins) {
-  add(new (alloc()) LAssertResumeKindIsNext(temp()), ins);
-}
-
 void LIRGenerator::visitClearResumingGeneratorFlag(
     MClearResumingGeneratorFlag* ins) {
   add(new (alloc()) LClearResumingGeneratorFlag(), ins);

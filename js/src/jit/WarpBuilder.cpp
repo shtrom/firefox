@@ -2817,14 +2817,13 @@ bool WarpBuilder::build_AfterYield(BytecodeLocation loc) {
                                             /* needsPreBarrier = */ true));
   }
 
-  // Push the [rval, resumeKind] values on top of the stack. Only a Next resume
-  // enters Ion, so the resume kind is a constant instead of a read of the
-  // ResumeFrameArgs slot.
+  // Push the [rval, resumeKind] values on top of the stack.
   current->push(resumeFrameArg(ResumeFrameArgs::ResumeValueSlot));
-#ifdef DEBUG
-  current->add(MAssertResumeKindIsNext::New(alloc()));
-#endif
-  current->push(constant(Int32Value(int32_t(GeneratorResumeKind::Next))));
+  auto* resumeKindVal = resumeFrameArg(ResumeFrameArgs::ResumeKindSlot);
+  auto* resumeKind = MUnbox::New(alloc(), resumeKindVal, MIRType::Int32,
+                                 MUnbox::Mode::Infallible);
+  current->add(resumeKind);
+  current->push(resumeKind);
 
   // Done! End the resume path by clearing the IsResuming frame descriptor bit.
   // From now on, loop backedges will take the normal path and the

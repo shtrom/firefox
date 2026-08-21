@@ -21907,14 +21907,12 @@ void CodeGenerator::visitGeneratorResume(LGeneratorResume* lir) {
                             /* hasInlined = */ false,
                             /* isResumingGenerator = */ true));
 
-  // Load the code to call. Throw and Return currently always resume in
-  // Baseline; see MaybeEnterJit.
+  // Load the code to call. Throw currently always resumes in Baseline.
+  // See MaybeEnterJit.
   Register code = callee;
-  if (resumeKind == int32_t(GeneratorResumeKind::Next)) {
+  if (resumeKind != int32_t(GeneratorResumeKind::Throw)) {
     masm.loadJitCodeRaw(callee, code);
   } else {
-    MOZ_ASSERT(resumeKind == int32_t(GeneratorResumeKind::Throw) ||
-               resumeKind == int32_t(GeneratorResumeKind::Return));
     masm.loadJitCodeRawNoIon(callee, code, scratch);
   }
 
@@ -21965,23 +21963,6 @@ void CodeGenerator::visitResumeFrameArg(LResumeFrameArg* lir) {
   masm.loadValue(
       Address(FramePointer, OffsetOfResumeFrameArg(gen, lir->mir()->slot())),
       output);
-}
-
-void CodeGenerator::visitAssertResumeKindIsNext(LAssertResumeKindIsNext* lir) {
-#ifdef DEBUG
-  Register temp = ToRegister(lir->temp0());
-  Label ok;
-  Address resumeKindAddr(
-      FramePointer,
-      OffsetOfResumeFrameArg(gen, ResumeFrameArgs::ResumeKindSlot));
-  masm.unboxInt32(resumeKindAddr, temp);
-  masm.branch32(Assembler::Equal, temp,
-                Imm32(int32_t(GeneratorResumeKind::Next)), &ok);
-  masm.assumeUnreachable("Ion resumed with a resume kind other than Next");
-  masm.bind(&ok);
-#else
-  MOZ_CRASH("MAssertResumeKindIsNext is created in DEBUG builds only");
-#endif
 }
 
 void CodeGenerator::visitIsResumingGenerator(LIsResumingGenerator* lir) {

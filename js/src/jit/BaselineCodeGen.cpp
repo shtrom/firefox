@@ -6671,13 +6671,13 @@ bool BaselineCodeGen<Handler>::emit_Resume() {
   MOZ_ASSERT(masm.framePushed() == sizeof(uintptr_t));
   masm.setFramePushed(0);
 
-  // Load the code to call. Throw and Return currently always resume in
-  // Baseline; see MaybeEnterJit.
+  // Load the code to call. Throw currently always resumes in Baseline.
+  // See MaybeEnterJit.
   Register code = regs.takeAny();
   Label baselineOnly, gotEntry;
   masm.unboxInt32(resumeKindSlot, scratch1);
-  masm.branch32(Assembler::NotEqual, scratch1,
-                Imm32(int32_t(GeneratorResumeKind::Next)), &baselineOnly);
+  masm.branch32(Assembler::Equal, scratch1,
+                Imm32(int32_t(GeneratorResumeKind::Throw)), &baselineOnly);
   masm.loadJitCodeRaw(callee, code);
   masm.jump(&gotEntry);
   masm.bind(&baselineOnly);
