@@ -11,7 +11,6 @@
 #include <SystemConfiguration/SystemConfiguration.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
-#include <unistd.h>
 #include "readstrings.h"
 
 #define ARCH_PATH "/usr/bin/arch"
@@ -69,80 +68,7 @@ static void StripQuarantineBit(NSString* aBundlePath) {
   LaunchTask(@"/usr/bin/xattr", arguments);
 }
 
-// How long to wait for the process we are replacing to go away before we give
-// up and launch anyway.
-static const NSTimeInterval kWaitForExitSeconds = 10.0;
-
-// How often to ask Launch Services whether the process is gone yet.
-static const useconds_t kWaitForExitPollMicroseconds = 50000;
-
-static NSString* CanonicalBundlePath(NSString* aBundlePath) {
-  return [[[NSURL fileURLWithPath:aBundlePath
-                      isDirectory:YES] URLByResolvingSymlinksInPath] path];
-}
-
-/**
- * Wait for the process we are replacing to go away.
- *
- * We ask Launch Services rather than looking at the process table because the
- * dock follows the Launch Services registration, which can outlive the process
- * itself for a moment. Re-querying on every pass avoids relying on a run loop
- * to deliver property updates.
- */
-static void WaitForAppToTerminate(pid_t aPid, NSTimeInterval aTimeout) {
-  NSDate* deadline = [NSDate dateWithTimeIntervalSinceNow:aTimeout];
-  while (true) {
-    {
-      MacAutoreleasePool pool;
-      NSRunningApplication* app =
-          [NSRunningApplication runningApplicationWithProcessIdentifier:aPid];
-      if (!app || [app isTerminated]) {
-        return;
-      }
-      if ([deadline timeIntervalSinceNow] <= 0) {
-        NSLog(@"Timed out waiting for pid %d to exit before relaunching.",
-              (int)aPid);
-        return;
-      }
-    }
-    usleep(kWaitForExitPollMicroseconds);
-  }
-}
-
-/**
- * While two processes of the same app bundle are registered with macOS at the
- * same time, the second one counts as another instance of the app and is given
- * its own dock tile, which then sticks around in the dock's list of recently
- * used applications. So only ask for a new instance when one is really
- * running. We cannot simply always drop the request: without it macOS would
- * activate the running app instead of launching ours, and the app we were
- * asked to launch would never come up. For that reason anything we are unsure
- * about counts as running.
- */
-static BOOL ShouldCreateNewAppInstance(NSString* aBundlePath) {
-  MacAutoreleasePool pool;
-
-  NSString* bundleId = [[NSBundle bundleWithPath:aBundlePath] bundleIdentifier];
-  NSString* path = CanonicalBundlePath(aBundlePath);
-  if (!bundleId || !path) {
-    return YES;
-  }
-
-  for (NSRunningApplication* app in [NSRunningApplication
-           runningApplicationsWithBundleIdentifier:bundleId]) {
-    NSURL* runningURL = [app bundleURL];
-    NSString* runningPath =
-        runningURL ? CanonicalBundlePath([runningURL path]) : nil;
-    if (!runningPath || [runningPath isEqualToString:path]) {
-      // This is either the app we are about to launch, or one we cannot rule
-      // out as being that app.
-      return YES;
-    }
-  }
-  return NO;
-}
-
-void LaunchMacApp(int argc, const char** argv, pid_t aWaitForPid) {
+void LaunchMacApp(int argc, const char** argv) {
   MacAutoreleasePool pool;
 
   @try {
@@ -162,10 +88,6 @@ void LaunchMacApp(int argc, const char** argv, pid_t aWaitForPid) {
     StripQuarantineBit(launchPath);
     RegisterAppWithLaunchServices(launchPath);
 
-    if (aWaitForPid > 0) {
-      WaitForAppToTerminate(aWaitForPid, kWaitForExitSeconds);
-    }
-
     // We use NSWorkspace to register the application into the
     // `TALAppsToRelaunchAtLogin` list and allow for macOS session resume.
     // This API only works with `.app`s.
@@ -174,8 +96,7 @@ void LaunchMacApp(int argc, const char** argv, pid_t aWaitForPid) {
         [NSWorkspaceOpenConfiguration configuration];
     [config setArguments:arguments];
     [config setActivates:NO];
-    [config setCreatesNewApplicationInstance:ShouldCreateNewAppInstance(
-                                                 launchPath)];
+    [config setCreatesNewApplicationInstance:YES];
     [config setEnvironment:[[NSProcessInfo processInfo] environment]];
 
     [[NSWorkspace sharedWorkspace]
