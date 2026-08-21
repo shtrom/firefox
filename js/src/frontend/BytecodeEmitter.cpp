@@ -3110,6 +3110,39 @@ bool BytecodeEmitter::emitIteratorCloseInScope(EmitterScope& currentScope,
   //                [stack] ...
 }
 
+bool BytecodeEmitter::emitDestructuringIteratorClose(
+    SelfHostedIter selfHostedIter) {
+  //                [stack] ... OBJ NEXT ITER DONE
+
+  InternalIfEmitter ifDone(this);
+  if (!ifDone.emitThenElse()) {
+    //              [stack] ... OBJ NEXT ITER
+    return false;
+  }
+  if (!emitPopN(2)) {
+    //              [stack] ... OBJ
+    return false;
+  }
+  if (!ifDone.emitElse()) {
+    //              [stack] ... OBJ NEXT ITER
+    return false;
+  }
+  if (!emit1(JSOp::Swap)) {
+    //              [stack] ... OBJ ITER NEXT
+    return false;
+  }
+  if (!emit1(JSOp::Pop)) {
+    //              [stack] ... OBJ ITER
+    return false;
+  }
+  if (!emitIteratorCloseInInnermostScope(
+          IteratorKind::Sync, CompletionKind::Normal, selfHostedIter)) {
+    //              [stack] ... OBJ
+    return false;
+  }
+  return ifDone.emitEnd();
+}
+
 template <typename InnerEmitter>
 bool BytecodeEmitter::wrapWithDestructuringTryNote(int32_t iterDepth,
                                                    InnerEmitter emitter) {
@@ -3800,33 +3833,8 @@ bool BytecodeEmitter::emitDestructuringOpsArray(ListNode* pattern,
   // IteratorClose.
   //                [stack] ... OBJ NEXT ITER DONE
 
-  InternalIfEmitter ifDone(this);
-  if (!ifDone.emitThenElse()) {
-    //              [stack] ... OBJ NEXT ITER
-    return false;
-  }
-  if (!emitPopN(2)) {
+  if (!emitDestructuringIteratorClose(selfHostedIter)) {
     //              [stack] ... OBJ
-    return false;
-  }
-  if (!ifDone.emitElse()) {
-    //              [stack] ... OBJ NEXT ITER
-    return false;
-  }
-  if (!emit1(JSOp::Swap)) {
-    //              [stack] ... OBJ ITER NEXT
-    return false;
-  }
-  if (!emit1(JSOp::Pop)) {
-    //              [stack] ... OBJ ITER
-    return false;
-  }
-  if (!emitIteratorCloseInInnermostScope(
-          IteratorKind::Sync, CompletionKind::Normal, selfHostedIter)) {
-    //              [stack] ... OBJ
-    return false;
-  }
-  if (!ifDone.emitEnd()) {
     return false;
   }
 
