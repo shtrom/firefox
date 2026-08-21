@@ -3912,12 +3912,16 @@ pref("services.common.log.logger.tokenserverclient", "Debug");
     pref("remote.experimental.enabled", false);
   #endif
 
-  // Allow Marionette and the Remote Agent to be started dynamically at runtime.
+  // Preferences related to starting Marionette and Remote Agent dynamically.
   #if defined(NIGHTLY_BUILD)
     pref("remote.experimental.dynamicstart.enabled", true);
   #else
     pref("remote.experimental.dynamicstart.enabled", false);
   #endif
+
+  // Display a connection prompt when trying to create a session via dynamically
+  // started Marionette / Remote Agent servers.
+  pref("remote.experimental.dynamicstart.prompt.enabled", true);
 
   // Display a banner while the servers are running after a dynamic start, and
   // another one while an application is connected to them. Both banners are
