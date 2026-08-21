@@ -594,7 +594,7 @@ samply:
     fetch:
         type: git
         repo: https://github.com/mstange/samply
-        revision: bc0cd2fe29c9de471653c0891162569760fa0e5e
+        revision: 7003392bdcdd78d7c8fa115c306408abf54a0e1a
 
 nodejs-12-linux64:
     description: nodejs 12 for x64 linux
