@@ -513,6 +513,13 @@ bool BytecodeEmitter::emitPopN(unsigned n) {
     return emit1(JSOp::Pop) && emit1(JSOp::Pop);
   }
 
+  // Emit multiple ops if there are many values to pop.
+  while (n > UINT16_MAX) {
+    if (!emitUint16Operand(JSOp::PopN, UINT16_MAX)) {
+      return false;
+    }
+    n -= UINT16_MAX;
+  }
   return emitUint16Operand(JSOp::PopN, n);
 }
 
@@ -6583,6 +6590,12 @@ bool BytecodeEmitter::finishReturn(BytecodeOffset setRvalOffset) {
   }
 
   if (needsFinalYield) {
+    // A forced return from a `yield` expression can have extra values on the
+    // expression stack. Pop them here.
+    int32_t nvalues = bytecodeSection().stackDepth();
+    if (nvalues > 0 && !emitPopN(nvalues)) {
+      return false;
+    }
     if (!emitJump(JSOp::Goto, &finalYields)) {
       return false;
     }
@@ -6598,6 +6611,80 @@ bool BytecodeEmitter::finishReturn(BytecodeOffset setRvalOffset) {
 
   // Nothing special needs to be done.
   return emitReturnRval();
+}
+
+bool BytecodeEmitter::emitCheckYieldResumeKind() {
+  // The bytecode below relies on Next being falsy and Throw/Return being
+  // truthy.
+  static_assert(uint8_t(GeneratorResumeKind::Next) == 0);
+  static_assert(uint8_t(GeneratorResumeKind::Throw) != 0);
+  static_assert(uint8_t(GeneratorResumeKind::Return) != 0);
+
+  const int32_t startDepth = bytecodeSection().stackDepth();
+  //                [stack] RVAL GENERATOR RESUMEKIND
+
+  if (!emit1(JSOp::Dup)) {
+    //              [stack] RVAL GENERATOR RESUMEKIND RESUMEKIND
+    return false;
+  }
+  InternalIfEmitter ifNotNext(this);
+  if (!ifNotNext.emitThen()) {
+    //              [stack] RVAL GENERATOR RESUMEKIND
+    return false;
+  }
+
+  // Handle Throw and Return.
+  if (!emitPushResumeKind(GeneratorResumeKind::Throw)) {
+    //              [stack] RVAL GENERATOR RESUMEKIND THROW
+    return false;
+  }
+  if (!emit1(JSOp::StrictEq)) {
+    //              [stack] RVAL GENERATOR (RESUMEKIND==Throw)
+    return false;
+  }
+  InternalIfEmitter ifThrow(this);
+  if (!ifThrow.emitThen()) {
+    //              [stack] RVAL GENERATOR
+    return false;
+  }
+  if (!emit1(JSOp::Pop)) {
+    //              [stack] RVAL
+    return false;
+  }
+  if (!emit1(JSOp::Throw)) {
+    //              [stack]
+    return false;
+  }
+  bytecodeSection().setStackDepth(startDepth - 1);
+  if (!ifThrow.emitEnd()) {
+    //              [stack] RVAL GENERATOR
+    return false;
+  }
+  if (!emit1(JSOp::Pop)) {
+    //              [stack] RVAL
+    return false;
+  }
+  if (!emit1(JSOp::SetRval)) {
+    //              [stack]
+    return false;
+  }
+  {
+    NonLocalExitControl nle(this, NonLocalExitKind::Return);
+    if (!nle.emitReturn()) {
+      return false;
+    }
+  }
+
+  bytecodeSection().setStackDepth(startDepth);
+  if (!ifNotNext.emitEnd()) {
+    //              [stack] RVAL GENERATOR RESUMEKIND
+    return false;
+  }
+  if (!emitPopN(2)) {
+    //              [stack] RVAL
+    return false;
+  }
+  return true;
 }
 
 bool BytecodeEmitter::emitCheckAwaitResumeKind() {
@@ -6660,7 +6747,7 @@ bool BytecodeEmitter::emitInitialYield(UnaryNode* yieldNode) {
     //              [stack] RVAL GENERATOR RESUMEKIND
     return false;
   }
-  if (!emit1(JSOp::CheckResumeKind)) {
+  if (!emitCheckYieldResumeKind()) {
     //              [stack] RVAL
     return false;
   }
@@ -6724,7 +6811,7 @@ bool BytecodeEmitter::emitYield(UnaryNode* yieldNode) {
     return false;
   }
 
-  if (!emit1(JSOp::CheckResumeKind)) {
+  if (!emitCheckYieldResumeKind()) {
     //              [stack] YIELDRESULT
     return false;
   }
@@ -6814,8 +6901,6 @@ bool BytecodeEmitter::emitYieldStar(ParseNode* iter) {
   IteratorKind iterKind = sc->asSuspendableContext()->isAsync()
                               ? IteratorKind::Async
                               : IteratorKind::Sync;
-  bool needsIteratorResult = sc->asSuspendableContext()->needsIteratorResult();
-
   // Steps 2-5.
   if (!emitTree(iter)) {
     //              [stack] ITERABLE
@@ -7091,13 +7176,6 @@ bool BytecodeEmitter::emitYieldStar(ParseNode* iter) {
       //            [stack] NEXT ITER RET ITER RECEIVED
       return false;
     }
-    if (needsIteratorResult) {
-      if (!emitAtomOp(JSOp::GetProp,
-                      TaggedParserAtomIndex::WellKnown::value())) {
-        //          [stack] NEXT ITER RET ITER VAL
-        return false;
-      }
-    }
     if (!emitCall(JSOp::Call, 1)) {
       //            [stack] NEXT ITER RESULT
       return false;
@@ -7140,21 +7218,6 @@ bool BytecodeEmitter::emitYieldStar(ParseNode* iter) {
       //            [stack] NEXT ITER VALUE
       return false;
     }
-    if (needsIteratorResult) {
-      if (!emitPrepareIteratorResult()) {
-        //          [stack] NEXT ITER VALUE RESULT
-        return false;
-      }
-      if (!emit1(JSOp::Swap)) {
-        //          [stack] NEXT ITER RESULT VALUE
-        return false;
-      }
-      if (!emitFinishIteratorResult(true)) {
-        //          [stack] NEXT ITER RESULT
-        return false;
-      }
-    }
-
     if (!ifReturnDone.emitElse()) {
       //            [stack] NEXT ITER RESULT
       return false;
@@ -7167,7 +7230,7 @@ bool BytecodeEmitter::emitYieldStar(ParseNode* iter) {
     }
 
     if (!ifReturnDone.emitEnd()) {
-      //            [stack] NEXT ITER RESULT
+      //            [stack] NEXT ITER VALUE
       return false;
     }
 
@@ -7196,18 +7259,17 @@ bool BytecodeEmitter::emitYieldStar(ParseNode* iter) {
     //
     // Step 7.c.iii.2.
     // Step 7.c.viii.2.
-    if (!emitGetDotGeneratorInInnermostScope()) {
-      //            [stack] NEXT ITER RESULT GENOBJ
+    if (!emit1(JSOp::SetRval)) {
+      //            [stack] NEXT ITER
       return false;
     }
-    if (!emitPushResumeKind(GeneratorResumeKind::Return)) {
-      //            [stack] NEXT ITER RESULT GENOBJ RESUMEKIND
-      return false;
+    {
+      NonLocalExitControl nle(this, NonLocalExitKind::Return);
+      if (!nle.emitReturn()) {
+        return false;
+      }
     }
-    if (!emit1(JSOp::CheckResumeKind)) {
-      //            [stack] NEXT ITER RESULT GENOBJ RESUMEKIND
-      return false;
-    }
+    bytecodeSection().setStackDepth(startDepth - 1);
   }
 
   if (!ifKind.emitEnd()) {

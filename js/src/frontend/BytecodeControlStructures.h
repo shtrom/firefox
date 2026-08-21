@@ -239,7 +239,8 @@ class NonLocalExitControl {
 
   [[nodiscard]] bool emitNonLocalJump(NestableControl* target,
                                       NestableControl* startingAfter = nullptr);
-  [[nodiscard]] bool emitReturn(BytecodeOffset setRvalOffset);
+  [[nodiscard]] bool emitReturn(
+      BytecodeOffset setRvalOffset = BytecodeOffset::invalidOffset());
 };
 
 } /* namespace frontend */

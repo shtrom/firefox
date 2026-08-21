@@ -897,6 +897,7 @@ struct MOZ_STACK_CLASS BytecodeEmitter {
   [[nodiscard]] bool emitReturn(UnaryNode* returnNode);
   [[nodiscard]] bool finishReturn(BytecodeOffset setRvalOffset);
 
+  [[nodiscard]] bool emitCheckYieldResumeKind();
   [[nodiscard]] bool emitCheckAwaitResumeKind();
 
   [[nodiscard]] bool emitExpressionStatement(UnaryNode* exprStmt);
