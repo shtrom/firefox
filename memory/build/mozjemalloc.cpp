@@ -1294,88 +1294,117 @@ size_t arena_t::ExtraCommitPages(size_t aReqPages, size_t aRemainingPages) {
 }
 #endif
 
-ArenaPurgeResult arena_t::Purge(
-    PurgeCondition aCond, PurgeStats& aStats,
-    const Maybe<std::function<bool()>>& aKeepGoing) {
-  arena_chunk_t* chunk = nullptr;
+ArenaPurgeResult arena_t::Purge(PurgeCondition aCond, PurgeStats& aStats,
+                                const Maybe<std::function<bool()>>& aKeepGoing)
+    MOZ_EXCLUDES(mLock) {
+  mLock.Lock();
 
-  // The first critical section will find a chunk with dirty pages.
-  {
-    MaybeMutexAutoLock lock(mLock);
+  if (mMustDeleteAfterPurge) {
+    mIsPurgePending = false;
+    mLock.Unlock();
+    return Dying;
+  }
 
-    if (mMustDeleteAfterPurge) {
-      mIsPurgePending = false;
-      return Dying;
-    }
+  if (!ShouldContinuePurge(aCond)) {
+    mIsPurgePending = false;
+    mLock.Unlock();
+    return ReachedThresholdOrBusy;
+  }
 
+  arena_chunk_t* chunk = PurgeGetSpareChunk(aStats);
+  if (chunk) {
+    // Release the memory outside of the lock.
+    mLock.Unlock();
+    arena_chunk_dealloc(mChunkAllocator, (void*)chunk, kChunkSize);
+    aStats.system_calls++;
+    return NotDone;
+  }
+
+  chunk = PurgeGetDirtyChunk(aCond, aStats);
+  mLock.Unlock();
+  if (chunk) {
+    return PurgeDirtyPages(chunk, aCond, aStats, aKeepGoing);
+  }
+
+  return ReachedThresholdOrBusy;
+}
+
+arena_chunk_t* arena_t::PurgeGetSpareChunk(PurgeStats& aStats)
+    MOZ_REQUIRES(mLock) {
+  if (mSpares.isEmpty()) {
+    return nullptr;
+  }
+
+  // Start flushing our cache of spare chunks.
+  arena_chunk_t* chunk = mSpares.popBack();
+
+  // This is not possible. Not because another thread won't be purging
+  // memory because that is possible (but rare).  But because it'd need
+  // to start purging, then become empty before the purge finishes,
+  // which cannot happen because busy runs won't be merged and it won't
+  // be detected as empty until the end of the purge.
+  MOZ_ASSERT(!chunk->mIsPurging);
+
+  aStats.chunks++;
+  aStats.pages_dirty += chunk->mNumDirty;
+  aStats.pages_total += (kChunkSize >> gPageSize2Pow) - gPagesPerRealPage * 2;
+  RemoveChunk(chunk);
+
+  return chunk;
+}
+
+arena_chunk_t* arena_t::PurgeGetDirtyChunk(PurgeCondition aCond,
+                                           PurgeStats& aStats)
+    MOZ_REQUIRES(mLock) {
 #ifdef MOZ_DEBUG
-    size_t ndirty = 0;
-    for (auto& chunk : mChunksDirty) {
-      ndirty += chunk.mNumDirty;
-    }
-    // Not all dirty chunks are in mChunksDirty as some may not have enough
-    // dirty pages for purging or might currently be being purged.
-    MOZ_ASSERT(ndirty <= mNumDirty);
+  size_t ndirty = 0;
+  for (auto& chunk : mChunksDirty) {
+    ndirty += chunk.mNumDirty;
+  }
+  // Not all dirty chunks are in mChunksDirty as some may not have enough
+  // dirty pages for purging or might currently be being purged.
+  MOZ_ASSERT(ndirty <= mNumDirty);
 #endif
 
-    if (!ShouldContinuePurge(aCond)) {
-      mIsPurgePending = false;
-      return ReachedThresholdOrBusy;
-    }
+  // Take a single chunk and attempt to purge some of its dirty pages.  The
+  // loop below will purge memory from the chunk until either:
+  //  * The dirty page count for the arena hits its target,
+  //  * Another thread attempts to delete this chunk, or
+  //  * The chunk has no more dirty pages.
+  // In any of these cases the loop will break and Purge() will return,
+  // which means it may return before the arena meets its dirty page count
+  // target, the return value is used by the caller to call Purge() again
+  // where it will take the next chunk with dirty pages.
+  if (mChunksDirty.isEmpty()) {
+    // We have to clear the flag to preserve the invariant that if Purge()
+    // returns anything other than NotDone then the flag is clear. If
+    // there's more purging work to do in other chunks then either other
+    // calls to Purge() (in other threads) will handle it or we rely on
+    // ShouldStartPurge() returning true at some point in the future.
+    mIsPurgePending = false;
 
-    // Take a single chunk and attempt to purge some of its dirty pages.  The
-    // loop below will purge memory from the chunk until either:
-    //  * The dirty page count for the arena hits its target,
-    //  * Another thread attempts to delete this chunk, or
-    //  * The chunk has no more dirty pages.
-    // In any of these cases the loop will break and Purge() will return, which
-    // means it may return before the arena meets its dirty page count target,
-    // the return value is used by the caller to call Purge() again where it
-    // will take the next chunk with dirty pages.
+    // There are chunks with dirty pages (because mNumDirty > 0 above) but
+    // they're not in mChunksDirty, they might not have enough dirty pages.
+    // Or maybe they're busy being purged by other threads.
+    return nullptr;
+  }
 
-    // If a spare chunk has dirty pages then try to purge these first.
-    //
-    // They're unlikely to be used in the near future because the spare chunk
-    // is only used if there's no run in mRunsAvail suitable.
-    // mRunsAvail never contains runs from a spare chunk.
-    for (arena_chunk_t& spare : mSpares) {
-      // TODO It'd be better to purge from the end of the list first.  But
-      // at this point the list can only contain a single item.  A later
-      // patch will fix this.
-      if (spare.mNumDirty && !spare.mIsPurging) {
-        chunk = &spare;
-        break;
-      }
-    }
+  arena_chunk_t* chunk = mChunksDirty.popFront();
+  MOZ_ASSERT(chunk->mNumDirty > 0);
+  MOZ_ASSERT(!chunk->IsEmpty());
 
-    if (!chunk) {
-      if (!mChunksDirty.isEmpty()) {
-        chunk = mChunksDirty.popFront();
-      }
-    }
+  // Mark the chunk as busy so it won't be deleted and remove it from
+  // mChunksDirty so we're the only thread purging it.
+  MOZ_ASSERT(!chunk->mIsPurging);
+  chunk->mIsPurging = true;
+  aStats.chunks++;
 
-    if (!chunk) {
-      // We have to clear the flag to preserve the invariant that if Purge()
-      // returns anything other than NotDone then the flag is clear. If there's
-      // more purging work to do in other chunks then either other calls to
-      // Purge() (in other threads) will handle it or we rely on
-      // ShouldStartPurge() returning true at some point in the future.
-      mIsPurgePending = false;
+  return chunk;
+}
 
-      // There are chunks with dirty pages (because mNumDirty > 0 above) but
-      // they're not in mChunksDirty, they might not have enough dirty pages.
-      // Or maybe they're busy being purged by other threads.
-      return ReachedThresholdOrBusy;
-    }
-    MOZ_ASSERT(chunk->mNumDirty > 0);
-
-    // Mark the chunk as busy so it won't be deleted and remove it from
-    // mChunksDirty so we're the only thread purging it.
-    MOZ_ASSERT(!chunk->mIsPurging);
-    chunk->mIsPurging = true;
-    aStats.chunks++;
-  }  // MaybeMutexAutoLock
-
+ArenaPurgeResult arena_t::PurgeDirtyPages(
+    arena_chunk_t* aChunk, PurgeCondition aCond, PurgeStats& aStats,
+    const Maybe<std::function<bool()>>& aKeepGoing) MOZ_EXCLUDES(mLock) {
   // True if we should continue purging memory from this arena.
   bool continue_purge_arena = true;
 
@@ -1392,23 +1421,23 @@ ArenaPurgeResult arena_t::Purge(
   while (continue_purge_chunk && continue_purge_arena && keep_going) {
     // This structure is used to communicate between the two PurgePhase
     // functions.
-    PurgeInfo purge_info(*this, chunk, aStats);
+    PurgeInfo purge_info(*this, aChunk, aStats);
 
     bool chunk_is_dying;
     {
       // Phase 1: Find pages that need purging.
       MaybeMutexAutoLock lock(purge_info.mArena.mLock);
-      MOZ_ASSERT(chunk->mIsPurging);
+      MOZ_ASSERT(aChunk->mIsPurging);
 
       if (purge_info.mArena.mMustDeleteAfterPurge) {
-        chunk->mIsPurging = false;
+        aChunk->mIsPurging = false;
         purge_info.mArena.mIsPurgePending = false;
         return Dying;
       }
 
       continue_purge_chunk = purge_info.FindDirtyPages(purged_once);
       continue_purge_arena = purge_info.mArena.ShouldContinuePurge(aCond);
-      chunk_is_dying = chunk->mDying;
+      chunk_is_dying = aChunk->mDying;
 
       // The code below will exit returning ReachedThresholdOrBusy if these are
       // both false, so clear mIsPurgePending while we still hold the
@@ -1421,7 +1450,7 @@ ArenaPurgeResult arena_t::Purge(
       if (chunk_is_dying) {
         // Phase one already unlinked the chunk from structures, we just need to
         // release the memory.
-        arena_chunk_dealloc(purge_info.mArena.mChunkAllocator, (void*)chunk,
+        arena_chunk_dealloc(purge_info.mArena.mChunkAllocator, (void*)aChunk,
                             kChunkSize);
       }
       // There's nothing else to do here, our caller may execute Purge() again
@@ -1453,7 +1482,7 @@ ArenaPurgeResult arena_t::Purge(
       // Phase 2: Mark the pages with their final state (madvised or
       // decommitted) and fix up any other bookkeeping.
       MaybeMutexAutoLock lock(purge_info.mArena.mLock);
-      MOZ_ASSERT(chunk->mIsPurging);
+      MOZ_ASSERT(aChunk->mIsPurging);
 
       // We can't early exit if the arena is dying, we have to finish the purge
       // (which restores the state so the destructor will check it) and maybe
