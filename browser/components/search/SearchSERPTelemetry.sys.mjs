@@ -1624,13 +1624,6 @@ class ContentHandler {
       return;
     }
 
-    // For a top level navigation, the docshell may swap before the dispatch
-    // below runs, which clears the channel's load context and makes
-    // browserElement null.
-    let channelBrowser = /** @type {MozBrowser} */ (
-      wrappedChannel.browserElement
-    );
-
     Services.tm.dispatchToMainThread(() => {
       // We suspect that No Content (204) responses are used to transfer or
       // update beacons. They used to lead to double-counting ad-clicks, so let's
@@ -1645,6 +1638,10 @@ class ContentHandler {
       if (!originURL) {
         return;
       }
+
+      let channelBrowser = /** @type {MozBrowser} */ (
+        wrappedChannel.browserElement
+      );
 
       // Find the browser that is linked to SERP tracking item for this request.
       // The request may come from the SERP tab itself, or from a new tab/window
@@ -1715,8 +1712,7 @@ class ContentHandler {
             wrappedChannel,
             info,
             telemetryState,
-            isFromNewtab,
-            channelBrowser
+            isFromNewtab
           );
         } catch (ex) {
           lazy.logConsole.error(ex);
@@ -1766,15 +1762,12 @@ class ContentHandler {
    *   The telemetry state for the SERP browser that triggered the request.
    * @param {boolean} isFromNewtab
    *   Whether the request was triggered from a new tab.
-   * @param {MozBrowser} browser
-   *   The browser the channel is loading into.
    */
   #maybeRecordSERPTelemetry(
     wrappedChannel,
     info,
     telemetryState,
-    isFromNewtab,
-    browser
+    isFromNewtab
   ) {
     if (wrappedChannel._recordedClick) {
       lazy.logConsole.debug("Click already recorded.");
@@ -1819,6 +1812,8 @@ class ContentHandler {
       (wrappedChannel.channel.loadInfo.isTopLevelLoad ||
         info.nonAdsLinkRegexps.some(r => r.test(url)))
     ) {
+      let browser = /** @type {MozBrowser} */ (wrappedChannel.browserElement);
+
       // If the load is from history, don't record an event.
       if (
         browser?.browsingContext.webProgress?.loadType &
