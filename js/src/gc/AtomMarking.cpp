@@ -425,6 +425,8 @@ CellColor AtomRefRuntime::getRefColor(Zone* zone, T* thing) {
     }
   }
 
+  AutoMarkingLock lock(zone, atomRefLock);
+
   size_t bit = getAtomBit(&thing->asTenured());
 
   size_t blackBit = bit + size_t(ColorBit::BlackBit);

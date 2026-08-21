@@ -33,6 +33,9 @@ class AtomRefRuntime {
   js::GCLockData<Vector<size_t, 0, SystemAllocPolicy>> pendingFreeArenaIndexes;
   mozilla::Atomic<bool, mozilla::Relaxed> hasPendingFreeArenaIndexes;
 
+  // Synchronize access during concurrent marking.
+  AtomRefLock atomRefLock;
+
  public:
   // The extent of all allocated and free words in atom reference bitmaps. This
   // monotonically increases and may be read from without locking.
@@ -86,7 +89,8 @@ class AtomRefRuntime {
   void refineZoneBitmapForCollectedZone(Zone* zone, Arena* arena);
 
   template <typename T>
-  MOZ_ALWAYS_INLINE bool inlinedRecordRefInternal(Zone* zone, T* thing);
+  MOZ_ALWAYS_INLINE bool inlinedRecordRefInternal(Zone* zone, T* thing,
+                                                  const AutoMarkingLock& lock);
 
  public:
   // Record a reference from the context's zone to an atom or id.

@@ -15,6 +15,7 @@
 #include "vm/StringType.h"
 #include "vm/SymbolType.h"
 
+#include "gc/GC-inl.h"
 #include "gc/Heap-inl.h"
 
 namespace js {
@@ -30,8 +31,8 @@ inline size_t AtomRefRuntime::getAtomBit(TenuredCell* thing) {
 }
 
 template <typename T>
-MOZ_ALWAYS_INLINE bool AtomRefRuntime::inlinedRecordRefInternal(Zone* zone,
-                                                                T* thing) {
+MOZ_ALWAYS_INLINE bool AtomRefRuntime::inlinedRecordRefInternal(
+    Zone* zone, T* thing, const AutoMarkingLock& lock) {
   static_assert(std::is_same_v<T, JSAtom> || std::is_same_v<T, JS::Symbol>,
                 "Should only be called with JSAtom* or JS::Symbol* argument");
 
@@ -80,7 +81,7 @@ MOZ_ALWAYS_INLINE bool AtomRefRuntime::inlinedRecordRefInternal(Zone* zone,
   // an atom can reference other atoms.
   if constexpr (std::is_same_v<T, JS::Symbol>) {
     if (JSAtom* description = thing->description()) {
-      if (!inlinedRecordRefInternal(zone, description)) {
+      if (!inlinedRecordRefInternal(zone, description, lock)) {
         return false;
       }
     }
@@ -103,11 +104,16 @@ inline void AtomRefRuntime::maybeUnmarkGrayAtomically(Zone* zone,
   // The atom is currently referred to with a black or gray reference.
   MOZ_ASSERT(hasRef(zone, symbol));
 
-  // Set the black bit. This has the effect of making the mark black if it was
-  // previously gray.
-  size_t blackBit = getAtomBit(symbol) + size_t(ColorBit::BlackBit);
-  MOZ_ASSERT(blackBit / JS_BITS_PER_WORD < allocatedWords);
-  zone->referencedAtoms().atomicSetExistingBit(blackBit);
+  {
+    // This may be called on the background thread by concurrent marking.
+    AutoMarkingLock lock(zone, atomRefLock);
+
+    // Set the black bit. This has the effect of making the mark black if it was
+    // previously gray.
+    size_t blackBit = getAtomBit(symbol) + size_t(ColorBit::BlackBit);
+    MOZ_ASSERT(blackBit / JS_BITS_PER_WORD < allocatedWords);
+    zone->referencedAtoms().atomicSetExistingBit(blackBit);
+  }
 
   MOZ_ASSERT(getRefColor(zone, symbol) == CellColor::Black);
 }
@@ -191,8 +197,13 @@ inline CellColor GCRuntime::isAtomReferencedByUncollectedZone(
 template <typename T>
 MOZ_ALWAYS_INLINE void AtomRefRuntime::inlinedRecordRefInfallible(Zone* zone,
                                                                   T* thing) {
+  // TODO: The main thread only needs to take the lock (here and in the next
+  // method) if it expands the bitmap but that's hard to arrange currently. This
+  // only affects concurrent marking builds.
+  AutoMarkingLock lock(zone->runtimeFromMainThread(), atomRefLock);
+
   AutoEnterOOMUnsafeRegion oomUnsafe;
-  if (!inlinedRecordRefInternal(zone, thing)) {
+  if (!inlinedRecordRefInternal(zone, thing, lock)) {
     oomUnsafe.crash("AtomRefRuntime::inlinedRecordRefInfallible");
   }
 }
@@ -200,7 +211,9 @@ MOZ_ALWAYS_INLINE void AtomRefRuntime::inlinedRecordRefInfallible(Zone* zone,
 template <typename T>
 MOZ_ALWAYS_INLINE bool AtomRefRuntime::inlinedRecordRefFallible(Zone* zone,
                                                                 T* thing) {
-  return inlinedRecordRefInternal(zone, thing);
+  AutoMarkingLock lock(zone->runtimeFromMainThread(), atomRefLock);
+
+  return inlinedRecordRefInternal(zone, thing, lock);
 }
 
 }  // namespace gc
