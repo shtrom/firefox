@@ -597,7 +597,7 @@ export class Tabbrowser {
     if (
       this.documentGlobal.gSharedTabWarning.willShowSharedTabWarning(val) ||
       this.document.documentElement.hasAttribute("window-modal-open") ||
-      (this.documentGlobal.gNavToolbox.collapsed && !this._allowTabChange)
+      this.documentGlobal.gNavToolbox.collapsed
     ) {
       return;
     }
