@@ -94,6 +94,7 @@ SAP names can be:
 > - `abouthome`
 > - `contextmenu`
 > - `newtab`
+> - `newtab-searchbar` Used when searching from the New Tab search bar.
 > - `searchbar`
 > - `smartbar` Used when searching from Smart Window.
 > - `smartwindow_assistant` Used when searching from Smart Window assistant.
@@ -119,6 +120,7 @@ Possible SAPs are:
 > - `urlbar_persisted` Used when searching from the Urlbar while it
 >   was in a Persisted Search state.
 > - `urlbar_searchmode` Used when the Urlbar is in search mode.
+> - `newtab_searchbar` Used when searching from the New Tab search bar.
 > - `searchbar`
 > - `smartbar` Used when searching from Smart Window.
 > - `smartwindow_assistant` Used when searching from Smart Window assistant.

@@ -60,6 +60,7 @@ class BrowserSearchTelemetryHandler {
     contextmenu: "contextmenu",
     contextmenu_visual: "contextmenu_visual",
     about_newtab: "newtab",
+    newtab_searchbar: "newtab-searchbar",
     searchbar: "searchbar",
     smartbar: "smartbar",
     smartwindow_assistant: "smartwindow_assistant",
@@ -243,6 +244,7 @@ class BrowserSearchTelemetryHandler {
       // Dispatch the search signal to other handlers.
       switch (source) {
         case "urlbar":
+        case "newtab_searchbar":
         case "searchbar":
         case "smartbar":
         case "urlbar_searchmode":
@@ -281,7 +283,7 @@ class BrowserSearchTelemetryHandler {
    *
    * @param {SearchEngine} engine
    *   The engine whose search form is being visited.
-   * @param {"searchbar"|"smartbar"|"urlbar"} source
+   * @param {"newtab_searchbar"|"searchbar"|"smartbar"|"urlbar"} source
    *   Where the search form was opened from. This is a sub-set of the
    *   KNOWN_SEARCH_SOURCES.
    */
