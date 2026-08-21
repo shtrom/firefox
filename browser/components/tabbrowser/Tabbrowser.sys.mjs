@@ -5,11 +5,13 @@
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
-const lazy = {};
-
-ChromeUtils.defineESModuleGetters(lazy, {
+const lazy = XPCOMUtils.declareLazy({
   AIWindow:
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+  allowTransparentBrowser: {
+    pref: "browser.tabs.allow_transparent_browser",
+    default: false,
+  },
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   ContextualIdentityService:
@@ -17,15 +19,35 @@ ChromeUtils.defineESModuleGetters(lazy, {
   E10SUtils: "resource://gre/modules/E10SUtils.sys.mjs",
   NewTabPagePreloading:
     "moz-src:///browser/components/tabbrowser/NewTabPagePreloading.sys.mjs",
+  notificationEnableDelay: {
+    pref: "security.notification_enable_delay",
+    default: 500,
+  },
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   ReducedProtectionNotification:
     "resource:///modules/ReducedProtectionNotification.sys.mjs",
+  remoteSVGIconDecoding: {
+    pref: "browser.tabs.remoteSVGIconDecoding",
+    default: false,
+  },
   SelectableProfileService:
     "resource:///modules/profiles/SelectableProfileService.sys.mjs",
   SessionStore:
     "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.sys.mjs",
+  shouldExposeContentTitle: {
+    pref: "privacy.exposeContentTitleInWindow",
+    default: true,
+  },
+  shouldExposeContentTitlePbm: {
+    pref: "privacy.exposeContentTitleInWindow.pbm",
+    default: true,
+  },
+  showTabCardPreview: {
+    pref: "browser.tabs.hoverPreview.enabled",
+    default: true,
+  },
   SitePermissions: "resource:///modules/SitePermissions.sys.mjs",
   TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
   webrtcUI: "resource:///modules/webrtcUI.sys.mjs",
@@ -214,62 +236,14 @@ export class Tabbrowser {
     });
     XPCOMUtils.defineLazyPreferenceGetter(
       this,
-      "_shouldExposeContentTitle",
-      "privacy.exposeContentTitleInWindow",
-      true
-    );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "_shouldExposeContentTitlePbm",
-      "privacy.exposeContentTitleInWindow.pbm",
-      true
-    );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "_showTabCardPreview",
-      "browser.tabs.hoverPreview.enabled",
-      true
-    );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "_allowTransparentBrowser",
-      "browser.tabs.allow_transparent_browser",
-      false
-    );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "_tabGroupsEnabled",
+      "tabGroupsEnabled",
       "browser.tabs.groups.enabled",
-      false
-    );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "_tabNotesEnabled",
-      "browser.tabs.notes.enabled",
       false
     );
     XPCOMUtils.defineLazyPreferenceGetter(
       this,
       "showPidAndActiveness",
       "browser.tabs.tooltipsShowPidAndActiveness",
-      false
-    );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "_unloadTabInContextMenu",
-      "browser.tabs.unloadTabInContextMenu",
-      false
-    );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "_notificationEnableDelay",
-      "security.notification_enable_delay",
-      500
-    );
-    XPCOMUtils.defineLazyPreferenceGetter(
-      this,
-      "_remoteSVGIconDecoding",
-      "browser.tabs.remoteSVGIconDecoding",
       false
     );
 
@@ -787,7 +761,7 @@ export class Tabbrowser {
       let uriToLoad = this.documentGlobal.gBrowserInit.uriToLoadPromise;
       let firstURI = Array.isArray(uriToLoad) ? uriToLoad[0] : uriToLoad;
 
-      if (!this._allowTransparentBrowser) {
+      if (!lazy.allowTransparentBrowser) {
         // firstURI may be a Promise (uriToLoadPromise still resolving while
         // SessionStore restores) or empty; only build a URI from a real
         // string, otherwise default to transparent like the no-URI case.
@@ -1364,7 +1338,7 @@ export class Tabbrowser {
             `tab-notification-box-${this.#nextNotificationBoxId++}`
           );
           this.#insertNotificationBox(browser, element);
-        }, this._notificationEnableDelay);
+        }, lazy.notificationEnableDelay);
     }
     return browser._notificationBox;
   }
@@ -1533,7 +1507,7 @@ export class Tabbrowser {
       if (aIconURL) {
         let url = aIconURL;
         if (
-          this._remoteSVGIconDecoding &&
+          lazy.remoteSVGIconDecoding &&
           url.startsWith(this.FaviconUtils.SVG_DATA_URI_PREFIX)
         ) {
           url = this.#getMozRemoteImageURLForSvg(browser, url);
@@ -1554,7 +1528,7 @@ export class Tabbrowser {
 
   // Used for refreshing the icons when the color scheme changes.
   #maybeRefreshIcons() {
-    if (!this._remoteSVGIconDecoding) {
+    if (!lazy.remoteSVGIconDecoding) {
       return;
     }
 
@@ -1667,7 +1641,7 @@ export class Tabbrowser {
    * the Taskbar Tab, or null if nothing is needed.
    */
   #determineTaskbarTabTitle(aProfile) {
-    if (!this._shouldExposeContentTitle) {
+    if (!lazy.shouldExposeContentTitle) {
       // The Taskbar Tab and container info expose what site the user's on.
       return null;
     }
@@ -1721,9 +1695,9 @@ export class Tabbrowser {
   #determineContentTitle(browser) {
     let title = "";
     if (
-      !this._shouldExposeContentTitle ||
+      !lazy.shouldExposeContentTitle ||
       (lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal) &&
-        !this._shouldExposeContentTitlePbm)
+        !lazy.shouldExposeContentTitlePbm)
     ) {
       return title;
     }
@@ -2405,6 +2379,8 @@ export class Tabbrowser {
 
   #dataURLRegEx = /^data:[^,]+;base64,/i;
 
+  #shortenURLRegEx = /^[^:]+:\/\/(?:www\.)?/;
+
   // Regex to test if a string (potential tab label) consists of only non-
   // printable characters. We consider Unicode categories Separator
   // (spaces & line-breaks) and Other (control chars, private use, non-
@@ -2515,10 +2491,7 @@ export class Tabbrowser {
 
     if (!isContentTitle) {
       // Remove protocol and "www."
-      if (!("_regex_shortenURLForTabLabel" in this)) {
-        this._regex_shortenURLForTabLabel = /^[^:]+:\/\/(?:www\.)?/;
-      }
-      aLabel = aLabel.replace(this._regex_shortenURLForTabLabel, "");
+      aLabel = aLabel.replace(this.#shortenURLRegEx, "");
     }
 
     if (aLabel.length > TAB_LABEL_MAX_LENGTH) {
@@ -3008,7 +2981,7 @@ export class Tabbrowser {
 
     if (
       lazy.AIWindow.isAIWindowActive(this.documentGlobal) ||
-      this._allowTransparentBrowser
+      lazy.allowTransparentBrowser
     ) {
       b.setAttribute("transparent", "true");
     }
@@ -9239,7 +9212,7 @@ export class Tabbrowser {
       // Prevent the tooltip from appearing if card preview is enabled, but
       // only if the user is not hovering over the media play icon or the
       // close button
-      if (this._showTabCardPreview) {
+      if (lazy.showTabCardPreview) {
         event.preventDefault();
         return;
       }
@@ -10404,7 +10377,7 @@ class TabProgressListener {
           this._browser.originalURI = aRequest.originalURI;
         }
 
-        if (!this.#tabbrowser._allowTransparentBrowser) {
+        if (!lazy.allowTransparentBrowser) {
           this._browser.toggleAttribute(
             "transparent",
             lazy.AIWindow.isAIWindowActive(this.#documentGlobal) &&
