@@ -11,7 +11,6 @@
 #include "mozilla/dom/BrowserParent.h"
 #include "mozilla/dom/BrowsingContext.h"
 #include "mozilla/dom/Element.h"
-#include "mozilla/dom/WindowContext.h"
 #include "nsAccessibilityService.h"
 #include "nsEventShell.h"
 #include "nsFocusManager.h"
@@ -88,10 +87,9 @@ Accessible* FocusManager::FocusedAccessible() const {
   // which returns the content BrowsingContext that has focus.
   dom::BrowsingContext* focusedContext =
       focusManagerDOM->GetFocusedBrowsingContextInChrome();
-  dom::WindowContext* focusedWindow =
-      focusedContext ? focusedContext->GetCurrentWindowContext() : nullptr;
 
-  DocAccessibleParent* focusedDoc = DocAccessibleParent::GetFrom(focusedWindow);
+  DocAccessibleParent* focusedDoc =
+      DocAccessibleParent::GetFrom(focusedContext);
   return focusedDoc ? focusedDoc->GetFocusedAcc() : nullptr;
 #endif  // defined(ANDROID)
 }

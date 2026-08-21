@@ -24,7 +24,6 @@
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/dom/MouseEventBinding.h"
-#include "mozilla/dom/WindowGlobalParent.h"
 #include "mozilla/jni/GeckoBundleUtils.h"
 #include "mozilla/jni/NativesInlines.h"
 #include "mozilla/widget/GeckoViewSupport.h"
@@ -362,7 +361,7 @@ RefPtr<SessionAccessibility> SessionAccessibility::GetInstanceFor(
                                              ->Top();
     dom::BrowserParent* bp = cbc->GetBrowserParent();
     if (!bp) {
-      bp = aAccessible->AsRemote()->Document()->GetBrowserParent();
+      bp = aAccessible->AsRemote()->Document()->Manager();
     }
     if (auto element = bp->GetOwnerElement()) {
       if (auto doc = element->OwnerDoc()) {
