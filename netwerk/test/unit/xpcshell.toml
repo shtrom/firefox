@@ -567,6 +567,13 @@ skip-if = [
 
 ["test_compressappend.js"]
 
+["test_compressConv_offmainthread_js_listener.js"]
+prefs = [
+  "network.decompression_off_mainthread2=true",
+  "network.decompression_off_mainthread_min_size=0",
+  "network.http.encoding.trustworthy_is_https=false",
+]
+
 ["test_connection_based_auth.js"]
 
 ["test_connection_coalescing.js"]
