@@ -12,7 +12,6 @@ using namespace mozilla;
 // A few MruCache implementations to use during testing.
 struct IntMap : public MruCache<int, int, IntMap> {
   static HashNumber Hash(const KeyType& aKey) { return aKey - 1; }
-  static bool IsEmpty(const ValueType& aVal) { return !aVal; }
   static bool Match(const KeyType& aKey, const ValueType& aVal) {
     return aKey == aVal;
   }
@@ -35,35 +34,19 @@ struct StringStructMap
   static HashNumber Hash(const KeyType& aKey) {
     return *aKey.BeginReading() - 1;
   }
-  static bool IsEmpty(const ValueType& aVal) { return aVal.mKey.IsEmpty(); }
   static bool Match(const KeyType& aKey, const ValueType& aVal) {
     return aKey == aVal.mKey;
   }
 };
 
-// Every key hashes into the same set, so all keys collide. Used to exercise
-// coexistence and eviction independently of hash distribution.
-struct CollideMap : public MruCache<int, int, CollideMap, 8> {
+// All keys map to the same slot, so any two distinct keys collide. Used to
+// exercise eviction/overwrite behaviour independently of hash distribution.
+struct CollideMap : public MruCache<int, int, CollideMap> {
   static HashNumber Hash(const KeyType&) { return 0; }
-  static bool IsEmpty(const ValueType& aVal) { return !aVal; }
   static bool Match(const KeyType& aKey, const ValueType& aVal) {
     return aKey == aVal;
   }
 };
-
-// The number of keys CollideMap's single set holds at once.
-static constexpr size_t kCollideWays = CollideMap::kWays;
-
-// Counts how many of the keys [1, kCollideWays] are still cached.
-static size_t CountLive(CollideMap& aMru) {
-  size_t live = 0;
-  for (size_t i = 1; i <= kCollideWays; i++) {
-    if (aMru.Lookup(i)) {
-      live++;
-    }
-  }
-  return live;
-}
 
 // Helper for emulating convertable holders such as RefPtr.
 template <typename T>
@@ -153,20 +136,17 @@ TEST(MruCache, TestPutConvertable)
 
 TEST(MruCache, TestOverwriting)
 {
-  // Distinct keys that map to the same set only evict each other once the set
-  // is full.
+  // Distinct keys that map to the same slot evict each other.
   CollideMap mru;
-  for (size_t i = 1; i <= kCollideWays; i++) {
-    mru.Put(i, i);
-  }
-  EXPECT_EQ(CountLive(mru), kCollideWays);
 
-  mru.Put(kCollideWays + 1, kCollideWays + 1);  // Evicts one of the above.
+  mru.Put(1, 1);
+  mru.Put(2, 2);  // Evicts 1.
 
-  auto p = mru.Lookup(kCollideWays + 1);
+  EXPECT_FALSE(mru.Lookup(1));
+
+  auto p = mru.Lookup(2);
   EXPECT_TRUE(p);
-  EXPECT_EQ(p.Data(), kCollideWays + 1);
-  EXPECT_EQ(CountLive(mru), kCollideWays - 1);
+  EXPECT_EQ(p.Data(), 2);
 }
 
 TEST(MruCache, TestRemove)
@@ -286,28 +266,29 @@ TEST(MruCache, TestLookupMissingAndSet)
 
 TEST(MruCache, TestLookupAndOverwrite)
 {
-  // Fill up a set with keys that all collide.
+  // Two distinct keys that map to the same slot.
   CollideMap mru;
-  for (size_t i = 1; i <= kCollideWays; i++) {
-    mru.Put(i, i);
-  }
 
-  // Lookup a key that maps to the same, now full, set.
-  const int key = kCollideWays + 1;
-  auto p = mru.Lookup(key);
+  // Set 1.
+  mru.Put(1, 1);
+
+  // Lookup a different key that maps to 1's entry.
+  auto p = mru.Lookup(2);
   EXPECT_FALSE(p);  // not a match
 
-  // Now overwrite the entry it picked.
-  p.Set(key);
+  // Now overwrite the entry.
+  p.Set(2);
   EXPECT_TRUE(p);
-  EXPECT_EQ(p.Data(), key);
+  EXPECT_EQ(p.Data(), 2);
 
-  // One of the previous keys should be gone now.
-  EXPECT_EQ(CountLive(mru), kCollideWays - 1);
+  // 1 should be gone now.
+  p = mru.Lookup(1);
+  EXPECT_FALSE(p);
 
-  p = mru.Lookup(key);
+  // 2 should be found.
+  p = mru.Lookup(2);
   EXPECT_TRUE(p);
-  EXPECT_EQ(p.Data(), key);
+  EXPECT_EQ(p.Data(), 2);
 }
 
 TEST(MruCache, TestLookupAndRemove)
@@ -362,29 +343,4 @@ TEST(MruCache, TestLookupAndSetWithMove)
 
   EXPECT_TRUE(p.Data().mKey == key);
   EXPECT_TRUE(p.Data().mOther == "foo"_ns);
-}
-
-TEST(MruCache, TestAssociativity)
-{
-  CollideMap mru;
-
-  for (size_t i = 1; i <= kCollideWays; i++) {
-    mru.Put(i, i);
-  }
-
-  for (size_t i = 1; i <= kCollideWays; i++) {
-    auto p = mru.Lookup(i);
-    EXPECT_TRUE(p);
-    EXPECT_EQ(p.Data(), i);
-  }
-}
-
-TEST(MruCache, TestPutReusesMatchingEntry)
-{
-  CollideMap mru;
-  // Putting the same key should not create multiple entries.
-  mru.Put(1, 1);
-  mru.Put(1, 1);
-  mru.Remove(1);
-  EXPECT_FALSE(mru.Lookup(1));
 }

@@ -61,9 +61,6 @@ class nsEffectiveTLDService final : public nsIEffectiveTLDService {
   // mitigation getting about a 99% hit rate with four tabs open.
   struct TldCache
       : public mozilla::MruCache<nsACString, TLDCacheEntry, TldCache> {
-    static bool IsEmpty(const TLDCacheEntry& aVal) {
-      return aVal.mHost.IsEmpty();
-    }
     static mozilla::HashNumber Hash(const nsACString& aKey) {
       return mozilla::HashString(aKey);
     }
