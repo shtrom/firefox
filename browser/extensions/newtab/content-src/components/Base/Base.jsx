@@ -950,6 +950,7 @@ export class BaseContent extends React.PureComponent {
     const mayHaveCrosswordWidget = widgetVisibleById("crossword");
     const mayHaveStocksWidget = widgetVisibleById("stocks");
     const mayHavePictureOfTheDayWidget = widgetVisibleById("pictureOfTheDay");
+    const mayHaveRecentSearchesWidget = widgetVisibleById("recentSearches");
 
     // These prefs set the initial values on the Customize panel toggle switches
     const enabledWidgets = {
@@ -964,6 +965,7 @@ export class BaseContent extends React.PureComponent {
       crosswordEnabled: prefs["widgets.crossword.enabled"],
       stocksEnabled: prefs["widgets.stocks.enabled"],
       pictureOfTheDayEnabled: prefs["widgets.pictureOfTheDay.enabled"],
+      recentSearchesEnabled: prefs["widgets.recentSearches.enabled"],
       widgetsMaximized: prefs["widgets.maximized"],
       widgetsMayBeMaximized: prefs["widgets.system.maximized"],
     };
@@ -1293,6 +1295,7 @@ export class BaseContent extends React.PureComponent {
                 mayHaveCrosswordWidget={mayHaveCrosswordWidget}
                 mayHaveStocksWidget={mayHaveStocksWidget}
                 mayHavePictureOfTheDayWidget={mayHavePictureOfTheDayWidget}
+                mayHaveRecentSearchesWidget={mayHaveRecentSearchesWidget}
                 mayHaveWeatherForecast={
                   prefs["widgets.system.weatherForecast.enabled"]
                 }
@@ -1472,6 +1475,7 @@ export class BaseContent extends React.PureComponent {
               mayHaveCrosswordWidget={mayHaveCrosswordWidget}
               mayHaveStocksWidget={mayHaveStocksWidget}
               mayHavePictureOfTheDayWidget={mayHavePictureOfTheDayWidget}
+              mayHaveRecentSearchesWidget={mayHaveRecentSearchesWidget}
               mayHaveWeatherForecast={
                 prefs["widgets.system.weatherForecast.enabled"]
               }

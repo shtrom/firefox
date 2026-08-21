@@ -237,6 +237,11 @@ function Widgets() {
       prefs,
       widgetsEnabled
     ),
+    recentSearches: isWidgetEnabled(
+      WIDGET_REGISTRY.find(w => w.id === "recentSearches"),
+      prefs,
+      widgetsEnabled
+    ),
   };
 
   const widgetOrder = resolveWidgetOrder(prefs);

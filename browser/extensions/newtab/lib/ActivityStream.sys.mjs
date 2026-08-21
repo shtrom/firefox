@@ -50,6 +50,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   SportsFeed: "resource://newtab/lib/Widgets/SportsFeed.sys.mjs",
   StocksFeed: "resource://newtab/lib/Widgets/StocksFeed.sys.mjs",
   PrivacyFeed: "resource://newtab/lib/Widgets/PrivacyFeed.sys.mjs",
+  RecentSearchesFeed:
+    "resource://newtab/lib/Widgets/RecentSearchesFeed.sys.mjs",
   PictureOfTheDayFeed:
     "resource://newtab/lib/Widgets/PictureOfTheDayFeed.sys.mjs",
   StartupCacheInit: "resource://newtab/lib/StartupCacheInit.sys.mjs",
@@ -1557,6 +1559,21 @@ export const PREFS_CONFIG = new Map([
     },
   ],
   [
+    "widgets.recentSearches.enabled",
+    {
+      title: "Enables the recent searches widget",
+      value: true,
+    },
+  ],
+  [
+    "widgets.recentSearches.interaction",
+    {
+      title:
+        "Boolean flag for determining if a user has interacted with the recent searches widget",
+      value: false,
+    },
+  ],
+  [
     "widgets.pictureOfTheDay.enabled",
     {
       title: "Enables the picture of the day widget",
@@ -1574,6 +1591,13 @@ export const PREFS_CONFIG = new Map([
     "widgets.system.crossword.enabled",
     {
       title: "Enables the crossword widget experiment in Nimbus",
+      value: false,
+    },
+  ],
+  [
+    "widgets.system.recentSearches.enabled",
+    {
+      title: "Enables the recent searches widget experiment in Nimbus",
       value: false,
     },
   ],
@@ -1692,6 +1716,13 @@ export const PREFS_CONFIG = new Map([
     "widgets.stocks.size",
     {
       title: "Size of the stocks widget (small, medium, or large)",
+      value: "",
+    },
+  ],
+  [
+    "widgets.recentSearches.size",
+    {
+      title: "Size of the recent searches widget (medium or large)",
       value: "",
     },
   ],
@@ -2303,6 +2334,12 @@ const FEEDS_DATA = [
     factory: () => new lazy.PrivacyFeed(),
     title:
       "Handles fetching the daily tracker-blocked count for the Privacy widget",
+    value: true,
+  },
+  {
+    name: "recentsearchesfeed",
+    factory: () => new lazy.RecentSearchesFeed(),
+    title: "Handles the data for the Recent Searches widget",
     value: true,
   },
   {
