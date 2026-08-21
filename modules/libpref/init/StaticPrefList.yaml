@@ -11853,13 +11853,6 @@
   value: true
   mirror: always
 
-# Whether :-moz-broken is supported in content.
-- name: layout.css.moz-broken.content.enabled
-  type: RelaxedAtomicBool
-  value: false
-  mirror: always
-  rust: true
-
 # Whether :-moz-placeholder is supported in content.
 - name: layout.css.moz-placeholder.content.enabled
   type: RelaxedAtomicBool
