@@ -181,6 +181,7 @@ toolbar[inactive="true"] .urlbar,
   box-sizing: border-box;
   will-change: translate;
   -moz-user-focus: ignore;
+  user-select: none;
 
   /* Reset UA popover rules */
   width: initial;
