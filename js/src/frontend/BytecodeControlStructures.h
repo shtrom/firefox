@@ -34,6 +34,21 @@ class NestableControl : public Nestable<NestableControl> {
   // The innermost scope when this was pushed.
   EmitterScope* emitterScope_;
 
+  // The expression-stack depth of this statement's body, for statements that
+  // require non-local-exit handling such as closing an iterator or executing a
+  // finally-block for a `return` or `break`. This is Nothing if no such
+  // handling is needed.
+  //
+  // emitNonLocalJump uses this to pop extra stack values before emitting exit
+  // handling. In most cases the depth already matches and this is a no-op,
+  // except for a forced return from a `yield` expression or an exit from a
+  // `finally` subroutine.
+  //
+  // This is set once, after all values that remain live throughout the body are
+  // pushed and before the body is emitted. It remains valid until the control
+  // is fully emitted and is never overwritten.
+  mozilla::Maybe<int32_t> nonLocalExitStackDepth_;
+
  protected:
   NestableControl(BytecodeEmitter* bce, StatementKind kind);
 
@@ -44,6 +59,14 @@ class NestableControl : public Nestable<NestableControl> {
   StatementKind kind() const { return kind_; }
 
   EmitterScope* emitterScope() const { return emitterScope_; }
+
+  mozilla::Maybe<int32_t> nonLocalExitStackDepth() const {
+    return nonLocalExitStackDepth_;
+  }
+  void setNonLocalExitStackDepth(int32_t stackDepth) {
+    MOZ_ASSERT(nonLocalExitStackDepth_.isNothing());
+    nonLocalExitStackDepth_ = mozilla::Some(stackDepth);
+  }
 
   template <typename T>
   bool is() const;

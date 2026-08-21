@@ -195,6 +195,9 @@ bool ForOfLoopControl::emitIteratorCloseInScope(BytecodeEmitter* bce,
 bool ForOfLoopControl::emitPrepareForNonLocalJumpFromScope(
     BytecodeEmitter* bce, EmitterScope& currentScope, bool isTarget,
     BytecodeOffset* tryNoteStart) {
+  //                [stack] NEXT ITER VALUE
+  MOZ_ASSERT(bce->bytecodeSection().stackDepth() == *nonLocalExitStackDepth());
+
   // Pop unnecessary value from the stack.  Effectively this means
   // leaving try-catch block.  However, the performing IteratorClose can
   // reach the depth for try-catch, and effectively re-enter the
