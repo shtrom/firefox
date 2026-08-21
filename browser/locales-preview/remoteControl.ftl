@@ -21,3 +21,21 @@ remote-control-dynamic-start-banner-disabled-message = Remote control has been t
 remote-control-connected-banner-message = An application is now controlling this browser session. It can read the content of your tabs, access your saved data, and navigate to any website.
 remote-control-connected-banner-disconnect-button = Disconnect
   .accesskey = D
+
+## Remote control toolbar button and panel
+
+remote-control-toolbar-button =
+    .label = Remote control
+    .tooltiptext = Manage remote control for { -brand-short-name }
+remote-control-toolbar-button-on =
+    .label = Remote control (on)
+    .tooltiptext = Remote control is on for { -brand-short-name }
+remote-control-panel-heading = Remote control for AI assistants
+remote-control-panel-summary = Turn on remote control to let AI assistants connect to { -brand-short-name } and help you browse, fill in forms, and automate repetitive tasks.
+remote-control-panel-warning = When remote control is on, other applications on this computer might request to connect to { -brand-short-name }.
+remote-control-panel-status-running = Ready to accept connections
+remote-control-panel-status-stopped = Not accepting connections
+remote-control-panel-turn-on-button =
+    .label = Turn on
+remote-control-panel-turn-off-button =
+    .label = Turn off

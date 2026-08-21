@@ -10,8 +10,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   EveryWindow: "resource:///modules/EveryWindow.sys.mjs",
   hasActiveWebDriverSession:
     "chrome://remote/content/shared/webdriver/Session.sys.mjs",
-  Marionette: "chrome://remote/content/components/Marionette.sys.mjs",
-  RemoteAgent: "chrome://remote/content/components/RemoteAgent.sys.mjs",
+  RemoteControlServers:
+    "moz-src:///browser/components/remotecontrol/RemoteControlServers.sys.mjs",
 });
 
 const DYNAMIC_START_ID = "remote-control-dynamic-start";
@@ -210,7 +210,7 @@ class RemoteControlBannerClass {
     }
 
     // No dynamic server is running, no banner to display.
-    if (!this.#isDynamicServerRunning()) {
+    if (!lazy.RemoteControlServers.runningDynamically) {
       return BANNER_STATES.NONE;
     }
 
@@ -235,12 +235,6 @@ class RemoteControlBannerClass {
     for (const win of lazy.EveryWindow.readyWindows) {
       this.#removeNotification(win, id);
     }
-  }
-
-  #isDynamicServerRunning() {
-    return (
-      lazy.RemoteAgent.running && !lazy.RemoteAgent.isBrowserAutomationRunning
-    );
   }
 
   #removeNotification(win, id) {
@@ -308,20 +302,7 @@ class RemoteControlBannerClass {
     }
 
     try {
-      // Sanity check that we have non-automation Marionette/RemoteAgent servers
-      // running, which should always be the case if the banners were displayed.
-      if (
-        lazy.Marionette.running &&
-        !lazy.Marionette.isBrowserAutomationRunning
-      ) {
-        await lazy.Marionette.stopAtRuntime();
-      }
-      if (
-        lazy.RemoteAgent.running &&
-        !lazy.RemoteAgent.isBrowserAutomationRunning
-      ) {
-        await lazy.RemoteAgent.stopAtRuntime();
-      }
+      await lazy.RemoteControlServers.stop();
     } catch (e) {
       console.error("Failed to stop the remote debugging servers:", e);
       this.#stoppedState = null;
@@ -332,7 +313,7 @@ class RemoteControlBannerClass {
   }
 
   #update() {
-    if (this.#isDynamicServerRunning() && !this.#stopping) {
+    if (lazy.RemoteControlServers.runningDynamically && !this.#stopping) {
       // While #stopServers is in progress servers may still be reported as
       // running, so skip the reset.
       this.#stoppedState = null;

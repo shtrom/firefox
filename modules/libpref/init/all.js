@@ -3912,12 +3912,11 @@ pref("services.common.log.logger.tokenserverclient", "Debug");
     pref("remote.experimental.enabled", false);
   #endif
 
-  // Preferences related to starting Marionette and Remote Agent dynamically.
-  #if defined(NIGHTLY_BUILD)
-    pref("remote.experimental.dynamicstart.enabled", true);
-  #else
-    pref("remote.experimental.dynamicstart.enabled", false);
-  #endif
+  // Enable features related to starting Marionette / Remote Agent dynamically,
+  // built for AI Assistant integrations (e.g. Claude cowork). On Nightly,
+  // enabling this preference will enable the Remote Control panel. On other
+  // channels, there is no user facing entry point for now.
+  pref("remote.experimental.dynamicstart.enabled", false);
 
   // Display a connection prompt when trying to create a session via dynamically
   // started Marionette / Remote Agent servers.

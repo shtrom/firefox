@@ -4,6 +4,8 @@
 
 MOZ_SRC_FILES += [
     "RemoteControlBanner.sys.mjs",
+    "RemoteControlPanel.sys.mjs",
+    "RemoteControlServers.sys.mjs",
 ]
 
 with Files("**"):

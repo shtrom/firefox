@@ -108,6 +108,10 @@ class MarionetteParentProcess {
     return this.running && this.#isBrowserAutomation;
   }
 
+  get isDynamicStartRunning() {
+    return this.running && !this.#isBrowserAutomation;
+  }
+
   /**
    * Syncs the Marionette active flag with the web content processes.
    *
@@ -225,6 +229,7 @@ class MarionetteParentProcess {
         // because on some platforms the notification fires multiple times
         // and removing an already-removed observer would throw.
         Services.obs.removeObserver(this, "before-cancel-download-prompt");
+
         lazy.logger.trace(
           `Application is shutting down with reason: "${data || "unknown"}"`
         );

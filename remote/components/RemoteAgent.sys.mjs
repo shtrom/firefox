@@ -147,6 +147,10 @@ class RemoteAgentParentProcess {
     return this.running && this.#isBrowserAutomation;
   }
 
+  get isDynamicStartRunning() {
+    return this.running && !this.#isBrowserAutomation;
+  }
+
   get scheme() {
     return this.#server?.identity.primaryScheme;
   }
@@ -519,6 +523,7 @@ class RemoteAgentParentProcess {
         // because on some platforms the notification fires multiple times
         // and removing an already-removed observer would throw.
         Services.obs.removeObserver(this, "before-cancel-download-prompt");
+
         lazy.logger.trace(
           `Application is shutting down with reason: "${data || "unknown"}"`
         );

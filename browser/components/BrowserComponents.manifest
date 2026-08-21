@@ -18,6 +18,9 @@ category browser-before-ui-startup resource:///modules/BuiltInThemes.sys.mjs Bui
 category browser-before-ui-startup resource://normandy/Normandy.sys.mjs Normandy.init
 #endif
 category browser-before-ui-startup moz-src:///browser/components/privatebrowsing/ResetPBMPanel.sys.mjs ResetPBMPanel.init
+#ifdef NIGHTLY_BUILD
+category browser-before-ui-startup moz-src:///browser/components/remotecontrol/RemoteControlPanel.sys.mjs RemoteControlPanel.init
+#endif
 category browser-before-ui-startup resource:///modules/AboutHomeStartupCache.sys.mjs AboutHomeStartupCache.init
 category browser-before-ui-startup resource:///modules/AccountsGlue.sys.mjs AccountsGlue.init
 category browser-before-ui-startup moz-src:///browser/modules/ObserverForwarder.sys.mjs ObserverForwarder.init
