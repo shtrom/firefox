@@ -1027,9 +1027,10 @@ mozilla::ipc::IPCResult DocAccessibleParent::RecvBindChildDoc(
   if (childDoc->IsShutdown()) {
     return IPC_FAIL(this, "Attempt to bind a shutdown child doc");
   }
-  if (childDoc->GetBrowserParent() != GetBrowserParent()) {
-    return IPC_FAIL(this,
-                    "Attempt to bind child doc from a different PBrowser");
+  RefPtr<dom::WindowGlobalParent> embedderWgp =
+      childDoc->GetBrowsingContext()->GetEmbedderWindowGlobal();
+  if (!embedderWgp || embedderWgp != Manager()) {
+    return IPC_FAIL(this, "Attempt to bind child doc that isn't actually ours");
   }
 
   ipc::IPCResult result = AddChildDoc(childDoc, aID, false);
