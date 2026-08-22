@@ -77,27 +77,24 @@ static bool GetMaxRowBSize(nsIFrame* aContainer, WritingMode aWM,
                            nscoord* aResult) {
   bool found = false;
   for (nsIFrame* child : aContainer->PrincipalChildList()) {
-    nsIContent* content = child->GetContent();
-    bool isOptGroupLabel =
-        child->Style()->IsPseudoElement() &&
-        aContainer->GetContent()->IsHTMLElement(nsGkAtoms::optgroup);
-    if (!isOptGroupLabel && content->IsElement() &&
-        !content->IsAnyOfHTMLElements(nsGkAtoms::option, nsGkAtoms::hr)) {
-      // An optgroup or a wrapper element, both of which can contain options;
-      // drill through any scroll frame and recurse.  |inner| might be null here
-      // though if |inner| is an anonymous leaf frame of some sort.
+    if (child->GetContent()->IsHTMLElement(nsGkAtoms::optgroup)) {
+      // An optgroup; drill through any scroll frame and recurse.  |inner| might
+      // be null here though if |inner| is an anonymous leaf frame of some sort.
       auto inner = child->GetContentInsertionFrame();
       if (inner && GetMaxRowBSize(inner, aWM, aResult)) {
         found = true;
       }
-      continue;
-    }
-    // an option, an <hr> or an optgroup label
-    nscoord childBSize = child->BSize(aWM);
-    // XXX bug 1499176: skip empty <optgroup> labels (zero bsize) for now
-    if (!isOptGroupLabel || childBSize > nscoord(0)) {
-      found = true;
-      *aResult = std::max(childBSize, *aResult);
+    } else {
+      // an option or optgroup label
+      bool isOptGroupLabel =
+          child->Style()->IsPseudoElement() &&
+          aContainer->GetContent()->IsHTMLElement(nsGkAtoms::optgroup);
+      nscoord childBSize = child->BSize(aWM);
+      // XXX bug 1499176: skip empty <optgroup> labels (zero bsize) for now
+      if (!isOptGroupLabel || childBSize > nscoord(0)) {
+        found = true;
+        *aResult = std::max(childBSize, *aResult);
+      }
     }
   }
   return found;
@@ -278,25 +275,21 @@ static uint32_t CountOptionsAndOptgroups(nsIFrame* aFrame) {
   uint32_t count = 0;
   for (nsIFrame* child : aFrame->PrincipalChildList()) {
     nsIContent* content = child->GetContent();
-    if (!content) {
-      continue;
-    }
-    if (content->IsHTMLElement(nsGkAtoms::option)) {
-      ++count;
-      continue;
-    }
-    if (RefPtr optgroup = HTMLOptGroupElement::FromNode(content)) {
-      nsAutoString label;
-      optgroup->GetLabel(label);
-      if (label.Length() > 0) {
+    if (content) {
+      if (content->IsHTMLElement(nsGkAtoms::option)) {
         ++count;
+      } else {
+        RefPtr<HTMLOptGroupElement> optgroup =
+            HTMLOptGroupElement::FromNode(content);
+        if (optgroup) {
+          nsAutoString label;
+          optgroup->GetLabel(label);
+          if (label.Length() > 0) {
+            ++count;
+          }
+          count += CountOptionsAndOptgroups(child);
+        }
       }
-      count += CountOptionsAndOptgroups(child);
-      continue;
-    }
-    if (content->IsElement()) {
-      // A wrapper element, which can contain options.
-      count += CountOptionsAndOptgroups(child);
     }
   }
   return count;

@@ -380,35 +380,18 @@ function uniqueStylesIndex(cs, uniqueStyles) {
   return uniqueStyles.length - 1;
 }
 
-// Yields the <option>, <optgroup> and <hr> children of `node` in tree order.
-// Any other element is a wrapper, which is transparent for the option list, so
-// it is descended into. See
-// https://html.spec.whatwg.org/#concept-select-option-list
-function* optionListChildren(node) {
-  for (let child of node.children) {
-    let className = ChromeUtils.getClassName(child);
-    switch (className) {
-      case "HTMLOptionElement":
-      case "HTMLOptGroupElement":
-      case "HTMLHRElement":
-        yield [child, className];
-        break;
-      case "HTMLSelectElement":
-      case "HTMLDataListElement":
-        break;
-      default:
-        yield* optionListChildren(child);
-    }
-  }
-}
-
 function buildOptionListForChildren(node, uniqueStyles) {
   let result = [];
 
   let lastWasHR = false;
-  for (let [child, className] of optionListChildren(node)) {
+  for (let child of node.children) {
+    let className = ChromeUtils.getClassName(child);
+    let isOption = className == "HTMLOptionElement";
     let isOptGroup = className == "HTMLOptGroupElement";
     let isHR = className == "HTMLHRElement";
+    if (!isOption && !isOptGroup && !isHR) {
+      continue;
+    }
     if (child.hidden) {
       continue;
     }
