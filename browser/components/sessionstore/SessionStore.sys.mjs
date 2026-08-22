@@ -723,7 +723,7 @@ class _SessionStore {
             const tabState = winData.tabs.pop();
 
             // Ensure the index is in bounds.
-            let activeIndex = (tabState.index || tabState.entries.length) - 1;
+            let activeIndex = this.historyIndex(tabState);
             activeIndex = Math.min(activeIndex, tabState.entries.length - 1);
             activeIndex = Math.max(activeIndex, 0);
 
@@ -2475,7 +2475,7 @@ class _SessionStore {
         // Adjust the window's title if we removed an open tab
         let selectedTab = openTabs[this.#closedWindows[ix].selected - 1];
         // some duplication from restoreHistory - make sure we get the correct title
-        let activeIndex = (selectedTab.index || selectedTab.entries.length) - 1;
+        let activeIndex = this.historyIndex(selectedTab);
         if (activeIndex >= selectedTab.entries.length) {
           activeIndex = selectedTab.entries.length - 1;
         }
@@ -4027,7 +4027,7 @@ class _SessionStore {
     // switches.
     let url;
     if (state.entries?.length) {
-      let activeIndex = (state.index || state.entries.length) - 1;
+      let activeIndex = this.historyIndex(state);
       activeIndex = Math.min(activeIndex, state.entries.length - 1);
       activeIndex = Math.max(activeIndex, 0);
       url = state.entries[activeIndex].url;
@@ -5993,7 +5993,7 @@ class _SessionStore {
     delete tabData.closedAt;
 
     // Ensure the index is in bounds.
-    let activeIndex = (tabData.index || tabData.entries.length) - 1;
+    let activeIndex = this.historyIndex(tabData);
     activeIndex = Math.min(activeIndex, tabData.entries.length - 1);
     activeIndex = Math.max(activeIndex, 0);
 
@@ -6733,7 +6733,7 @@ class _SessionStore {
       let restoreSessionURL = "";
       if (tab.entries.length) {
         // tab.index is 1-based in the session store format (0/falsy means unset).
-        let activeIndex = (tab.index || tab.entries.length) - 1;
+        let activeIndex = this.historyIndex(tab);
         restoreSessionURL = tab.entries[activeIndex].url;
       }
       argString = lazy.AIWindow.handleAIWindowOptions({
@@ -7314,7 +7314,7 @@ class _SessionStore {
     if (!tabData?.entries?.length) {
       return null;
     }
-    let activeIndex = (tabData.index || tabData.entries.length) - 1;
+    let activeIndex = this.historyIndex(tabData);
     activeIndex = Math.min(activeIndex, tabData.entries.length - 1);
     activeIndex = Math.max(activeIndex, 0);
     return tabData.entries[activeIndex]?.url;
@@ -8490,6 +8490,18 @@ class _SessionStore {
       console.error(`Error validating session state: ${ex.message}`, ex);
     }
     return result;
+  }
+
+  /**
+   * The index into `tabData.entries` of the history entry a saved tab was
+   * showing. `tabData.index` is one-based and absent for a tab that never
+   * navigated, in which case the tab was showing its last entry.
+   *
+   * @param {TabStateData} tabData
+   * @returns {number} A zero-based index.
+   */
+  historyIndex(tabData) {
+    return (tabData.index || tabData.entries.length) - 1;
   }
 }
 
