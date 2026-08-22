@@ -104,9 +104,6 @@ class UnsubmittedCrashDialogTest {
     private fun cancelForEverUnsubmittedCrashPull(): String =
         TestHelper.appContext.resources.getString(R.string.unsubmitted_crash_requested_by_devs_dialog_never_button)
 
-    private fun learnMoreUnsubmittedCrashPull(): String =
-        TestHelper.appContext.resources.getString(R.string.unsubmitted_crash_requested_by_devs_learn_more)
-
     @OptIn(ExperimentalTestApi::class)
     private fun clickButton(text: String) {
         composeTestRule.waitUntilAtLeastOneExists(hasTextExactly(text))

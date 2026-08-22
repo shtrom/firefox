@@ -66,7 +66,6 @@ import org.mozilla.fenix.helpers.MatcherHelper.itemWithDescription
 import org.mozilla.fenix.helpers.MatcherHelper.itemWithIndex
 import org.mozilla.fenix.helpers.MatcherHelper.itemWithResId
 import org.mozilla.fenix.helpers.MatcherHelper.itemWithResIdAndIndex
-import org.mozilla.fenix.helpers.MatcherHelper.itemWithResIdAndText
 import org.mozilla.fenix.helpers.MatcherHelper.itemWithResIdContainingText
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTimeLong
@@ -1233,22 +1232,12 @@ fun homeScreen(composeTestRule: ComposeTestRule, interact: HomeScreenRobot.() ->
     return HomeScreenRobot.Transition(composeTestRule)
 }
 
-private fun homeScreenList() = UiScrollable(UiSelector().resourceId(HOMEPAGE).scrollable(true)).setAsVerticalList()
-
 private fun saveTabsToCollectionButton(composeTestRule: ComposeTestRule) =
     composeTestRule.onNodeWithText(getStringResource(R.string.tabs_menu_save_to_collection1))
 
 private fun tabsCounterFromRedesignedToolbar() = itemWithResId("$packageName:id/counter_box")
 
 private fun tabsCounter() = mDevice.findObject(By.res("$packageName:id/counter_root"))
-
-private fun sponsoredShortcut(sponsoredShortcutTitle: String) =
-    onView(
-        allOf(
-            withId(R.id.top_site_title),
-            withText(sponsoredShortcutTitle),
-        )
-    )
 
 private fun homeScreen() = itemWithResId("$packageName:id/homepageView")
 
@@ -1269,9 +1258,6 @@ private fun homepageWordmarkText() = itemWithResId(HOMEPAGE_WORDMARK_TEXT)
 private fun navigationToolbar() = itemWithResId("$packageName:id/composable_toolbar")
 
 private fun menuButton() = itemWithDescription(getStringResource(R.string.content_description_menu))
-
-private fun tabCounter(numberOfOpenTabs: String) =
-    itemWithResIdAndText("$packageName:id/counter_text", numberOfOpenTabs)
 
 fun deleteFromHistory() =
     onView(

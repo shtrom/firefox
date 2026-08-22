@@ -120,13 +120,6 @@ class DefaultTabManagerControllerTest {
     private val collectionStorage: TabCollectionStorage = mockk(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
 
-    private val testPrivateTab =
-        createTab(
-            id = "privateTestTabId",
-            url = "",
-            private = true,
-        )
-
     private val testNormalTab =
         createTab(
             id = "testTabId",

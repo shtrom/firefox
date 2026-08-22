@@ -77,11 +77,6 @@ class HomePage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *
         return HomeSelectors.all.filter { it.groups.contains(group) }
     }
 
-    private fun safeId(prefix: String, raw: String): String {
-        val cleaned = raw.replace(Regex("[^A-Za-z0-9_\\-]"), "_")
-        return "'$prefix'_$cleaned".take(120)
-    }
-
     /*
      * Temporary stub for the Test Factory demo.
      *
