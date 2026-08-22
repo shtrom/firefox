@@ -174,6 +174,11 @@ async function handleDroppedLink(
  * Displays and manages the contents of a browser window's tabs. Every window
  * instantiates this class during startup and exposes the instance in its window
  * scope as `gBrowser`.
+ *
+ * A member is either public API, `#private`, or `_`-prefixed. The last is
+ * internal as well, and carries the underscore only because something outside
+ * the class reaches it: `TabProgressListener` below, or one of the sibling
+ * modules that implement the tab strip. Nothing else may use those.
  */
 export class Tabbrowser {
   static create(window) {
