@@ -134,7 +134,7 @@ export class SmartbarInput extends HTMLElement {
                          aria-label="More options"
                          data-l10n-id="urlbar-searchmode-default2"
                          tabindex="-1"
-                         role="presentation">
+                         role="combobox">
           <!-- This span has no purpose other than making the moz-button think
                it contains text even when searchmode-switcher-title is hidden. -->
           <html:span class="urlbar-visually-hidden" aria-hidden="true">a</html:span>
@@ -150,8 +150,7 @@ export class SmartbarInput extends HTMLElement {
           </html:span>
         </html:moz-button>
         <!-- In XUL windows, this will be wrapped in a panel with class="searchmode-switcher-panel". -->
-        <html:panel-list class="searchmode-switcher-panel-list"
-                         click-on-mouseup="">
+        <html:panel-list class="searchmode-switcher-panel-list">
           <html:span class="searchmode-switcher-panel-description" role="heading" />
 ${
   UrlbarPrefs.get("browser.nova.enabled")

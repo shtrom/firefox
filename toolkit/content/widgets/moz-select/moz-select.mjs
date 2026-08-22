@@ -397,7 +397,6 @@ export default class MozSelect extends MozBaseInputElement {
     return html`<panel-list
       .value=${this.value}
       min-width-from-anchor
-      click-on-mouseup
       @click=${this.handlePanelChange}
       @hidden=${this.handlePanelHidden}
     >
