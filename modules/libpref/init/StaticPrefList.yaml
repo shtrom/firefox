@@ -11007,13 +11007,6 @@
   value: false
   mirror: always
 
-# Is support for (linear|radial|conic)-gradient color interpolation methods enabled?
-- name: layout.css.gradient-color-interpolation-method.enabled
-  type: RelaxedAtomicBool
-  value: true
-  mirror: always
-  rust: true
-
 # Should we propagate baseline alignment information from a parent grid into
 # its subgrids?
 - name: layout.css.grid-subgrid-baselines.enabled
