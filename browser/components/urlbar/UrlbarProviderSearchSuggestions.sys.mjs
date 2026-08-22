@@ -382,7 +382,10 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
       case RESULT_MENU_COMMANDS.TRENDING_BLOCK:
         lazy.UrlbarPrefs.set("suggest.trending", false);
         this.#recordTrendingBlockedTelemetry();
-        this.#replaceTrendingResultWithAcknowledgement(controller);
+        this.#replaceTrendingResultWithAcknowledgement(
+          controller,
+          queryContext
+        );
         break;
     }
   }
@@ -662,8 +665,8 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
    * Remove all the trending results and show an acknowledgement that the
    * trending suggestions have been turned off.
    */
-  #replaceTrendingResultWithAcknowledgement(controller) {
-    let resultsToRemove = controller.view.visibleResults.filter(
+  #replaceTrendingResultWithAcknowledgement(controller, queryContext) {
+    let resultsToRemove = queryContext.results.filter(
       result => result.payload.trending
     );
     // Show an acknowledgement tip for the first result.

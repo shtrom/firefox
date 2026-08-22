@@ -123,6 +123,7 @@ skip-if = [
 ["browser_tooManyEnginesOffered.js"]
 
 ["browser_trending_suggestions.js"]
+tags = "urlbar"
 support-files = ["trendingSuggestionEngine.sjs"]
 
 ["browser_webSearch.js"]
