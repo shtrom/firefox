@@ -170,7 +170,7 @@ export class UrlbarInputBase extends HTMLElement {
                     aria-label="More options"
                     data-l10n-id="urlbar-searchmode-default2"
                     tabindex="-1"
-                    role="combobox">
+                    role="presentation">
           <!-- This span has no purpose other than making the moz-button think
                it contains text even when searchmode-switcher-title is hidden. -->
           <span class="urlbar-visually-hidden" aria-hidden="true">a</span>
