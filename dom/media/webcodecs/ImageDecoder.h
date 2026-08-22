@@ -50,8 +50,7 @@ class ImageDecoder final : public nsISupports,
   JSObject* WrapObject(JSContext* aCx,
                        JS::Handle<JSObject*> aGivenProto) override;
 
-  // TODO(bug 1749042): Mark as MOZ_CAN_RUN_SCRIPT when IDL constructors can be.
-  MOZ_CAN_RUN_SCRIPT_BOUNDARY static already_AddRefed<ImageDecoder> Constructor(
+  static already_AddRefed<ImageDecoder> Constructor(
       const GlobalObject& aGlobal, const ImageDecoderInit& aInit,
       ErrorResult& aRv);
 
@@ -67,19 +66,19 @@ class ImageDecoder final : public nsISupports,
 
   ImageTrackList* Tracks() const { return mTracks; }
 
-  MOZ_CAN_RUN_SCRIPT already_AddRefed<Promise> Decode(
-      const ImageDecodeOptions& aOptions, ErrorResult& aRv);
+  already_AddRefed<Promise> Decode(const ImageDecodeOptions& aOptions,
+                                   ErrorResult& aRv);
 
   void Reset();
 
-  MOZ_CAN_RUN_SCRIPT void Close();
+  void Close();
 
   void OnShutdown() override;
 
   void OnSourceBufferComplete(const MediaResult& aResult);
 
   void QueueSelectTrackMessage(uint32_t aSelectedIndex);
-  MOZ_CAN_RUN_SCRIPT void ProcessControlMessageQueue();
+  void ProcessControlMessageQueue();
 
   void ResetWithoutRef(const MediaResult& aResult);
 
@@ -105,23 +104,18 @@ class ImageDecoder final : public nsISupports,
   // VideoFrame can run on either main thread or worker thread.
   void AssertIsOnOwningThread() const { NS_ASSERT_OWNINGTHREAD(ImageDecoder); }
 
-  MOZ_CAN_RUN_SCRIPT void Initialize(const GlobalObject& aGLobal,
-                                     const ImageDecoderInit& aInit,
-                                     ErrorResult& aRv);
-  MOZ_CAN_RUN_SCRIPT void Close(const MediaResult& aResult);
+  void Initialize(const GlobalObject& aGLobal, const ImageDecoderInit& aInit,
+                  ErrorResult& aRv);
+  void Close(const MediaResult& aResult);
   void CloseWithoutRef(const MediaResult& aResult);
-  MOZ_CAN_RUN_SCRIPT void CloseAndCancelWithoutRef(const MediaResult& aResult);
-  already_AddRefed<ImageDecoderReadRequest> CloseCommon(
-      const MediaResult& aResult);
 
   void QueueConfigureMessage(const Maybe<gfx::IntSize>& aOutputSize,
                              ColorSpaceConversion aColorSpaceConversion);
   void QueueDecodeMetadataMessage();
   void QueueDecodeFrameMessage();
 
-  MOZ_CAN_RUN_SCRIPT void ResumeControlMessageQueue();
-  MOZ_CAN_RUN_SCRIPT MessageProcessedResult
-  ProcessConfigureMessage(ConfigureMessage* aMsg);
+  void ResumeControlMessageQueue();
+  MessageProcessedResult ProcessConfigureMessage(ConfigureMessage* aMsg);
   MessageProcessedResult ProcessDecodeMetadataMessage(
       DecodeMetadataMessage* aMsg);
   MessageProcessedResult ProcessDecodeFrameMessage(DecodeFrameMessage* aMsg);
@@ -133,11 +127,11 @@ class ImageDecoder final : public nsISupports,
   void OnCompleteFailed(const MediaResult& aResult);
 
   void OnMetadataSuccess(const image::DecodeMetadataResult& aMetadata);
-  MOZ_CAN_RUN_SCRIPT void OnMetadataFailed(const nsresult& aErr);
+  void OnMetadataFailed(const nsresult& aErr);
 
   void RequestFrameCount(uint32_t aKnownFrameCount);
   void OnFrameCountSuccess(const image::DecodeFrameCountResult& aResult);
-  MOZ_CAN_RUN_SCRIPT void OnFrameCountFailed(const nsresult& aErr);
+  void OnFrameCountFailed(const nsresult& aErr);
 
   void RequestDecodeFrames(uint32_t aFramesToDecode);
   void OnDecodeFramesSuccess(const image::DecodeFramesResult& aResult);

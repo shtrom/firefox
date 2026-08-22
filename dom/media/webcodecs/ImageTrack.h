@@ -58,7 +58,7 @@ class ImageTrack final : public nsISupports, public nsWrapperCache {
 
   bool Selected() const { return mSelected; }
 
-  MOZ_CAN_RUN_SCRIPT void SetSelected(bool aSelected);
+  void SetSelected(bool aSelected);
 
   void GetSizes(nsTArray<ImageSize>& aSizes);
 
