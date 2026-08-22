@@ -49,7 +49,7 @@ class UnsubmittedCrashDialogTest {
 
     @get:Rule(order = 1)
     val composeTestRule =
-        AndroidComposeTestRuleV2(HomeActivityTestRule.withDefaultSettingsOverrides(useNewCrashReporterFlow = true)) {
+        AndroidComposeTestRuleV2(HomeActivityTestRule.withDefaultSettingsOverrides()) {
             it.activity
         }
 

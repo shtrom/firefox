@@ -200,18 +200,10 @@ class NavigationToolbarRobot(private val composeTestRule: ComposeTestRule) {
             )
         )
 
-    fun verifySearchBarPlaceholder(string: String) {
-        Log.i(
-            TAG,
-            "verifySearchBarPlaceholder: Trying to verify that the search bar place holder is \"Search or enter address\"",
-        )
-        composeTestRule
-            .onAllNodesWithTag(ADDRESSBAR_URL_BOX)
-            .assertAny(hasContentDescription("Search or enter address"))
-        Log.i(
-            TAG,
-            "verifySearchBarPlaceholder: Verified that the search bar place holder is \"Search or enter address\"",
-        )
+    fun verifySearchBarPlaceholder(searchHint: String) {
+        Log.i(TAG, "verifySearchBarPlaceholder: Trying to verify that the search bar place holder is \"$searchHint\"")
+        composeTestRule.onAllNodesWithTag(ADDRESSBAR_URL_BOX).assertAny(hasContentDescription(searchHint))
+        Log.i(TAG, "verifySearchBarPlaceholder: Verified that the search bar place holder is \"$searchHint\"")
     }
 
     fun verifyDefaultSearchEngine(engineName: String) {
@@ -393,7 +385,7 @@ class NavigationToolbarRobot(private val composeTestRule: ComposeTestRule) {
      * Asserts that the navigation bar compose node is positioned relative to the view identified by
      * [referenceResourceId].
      */
-    private fun assertNavBarIsPositioned(referenceResourceId: String, isAtBottom: Boolean = true) {
+    private fun assertNavBarIsPositioned(referenceResourceId: String) {
         val navBarBounds = composeTestRule.onNodeWithTag(NAVIGATION_BAR).fetchSemanticsNode().boundsInWindow
         val reference = mDevice.findObject(UiSelector().resourceId(referenceResourceId))
 

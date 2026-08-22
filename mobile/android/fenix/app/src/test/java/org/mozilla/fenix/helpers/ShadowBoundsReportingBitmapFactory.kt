@@ -27,6 +27,8 @@ class ShadowBoundsReportingBitmapFactory {
     companion object {
         @Implementation
         @JvmStatic
+        // Some parameters are unused but method signature should be the same as for original class.
+        @Suppress("UNUSED_PARAMETER")
         fun decodeStream(
             stream: InputStream?,
             outPadding: Rect?,

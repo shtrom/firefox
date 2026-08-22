@@ -88,6 +88,7 @@ class HomePage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *
      * The `UnsupportedOperationException` is intentional to ensure this placeholder
      * is never used in production or non-demo tests.
      */
+    @Suppress("UnusedParameter")
     fun visitWebsite(url: String) {
         throw UnsupportedOperationException("visitWebsite is not supported by ${this::class.simpleName}")
     }

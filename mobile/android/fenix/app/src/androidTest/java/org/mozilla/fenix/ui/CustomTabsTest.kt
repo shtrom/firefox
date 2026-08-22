@@ -151,7 +151,7 @@ class CustomTabsTest {
 
         browserScreen(composeTestRule) {}
             .clickDownloadLink(downloadFile) {
-                verifyDownloadPrompt(composeTestRule, downloadFile)
+                verifyDownloadPrompt(composeTestRule)
             }
             .clickDownload(composeTestRule) {
                 verifyDownloadCompleteSnackbar(fileName = "web_icon.png")

@@ -141,7 +141,6 @@ class HomeActivityTestRule(
             initialTouchMode: Boolean = false,
             launchActivity: Boolean = true,
             skipOnboarding: Boolean = true,
-            useNewCrashReporterFlow: Boolean = false,
         ) =
             HomeActivityTestRule(
                 initialTouchMode = initialTouchMode,

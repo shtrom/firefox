@@ -78,7 +78,7 @@ class SettingsAddonsTest {
                 cancelInstallAddon()
                 clickInstallAddon(addonName)
                 acceptPermissionToInstallAddon()
-                verifyAddonInstallCompletedPrompt(addonName, composeTestRule.activityRule)
+                verifyAddonInstallCompletedPrompt(addonName)
                 closeAddonInstallCompletePrompt()
                 verifyAddonIsInstalled(addonName)
                 verifyEnabledTitleDisplayed()
@@ -92,7 +92,7 @@ class SettingsAddonsTest {
         val addonName = "uBlock Origin"
 
         addonsMenu(composeTestRule) {
-                installAddon(addonName, composeTestRule.activityRule)
+                installAddon(addonName)
                 closeAddonInstallCompletePrompt()
             }
             .openDetailedMenuForAddon(addonName) {}
@@ -124,13 +124,13 @@ class SettingsAddonsTest {
         val trackingProtectionPage = mockWebServer.enhancedTrackingProtectionAsset
 
         addonsMenu(composeTestRule) {
-                installAddon(uBlockAddon, composeTestRule.activityRule)
+                installAddon(uBlockAddon)
                 closeAddonInstallCompletePrompt()
-                // installAddon(darkReaderAddon, composeTestRule.activityRule)
+                // installAddon(darkReaderAddon)
                 clickInstallAddon(darkReaderAddon)
                 verifyAddonPermissionPrompt(darkReaderAddon)
                 acceptPermissionToInstallAddon()
-                verifyAddonInstallCompletedPrompt(darkReaderAddon, composeTestRule.activityRule)
+                verifyAddonInstallCompletedPrompt(darkReaderAddon)
                 closeAddonInstallCompletePrompt()
             }
             .goBackToHomeScreen {}
@@ -159,7 +159,7 @@ class SettingsAddonsTest {
         val webPage = "https://mozilla-mobile.github.io/testapp/"
 
         addonsMenu(composeTestRule) {
-                installAddonInPrivateMode(addonName, composeTestRule.activityRule)
+                installAddonInPrivateMode(addonName)
                 closeAddonInstallCompletePrompt()
             }
             .goBackToHomeScreen {}
@@ -181,7 +181,7 @@ class SettingsAddonsTest {
         val webPage = "https://mozilla-mobile.github.io/testapp/"
 
         addonsMenu(composeTestRule) {
-                installAddon(addonName, composeTestRule.activityRule)
+                installAddon(addonName)
                 closeAddonInstallCompletePrompt()
                 verifyAddonIsInstalled(addonName)
             }
