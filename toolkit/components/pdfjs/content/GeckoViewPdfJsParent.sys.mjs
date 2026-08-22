@@ -56,7 +56,7 @@ class FindHandler {
             type: "findbarclose",
             detail: null,
           },
-          "GeckoViewPdfjs"
+          "GeckoViewPdfJs"
         );
         break;
       case "GeckoView:DisplayMatches":
@@ -69,7 +69,7 @@ class FindHandler {
             type: "findhighlightallchange",
             detail: this.#state,
           },
-          "GeckoViewPdfjs"
+          "GeckoViewPdfJs"
         );
         break;
       case "GeckoView:FindInPage": {
@@ -80,7 +80,7 @@ class FindHandler {
             type,
             detail: this.#state,
           },
-          "GeckoViewPdfjs"
+          "GeckoViewPdfJs"
         );
         this.#callbacks.push([aCallback, this.#state]);
         break;
@@ -196,7 +196,7 @@ class FileSaver {
       {
         type: "save",
       },
-      "GeckoViewPdfjs"
+      "GeckoViewPdfJs"
     );
   }
 
@@ -239,7 +239,7 @@ class FileSaver {
   }
 }
 
-export class GeckoViewPdfjsParent extends GeckoViewActorParent {
+export class GeckoViewPdfJsParent extends GeckoViewActorParent {
   #findHandler;
 
   #fileSaver;
@@ -358,6 +358,6 @@ export class GeckoViewPdfjsParent extends GeckoViewActorParent {
   }
 }
 
-const { debug, warn } = GeckoViewPdfjsParent.initLogging(
-  "GeckoViewPdfjsParent"
+const { debug, warn } = GeckoViewPdfJsParent.initLogging(
+  "GeckoViewPdfJsParent"
 );

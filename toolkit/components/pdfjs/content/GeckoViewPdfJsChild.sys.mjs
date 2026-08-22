@@ -15,7 +15,7 @@
 
 import { GeckoViewActorChild } from "resource://gre/modules/GeckoViewActorChild.sys.mjs";
 
-export class GeckoViewPdfjsChild extends GeckoViewActorChild {
+export class GeckoViewPdfJsChild extends GeckoViewActorChild {
   init(aSupportsFind) {
     this.sendAsyncMessage("PDFJS:Parent:addEventListener", { aSupportsFind });
   }
@@ -42,4 +42,4 @@ export class GeckoViewPdfjsChild extends GeckoViewActorChild {
   }
 }
 
-const { debug } = GeckoViewPdfjsChild.initLogging("GeckoViewPdfjsChild");
+const { debug } = GeckoViewPdfJsChild.initLogging("GeckoViewPdfJsChild");

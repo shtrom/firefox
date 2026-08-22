@@ -89,7 +89,7 @@ function getDOMWindow(aChannel, aPrincipal) {
 function getActor(window) {
   try {
     const actorName =
-      AppConstants.platform === "android" ? "GeckoViewPdfjs" : "Pdfjs";
+      AppConstants.platform === "android" ? "GeckoViewPdfJs" : "PdfJs";
     return window.windowGlobalChild.getActor(actorName);
   } catch (ex) {
     return null;

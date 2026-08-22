@@ -111,7 +111,7 @@ function saveBrowser(aBrowser, aSkipPrompt, aBrowsingContext = null) {
   // PDF.js has its own way to handle saving PDFs since it may need to
   // generate a new PDF to save modified form data.
   if (aBrowser.contentPrincipal.spec == "resource://pdf.js/web/viewer.html") {
-    aBrowser.sendMessageToActor("PDFJS:Save", {}, "Pdfjs");
+    aBrowser.sendMessageToActor("PDFJS:Save", {}, "PdfJs");
     return;
   }
   let stack = Components.stack.caller;

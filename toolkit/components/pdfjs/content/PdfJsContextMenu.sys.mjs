@@ -24,7 +24,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
-export class PdfjsContextMenu {
+export class PdfJsContextMenu {
   #contextMenu;
 
   #isInPDFViewer = false;
@@ -155,7 +155,7 @@ export class PdfjsContextMenu {
         this.#contextMenu.browser.sendMessageToActor(
           "PDFJS:Editing",
           { name: aName },
-          "Pdfjs"
+          "PdfJs"
         );
       }
       return;
@@ -163,7 +163,7 @@ export class PdfjsContextMenu {
     this.#contextMenu.browser.sendMessageToActor(
       "PDFJS:Editing",
       { name: aName.replaceAll(/-([a-z])/g, (_, char) => char.toUpperCase()) },
-      "Pdfjs"
+      "PdfJs"
     );
   }
 }

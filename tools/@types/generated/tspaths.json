@@ -7297,8 +7297,14 @@
       "resource://pdf.js/PdfJsAIFeature.sys.mjs": [
         "../../../toolkit/components/pdfjs/content/PdfJsAIFeature.sys.mjs"
       ],
+      "resource://pdf.js/PdfJsContextMenu.sys.mjs": [
+        "../../../toolkit/components/pdfjs/content/PdfJsContextMenu.sys.mjs"
+      ],
       "resource://pdf.js/PdfJsNetwork.sys.mjs": [
         "../../../toolkit/components/pdfjs/content/PdfJsNetwork.sys.mjs"
+      ],
+      "resource://pdf.js/PdfJsParent.sys.mjs": [
+        "../../../toolkit/components/pdfjs/content/PdfJsParent.sys.mjs"
       ],
       "resource://pdf.js/PdfJsTelemetry.sys.mjs": [
         "../../../toolkit/components/pdfjs/content/PdfJsTelemetry.sys.mjs"
@@ -7308,12 +7314,6 @@
       ],
       "resource://pdf.js/PdfStreamConverter.sys.mjs": [
         "../../../toolkit/components/pdfjs/content/PdfStreamConverter.sys.mjs"
-      ],
-      "resource://pdf.js/PdfjsContextMenu.sys.mjs": [
-        "../../../toolkit/components/pdfjs/content/PdfjsContextMenu.sys.mjs"
-      ],
-      "resource://pdf.js/PdfjsParent.sys.mjs": [
-        "../../../toolkit/components/pdfjs/content/PdfjsParent.sys.mjs"
       ],
       "resource://pdf.js/build/pdf.mjs": [
         "../../../toolkit/components/pdfjs/content/build/pdf.mjs"

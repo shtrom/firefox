@@ -117,7 +117,7 @@ export function filterCertsForView(data) {
   return certs.length ? certs : null;
 }
 
-export class PdfjsParent extends JSWindowActorParent {
+export class PdfJsParent extends JSWindowActorParent {
   #signatureStorageChangedObserver = null;
 
   #mutablePreferences = new Set([
@@ -842,7 +842,7 @@ export class PdfjsParent extends JSWindowActorParent {
       return;
     }
 
-    // Ignore events findbar events which arrive while the Pdfjs document is in
+    // Ignore events findbar events which arrive while the PdfJs document is in
     // the BFCache.
     if (this.windowContext.isInBFCache) {
       return;
@@ -871,7 +871,7 @@ export class PdfjsParent extends JSWindowActorParent {
     browser.sendMessageToActor(
       "PDFJS:Child:handleEvent",
       { type, detail },
-      "Pdfjs"
+      "PdfJs"
     );
     aEvent.preventDefault();
   }

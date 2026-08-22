@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-export class PdfjsChild extends JSWindowActorChild {
+export class PdfJsChild extends JSWindowActorChild {
   init(aSupportsFind) {
     if (aSupportsFind) {
       this.sendAsyncMessage("PDFJS:Parent:addEventListener");
