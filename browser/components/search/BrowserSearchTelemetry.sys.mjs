@@ -57,9 +57,10 @@ class BrowserSearchTelemetryHandler {
    */
   KNOWN_SEARCH_SOURCES = Object.freeze({
     about_home: "abouthome",
+    about_newtab: "newtab",
     contextmenu: "contextmenu",
     contextmenu_visual: "contextmenu_visual",
-    about_newtab: "newtab",
+    errorpage: "errorpage",
     newtab_searchbar: "newtab-searchbar",
     searchbar: "searchbar",
     smartbar: "smartbar",
@@ -243,18 +244,19 @@ class BrowserSearchTelemetryHandler {
 
       // Dispatch the search signal to other handlers.
       switch (source) {
-        case "urlbar":
-        case "newtab_searchbar":
-        case "searchbar":
-        case "smartbar":
-        case "urlbar_searchmode":
-        case "urlbar_persisted":
-        case "urlbar_handoff":
-          this._handleSearchAndUrlbar(browser, engine, source, details);
-          break;
         case "about_home":
         case "about_newtab":
           this.#recordSearch(browser, source, "enter");
+          break;
+        case "errorpage":
+        case "newtab_searchbar":
+        case "searchbar":
+        case "smartbar":
+        case "urlbar":
+        case "urlbar_handoff":
+        case "urlbar_persisted":
+        case "urlbar_searchmode":
+          this._handleSearchAndUrlbar(browser, engine, source, details);
           break;
         default:
           this.#recordSearch(browser, source);

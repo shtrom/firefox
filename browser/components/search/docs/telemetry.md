@@ -93,6 +93,7 @@ SAP names can be:
 >   83+, since urlbar-searchmode replaces it.
 > - `abouthome`
 > - `contextmenu`
+> - `errorpage` Used when a DNS error occurs
 > - `newtab`
 > - `newtab-searchbar` Used when searching from the New Tab search bar.
 > - `searchbar`
@@ -115,20 +116,21 @@ It counts loads triggered in a subsession from the specified SAP, broken down
 by the originating action.
 Possible SAPs are:
 
+> - `about_home`
+> - `about_newtab`
+> - `contextmenu`
+> - `errorpage` Used when a DNS error occurs
+> - `newtab_searchbar` Used when searching from the New Tab search bar.
+> - `searchbar`
+> - `smartbar` Used when searching from Smart Window.
+> - `smartwindow_assistant` Used when searching from Smart Window assistant.
+> - `system` Indicates a search from the command line.
 > - `urlbar` Except search mode.
 > - `urlbar_handoff` Used when searching from `about:newtab`.
 > - `urlbar_persisted` Used when searching from the Urlbar while it
 >   was in a Persisted Search state.
 > - `urlbar_searchmode` Used when the Urlbar is in search mode.
-> - `newtab_searchbar` Used when searching from the New Tab search bar.
-> - `searchbar`
-> - `smartbar` Used when searching from Smart Window.
-> - `smartwindow_assistant` Used when searching from Smart Window assistant.
-> - `about_home`
-> - `about_newtab`
-> - `contextmenu`
 > - `webextension`
-> - `system` Indicates a search from the command line.
 
 Recorded actions may be:
 
