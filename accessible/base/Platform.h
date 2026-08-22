@@ -36,6 +36,15 @@ enum EPlatformDisabledState {
  */
 EPlatformDisabledState PlatformDisabledState();
 
+/**
+ * If accessibility.force_disabled is force enabled, start the accessibility
+ * service if it isn't already running. This also ensures the pref is being
+ * watched, so that a later change to force enabled also starts the service.
+ * This is a no-op in content processes; accessibility there is driven by the
+ * parent process.
+ */
+void MaybeStartForceEnabled();
+
 #ifdef MOZ_ACCESSIBILITY_ATK
 /**
  * Perform initialization that should be done as soon as possible, in order
