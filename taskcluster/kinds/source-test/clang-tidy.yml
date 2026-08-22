@@ -8,6 +8,7 @@ task-defaults:
     worker:
         docker-image: {in-tree: static-analysis-build}
         max-run-time: 18000
+    run-on-projects: []
     treeherder:
         kind: other
         tier: 2
