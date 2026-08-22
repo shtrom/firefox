@@ -44,7 +44,7 @@ class IPProtectionSnackbarBinding(
             .distinctUntilChanged()
             .collect { state ->
                 when (state) {
-                    is SnackbarState.IPProtectionShowSnackbar -> state.title
+                    is SnackbarState.IPProtectionConnectionError -> state.title
                     is SnackbarState.IPProtectionDataLimitReached -> state.title
                     else -> null
                 }?.let {

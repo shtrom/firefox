@@ -22,7 +22,6 @@ import org.mozilla.fenix.components.appstate.AppState
 
 class IPProtectionSnackbarMiddlewareTest {
     private val connectionError = "Couldn't connect to VPN."
-    private val locationSelectionReset = "Selected VPN location unavailable. Switched to the recommended location."
     private lateinit var captureMiddleware: CaptureActionsMiddleware<AppState, AppAction>
     private lateinit var appStore: AppStore
     private lateinit var ipProtectionStore: IPProtectionStore
@@ -37,31 +36,18 @@ class IPProtectionSnackbarMiddlewareTest {
                     listOf(
                         IPProtectionSnackbarMiddleware(
                             lazyAppStore = lazy { appStore },
-                            messages =
-                                IPProtectionSnackbarMessages(
-                                    connectionError = connectionError,
-                                    locationSelectionReset = locationSelectionReset,
-                                ),
+                            messages = IPProtectionSnackbarMessages(connectionError = connectionError),
                         )
                     )
             )
     }
 
     @Test
-    fun `WHEN ActivationFailed is dispatched THEN ShowSnackbar action is dispatched`() {
+    fun `WHEN ActivationFailed is dispatched THEN ConnectionError snackbar action is dispatched`() {
         ipProtectionStore.dispatch(IPProtectionAction.ToggleFailed())
 
-        captureMiddleware.assertLastAction(AppAction.IPProtectionSnackbarAction.ShowSnackbar::class) { action ->
+        captureMiddleware.assertLastAction(AppAction.IPProtectionSnackbarAction.ConnectionError::class) { action ->
             assertEquals(connectionError, action.title)
-        }
-    }
-
-    @Test
-    fun `WHEN LocationReset is dispatched THEN ShowSnackbar action is dispatched`() {
-        ipProtectionStore.dispatch(IPProtectionAction.LocationReset)
-
-        captureMiddleware.assertLastAction(AppAction.IPProtectionSnackbarAction.ShowSnackbar::class) { action ->
-            assertEquals(locationSelectionReset, action.title)
         }
     }
 
@@ -69,7 +55,7 @@ class IPProtectionSnackbarMiddlewareTest {
     fun `WHEN an unrelated action is dispatched THEN no snackbar action is dispatched`() {
         ipProtectionStore.dispatch(IPProtectionAction.EligibilityChanged(EligibilityStatus.Eligible))
 
-        captureMiddleware.assertNotDispatched(AppAction.IPProtectionSnackbarAction.ShowSnackbar::class)
+        captureMiddleware.assertNotDispatched(AppAction.IPProtectionSnackbarAction.ConnectionError::class)
     }
 
     @Test
@@ -79,7 +65,7 @@ class IPProtectionSnackbarMiddlewareTest {
             // a new observer (a freshly-instantiated IPProtectionInfoPrompter). With the snackbar
             // owned by middleware, the new observer does not re-fire on already-set state.
             ipProtectionStore.dispatch(IPProtectionAction.ToggleFailed())
-            captureMiddleware.assertLastAction(AppAction.IPProtectionSnackbarAction.ShowSnackbar::class)
+            captureMiddleware.assertLastAction(AppAction.IPProtectionSnackbarAction.ConnectionError::class)
             captureMiddleware.reset()
 
             val newPrompter =
@@ -92,6 +78,6 @@ class IPProtectionSnackbarMiddlewareTest {
             newPrompter.start()
             testScheduler.advanceUntilIdle()
 
-            captureMiddleware.assertNotDispatched(AppAction.IPProtectionSnackbarAction.ShowSnackbar::class)
+            captureMiddleware.assertNotDispatched(AppAction.IPProtectionSnackbarAction.ConnectionError::class)
         }
 }
