@@ -42,8 +42,11 @@ EPlatformDisabledState PlatformDisabledState();
  * watched, so that a later change to force enabled also starts the service.
  * This is a no-op in content processes; accessibility there is driven by the
  * parent process.
+ * @param aAsync True to start the service asynchronously using a runnable.
+ *        This should be used when called from a pref change callback, to
+ *        avoid starting the service reentrantly.
  */
-void MaybeStartForceEnabled();
+void MaybeStartForceEnabled(bool aAsync = false);
 
 #ifdef MOZ_ACCESSIBILITY_ATK
 /**

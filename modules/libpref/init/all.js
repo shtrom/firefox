@@ -471,17 +471,15 @@ pref("ui.textHighlightBackground", "#ef0fff");
 // Used with nsISelectionController::SELECTION_FIND
 pref("ui.textHighlightForeground", "#ffffff");
 
-// We want the ability to forcibly disable platform a11y, because
-// some non-a11y-related components attempt to bring it up.  See bug
-// 538530 for details about Windows; we have a pref here that allows it
-// to be disabled for performance and testing resons.
-// See bug 761589 for the crossplatform aspect.
-//
-// This pref is checked only once, and the browser needs a restart to
-// pick up any changes.
-//
-// Values are -1 always on. 1 always off, 0 is auto as some platform perform
-// further checks.
+// Forcibly enable or disable accessibility. This is useful for testing. Values:
+// 0: auto: enable accessibility if an accessibility client is detected.
+// 1: force disable: Disable accessibility, even if a client attempts to enable it.
+// -1: force enable: Enable accessibility, even if there is no client. On some
+// platforms (e.g. Android), accessibility events can't be fired to the platform
+// in this case because the platform doesn't allow it. However, the Gecko
+// accessibility code will still run.
+// Changes to this pref are picked up without a restart: setting it to 1
+// shuts accessibility down, and setting it to -1 starts it up.
 pref("accessibility.force_disabled", 0);
 
 pref("focusmanager.testmode", false);
