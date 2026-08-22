@@ -12,26 +12,17 @@ const lazy = XPCOMUtils.declareLazy({
     pref: "browser.tabs.allow_transparent_browser",
     default: false,
   },
-  ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
-  AsyncTabSwitcher:
-    "moz-src:///browser/components/tabbrowser/AsyncTabSwitcher.sys.mjs",
   BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   ContextualIdentityService:
     "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   E10SUtils: "resource://gre/modules/E10SUtils.sys.mjs",
-  FaviconUtils: "moz-src:///toolkit/modules/FaviconUtils.sys.mjs",
-  KeyboardLockUtils: "resource://gre/modules/KeyboardLockUtils.sys.mjs",
   NewTabPagePreloading:
     "moz-src:///browser/components/tabbrowser/NewTabPagePreloading.sys.mjs",
   notificationEnableDelay: {
     pref: "security.notification_enable_delay",
     default: 500,
   },
-  OpenInTabsUtils:
-    "moz-src:///browser/components/tabbrowser/OpenInTabsUtils.sys.mjs",
-  PictureInPicture:
-    "moz-src:///toolkit/components/pictureinpicture/PictureInPicture.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   ReducedProtectionNotification:
@@ -58,16 +49,7 @@ const lazy = XPCOMUtils.declareLazy({
     default: true,
   },
   SitePermissions: "resource:///modules/SitePermissions.sys.mjs",
-  SponsorProtection:
-    "moz-src:///browser/components/newtab/SponsorProtection.sys.mjs",
   TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
-  TabStateFlusher:
-    "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs",
-  TaskbarTabs: "resource:///modules/taskbartabs/TaskbarTabs.sys.mjs",
-  TaskbarTabsUtils: "resource:///modules/taskbartabs/TaskbarTabsUtils.sys.mjs",
-  UrlbarProviderOpenTabs:
-    "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
-  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
   webrtcUI: "resource:///modules/webrtcUI.sys.mjs",
 });
 
@@ -157,7 +139,7 @@ async function handleDroppedLink(
     links.length >= Services.prefs.getIntPref("browser.tabs.maxOpenBeforeWarn")
   ) {
     // Sync dialog cannot be used inside drop event handler.
-    let answer = await lazy.OpenInTabsUtils.promiseConfirmOpenInTabs(
+    let answer = await tabbrowser.OpenInTabsUtils.promiseConfirmOpenInTabs(
       links.length,
       tabbrowser.documentGlobal
     );
@@ -169,7 +151,9 @@ async function handleDroppedLink(
   let urls = [];
   let postDatas = [];
   for (let link of links) {
-    let data = await lazy.UrlbarUtils.getShortcutOrURIAndPostData(link.url);
+    let data = await tabbrowser.UrlbarUtils.getShortcutOrURIAndPostData(
+      link.url
+    );
     urls.push(data.url);
     postDatas.push(data.postData);
   }
@@ -190,11 +174,6 @@ async function handleDroppedLink(
  * Displays and manages the contents of a browser window's tabs. Every window
  * instantiates this class during startup and exposes the instance in its window
  * scope as `gBrowser`.
- *
- * A member is either public API, `#private`, or `_`-prefixed. The last is
- * internal as well, and carries the underscore only because something outside
- * the class reaches it: `TabProgressListener` below, or one of the sibling
- * modules that implement the tab strip. Nothing else may use those.
  */
 export class Tabbrowser {
   static create(window) {
@@ -218,11 +197,32 @@ export class Tabbrowser {
     this.splitViewCommandSet =
       this.document.getElementById("splitViewCommands");
 
-    // Defined on the instance, not on `lazy`, because callers reach it as
-    // `gBrowser.TabMetrics`.
+    // Defined on the instance, not on `lazy`, because callers reach these
+    // as `gBrowser.TabMetrics` and friends.
     // eslint-disable-next-line mozilla/lazy-getter-object-name
     ChromeUtils.defineESModuleGetters(this, {
+      ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
+      AsyncTabSwitcher:
+        "moz-src:///browser/components/tabbrowser/AsyncTabSwitcher.sys.mjs",
+      OpenInTabsUtils:
+        "moz-src:///browser/components/tabbrowser/OpenInTabsUtils.sys.mjs",
+      PictureInPicture:
+        "moz-src:///toolkit/components/pictureinpicture/PictureInPicture.sys.mjs",
+      SmartTabGroupingManager:
+        "moz-src:///browser/components/tabbrowser/SmartTabGrouping.sys.mjs",
+      SponsorProtection:
+        "moz-src:///browser/components/newtab/SponsorProtection.sys.mjs",
       TabMetrics: "moz-src:///browser/components/tabbrowser/TabMetrics.sys.mjs",
+      TabStateFlusher:
+        "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs",
+      TaskbarTabsUtils:
+        "resource:///modules/taskbartabs/TaskbarTabsUtils.sys.mjs",
+      TaskbarTabs: "resource:///modules/taskbartabs/TaskbarTabs.sys.mjs",
+      UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+      UrlbarProviderOpenTabs:
+        "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
+      FaviconUtils: "moz-src:///toolkit/modules/FaviconUtils.sys.mjs",
+      KeyboardLockUtils: "resource://gre/modules/KeyboardLockUtils.sys.mjs",
     });
     ChromeUtils.defineLazyGetter(this, "tabLocalization", () => {
       return new Localization(
@@ -246,6 +246,13 @@ export class Tabbrowser {
       "browser.tabs.tooltipsShowPidAndActiveness",
       false
     );
+
+    if (AppConstants.MOZ_CRASHREPORTER) {
+      // eslint-disable-next-line mozilla/lazy-getter-object-name
+      ChromeUtils.defineESModuleGetters(this, {
+        TabCrashHandler: "resource:///modules/ContentCrashHandlers.sys.mjs",
+      });
+    }
 
     Services.obs.addObserver(this, "contextual-identity-updated");
     Services.obs.addObserver(this, "intl:app-locales-changed");
@@ -1511,7 +1518,7 @@ export class Tabbrowser {
         let url = aIconURL;
         if (
           lazy.remoteSVGIconDecoding &&
-          url.startsWith(lazy.FaviconUtils.SVG_DATA_URI_PREFIX)
+          url.startsWith(this.FaviconUtils.SVG_DATA_URI_PREFIX)
         ) {
           url = this.#getMozRemoteImageURLForSvg(browser, url);
         }
@@ -1540,7 +1547,7 @@ export class Tabbrowser {
       let iconURL = browser.mIconURL;
       if (
         !iconURL ||
-        !iconURL.startsWith(lazy.FaviconUtils.SVG_DATA_URI_PREFIX)
+        !iconURL.startsWith(this.FaviconUtils.SVG_DATA_URI_PREFIX)
       ) {
         continue;
       }
@@ -1570,7 +1577,7 @@ export class Tabbrowser {
       options.contentParentId = contentParentId;
     }
 
-    return lazy.FaviconUtils.getMozRemoteImageURL(aUrl, options);
+    return this.FaviconUtils.getMozRemoteImageURL(aUrl, options);
   }
 
   getIcon(aTab) {
@@ -1653,7 +1660,7 @@ export class Tabbrowser {
       return this.#taskbarTabTitle;
     }
 
-    let id = lazy.TaskbarTabsUtils.getTaskbarTabIdFromWindow(
+    let id = this.TaskbarTabsUtils.getTaskbarTabIdFromWindow(
       this.documentGlobal
     );
     if (!id) {
@@ -1661,7 +1668,7 @@ export class Tabbrowser {
     }
 
     if (!this.#taskbarTab) {
-      lazy.TaskbarTabs.getTaskbarTab(id)
+      this.TaskbarTabs.getTaskbarTab(id)
         .then(tt => {
           this.#taskbarTab = tt;
           this.updateTitlebar();
@@ -2089,8 +2096,8 @@ export class Tabbrowser {
       existingEntry.count++;
       existingEntry.timestamp = now;
       if (existingEntry.count === LIMIT_FOR_TRIGGER) {
-        await lazy.ASRouter.waitForInitialized;
-        lazy.ASRouter.sendTriggerMessage({
+        await this.ASRouter.waitForInitialized;
+        this.ASRouter.sendTriggerMessage({
           browser: newTab.linkedBrowser,
           id: "tabSwitch",
           context: {
@@ -3274,7 +3281,7 @@ export class Tabbrowser {
     }
 
     // Flush the tab's state so session restore has the latest data.
-    await lazy.TabStateFlusher.flush(browser);
+    await this.TabStateFlusher.flush(browser);
   }
 
   discardBrowser(aTab, aForceDiscard) {
@@ -3720,7 +3727,7 @@ export class Tabbrowser {
         if (lazyBrowserURI) {
           // Lazy browser must be explicitly registered so tab will appear as
           // a switch-to-tab candidate in autocomplete.
-          lazy.UrlbarProviderOpenTabs.registerOpenTab(
+          this.UrlbarProviderOpenTabs.registerOpenTab(
             lazyBrowserURI.spec,
             t.userContextId,
             tabGroup?.id,
@@ -4113,7 +4120,7 @@ export class Tabbrowser {
     // Without this, it is not possible to save and close a tab group with
     // a short lifetime.
     group.tabs.forEach(tab => {
-      lazy.TabStateFlusher.flush(tab.linkedBrowser);
+      this.TabStateFlusher.flush(tab.linkedBrowser);
     });
 
     return group;
@@ -6451,7 +6458,7 @@ export class Tabbrowser {
 
     if (browser.registeredOpenURI && !adoptedByTab) {
       let userContextId = browser.getAttribute("usercontextid") || 0;
-      lazy.UrlbarProviderOpenTabs.unregisterOpenTab(
+      this.UrlbarProviderOpenTabs.unregisterOpenTab(
         browser.registeredOpenURI.spec,
         userContextId,
         aTab.group?.id,
@@ -7047,7 +7054,7 @@ export class Tabbrowser {
     // Unregister the previously opened URI
     if (otherBrowser.registeredOpenURI) {
       let userContextId = otherBrowser.getAttribute("usercontextid") || 0;
-      lazy.UrlbarProviderOpenTabs.unregisterOpenTab(
+      this.UrlbarProviderOpenTabs.unregisterOpenTab(
         otherBrowser.registeredOpenURI.spec,
         userContextId,
         aOtherTab.group?.id,
@@ -8702,14 +8709,14 @@ export class Tabbrowser {
     return (
       (aBrowser == this.selectedBrowser && !this.document.hidden) ||
       this._printPreviewBrowsers.has(aBrowser) ||
-      lazy.PictureInPicture.isOriginatingBrowser(aBrowser) ||
+      this.PictureInPicture.isOriginatingBrowser(aBrowser) ||
       this.splitViewBrowsers.includes(aBrowser)
     );
   }
 
   _getSwitcher() {
     if (!this._switcher) {
-      this._switcher = new lazy.AsyncTabSwitcher(this);
+      this._switcher = new this.AsyncTabSwitcher(this);
     }
     return this._switcher;
   }
@@ -8768,7 +8775,7 @@ export class Tabbrowser {
     const action = lazy.ShortcutUtils.getSystemActionForEvent(aEvent);
     if (
       action != null &&
-      lazy.KeyboardLockUtils.mustWaitForKeyboardLockRequestedReply(aEvent)
+      this.KeyboardLockUtils.mustWaitForKeyboardLockRequestedReply(aEvent)
     ) {
       return;
     }
@@ -8987,13 +8994,13 @@ export class Tabbrowser {
     let uri =
       tab.linkedBrowser?.registeredOpenURI || tab._originalRegisteredOpenURI;
     if (uri) {
-      lazy.UrlbarProviderOpenTabs.unregisterOpenTab(
+      this.UrlbarProviderOpenTabs.unregisterOpenTab(
         uri.spec,
         tab.userContextId,
         null,
         lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
       );
-      lazy.UrlbarProviderOpenTabs.registerOpenTab(
+      this.UrlbarProviderOpenTabs.registerOpenTab(
         uri.spec,
         tab.userContextId,
         tab.group?.id,
@@ -9010,13 +9017,13 @@ export class Tabbrowser {
       // By the time the tab makes it to us it is already ungrouped, but
       // the original group is preserved in the event target.
       let originalGroup = aEvent.target;
-      lazy.UrlbarProviderOpenTabs.unregisterOpenTab(
+      this.UrlbarProviderOpenTabs.unregisterOpenTab(
         uri.spec,
         tab.userContextId,
         originalGroup.id,
         lazy.PrivateBrowsingUtils.isWindowPrivate(this.documentGlobal)
       );
-      lazy.UrlbarProviderOpenTabs.registerOpenTab(
+      this.UrlbarProviderOpenTabs.registerOpenTab(
         uri.spec,
         tab.userContextId,
         null,
@@ -9119,7 +9126,7 @@ export class Tabbrowser {
         debugStringArray.push("[A]");
       }
 
-      if (lazy.SponsorProtection.isProtectedBrowser(tab.linkedBrowser)) {
+      if (this.SponsorProtection.isProtectedBrowser(tab.linkedBrowser)) {
         debugStringArray.push("[S]");
       }
 
@@ -9311,7 +9318,7 @@ export class Tabbrowser {
       let browser = tab.linkedBrowser;
       if (browser.registeredOpenURI) {
         let userContextId = browser.getAttribute("usercontextid") || 0;
-        lazy.UrlbarProviderOpenTabs.unregisterOpenTab(
+        this.UrlbarProviderOpenTabs.unregisterOpenTab(
           browser.registeredOpenURI.spec,
           userContextId,
           tab.group?.id,
@@ -10390,7 +10397,7 @@ class TabProgressListener {
       let userContextId = this._browser.getAttribute("usercontextid") || 0;
       if (this._browser.registeredOpenURI) {
         let uri = this._browser.registeredOpenURI;
-        lazy.UrlbarProviderOpenTabs.unregisterOpenTab(
+        this.#tabbrowser.UrlbarProviderOpenTabs.unregisterOpenTab(
           uri.spec,
           userContextId,
           this._tab.group?.id,
@@ -10399,7 +10406,7 @@ class TabProgressListener {
         delete this._browser.registeredOpenURI;
       }
       if (!this.#documentGlobal.isBlankPageURL(aLocation.spec)) {
-        lazy.UrlbarProviderOpenTabs.registerOpenTab(
+        this.#tabbrowser.UrlbarProviderOpenTabs.registerOpenTab(
           aLocation.spec,
           userContextId,
           this._tab.group?.id,
