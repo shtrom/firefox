@@ -4079,11 +4079,22 @@ pref("extensions.formautofill.addresses.supported", "detect");
 #else
 pref("extensions.formautofill.useml", false);
 #endif
+
 // Set at runtime once we have asked the inference process whether the native
 // ONNX runtime is available. Until then we stay on the regex heuristics.
 pref("extensions.formautofill.useml.nativeOnnxAvailable", false);
+
+// Use the two-engine (encoder + fusion head) field classifier instead of the
+// single text-classification model. Controlled by the form-autofill-ml Nimbus
+// feature.
+pref("extensions.formautofill.useml.twoHead", true);
+// How long an idle ML autofill engine is kept alive, in milliseconds. -1 means
+// never time out. Controlled by the form-autofill-ml Nimbus feature.
+pref("extensions.formautofill.useml.timeoutMS", 120000);
+
 pref("extensions.formautofill.addresses.enabled", true);
 pref("extensions.formautofill.addresses.capture.enabled", true);
+
 #if defined(ANDROID)
   // On android we have custom logic to control this. Ideally we should use nimbus there as well.
   // https://github.com/mozilla-mobile/firefox-android/blob/d566743ea0f041ce27c1204da903de380f96b46e/fenix/app/src/main/java/org/mozilla/fenix/utils/Settings.kt#L1502-L1510
