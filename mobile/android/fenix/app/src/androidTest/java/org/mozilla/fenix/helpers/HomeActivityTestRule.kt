@@ -359,8 +359,7 @@ fun setLongTapTimeout(delay: Int) {
             Log.i(TAG, "setLongTapTimeout: Executed command \"settings put secure long_press_timeout $delay\"")
             break
         } catch (e: RuntimeException) {
-            Log.i(TAG, "setLongTapTimeout: RuntimeException caught, executing fallback methods")
-            e.printStackTrace()
+            Log.e(TAG, "setLongTapTimeout: RuntimeException caught, executing fallback methods", e)
         }
     }
 }

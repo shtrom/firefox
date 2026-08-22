@@ -229,7 +229,8 @@ object ScreenDump {
         val hint = (view as? TextView)?.hint?.toString()?.takeIf { it.isNotBlank() }
         val desc = view.contentDescription?.toString()?.takeIf { it.isNotBlank() }
         // Print a line only for views carrying an actionable handle (id/text/hint/desc); skip pure layout wrappers.
-        if (id != null || text != null || hint != null || desc != null) {
+        val hasActionableHandle = id != null || text != null || hint != null || desc != null
+        if (hasActionableHandle) {
             val parts = buildList {
                 if (id != null) add("id=\"$id\"")
                 add("class=${view.javaClass.simpleName}")

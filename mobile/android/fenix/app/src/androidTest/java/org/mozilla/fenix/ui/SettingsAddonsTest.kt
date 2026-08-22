@@ -104,8 +104,8 @@ class SettingsAddonsTest {
             }
     }
 
-    // TODO: Harden to dynamically install addons from position
-    //   in list of detected addons on screen instead of hard-coded values.
+    // This test should be hardened to dynamically install addons from their position in the list of
+    // detected addons on screen instead of relying on hard-coded values.
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/561600
     // Installs 2 add-on and checks that the app doesn't crash while navigating the app
     @Converted(

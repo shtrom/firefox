@@ -23,6 +23,8 @@ internal const val SHADOW_HEIGHT = 40
  * shadow restores that contract to keep decoding from treating the return value as a success signal.
  */
 @Implements(BitmapFactory::class)
+// Robolectric instantiates shadows, so this has to stay a class.
+@Suppress("UtilityClassWithPublicConstructor")
 class ShadowBoundsReportingBitmapFactory {
     companion object {
         @Implementation
