@@ -2118,15 +2118,20 @@ class nsContentUtils {
   [[nodiscard]] static bool GetNodeTextContent(const nsINode* aNode, bool aDeep,
                                                nsAString& aResult,
                                                const mozilla::fallible_t&);
-
   static void GetNodeTextContent(const nsINode* aNode, bool aDeep,
                                  nsAString& aResult);
-
-  /**
-   * Same as GetNodeTextContents but appends the result rather than sets it.
-   */
+  // Same as GetNodeTextContents but appends the result rather than sets it.
   static bool AppendNodeTextContent(const nsINode* aNode, bool aDeep,
                                     nsAString& aResult,
+                                    const mozilla::fallible_t&);
+  // Same as above, but returning utf-8.
+  static void GetNodeTextContent(const nsINode* aNode, bool aDeep,
+                                 nsACString& aResult);
+  [[nodiscard]] static bool GetNodeTextContent(const nsINode* aNode, bool aDeep,
+                                               nsACString& aResult,
+                                               const mozilla::fallible_t&);
+  static bool AppendNodeTextContent(const nsINode* aNode, bool aDeep,
+                                    nsACString& aResult,
                                     const mozilla::fallible_t&);
 
   /**
