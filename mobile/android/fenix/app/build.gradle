@@ -785,7 +785,7 @@ mozilla {
     ktfmtSourcePaths = ["src/**/*.kt", "!**/build/**/*.kt"]
     detektSourcePaths = [
         "**/src/**/*.kt",
-        "!**/test/**", "!**/androidTest/**", "!**/build/**", "!**/resources/**", "!**/tmp/**",
+        "!**/build/**", "!**/resources/**", "!**/tmp/**",
         "!**/longfox/**"
     ]
     detektConfig = "$projectDir/../config/detekt.yml"
