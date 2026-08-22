@@ -786,7 +786,7 @@ export class Tabbrowser {
     this.#selectedTab = tab;
     this.#selectedBrowser = browser;
     tab.permanentKey = browser.permanentKey;
-    tab._tPos = 0;
+    tab._index = 0;
     tab._fullyOpen = true;
     tab.linkedBrowser = browser;
 
@@ -2630,7 +2630,7 @@ export class Tabbrowser {
       newIndex < 0 &&
       Services.prefs.getBoolPref("browser.tabs.insertAfterCurrent")
     ) {
-      newIndex = this.selectedTab._tPos + 1;
+      newIndex = this.selectedTab.index + 1;
     }
 
     if (replace) {
@@ -2642,7 +2642,7 @@ export class Tabbrowser {
       let browser;
       if (targetTab) {
         browser = this.getBrowserForTab(targetTab);
-        targetTabIndex = targetTab._tPos;
+        targetTabIndex = targetTab.index;
       } else {
         browser = this.selectedBrowser;
         targetTabIndex = this.tabContainer.selectedIndex;
@@ -2693,7 +2693,7 @@ export class Tabbrowser {
       firstTabAdded = this.addTab(aURIs[0], params);
       tabs.push(firstTabAdded);
       if (newIndex > -1) {
-        targetTabIndex = firstTabAdded._tPos;
+        targetTabIndex = firstTabAdded.index;
       }
     }
 
@@ -3393,7 +3393,7 @@ export class Tabbrowser {
           this.selectedTab = this.addTrustedTab(
             this.documentGlobal.BROWSER_NEW_TAB_URL,
             {
-              tabIndex: tab._tPos + 1,
+              tabIndex: tab.index + 1,
               userContextId: tab.userContextId,
               tabGroup: tab.group,
               focusUrlBar: true,
@@ -3420,8 +3420,8 @@ export class Tabbrowser {
     // new tab right after `tab`.
     const tabIndex =
       !options.tabGroup && adjacentTab.group
-        ? adjacentTab.group.tabs.at(-1)._tPos + 1
-        : adjacentTab._tPos + 1;
+        ? adjacentTab.group.tabs.at(-1).index + 1
+        : adjacentTab.index + 1;
 
     return this.addTab(uriString, {
       ...options,
@@ -3858,7 +3858,7 @@ export class Tabbrowser {
     if (this.isSplitViewWrapper(element)) {
       element = element.tabs[0];
     }
-    return element._tPos;
+    return element.index;
   }
 
   /**
@@ -4254,7 +4254,7 @@ export class Tabbrowser {
           tabIndex,
         });
         newTabs.push(splitview);
-        tabIndex = splitview.tabs[0]._tPos + splitview.tabs.length;
+        tabIndex = splitview.tabs[0].index + splitview.tabs.length;
       } else {
         adoptedTab = this.adoptTab(element, {
           elementIndex,
@@ -4264,7 +4264,7 @@ export class Tabbrowser {
         newTabs.push(adoptedTab);
         // Put next tab after current one.
         elementIndex = undefined;
-        tabIndex = adoptedTab._tPos + 1;
+        tabIndex = adoptedTab.index + 1;
       }
     }
 
@@ -4311,7 +4311,7 @@ export class Tabbrowser {
       newTabs.push(adoptedTab);
       // Put next tab after current one.
       elementIndex = undefined;
-      tabIndex = adoptedTab._tPos + 1;
+      tabIndex = adoptedTab.index + 1;
     }
 
     try {
@@ -6539,9 +6539,9 @@ export class Tabbrowser {
     aTab.remove();
     this.tabContainer._invalidateCachedTabs();
 
-    // ... and fix up the _tPos properties immediately.
-    for (let i = aTab._tPos; i < this.tabs.length; i++) {
-      this.tabs[i]._tPos = i;
+    // ... and fix up the _index properties immediately.
+    for (let i = aTab.index; i < this.tabs.length; i++) {
+      this.tabs[i]._index = i;
     }
 
     if (!this.#windowIsClosing) {
@@ -7580,7 +7580,7 @@ export class Tabbrowser {
 
   #updateTabsAfterInsert() {
     for (let i = 0; i < this.tabs.length; i++) {
-      this.tabs[i]._tPos = i;
+      this.tabs[i]._index = i;
       this.tabs[i]._selected = false;
     }
 
@@ -7638,7 +7638,7 @@ export class Tabbrowser {
     // Return early if the tab is already in the right spot.
     if (
       this.isTab(element) &&
-      element._tPos == tabIndex &&
+      element.index == tabIndex &&
       !(element.group && forceUngrouped)
     ) {
       return;
@@ -7662,11 +7662,11 @@ export class Tabbrowser {
     // causes all following tabs to have a decreased index.
     let movingForwards = false;
     if (this.isTab(element)) {
-      movingForwards = tabIndex > element._tPos;
+      movingForwards = tabIndex > element.index;
     } else {
       // tab group or split view (mutually exclusive with being pinned).
       let tabsInElement = element.tabs;
-      movingForwards = tabIndex > tabsInElement[0]._tPos;
+      movingForwards = tabIndex > tabsInElement[0].index;
       if (movingForwards) {
         // -1 because element will be *after* tabIndex instead of at it.
         tabIndex += tabsInElement.length - 1;
@@ -7974,7 +7974,7 @@ export class Tabbrowser {
     }
 
     let state = {
-      tabIndex: tab._tPos,
+      tabIndex: tab.index,
     };
     if (tab.visible) {
       state.elementIndex = tab.elementIndex;
@@ -8086,7 +8086,7 @@ export class Tabbrowser {
     // the front tab, then logically that tab moves, and all following tabs
     // would shift, which would invalidate the index in previousTabState.
     let reverseEvents =
-      tabs.length > 1 && tabs[0]._tPos > previousTabStates[0].tabIndex;
+      tabs.length > 1 && tabs[0].index > previousTabStates[0].tabIndex;
 
     for (let i = 0; i < tabs.length; i++) {
       let ii = reverseEvents ? tabs.length - i - 1 : i;
@@ -8545,7 +8545,7 @@ export class Tabbrowser {
     ) {
       tabs.push(selectedTab);
     }
-    return tabs.sort((a, b) => a._tPos > b._tPos);
+    return tabs.sort((a, b) => a.index > b.index);
   }
 
   /**

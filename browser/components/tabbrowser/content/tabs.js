@@ -1408,7 +1408,7 @@
         return;
       }
 
-      let isEndTab = aClosingTab && aClosingTab._tPos > tabs.at(-1)._tPos;
+      let isEndTab = aClosingTab && aClosingTab.index > tabs.at(-1).index;
 
       if (!this._tabDefaultMaxWidth) {
         this._tabDefaultMaxWidth = parseFloat(

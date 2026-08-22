@@ -2763,7 +2763,7 @@ class _SessionStore {
       state: tabState,
       title: aTab.label,
       image: aWindow.gBrowser.getIcon(aTab),
-      pos: aTab._tPos,
+      pos: aTab.index,
       closedAt: Date.now(),
       closedInGroup: aTab._closedInMultiselection,
       closedInTabGroupId: closedInTabGroup ? tabState.groupId : null,
@@ -3361,7 +3361,7 @@ class _SessionStore {
     this.#ensureNoNullsInTabDataList(
       window.gBrowser.tabs,
       this.#windows[window.__SSi].tabs,
-      aTab._tPos
+      aTab.index
     );
     this.#restoreTab(aTab, tabState);
 
@@ -5907,7 +5907,7 @@ class _SessionStore {
   }
 
   // In case we didn't collect/receive data for any tabs yet we'll have to
-  // fill the array with at least empty tabData objects until |_tPos| or
+  // fill the array with at least empty tabData objects until |index| or
   // we'll end up with |null| entries.
   #ensureNoNullsInTabDataList(tabElements, tabDataList, changedTabPos) {
     let initialDataListLength = tabDataList.length;
@@ -5962,13 +5962,16 @@ class _SessionStore {
     // we collect their data for the first time when saving state.
     DirtyWindows.add(window);
 
-    if (!tab.hasOwnProperty("_tPos")) {
+    // TODO: Check whether this is reachable at all. Every tab the tabbrowser
+    // inserts gets indexed by #updateTabsAfterInsert(), so a tab arriving here
+    // should always have a position.
+    if (tab.index === undefined) {
       throw new Error(
         "Shouldn't be trying to restore a tab that has no position"
       );
     }
     // Update the tab state in case we shut down without being notified.
-    this.#windows[window.__SSi].tabs[tab._tPos] = tabData;
+    this.#windows[window.__SSi].tabs[tab.index] = tabData;
 
     // Prepare the tab so that it can be properly restored.  We'll also attach
     // a copy of the tab's data in case we close it before it's been restored.

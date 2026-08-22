@@ -894,7 +894,7 @@ var TabContextMenu = {
     let allSelectedTabsAdjacent = selectedTabs.every(
       (element, index, array) => {
         return array.length > index + 1
-          ? element._tPos + 1 == array[index + 1]._tPos
+          ? element.index + 1 == array[index + 1].index
           : true;
       }
     );
@@ -1162,7 +1162,7 @@ var TabContextMenu = {
     });
   },
   duplicateSelectedTabs() {
-    let newIndex = this.contextTabs.at(-1)._tPos + 1;
+    let newIndex = this.contextTabs.at(-1).index + 1;
     for (let tab of this.contextTabs) {
       let newTab = SessionStore.duplicateTab(window, tab);
       if (tab.group) {
@@ -1220,7 +1220,7 @@ var TabContextMenu = {
       let newTab = gBrowser.addTab(tab.linkedBrowser.currentURI.spec, {
         userContextId,
         pinned: tab.pinned,
-        tabIndex: tab._tPos + 1,
+        tabIndex: tab.index + 1,
         triggeringPrincipal,
         eventDetail: { containerSource: "tab_context_menu" },
       });
@@ -1262,7 +1262,7 @@ var TabContextMenu = {
 
   moveTabsToNewGroup() {
     let insertBefore = this.contextTab;
-    if (insertBefore._tPos < gBrowser.pinnedTabCount) {
+    if (insertBefore.index < gBrowser.pinnedTabCount) {
       let firstUnpinnedTab = gBrowser.tabs[gBrowser.pinnedTabCount];
       if (firstUnpinnedTab.splitview) {
         insertBefore = firstUnpinnedTab.splitview;
@@ -1290,7 +1290,7 @@ var TabContextMenu = {
 
   moveSplitViewToNewGroup() {
     let insertBefore = this.contextTab;
-    if (insertBefore._tPos < gBrowser.pinnedTabCount) {
+    if (insertBefore.index < gBrowser.pinnedTabCount) {
       insertBefore = gBrowser.tabs[gBrowser.pinnedTabCount];
     } else if (this.contextTab.group) {
       insertBefore = this.contextTab.group;
