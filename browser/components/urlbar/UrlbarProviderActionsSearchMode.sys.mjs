@@ -99,7 +99,6 @@ export class UrlbarProviderActionsSearchMode extends UrlbarProvider {
 
   getViewTemplate(result) {
     let action = lazy.ActionsProviderQuickActions.getAction(result.payload.key);
-    let isInactive = this.#isActionInactive(action);
     return {
       children: [
         {
@@ -109,8 +108,7 @@ export class UrlbarProviderActionsSearchMode extends UrlbarProvider {
             "data-action": result.payload.key,
             "data-input-length": result.payload.inputLength,
             role: "button",
-            "aria-disabled": isInactive ? "true" : null,
-            disabled: isInactive,
+            disabled: this.#isActionInactive(action),
           },
           children: [
             {
