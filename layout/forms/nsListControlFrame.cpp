@@ -243,7 +243,7 @@ void nsListControlFrame::Reflow(nsPresContext* aPresContext,
   mMightNeedSecondPass = false;
 
   // Now see whether we need a second pass.  If we do, our
-  // nsSelectsAreaFrame will have suppressed the scrollbar update.
+  // scrolled frame will have suppressed the scrollbar update.
   if (mBSizeOfARow == oldBSizeOfARow) {
     return;
   }

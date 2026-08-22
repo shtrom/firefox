@@ -539,7 +539,7 @@ static bool IsFontSizeInflationContainer(nsIFrame* aFrame,
        frameType == LayoutFrameType::Letter) ||
       // Given multiple frames for the same node, only the
       // outer one should be considered a container.
-      // (Important, e.g., for nsSelectsAreaFrame.)
+      // (Important, e.g., for scrolled frames.)
       (aFrame->GetParent()->GetContent() == content) ||
       (content &&
        // Form controls shouldn't become inflation containers.
