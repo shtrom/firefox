@@ -2607,6 +2607,10 @@ def asan_flags(c_compiler, target, compilation_flags, linker_flags, build_env):
             flag = f"-fsanitize-blacklist={build_env.topsrcdir}/build/sanitizers/asan_blacklist_win.txt"
             compilation_flags.cflags.append(flag)
             compilation_flags.cxxflags.append(flag)
+        # Disable MSVC STL <optional> ASan annotations that produce
+        # false-positive use-after-poison reports at -O2.
+        # https://github.com/llvm/llvm-project/issues/204041
+        compilation_flags.cxxflags.append("-D_DISABLE_OPTIONAL_ANNOTATION")
 
     asan_flag = "-fsanitize=address"
     compilation_flags.cflags.append(asan_flag)
