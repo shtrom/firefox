@@ -533,12 +533,11 @@ class BrowserRobot(private val composeTestRule: ComposeTestRule) {
     }
 
     /**
-     * Asserts that in [waitingTime] the playback state of the current tab will be [expectedState].
+     * Asserts that in [waitingTime] the playback state of the current tab will be [expectedState], failing the
+     * assertion otherwise.
      *
      * @param store [BrowserStore] from which to get data about the current tab's state.
      * @param expectedState [MediaSession.PlaybackState] the playback state that will be asserted
-     * @param waitingTime maximum time the test will wait for the playback state to become [expectedState] before
-     *   failing the assertion.
      */
     fun assertPlaybackState(store: BrowserStore, expectedState: MediaSession.PlaybackState) {
         val startMills = SystemClock.uptimeMillis()

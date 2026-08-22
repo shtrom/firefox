@@ -31,6 +31,7 @@ import org.mozilla.fenix.settings.PhoneFeature
  *
  * @param initialTouchMode See [ActivityTestRule]
  * @param launchActivity See [ActivityTestRule]
+ * @param skipOnboarding Whether onboarding is skipped before the activity launches.
  */
 class HomeActivityTestRule(
     initialTouchMode: Boolean = false,
@@ -169,6 +170,7 @@ class HomeActivityTestRule(
  *
  * @param initialTouchMode See [IntentsTestRule]
  * @param launchActivity See [IntentsTestRule]
+ * @param skipOnboarding Whether onboarding is skipped before the activity launches.
  */
 class HomeActivityIntentTestRule
 internal constructor(
