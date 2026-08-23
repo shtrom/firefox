@@ -1468,27 +1468,29 @@ toolbar[inactive="true"] .urlbar,
 
 .searchmode-switcher-panel-list {
   max-width: var(--search-engine-name-max-width);
-  /* TODO bug 2032017: clean this up after 1826841 is done */
-  --panel-list-border-radius: var(--panel-border-radius);
-
   min-width: var(--urlbar-searchmode-switcher-panel-list-min-width);
 
   .searchmode-switcher-panel > & {
-    --panel-list-background-color: var(--panel-background);
+    /* The panel zeroes its own padding because the list is the scroll
+       container, so the body padding has to go inside it. */
     padding: var(--panel-subview-body-padding);
   }
 
   > panel-item::part(button) {
-    -moz-context-properties: fill;
-    fill: currentColor;
     /* The --icon-url variable allows setting an icon in JS. */
     background-image: var(--icon-url, url("chrome://global/skin/icons/search-glass.svg"));
-    background-size: 16px 16px;
-    /* TODO bug 2032017: clean this up after 1826841 is done */
-    padding: var(--panel-menuitem-padding);
+    /* The icon sits at --panel-menuitem-padding-inline and is --icon-size wide,
+       so the label clears it. panel-item reserves that room itself, but New Tab
+       overrides it with too little (bug 2065170). */
     padding-inline-start: calc(var(--panel-menuitem-padding-inline) + 22px);
-    border-radius: var(--panel-menuitem-border-radius);
-    margin: var(--panel-menuitem-margin);
+    /* With Nova, panel-list already has these styles by default; Proton needs
+       adjustments to look like a proper menu. */
+    /* stylelint-disable-next-line media-query-no-invalid */
+    @media not -moz-pref("browser.nova.enabled") {
+      padding: var(--panel-menuitem-padding);
+      border-radius: var(--panel-menuitem-border-radius);
+      margin: var(--panel-menuitem-margin);
+    }
   }
 
   > .searchmode-switcher-panel-search-settings-button::part(button) {
@@ -1505,10 +1507,6 @@ toolbar[inactive="true"] .urlbar,
     width: 11px;
     top: 4px;
     inset-inline-start: 17px;
-  }
-
-  > hr {
-    margin: var(--panel-menuitem-margin);
   }
 }
 
