@@ -893,6 +893,9 @@ browser:
     notification_emails:
       - application-update-telemetry-alerts@mozilla.com
     expires: never
+    send_in_pings:
+      - fx-accounts-client-info
+      - metrics
     telemetry_mirror: h#BROWSER_IS_USER_DEFAULT
 
   is_user_default_error:
