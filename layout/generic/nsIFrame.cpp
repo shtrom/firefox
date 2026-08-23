@@ -3060,6 +3060,14 @@ static void WrapSeparatorTransform(nsDisplayListBuilder* aBuilder,
 // that will be built for |aMaskedFrame|. If we're not able to compute
 // one, return an empty Maybe.
 // The returned clip rect, if there is one, is relative to |aMaskedFrame|.
+// Bug 1958124: If this is inlined in
+// nsIFrame::BuildDisplayListForStackingContext on Win32, its variables enlarge
+// that function's stack frame, which is on a deeply recursive path that is
+// already up against the stack limit. Only masked frames reach this code, so
+// never inlining it on Win32 costs us nothing.
+#if defined(XP_WIN) && !defined(_WIN64)
+MOZ_NEVER_INLINE
+#endif
 static Maybe<nsRect> ComputeClipForMaskItem(
     nsDisplayListBuilder* aBuilder, nsIFrame* aMaskedFrame,
     const SVGUtils::MaskUsage& aMaskUsage) {
