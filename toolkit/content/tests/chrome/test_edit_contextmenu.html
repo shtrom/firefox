@@ -105,6 +105,16 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=1513343
       let isPassword = element.type == "password";
       is(revealPassword.hidden, !isPassword, "reveal password");
 
+      // Items contributed by the fixture through EditContextMenu.addItems().
+      let addedItem = contextmenu.querySelector("#test-item");
+      ok(addedItem, "added item is in the menu");
+      is(addedItem.previousElementSibling.id, "edit-contextmenu-paste",
+         "added item sits after the item it asked for");
+      let matches = element.localName == "textarea";
+      is(addedItem.hidden, !matches, "added item is only shown for a matching field");
+      is(addedItem.getAttribute("data-shown-for"), matches ? "textarea" : null,
+         "onShowing only ran for a matching field");
+
       let popuphidden = new Promise(r => win.addEventListener("popuphidden", r, { once: true }));
       if (isPassword) {
         let isRevealed = element.revealPassword;
