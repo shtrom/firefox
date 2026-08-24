@@ -644,6 +644,8 @@ class TestInfoReport(TestInfo):
             "https://hg.mozilla.org/try",
         ]:
             trunk = True
+        elif os.environ.get("GECKO_HEAD_REF", "") == "refs/heads/main":
+            trunk = True
         else:
             show_testruns = False
 
