@@ -84,8 +84,9 @@ bool nsIConstraintValidation::ReportValidity() {
   return false;
 }
 
-void nsIConstraintValidation::SetValidityState(ValidityStateType aState,
-                                               bool aValue) {
+void nsIConstraintValidation::DoSetValidityState(ValidityStateType aState,
+                                                 bool aValue) {
+  MOZ_ASSERT(GetValidityState(aState) != aValue);
   bool previousValidity = IsValid();
 
   if (aValue) {
