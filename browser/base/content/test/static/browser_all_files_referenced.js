@@ -199,6 +199,11 @@ var allowlist = [
   // SpiderMonkey parser API, currently unused in browser/ and toolkit/
   { file: "moz-src:///toolkit/components/reflect/reflect.sys.mjs" },
 
+  // TODO Bug 2065560: Connect AITabStore to Tool calls
+  {
+    file: "moz-src:///browser/components/aiwindow/ui/modules/AITabStore.sys.mjs",
+  },
+
   // extensions/pref/autoconfig/src/nsReadConfig.cpp
   { file: "resource://gre/defaults/autoconfig/prefcalls.js" },
 

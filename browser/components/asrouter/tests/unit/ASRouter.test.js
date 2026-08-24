@@ -936,6 +936,14 @@ describe("ASRouter", () => {
         assert.notCalled(addImpressionStub);
         assert.notCalled(blockMessageByIdStub);
       });
+      it("allowlists the SET_DEFAULT_BROWSER_OPEN_WITH action", () => {
+        assert.isTrue(
+          Router._isAllowedActionOnlyMessageAction({
+            type: "SET_DEFAULT_BROWSER_OPEN_WITH",
+          }),
+          "SET_DEFAULT_BROWSER_OPEN_WITH is an allowed action-only action"
+        );
+      });
       it("does nothing for a non-allowlisted action", () => {
         const badMessage = {
           id: "BAD",

@@ -301,7 +301,7 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
       engine,
       query,
       alias,
-      controller.browserWindow
+      controller
     );
 
     if (!results || instance != this.queryInstance) {
@@ -400,7 +400,7 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
     engine,
     searchString,
     alias,
-    win
+    controller
   ) {
     if (!engine) {
       return null;
@@ -557,7 +557,7 @@ export class UrlbarProviderSearchSuggestions extends UrlbarProvider {
                 : UrlbarUtils.getRemoteIconUrl(
                     entry.icon,
                     UrlbarProviderSearchSuggestions.RICH_ICON_SIZE,
-                    win
+                    controller
                   ),
               helpUrl: entry.trending ? TRENDING_HELP_URL : undefined,
             },

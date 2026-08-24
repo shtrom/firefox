@@ -1,11 +1,11 @@
 // |reftest| error:SyntaxError
 // This file was procedurally generated from the following sources:
-// - src/dstr-assignment/array-rest-elision-invalid.case
-// - src/dstr-assignment/syntax/for-in.template
+// - src/dstr-assignment/obj-rest-before-comma-invalid.case
+// - src/dstr-assignment/syntax/for-of.template
 /*---
-description: ArrayAssignmentPattern may not include elisions following an AssignmentRestElement in a AssignmentElementList. (For..in statement)
+description: Object rest element cannot be followed by a comma in ObjectAssignmentPattern. (For..of statement)
 esid: sec-for-in-and-for-of-statements-runtime-semantics-labelledevaluation
-features: [destructuring-binding]
+features: [object-rest, destructuring-binding]
 flags: [generated]
 negative:
   phase: parse
@@ -29,5 +29,7 @@ info: |
     [...]
 ---*/
 $DONOTEVALUATE();
+var rest;
 
-for ([...x,] in [[]]) ;
+for ({...rest,} of [{}
+]) ;

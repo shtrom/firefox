@@ -284,19 +284,27 @@ export var UrlbarUtils = {
 
   /**
    * Converts a given icon URL to a remote icon URL if it's not a trusted
-   * protocol.
+   * protocol, which keeps the decode out of the parent process (bug 2012436).
    *
    * @param {string} iconUrl The URL of the icon.
    * @param {number} size The desired size of the icon (currently ignored).
-   * @param {Window} win The window context.
+   * @param {UrlbarParentController} [controller]
+   *   The controller the query runs on. It supplies the window the icon renders
+   *   in, and whether that window is in a content process, which decodes what
+   *   it displays itself and can't load the wrapper's scheme. Omitted in unit
+   *   tests.
    * @returns {string|null} The URL of the remote icon or null if not available.
    */
-  getRemoteIconUrl(iconUrl, size, win) {
+  getRemoteIconUrl(iconUrl, size, controller) {
     let url = URL.parse(iconUrl);
     if (!url) {
       return null;
     }
-    if (!lazy.FaviconUtils.TRUSTED_FAVICON_SCHEMES.includes(url.protocol)) {
+    let scheme = url.protocol.slice(0, -1);
+    if (
+      !controller?.rendersInContentProcess &&
+      !lazy.FaviconUtils.TRUSTED_FAVICON_SCHEMES.includes(scheme)
+    ) {
       if (Services.env.exists("XPCSHELL_TEST_PROFILE_DIR")) {
         // XPCShell tests don't have a real window, just use fallback values.
         return lazy.FaviconUtils.getMozRemoteImageURL(iconUrl, {
@@ -308,8 +316,10 @@ export var UrlbarUtils = {
         // TODO Bug 2035971: Restore the size property once `FaviconUtils` and
         // `moz-remote-image` handle the image aspect ratio correctly.
         //
-        // size: Math.floor(size * win.devicePixelRatio),
-        colorScheme: win.matchMedia("(prefers-color-scheme: dark)").matches
+        // size: Math.floor(size * controller.browserWindow.devicePixelRatio),
+        colorScheme: controller.browserWindow.matchMedia(
+          "(prefers-color-scheme: dark)"
+        ).matches
           ? "dark"
           : "light",
       });

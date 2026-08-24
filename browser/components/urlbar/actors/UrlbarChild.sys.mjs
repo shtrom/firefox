@@ -149,40 +149,55 @@ export class UrlbarChild extends JSWindowActorChild {
    * returns a content-realm promise (see `#wrapPromise`).
    */
   exposePort() {
-    let win = Cu.waiveXrays(this.contentWindow);
-    win.UrlbarActorPort = Cu.cloneInto(
-      {
-        sendAsyncMessage: (name, data) => this.sendAsyncMessage(name, data),
-        sendQuery: (name, data) =>
-          this.#wrapPromise(this.sendQuery(name, data), win),
-        registerMessagePathInput: input => this.registerMessagePathInput(input),
-        registerChildController: (instanceId, child) =>
-          this.registerChildController(instanceId, child),
-        whereToOpenLink: event => UrlbarContentUtils.whereToOpenLink(event),
-        willLoadInBackground: (where, params) =>
-          UrlbarContentUtils.willLoadInBackground(where, params),
-        getFixupPrimitives: (searchString, isPrivate) =>
-          Cu.cloneInto(
-            UrlbarContentUtils.getFixupPrimitives(searchString, isPrivate),
-            win
-          ),
-        getDisplaySpec: url => UrlbarContentUtils.getDisplaySpec(url),
-        unEscapeURIForUI: uri => UrlbarContentUtils.unEscapeURIForUI(uri),
-        getSupportUrl: topic => UrlbarContentUtils.getSupportUrl(topic),
-        getPlatform: () => UrlbarContentUtils.getPlatform(),
-        isWindowPrivate: lazy.PrivateBrowsingUtils.isContentWindowPrivate(
-          this.contentWindow
+    let unprivileged = !this.manager.parentActor;
+    let win = unprivileged
+      ? Cu.waiveXrays(this.contentWindow)
+      : this.contentWindow;
+    let port = {
+      sendAsyncMessage: (name, data) => this.sendAsyncMessage(name, data),
+      sendQuery: (name, data) =>
+        unprivileged
+          ? this.#wrapPromise(this.sendQuery(name, data), win)
+          : this.sendQuery(name, data),
+      registerMessagePathInput: input => this.registerMessagePathInput(input),
+      registerChildController: (instanceId, child) =>
+        this.registerChildController(instanceId, child),
+      whereToOpenLink: event => UrlbarContentUtils.whereToOpenLink(event),
+      willLoadInBackground: (where, params) =>
+        UrlbarContentUtils.willLoadInBackground(where, params),
+      getFixupPrimitives: (searchString, isPrivate) =>
+        this.#forWindow(
+          UrlbarContentUtils.getFixupPrimitives(searchString, isPrivate),
+          win
         ),
-        isTextDirectionRTL: (value, window) =>
-          UrlbarContentUtils.isTextDirectionRTL(value, window),
-        getPref: name => Cu.cloneInto(lazy.UrlbarPrefs.get(name), win),
-        addPrefObserver: observer => lazy.UrlbarPrefs.addObserver(observer),
-        removePrefObserver: observer =>
-          lazy.UrlbarPrefs.removeObserver(observer),
-      },
-      win,
-      { cloneFunctions: true }
-    );
+      getDisplaySpec: url => UrlbarContentUtils.getDisplaySpec(url),
+      unEscapeURIForUI: uri => UrlbarContentUtils.unEscapeURIForUI(uri),
+      getSupportUrl: topic => UrlbarContentUtils.getSupportUrl(topic),
+      getPlatform: () => UrlbarContentUtils.getPlatform(),
+      isWindowPrivate: unprivileged
+        ? lazy.PrivateBrowsingUtils.isContentWindowPrivate(this.contentWindow)
+        : lazy.PrivateBrowsingUtils.isWindowPrivate(this.contentWindow),
+      isTextDirectionRTL: (value, window) =>
+        UrlbarContentUtils.isTextDirectionRTL(value, window),
+      getPref: name => this.#forWindow(lazy.UrlbarPrefs.get(name), win),
+      addPrefObserver: observer => lazy.UrlbarPrefs.addObserver(observer),
+      removePrefObserver: observer => lazy.UrlbarPrefs.removeObserver(observer),
+    };
+    win.UrlbarActorPort = unprivileged
+      ? Cu.cloneInto(port, win, { cloneFunctions: true })
+      : port;
+  }
+
+  /**
+   * Hands a value to the port's consumer, cloning it only for an unprivileged
+   * one.
+   *
+   * @param {any} value
+   * @param {Window} win
+   * @returns {any}
+   */
+  #forWindow(value, win) {
+    return this.manager.parentActor ? value : Cu.cloneInto(value, win);
   }
 
   /**
@@ -191,9 +206,10 @@ export class UrlbarChild extends JSWindowActorChild {
    * script runs.
    */
   handleEvent() {
-    // Only a content realm reads the port; chrome holds the actor and imports
-    // UrlbarPrefs directly, so don't publish it on every chrome window.
-    if (!this.manager.parentActor) {
+    // The port is what the message path routes through, so a chrome window on
+    // that path gets one too and exercises the same code an unprivileged input
+    // does. A direct-path window reaches its privileged side itself.
+    if (this.usesMessagePath) {
       this.exposePort();
     }
   }

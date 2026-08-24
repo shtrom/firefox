@@ -23,10 +23,12 @@ import {
   CONVERSATION_UPDATED_DATE_INDEX,
   CONVERSATION_INSERT,
   MESSAGE_TABLE,
-  MESSAGE_ORDINAL_INDEX,
   MESSAGE_URL_INDEX,
   MESSAGE_CREATED_DATE_INDEX,
   MESSAGE_CONV_ID_INDEX,
+  MESSAGE_ROLE_CREATED_DATE_INDEX,
+  MESSAGE_PARENT_ID_INDEX,
+  MESSAGE_REVISION_ROOT_INDEX,
   MESSAGE_INSERT,
   TOOL_RESULT_TABLE,
   TOOL_RESULT_HISTORY_URL_INDEX,
@@ -54,7 +56,6 @@ import {
   getUniformSamplingByConvIdsSql,
   LLM_TELEMETRY_TABLE,
   GET_LLM_TELEMETRY_BY_CONV_ID,
-  GET_LLM_TELEMETRY_DATA_BY_CONV_ID,
   UPSERT_LLM_TELEMETRY,
   MARK_LLM_TELEMETRY_UNPROCESSED,
   MARK_LLM_TELEMETRY_PROCESSED,
@@ -1297,57 +1298,13 @@ class ChatStore {
     });
 
     await this.#conn
-      .executeTransaction(async () => {
-        const rows = await this.#conn.executeCached(
-          GET_LLM_TELEMETRY_DATA_BY_CONV_ID,
-          { conv_id: conversationId }
-        );
-
-        let existingPrompts = {};
-        let existingProbabilities = {};
-
-        if (rows.length) {
-          try {
-            existingPrompts = JSON.parse(
-              rows[0].getResultByName("telemetry_prompts") || "{}"
-            );
-          } catch (e) {
-            lazy.log.warn(
-              `Could not parse LLM telemetry prompts for ${conversationId}`,
-              e.message
-            );
-          }
-
-          try {
-            existingProbabilities = JSON.parse(
-              rows[0].getResultByName("telemetry_probabilities") || "{}"
-            );
-          } catch (e) {
-            lazy.log.warn(
-              `Could not parse LLM telemetry probabilities for ${conversationId}`,
-              e.message
-            );
-          }
-        }
-
-        const mergedPrompts = {
-          ...existingPrompts,
-          ...(prompts ?? {}),
-        };
-
-        const mergedProbabilities = {
-          ...(probabilities ?? {}),
-          ...existingProbabilities,
-        };
-
-        await this.#conn.executeCached(UPSERT_LLM_TELEMETRY, {
-          conv_id: conversationId,
-          telemetry_prompts: JSON.stringify(mergedPrompts),
-          telemetry_probabilities: JSON.stringify(mergedProbabilities),
-          uniform_sampling_probability,
-          processed_time: Date.now(),
-          processed,
-        });
+      .executeCached(UPSERT_LLM_TELEMETRY, {
+        conv_id: conversationId,
+        telemetry_prompts: JSON.stringify(prompts ?? {}),
+        telemetry_probabilities: JSON.stringify(probabilities ?? {}),
+        uniform_sampling_probability,
+        processed_time: Date.now(),
+        processed,
       })
       .catch(e => {
         lazy.log.error(
@@ -1428,31 +1385,15 @@ class ChatStore {
       throw e;
     });
 
+    const newPrompts = Object.fromEntries(
+      Object.keys(telemetryPrompts).map(name => [name, turnIndex])
+    );
+
     await this.#conn
-      .executeTransaction(async () => {
-        const existingRows = await this.#conn.executeCached(
-          GET_LLM_TELEMETRY_BY_CONV_ID,
-          { conv_id: convId }
-        );
-
-        const existingPrompts = existingRows.length
-          ? JSON.parse(
-              existingRows[0].getResultByName("telemetry_prompts") || "{}"
-            )
-          : {};
-
-        const newPrompts = Object.fromEntries(
-          Object.keys(telemetryPrompts).map(name => [name, turnIndex])
-        );
-
-        await this.#conn.executeCached(MARK_LLM_TELEMETRY_PROCESSED, {
-          conv_id: convId,
-          processed_time: Date.now(),
-          telemetry_prompts: JSON.stringify({
-            ...existingPrompts,
-            ...newPrompts,
-          }),
-        });
+      .executeCached(MARK_LLM_TELEMETRY_PROCESSED, {
+        conv_id: convId,
+        processed_time: Date.now(),
+        telemetry_prompts: JSON.stringify(newPrompts),
       })
       .catch(e => {
         lazy.log.error(
@@ -1493,10 +1434,12 @@ class ChatStore {
     await this.#conn.execute(CONVERSATION_TABLE);
     await this.#conn.execute(CONVERSATION_UPDATED_DATE_INDEX);
     await this.#conn.execute(MESSAGE_TABLE);
-    await this.#conn.execute(MESSAGE_ORDINAL_INDEX);
     await this.#conn.execute(MESSAGE_URL_INDEX);
     await this.#conn.execute(MESSAGE_CREATED_DATE_INDEX);
     await this.#conn.execute(MESSAGE_CONV_ID_INDEX);
+    await this.#conn.execute(MESSAGE_ROLE_CREATED_DATE_INDEX);
+    await this.#conn.execute(MESSAGE_PARENT_ID_INDEX);
+    await this.#conn.execute(MESSAGE_REVISION_ROOT_INDEX);
     await this.#conn.execute(TOOL_RESULT_TABLE);
     await this.#conn.execute(TOOL_RESULT_HISTORY_URL_INDEX);
     await this.#conn.execute(LLM_TELEMETRY_TABLE);
