@@ -839,11 +839,12 @@ export class ProtonScreen extends React.PureComponent {
 
   renderOrderedContent(content) {
     const elements = [];
-    for (const item of content) {
+    for (const [index, item] of content.entries()) {
       switch (item.type) {
         case "text":
           elements.push(
             <LinkParagraph
+              key={index}
               text_content={item}
               handleAction={this.props.handleAction}
             />
@@ -851,15 +852,17 @@ export class ProtonScreen extends React.PureComponent {
           break;
         case "image":
           elements.push(
-            this.renderPicture({
-              imageURL: item.url,
-              darkModeImageURL: item.darkModeImageURL,
-              height: item.height,
-              width: item.width,
-              alt: item.alt_text,
-              marginInline: item.marginInline,
-              className: "inline-image",
-            })
+            <React.Fragment key={index}>
+              {this.renderPicture({
+                imageURL: item.url,
+                darkModeImageURL: item.darkModeImageURL,
+                height: item.height,
+                width: item.width,
+                alt: item.alt_text,
+                marginInline: item.marginInline,
+                className: "inline-image",
+              })}
+            </React.Fragment>
           );
       }
     }
