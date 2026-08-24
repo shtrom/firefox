@@ -1901,18 +1901,6 @@ class MacroAssemblerCompat : public vixl::MacroAssembler {
     return testGCThing(cond, scratch);
   }
 
-  Condition testInt32Truthy(bool truthy, const ValueOperand& operand) {
-    ARMRegister payload32(operand.valueReg(), 32);
-    Tst(payload32, payload32);
-    return truthy ? NonZero : Zero;
-  }
-
-  Condition testBooleanTruthy(bool truthy, const ValueOperand& operand) {
-    ARMRegister payload32(operand.valueReg(), 32);
-    Tst(payload32, payload32);
-    return truthy ? NonZero : Zero;
-  }
-
   Condition testBigIntTruthy(bool truthy, const ValueOperand& value);
   Condition testStringTruthy(bool truthy, const ValueOperand& value);
 
