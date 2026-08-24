@@ -10,6 +10,8 @@ DIRS += [
 ]
 
 MOZ_SRC_FILES += [
+    "actors/UrlbarChild.sys.mjs",
+    "actors/UrlbarParent.sys.mjs",
     "ActionsProvider.sys.mjs",
     "ActionsProviderContextualSearch.sys.mjs",
     "ActionsProviderQuickActions.sys.mjs",
