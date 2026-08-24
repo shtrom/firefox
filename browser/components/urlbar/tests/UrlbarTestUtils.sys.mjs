@@ -2328,8 +2328,8 @@ class TestProvider extends UrlbarProvider {
     this._onCancel?.();
   }
 
-  onSelection(result, element) {
-    this._onSelection?.(result, element);
+  onSelection(result) {
+    this._onSelection?.(result);
   }
 }
 

@@ -194,8 +194,8 @@ export class UrlbarChildController {
   onBeforeSelection(result, element) {
     return this.#parentController.onBeforeSelection(result, element);
   }
-  onSelection(result, element) {
-    return this.#parentController.onSelection(result, element);
+  onSelection(result) {
+    return this.#parentController.onSelection(result);
   }
   getHeuristicResult(queryContext) {
     return this.#parentController.getHeuristicResult(queryContext);

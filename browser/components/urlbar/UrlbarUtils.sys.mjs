@@ -2080,9 +2080,10 @@ export class UrlbarProvider {
    * for details on what that means.
    *
    * @param {UrlbarResult} _result
-   *   The result that was selected.
-   * @param {Element} _element
-   *   The element in the result's view that was selected.
+   *   The result being selected.
+   * @param {Element} [_element]
+   *   The selected element. Undefined in the message path.
+   *   New providers should not use this parameter!
    * @abstract
    */
   onBeforeSelection(_result, _element) {}
@@ -2096,11 +2097,9 @@ export class UrlbarProvider {
    *
    * @param {UrlbarResult} _result
    *   The result that was selected.
-   * @param {Element} _element
-   *   The element in the result's view that was selected.
    * @abstract
    */
-  onSelection(_result, _element) {}
+  onSelection(_result) {}
 
   /**
    * @typedef {object} ViewTemplate
