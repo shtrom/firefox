@@ -16,7 +16,6 @@
 const PDFJS_EVENT_ID = "pdf.js.message";
 const PDF_VIEWER_ORIGIN = "resource://pdf.js";
 const PDF_VIEWER_WEB_PAGE = "resource://pdf.js/web/viewer.html";
-const PDF_VIEWER_WORKER_URL = "resource://pdf.js/build/pdf.worker.mjs";
 const MAX_NUMBER_OF_PREFS = 60;
 const PDF_CONTENT_TYPE = "application/pdf";
 const SUMO_URL = "https://support.mozilla.org/";
@@ -299,51 +298,12 @@ class ChromeActions {
     "outlineloaded",
   ]);
 
-  #viewerDocument = null;
-
-  #worker = null;
-
-  #workerUnloadListener = () => this.closeWorker();
-
   constructor(domWindow, contentDispositionFilename) {
     this.domWindow = domWindow;
-    this.#viewerDocument = domWindow.document;
     this.contentDispositionFilename = contentDispositionFilename;
     this.sandbox = null;
     this.unloadListener = null;
     this.observer = new PrefObserver(domWindow, this.isMobile());
-  }
-
-  // PDF.js does not terminate a Worker supplied through workerPort.
-  closeWorker() {
-    try {
-      const worker = this.#worker;
-      this.#worker = null;
-      worker?.terminate();
-
-      const { domWindow } = this;
-      if (domWindow.document === this.#viewerDocument) {
-        domWindow.wrappedJSObject.pdfjsPreloadedWorker = null;
-      }
-    } catch (e) {
-      console.error("Error while closing the PDF.js worker:", e);
-    }
-  }
-
-  preloadWorker() {
-    const { domWindow } = this;
-    try {
-      this.#worker?.terminate();
-      this.#worker = new domWindow.Worker(PDF_VIEWER_WORKER_URL, {
-        type: "module",
-      });
-      domWindow.wrappedJSObject.pdfjsPreloadedWorker = this.#worker;
-      domWindow.addEventListener("unload", this.#workerUnloadListener, {
-        once: true,
-      });
-    } catch (e) {
-      console.error("Error while preloading the PDF.js worker:", e);
-    }
   }
 
   createSandbox(data, sendResponse) {
@@ -844,12 +804,7 @@ class RangedChromeActions extends ChromeActions {
         );
       };
       this.dataListener.oncomplete = () => {
-        const { dataListener } = this;
-        if (!dataListener) {
-          return;
-        }
-        this.dataListener = null;
-        if (!done && dataListener.isDone) {
+        if (!done && this.dataListener.isDone) {
           this.domWindow.postMessage(
             {
               pdfjsLoadAction: "progressiveDone",
@@ -857,12 +812,10 @@ class RangedChromeActions extends ChromeActions {
             PDF_VIEWER_ORIGIN
           );
         }
+        this.dataListener = null;
       };
     }
 
-    if (done && !data) {
-      this.closeWorker();
-    }
     this.domWindow.postMessage(
       {
         pdfjsLoadAction: "supportsRangedLoading",
@@ -958,9 +911,6 @@ class StandardChromeActions extends ChromeActions {
     };
 
     this.dataListener.oncomplete = (data, errorCode) => {
-      if (!data) {
-        this.closeWorker();
-      }
       this.domWindow.postMessage(
         {
           pdfjsLoadAction: "complete",
@@ -1269,13 +1219,6 @@ PdfStreamConverter.prototype = {
 
     var rangeRequest = false;
     var streamRequest = false;
-    const searchParams = new URLSearchParams(aRequest.URI.ref.toLowerCase());
-    const isPDFBugEnabled = Services.prefs.getBoolPref(
-      "pdfjs.pdfBugEnabled",
-      false
-    );
-    const disableWorker =
-      isPDFBugEnabled && searchParams.get("disableworker") === "true";
     if (isHttpRequest) {
       var contentEncoding = "identity";
       try {
@@ -1287,17 +1230,23 @@ PdfStreamConverter.prototype = {
         acceptRanges = aRequest.getResponseHeader("Accept-Ranges");
       } catch (e) {}
 
+      var hash = aRequest.URI.ref;
+      const isPDFBugEnabled = Services.prefs.getBoolPref(
+        "pdfjs.pdfBugEnabled",
+        false
+      );
       rangeRequest =
         contentEncoding === "identity" &&
         acceptRanges === "bytes" &&
         aRequest.contentLength >= 0 &&
         !Services.prefs.getBoolPref("pdfjs.disableRange", false) &&
-        (!isPDFBugEnabled || searchParams.get("disablerange") !== "true");
+        (!isPDFBugEnabled || !hash.toLowerCase().includes("disablerange=true"));
       streamRequest =
         contentEncoding === "identity" &&
         aRequest.contentLength >= 0 &&
         !Services.prefs.getBoolPref("pdfjs.disableStream", false) &&
-        (!isPDFBugEnabled || searchParams.get("disablestream") !== "true");
+        (!isPDFBugEnabled ||
+          !hash.toLowerCase().includes("disablestream=true"));
     }
 
     aRequest.QueryInterface(Ci.nsIChannel);
@@ -1370,7 +1319,7 @@ PdfStreamConverter.prototype = {
         listener.onDataAvailable(aRequest, inputStream, offset, count);
       },
       onStopRequest(request, statusCode) {
-        const domWindow = getDOMWindow(channel, resourcePrincipal);
+        var domWindow = getDOMWindow(channel, resourcePrincipal);
         if (!Components.isSuccessCode(statusCode) || !domWindow) {
           // The request may have been aborted and the document may have been
           // replaced with something that is not PDF.js, abort attaching.
@@ -1394,10 +1343,6 @@ PdfStreamConverter.prototype = {
             aRequest,
             dataListener
           );
-        }
-        // viewer.mjs reads pdfjsPreloadedWorker during module evaluation.
-        if (!disableWorker) {
-          actions.preloadWorker();
         }
 
         var requestListener = new RequestListener(actions);
