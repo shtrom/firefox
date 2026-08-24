@@ -6186,15 +6186,9 @@ static bool Promise_static_try(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  // 3. Let promiseCapability be ? NewPromiseCapability(C).
   RootedObject c(cx, &cVal.toObject());
-  Rooted<PromiseCapability> promiseCapability(cx);
-  if (!NewPromiseCapability(cx, c, &promiseCapability, false)) {
-    return false;
-  }
-  HandleObject promiseObject = promiseCapability.promise();
 
-  // 4. Let status be Completion(Call(callbackfn, undefined, args)).
+  // 3. Let status be Completion(Call(callbackfn, undefined, args)).
   size_t argCount = args.length();
   if (argCount > 0) {
     argCount--;
@@ -6213,7 +6207,7 @@ static bool Promise_static_try(JSContext* cx, unsigned argc, Value* vp) {
   RootedValue rval(cx);
   bool ok = Call(cx, callbackfn, UndefinedHandleValue, iargs, &rval);
 
-  // 5. If status is an abrupt completion, then
+  // 4. If status is an abrupt completion, then
   if (!ok) {
     RootedValue reason(cx);
     Rooted<SavedFrame*> stack(cx);
@@ -6222,25 +6216,34 @@ static bool Promise_static_try(JSContext* cx, unsigned argc, Value* vp) {
       return false;
     }
 
-    // 5.a. Perform ? Call(promiseCapability.[[Reject]], undefined, «
+    // 4.a. Let promiseCapability be ? NewPromiseCapability(C).
+    Rooted<PromiseCapability> promiseCapability(cx);
+    if (!NewPromiseCapability(cx, c, &promiseCapability, false)) {
+      return false;
+    }
+    HandleObject promiseObject = promiseCapability.promise();
+
+    // 4.b. Perform ? Call(promiseCapability.[[Reject]], undefined, «
     // status.[[Value]] »).
     if (!CallPromiseRejectFunction(cx, promiseCapability.reject(), reason,
                                    promiseObject, stack,
                                    UnhandledRejectionBehavior::Report)) {
       return false;
     }
-  } else {
-    // 6. Else,
-    // 6.a. Perform ? Call(promiseCapability.[[Resolve]], undefined, «
-    // status.[[Value]] »).
-    if (!CallPromiseResolveFunction(cx, promiseCapability.resolve(), rval,
-                                    promiseObject)) {
-      return false;
-    }
+
+    // 4.c. Return promiseCapability.[[Promise]].
+    args.rval().setObject(*promiseObject);
+    return true;
   }
 
-  // 7. Return promiseCapability.[[Promise]].
-  args.rval().setObject(*promiseObject);
+  // 5. Else,
+  // 5.a. Return ? PromiseResolve(C, ! status).
+  RootedObject promise(cx, PromiseResolve(cx, c, rval));
+  if (!promise) {
+    return false;
+  }
+
+  args.rval().setObject(*promise);
   return true;
 }
 
