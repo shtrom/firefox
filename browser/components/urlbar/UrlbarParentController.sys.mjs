@@ -222,11 +222,8 @@ export class UrlbarParentController {
    * Notifies a result's provider that the result is about to be selected.
    * Mediates the view's access to the (parent-process) provider.
    *
-   * @param {UrlbarResult} result
-   *   The result being selected.
-   * @param {Element} [element]
-   *   The selected element. Undefined in the message path.
-   *   New providers should not use this parameter!
+   * @param {UrlbarResult} result The result being selected.
+   * @param {Element} element The selected element.
    */
   onBeforeSelection(result, element) {
     this.manager
@@ -239,11 +236,12 @@ export class UrlbarParentController {
    * view's access to the (parent-process) provider.
    *
    * @param {UrlbarResult} result The selected result.
+   * @param {Element} element The selected element.
    */
-  onSelection(result) {
+  onSelection(result, element) {
     this.manager
       .getProvider(result?.providerName)
-      ?.tryMethod("onSelection", result);
+      ?.tryMethod("onSelection", result, element);
   }
 
   /**

@@ -307,7 +307,6 @@ export class UrlbarChild extends JSWindowActorChild {
     if (!this.manager.parentActor) {
       child = Cu.waiveXrays(child);
     }
-    // @ts-expect-error This will be refactored soon.
     child.updateEngineStore(...this.#forContent(args));
   }
 }

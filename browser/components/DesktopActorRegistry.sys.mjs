@@ -997,12 +997,10 @@ let JSWINDOWACTORS = {
 
   Urlbar: {
     parent: {
-      esModuleURI:
-        "moz-src:///browser/components/urlbar/actors/UrlbarParent.sys.mjs",
+      esModuleURI: "resource:///actors/UrlbarParent.sys.mjs",
     },
     child: {
-      esModuleURI:
-        "moz-src:///browser/components/urlbar/actors/UrlbarChild.sys.mjs",
+      esModuleURI: "resource:///actors/UrlbarChild.sys.mjs",
       events: {
         // A content-realm `<moz-urlbar>` reads `window.UrlbarActorPort`
         // synchronously as it connects, and can't create the actor itself, so

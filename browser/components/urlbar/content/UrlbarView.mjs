@@ -3320,7 +3320,7 @@ export class UrlbarView {
     }
 
     if (result) {
-      this.controller.onSelection(result);
+      this.controller.onSelection(result, element);
     }
   }
 
