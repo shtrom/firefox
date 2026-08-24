@@ -189,6 +189,17 @@ export class UrlbarParentController {
   }
 
   /**
+   * Whether the view showing these results renders in a content process, which
+   * decodes what it displays itself. For an in-page urlbar that is the
+   * privileged about process.
+   *
+   * @type {boolean}
+   */
+  get rendersInContentProcess() {
+    return !!this.#actor?.browsingContext?.isContent;
+  }
+
+  /**
    * Resolves the `<browser>` a `browserId` refers to. A content sender always
    * targets its own tab, so its `browserId` is ignored; only a chrome sender
    * resolves a pinned id globally.
