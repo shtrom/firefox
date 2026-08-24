@@ -47,9 +47,10 @@ class BrowserBridgeChild : public PBrowserBridgeChild {
   already_AddRefed<BrowserBridgeHost> FinishInit(nsFrameLoader* aFrameLoader);
 
 #if defined(ACCESSIBILITY)
-  void SetEmbedderAccessible(uint64_t aID) {
+  void SetEmbedderAccessible(PDocAccessibleChild* aDoc, uint64_t aID) {
+    MOZ_ASSERT((aDoc && aID) || (!aDoc && !aID));
     mEmbedderAccessibleID = aID;
-    (void)SendSetEmbedderAccessible(aID);
+    (void)SendSetEmbedderAccessible(aDoc, aID);
   }
 
   uint64_t GetEmbedderAccessibleID() { return mEmbedderAccessibleID; }
