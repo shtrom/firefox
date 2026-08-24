@@ -611,15 +611,18 @@ ${
         : !!this.closest("toolbar")) &&
       !document.documentElement.hasAttribute("customizing");
     if (this.#allowBreakout) {
-      // TODO(emilio): This could use CSS anchor positioning rather than this
-      // ResizeObserver, eventually.
-      this._resizeObserver = new this.window.ResizeObserver(([entry]) => {
-        this.style.setProperty(
-          "--urlbar-width",
-          px(entry.borderBoxSize[0].inlineSize)
-        );
-      });
-      this._resizeObserver.observe(this.parentNode);
+      if (!this.hasAttribute("in-page")) {
+        // TODO(emilio, bug 2065901): This could use CSS anchor positioning
+        // rather than this ResizeObserver, eventually, as an in-page element
+        // already does.
+        this._resizeObserver = new this.window.ResizeObserver(([entry]) => {
+          this.style.setProperty(
+            "--urlbar-width",
+            px(entry.borderBoxSize[0].inlineSize)
+          );
+        });
+        this._resizeObserver.observe(this.parentNode);
+      }
 
       this.#updateLayoutBreakout();
     } else {
@@ -3499,6 +3502,10 @@ ${
   }
 
   #updateTextboxPosition() {
+    if (this.hasAttribute("in-page")) {
+      // An in-page element anchors its popover to its container in CSS.
+      return;
+    }
     if (!this.hasAttribute("breakout-extend")) {
       this.style.top = "";
       return;

@@ -52,6 +52,7 @@ export class UrlbarNewTabComponentRegistrant extends BaseAboutNewTabComponentReg
           class: "urlbar",
           pageproxystate: "invalid",
           popover: "manual",
+          "in-page": "",
           "sap-name": "newtab_searchbar",
           "unifiedsearchbutton-available": "",
         },
