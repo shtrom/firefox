@@ -20,6 +20,7 @@
 #include "mozilla/dom/ServiceWorker.h"
 #include "mozilla/dom/ServiceWorkerContainer.h"
 #include "mozilla/dom/ServiceWorkerRegistration.h"
+#include "mozilla/dom/WebTaskScheduler.h"
 #include "mozilla/ipc/PBackgroundSharedTypes.h"
 #include "nsContentUtils.h"
 #include "nsGlobalWindowInner.h"
@@ -155,6 +156,7 @@ void nsIGlobalObject::UnlinkObjectsInGlobal() {
   mReportingObservers.Clear();
   mCountQueuingStrategySizeFunction = nullptr;
   mByteLengthQueuingStrategySizeFunction = nullptr;
+  SetWebTaskSchedulingState(nullptr);
 }
 
 void nsIGlobalObject::TraverseObjectsInGlobal(
@@ -164,7 +166,14 @@ void nsIGlobalObject::TraverseObjectsInGlobal(
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mReportingObservers)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mCountQueuingStrategySizeFunction)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mByteLengthQueuingStrategySizeFunction)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWebTaskSchedulingState)
 }
+
+void nsIGlobalObject::SetWebTaskSchedulingState(
+    mozilla::dom::WebTaskSchedulingState* aState) {
+  mWebTaskSchedulingState = aState;
+}
+
 
 void nsIGlobalObject::AddGlobalTeardownObserver(
     GlobalTeardownObserver* aObject) {
