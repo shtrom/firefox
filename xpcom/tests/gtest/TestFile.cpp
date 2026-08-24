@@ -27,9 +27,35 @@
 #include "gtest/gtest.h"
 #include "mozilla/gtest/MozAssertions.h"
 
+// RAII guard for enabling/disabling the DOS device path prefix (\\?\) in tests.
+// Prefixed paths allow exceeding MAX_PATH (260 characters).
+// Saves the current value on construction, restores it on destruction.
+// No-op on non-Windows platforms.
+class TestWithPrefixWinScope {
+ public:
 #ifdef XP_WIN
-using namespace mozilla;
-bool gTestWithPrefix_Win = false;
+  explicit TestWithPrefixWinScope(bool aPrefix) : mOldValue(sEnabled) {
+    sEnabled = aPrefix;
+  }
+  ~TestWithPrefixWinScope() { sEnabled = mOldValue; }
+
+  static bool IsEnabled() { return sEnabled; }
+#else
+  explicit TestWithPrefixWinScope(bool) {}
+  static bool IsEnabled() { return false; }
+#endif
+
+  TestWithPrefixWinScope(const TestWithPrefixWinScope&) = delete;
+  TestWithPrefixWinScope& operator=(const TestWithPrefixWinScope&) = delete;
+
+#ifdef XP_WIN
+ private:
+  bool mOldValue;
+  static bool sEnabled;
+#endif
+};
+#ifdef XP_WIN
+bool TestWithPrefixWinScope::sEnabled = false;
 #endif
 
 static bool VerifyResult(nsresult aRV, const char* aMsg) {
@@ -40,7 +66,7 @@ static bool VerifyResult(nsresult aRV, const char* aMsg) {
 
 #ifdef XP_WIN
 static void SetUseDOSDevicePathSyntax(nsIFile* aFile) {
-  if (gTestWithPrefix_Win) {
+  if (TestWithPrefixWinScope::IsEnabled()) {
     nsresult rv;
     nsCOMPtr<nsILocalFileWin> winFile = do_QueryInterface(aFile, &rv);
     VerifyResult(rv, "Querying nsILocalFileWin");
@@ -60,10 +86,10 @@ static auto GetSecurityInfoStructured(nsIFile* aFile) {
       pathStr.getW(), SE_FILE_OBJECT,
       DACL_SECURITY_INFORMATION | OWNER_SECURITY_INFORMATION |
           GROUP_SECURITY_INFORMATION,
-      nullptr, nullptr, &pDacl, nullptr, getter_Transfers(secDesc));
+      nullptr, nullptr, &pDacl, nullptr, mozilla::getter_Transfers(secDesc));
   MOZ_RELEASE_ASSERT(errCode == ERROR_SUCCESS && pDacl);
 
-  return std::make_tuple(std::move(pathStr), WrapNotNull(pDacl),
+  return std::make_tuple(std::move(pathStr), mozilla::WrapNotNull(pDacl),
                          std::move(secDesc));
 }
 
@@ -74,8 +100,8 @@ static void AddAcesForRandomSidToDir(nsIFile* aDir) {
 
   constexpr BYTE kSubAuthorityCount = 4;
   BYTE randomSidBuffer[SECURITY_SID_SIZE(4)];
-  ASSERT_TRUE(
-      GenerateRandomBytesFromOS(randomSidBuffer, sizeof(randomSidBuffer)));
+  ASSERT_TRUE(mozilla::GenerateRandomBytesFromOS(randomSidBuffer,
+                                                 sizeof(randomSidBuffer)));
   auto* randomSid = reinterpret_cast<SID*>(randomSidBuffer);
   randomSid->Revision = SID_REVISION;
   randomSid->SubAuthorityCount = kSubAuthorityCount;
@@ -91,9 +117,9 @@ static void AddAcesForRandomSidToDir(nsIFile* aDir) {
   newAccess[1].grfAccessPermissions = GENERIC_WRITE;
   newAccess[1].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
   ::BuildTrusteeWithSidW(&newAccess[1].Trustee, randomSid);
-  UniquePtr<ACL, LocalFreeDeleter> newDacl;
+  mozilla::UniquePtr<ACL, LocalFreeDeleter> newDacl;
   ASSERT_EQ(::SetEntriesInAclW(std::size(newAccess), newAccess, pDirDacl,
-                               getter_Transfers(newDacl)),
+                               mozilla::getter_Transfers(newDacl)),
             (ULONG)ERROR_SUCCESS);
 
   ASSERT_EQ(::SetNamedSecurityInfoW(dirPath.get(), SE_FILE_OBJECT,
@@ -675,23 +701,19 @@ static void SetupAndTestFunctions(const nsAString& aDirName,
 
 TEST(TestFile, Unprefixed)
 {
-#ifdef XP_WIN
-  gTestWithPrefix_Win = false;
-#endif
+  TestWithPrefixWinScope prefixed(false);
 
   SetupAndTestFunctions(u"mozfiletests"_ns,
                         /* aTestCreateUnique */ true,
                         /* aTestNormalize */ true);
-
-#ifdef XP_WIN
-  gTestWithPrefix_Win = true;
-#endif
 }
 
 // This simulates what QM_NewLocalFile does (NS_NewLocalFiles and then
 // SetUseDOSDevicePathSyntax if it's on Windows for NewFile)
 TEST(TestFile, PrefixedOnWin)
 {
+  TestWithPrefixWinScope prefixed(true);
+
   SetupAndTestFunctions(u"mozfiletests"_ns,
                         /* aTestCreateUnique */ true,
                         /* aTestNormalize */ true);
@@ -699,6 +721,8 @@ TEST(TestFile, PrefixedOnWin)
 
 TEST(TestFile, PrefixedOnWin_PathExceedsMaxPath)
 {
+  TestWithPrefixWinScope prefixed(true);
+
   // We want to verify if the prefix would allow as to create a file with over
   // 260 char for its path. However, on Windows, the maximum length of filename
   // is 255. Given the base file path and we are going append some other file
@@ -718,6 +742,8 @@ TEST(TestFile, PrefixedOnWin_PathExceedsMaxPath)
 
 TEST(TestFile, PrefixedOnWin_ComponentEndsWithPeriod)
 {
+  TestWithPrefixWinScope prefixed(true);
+
   // Bypass the normalization for this because it would strip the trailing
   // period.
   SetupAndTestFunctions(u"mozfiletests."_ns,
