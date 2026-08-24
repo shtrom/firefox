@@ -1289,6 +1289,10 @@ features:
         description: If true, the Collections UI is hidden.
         type: Boolean
         default: false
+      enabled:
+        description: If true, run the one-time migration that converts existing Collections into Tab Groups.
+        type: Boolean
+        default: false
 
   oled-theme:
     description: Feature to provide the OLED theme option for users on Firefox for Android.

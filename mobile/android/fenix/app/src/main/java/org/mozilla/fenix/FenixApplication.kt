@@ -116,6 +116,7 @@ import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.containsQueryParameters
 import org.mozilla.fenix.ext.isCustomEngine
 import org.mozilla.fenix.ext.isKnownSearchDomain
+import org.mozilla.fenix.home.collections.migration.CollectionsToTabGroupsMigrationWorker
 import org.mozilla.fenix.home.topsites.TopSitesConfigConstants.TOP_SITES_PROVIDER_LIMIT
 import org.mozilla.fenix.home.topsites.TopSitesConfigConstants.TOP_SITES_PROVIDER_MAX_THRESHOLD
 import org.mozilla.fenix.lifecycle.StoreLifecycleObserver
@@ -546,6 +547,11 @@ open class FenixApplication : Application(), Provider, ThemeProvider {
                 components.core.fileUploadsDirCleaner.cleanUploadsDirectory()
                 components.settings.deletePocketDatabaseIfNeeded()
                 components.settings.deleteReportSiteDomainsDataStoreIfNeeded()
+
+                CollectionsToTabGroupsMigrationWorker.enqueueIfNeeded(
+                    context = this@FenixApplication,
+                    settings = components.settings,
+                )
             }
             // Account manager initialization needs to happen on the main thread.
             GlobalScope.launch(Dispatchers.Main) {

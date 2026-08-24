@@ -102,6 +102,9 @@
     <string name="pref_key_enable_fxsuggest" translatable="false">pref_key_fxsuggest_enabled</string>
     <string name="pref_key_enable_debug_drawer" translatable="false">pref_key_enable_debug_drawer</string>
     <string name="pref_key_hide_collections" translatable="false">pref_key_hide_collections</string>
+    <string name="pref_key_migrate_collections_to_tab_groups" translatable="false">pref_key_migrate_collections_to_tab_groups</string>
+    <string name="pref_key_has_migrated_collections_to_tab_groups" translatable="false">pref_key_has_migrated_collections_to_tab_groups</string>
+    <string name="pref_key_migrated_collection_ids" translatable="false">pref_key_migrated_collection_ids</string>
     <string name="pref_key_show_first_time_translation" translatable="false">pref_key_show_first_time_translation</string>
     <string name="pref_key_translations_offer" translatable="false">pref_key_translations_offer</string>
     <string name="pref_key_terms_accepted" translatable="false">pref_key_terms_accepted</string>
