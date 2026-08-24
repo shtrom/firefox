@@ -417,7 +417,6 @@ class WorkerGlobalScope : public WorkerGlobalScopeBase {
   WebTaskScheduler* GetExistingScheduler() const;
   bool HasScheduledNormalOrHighPriorityWebTasks() const override;
 
-
   bool WindowInteractionAllowed() const;
 
   void AllowWindowInteraction();
