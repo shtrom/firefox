@@ -19,6 +19,10 @@
 class nsGlobalWindowInner;
 class nsDocShell;
 
+namespace mozilla::a11y {
+class PDocAccessibleChild;
+}  // namespace mozilla::a11y
+
 namespace mozilla::dom {
 
 class BrowsingContext;
@@ -85,6 +89,12 @@ class WindowGlobalChild final : public WindowGlobalActor,
   bool IsCurrentGlobal();
 
   bool IsProcessRoot();
+
+#ifdef ACCESSIBILITY
+  a11y::PDocAccessibleChild* AllocPDocAccessibleChild(
+      a11y::PDocAccessibleChild*, const uint64_t&, const bool&);
+  bool DeallocPDocAccessibleChild(a11y::PDocAccessibleChild*);
+#endif
 
   // Get the other side of this actor if it is an in-process actor. Returns
   // |nullptr| if the actor has been torn down, or is not in-process.
