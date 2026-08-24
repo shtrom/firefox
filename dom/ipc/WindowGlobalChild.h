@@ -91,8 +91,8 @@ class WindowGlobalChild final : public WindowGlobalActor,
   bool IsProcessRoot();
 
 #ifdef ACCESSIBILITY
-  a11y::PDocAccessibleChild* AllocPDocAccessibleChild(
-      a11y::PDocAccessibleChild*, const uint64_t&, const bool&);
+  a11y::PDocAccessibleChild* AllocPDocAccessibleChild(const uint64_t&,
+                                                      const bool&);
   bool DeallocPDocAccessibleChild(a11y::PDocAccessibleChild*);
 #endif
 

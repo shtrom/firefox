@@ -430,12 +430,12 @@ class WindowGlobalParent final : public WindowContext,
   AllocPDigitalCredentialParent();
 
 #ifdef ACCESSIBILITY
-  a11y::PDocAccessibleParent* AllocPDocAccessibleParent(
-      a11y::PDocAccessibleParent*, const uint64_t&, const bool&);
+  a11y::PDocAccessibleParent* AllocPDocAccessibleParent(const uint64_t&,
+                                                        const bool&);
   bool DeallocPDocAccessibleParent(a11y::PDocAccessibleParent*);
   mozilla::ipc::IPCResult RecvPDocAccessibleConstructor(
-      a11y::PDocAccessibleParent* aDoc, a11y::PDocAccessibleParent* aParentDoc,
-      const uint64_t& aParentID, const bool& aIsPrintDoc) override;
+      a11y::PDocAccessibleParent* aDoc, const uint64_t& aParentID,
+      const bool& aIsPrintDoc) override;
 #endif
 
   // Spec: https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record
