@@ -145,25 +145,27 @@ export class PdfJsContextMenu {
   }
 
   cmd(aName) {
+    // Ignore commands from context menus made stale by navigation.
+    const windowGlobal = this.#contextMenu.actor.manager;
+    if (!windowGlobal.isActiveInTab) {
+      return;
+    }
+
     aName = aName.replace("context-pdfjs-", "");
+    // Target the frame where the menu opened.
+    const actor = windowGlobal.getActor("PdfJs");
     if (["cut", "copy", "paste"].includes(aName)) {
       const cmd = `cmd_${aName}`;
       this.#contextMenu.document.commandDispatcher
         .getControllerForCommand(cmd)
         .doCommand(cmd);
       if (Cu.isInAutomation) {
-        this.#contextMenu.browser.sendMessageToActor(
-          "PDFJS:Editing",
-          { name: aName },
-          "PdfJs"
-        );
+        actor.sendAsyncMessage("PDFJS:Editing", { name: aName });
       }
       return;
     }
-    this.#contextMenu.browser.sendMessageToActor(
-      "PDFJS:Editing",
-      { name: aName.replaceAll(/-([a-z])/g, (_, char) => char.toUpperCase()) },
-      "PdfJs"
-    );
+    actor.sendAsyncMessage("PDFJS:Editing", {
+      name: aName.replaceAll(/-([a-z])/g, (_, char) => char.toUpperCase()),
+    });
   }
 }

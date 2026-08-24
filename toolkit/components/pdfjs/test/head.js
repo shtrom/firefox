@@ -80,7 +80,17 @@ async function waitForPdfJSAllLayers(browser, url, layers) {
     annotationEditorPromise,
   ]);
 
-  await SpecialPowers.spawn(browser, [layers], async function (layers) {
+  await waitForPdfJSLayers(browser, layers);
+}
+
+/**
+ * Wait for each page's expected PDF layers.
+ *
+ * @param {MozBrowser|BrowsingContext} target Target containing the viewer.
+ * @param {Array<Array<string>>} layers Expected layer classes by page.
+ */
+async function waitForPdfJSLayers(target, layers) {
+  await SpecialPowers.spawn(target, [layers], async function (layers) {
     const { ContentTaskUtils } = ChromeUtils.importESModule(
       "resource://testing-common/ContentTaskUtils.sys.mjs"
     );
