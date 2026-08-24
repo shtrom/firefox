@@ -476,14 +476,12 @@ CREATE TABLE IF NOT EXISTS llm_telemetry (
 )
 `;
 
-export const GET_LLM_TELEMETRY_DATA_BY_CONV_ID = `
-SELECT
-  telemetry_prompts,
-  telemetry_probabilities
-FROM llm_telemetry
-WHERE conv_id = :conv_id
-`;
-
+// The incoming values are merged into the stored ones by json_patch rather
+// than by a read-modify-write in JS. Note the argument order differs between
+// the two columns: json_patch's second argument wins, so prompts take the
+// incoming turn index while probabilities keep the value first recorded.
+// The columns are nullable and json_patch propagates NULL, so coalesce keeps
+// a NULL from silently blanking the merged result.
 export const UPSERT_LLM_TELEMETRY = `
 INSERT INTO llm_telemetry (
   conv_id,
@@ -502,8 +500,14 @@ VALUES (
   :processed
 )
 ON CONFLICT(conv_id) DO UPDATE SET
-  telemetry_prompts = excluded.telemetry_prompts,
-  telemetry_probabilities = excluded.telemetry_probabilities,
+  telemetry_prompts = json_patch(
+    coalesce(telemetry_prompts, '{}'),
+    excluded.telemetry_prompts
+  ),
+  telemetry_probabilities = json_patch(
+    excluded.telemetry_probabilities,
+    coalesce(telemetry_probabilities, '{}')
+  ),
   processed_time = excluded.processed_time,
   processed = excluded.processed
 `;
@@ -517,7 +521,10 @@ UPDATE llm_telemetry
 SET
   processed = 1,
   processed_time = :processed_time,
-  telemetry_prompts = :telemetry_prompts
+  telemetry_prompts = json_patch(
+    coalesce(telemetry_prompts, '{}'),
+    :telemetry_prompts
+  )
 WHERE conv_id = :conv_id
 `;
 
