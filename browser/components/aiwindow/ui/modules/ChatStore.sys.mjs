@@ -23,10 +23,12 @@ import {
   CONVERSATION_UPDATED_DATE_INDEX,
   CONVERSATION_INSERT,
   MESSAGE_TABLE,
-  MESSAGE_ORDINAL_INDEX,
   MESSAGE_URL_INDEX,
   MESSAGE_CREATED_DATE_INDEX,
   MESSAGE_CONV_ID_INDEX,
+  MESSAGE_ROLE_CREATED_DATE_INDEX,
+  MESSAGE_PARENT_ID_INDEX,
+  MESSAGE_REVISION_ROOT_INDEX,
   MESSAGE_INSERT,
   TOOL_RESULT_TABLE,
   TOOL_RESULT_HISTORY_URL_INDEX,
@@ -1432,10 +1434,12 @@ class ChatStore {
     await this.#conn.execute(CONVERSATION_TABLE);
     await this.#conn.execute(CONVERSATION_UPDATED_DATE_INDEX);
     await this.#conn.execute(MESSAGE_TABLE);
-    await this.#conn.execute(MESSAGE_ORDINAL_INDEX);
     await this.#conn.execute(MESSAGE_URL_INDEX);
     await this.#conn.execute(MESSAGE_CREATED_DATE_INDEX);
     await this.#conn.execute(MESSAGE_CONV_ID_INDEX);
+    await this.#conn.execute(MESSAGE_ROLE_CREATED_DATE_INDEX);
+    await this.#conn.execute(MESSAGE_PARENT_ID_INDEX);
+    await this.#conn.execute(MESSAGE_REVISION_ROOT_INDEX);
     await this.#conn.execute(TOOL_RESULT_TABLE);
     await this.#conn.execute(TOOL_RESULT_HISTORY_URL_INDEX);
     await this.#conn.execute(LLM_TELEMETRY_TABLE);
