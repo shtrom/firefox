@@ -1637,6 +1637,9 @@ export class _ASRouter {
       // This set default action is ONLY to be used in cases where an OS level
       // prompt or settings panel will obtain a user's consent to set default.
       "SET_DEFAULT_BROWSER",
+      // This set default action always shows the OS "Open with" picker
+      // (IOpenWithLauncher), which obtains the user's consent to set default.
+      "SET_DEFAULT_BROWSER_OPEN_WITH",
     ];
     // ALLOWED_ACTION_MESSAGE_ACTIONS above is the in-tree baseline. It can be
     // extended off-train via Remote Settings, except for the actions in

@@ -258,6 +258,18 @@ export const SpecialMessageActions = {
   },
 
   /**
+   * Set browser as the OS default browser via the "Open with" picker
+   * (IOpenWithLauncher), guaranteeing an OS-level prompt. Claiming the https
+   * protocol handler this way sets the whole web-browser default (http and
+   * https) with a single picker. Windows only.
+   *
+   * @param {Window} window Reference to a window object
+   */
+  async setDefaultBrowserViaOpenWith(window) {
+    await window.getShellService().setAsDefaultProtocolHandler("https");
+  },
+
+  /**
    * Reset browser homepage and newtab to default with a certain section configuration
    *
    * @param {"default"|null} home Value to set for browser homepage
@@ -947,6 +959,9 @@ export const SpecialMessageActions = {
         break;
       case "SET_DEFAULT_BROWSER":
         await this.setDefaultBrowser(window);
+        break;
+      case "SET_DEFAULT_BROWSER_OPEN_WITH":
+        await this.setDefaultBrowserViaOpenWith(window);
         break;
       case "SET_DEFAULT_PDF_HANDLER":
         await this.setDefaultPDFHandler(
