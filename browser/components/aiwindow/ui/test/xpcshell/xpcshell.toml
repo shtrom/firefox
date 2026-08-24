@@ -5,6 +5,8 @@ run-if = [
   "os != 'android'",
 ]
 
+["test_AITabStore.js"]
+
 ["test_AutoTabGrouping.js"]
 
 ["test_ChatConversation.js"]
