@@ -49,7 +49,15 @@ struct TestWebrtcGmpVideoEncoder : public Test {
     ASSERT_TRUE(mGmpThread);
   }
 
-  void TearDown() override { mEncoder = nullptr; }
+  // Dropping the last RefPtr does not destroy the encoder: it and
+  // GMPVideoEncoderParent hold refs on each other, and only Shutdown() breaks
+  // that cycle. Shutdown() also clears the encode-complete callback. The mock
+  // it points at died with the test body, so the pointer would otherwise stay
+  // dangling for the rest of the process.
+  void TearDown() override {
+    mEncoder->Shutdown();
+    mEncoder = nullptr;
+  }
 
   // Connect before starting the init: MediaEventSource does not replay, and a
   // warm plugin finishes the init on the GMP thread before this thread would
