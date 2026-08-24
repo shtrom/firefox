@@ -324,8 +324,7 @@ class HTMLInputElement final : public TextControlElement,
   void UpdateValueMissingValidityState();
   void UpdateTypeMismatchValidityState();
   void UpdatePatternMismatchValidityState();
-  void UpdateRangeOverflowValidityState();
-  void UpdateRangeUnderflowValidityState();
+  void UpdateRangeValidityStates();
   void UpdateStepMismatchValidityState();
   void UpdateBadInputValidityState();
   void UpdatePlaceholderShownState();
@@ -1080,6 +1079,34 @@ class HTMLInputElement final : public TextControlElement,
   bool DoesStepApply() const { return DoesMinMaxApply(); }
 
   /**
+   * Returns whether the current type can suffer from a type mismatch, that is,
+   * whether its InputType overrides HasTypeMismatch().
+   */
+  bool DoesTypeMismatchApply() const {
+    return mType == FormControlType::InputEmail ||
+           mType == FormControlType::InputUrl;
+  }
+
+  /**
+   * Returns whether the current type can suffer from bad input, that is,
+   * whether its InputType overrides HasBadInput().
+   */
+  bool DoesBadInputApply() const {
+    switch (mType) {
+      case FormControlType::InputEmail:
+      case FormControlType::InputNumber:
+      case FormControlType::InputDate:
+      case FormControlType::InputTime:
+      case FormControlType::InputMonth:
+      case FormControlType::InputWeek:
+      case FormControlType::InputDatetimeLocal:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
    * Returns if stepDown and stepUp methods apply for the current type.
    */
   bool DoStepDownStepUpApply() const { return DoesStepApply(); }
@@ -1093,6 +1120,10 @@ class HTMLInputElement final : public TextControlElement,
    * Returns if autocomplete attribute applies for the current type.
    */
   bool DoesAutocompleteApply() const;
+
+  bool WasValueChangedInteractively() const {
+    return mValueChanged && mLastValueChangeWasInteractive;
+  }
 
   enum class TextControlStateDisposition : bool {
     Destroy,

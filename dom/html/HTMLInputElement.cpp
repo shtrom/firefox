@@ -1487,7 +1487,7 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
       // call above or else the following assert will not be valid.
       // We don't assert the state of underflow during creation since
       // DoneCreatingElement sanitizes.
-      UpdateRangeOverflowValidityState();
+      UpdateRangeValidityStates();
       needValidityUpdate = true;
       MOZ_ASSERT(!mDoneCreating || mType != FormControlType::InputRange ||
                      !GetValidityState(VALIDITY_STATE_RANGE_UNDERFLOW),
@@ -1496,7 +1496,7 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
       UpdateHasRange(aNotify);
       mInputType->MinMaxStepAttrChanged();
       // See corresponding @max comment
-      UpdateRangeUnderflowValidityState();
+      UpdateRangeValidityStates();
       UpdateStepMismatchValidityState();
       needValidityUpdate = true;
       MOZ_ASSERT(!mDoneCreating || mType != FormControlType::InputRange ||
@@ -4791,6 +4791,7 @@ void HTMLInputElement::HandleTypeChange(FormControlType aNewType,
   UpdateReadOnlyState(aNotify);
   UpdateCheckedState(aNotify);
   UpdateIndeterminateState(aNotify);
+  UpdateHasRange(aNotify);
   const bool isDefault = IsRadioOrCheckbox()
                              ? DefaultChecked()
                              : (mForm && mForm->IsDefaultSubmitElement(this));
@@ -4877,8 +4878,6 @@ void HTMLInputElement::HandleTypeChange(FormControlType aNewType,
   } else {
     RemoveStates(ElementState::REQUIRED_STATES, aNotify);
   }
-
-  UpdateHasRange(aNotify);
 
   // Update validity states, but not element state.  We'll update
   // element state later, as part of this attribute change.
@@ -6834,7 +6833,7 @@ bool HTMLInputElement::DoesMinMaxApply() const {
     case FormControlType::InputColor:
       return false;
     default:
-      MOZ_ASSERT_UNREACHABLE("Unexpected input type in DoesRequiredApply()");
+      MOZ_ASSERT_UNREACHABLE("Unexpected input type in DoesMinMaxApply()");
       return false;
 #else   // DEBUG
     default:
@@ -6919,42 +6918,40 @@ void HTMLInputElement::SetCustomValidity(const nsAString& aError) {
 }
 
 bool HTMLInputElement::IsTooLong() {
-  if (!mValueChanged || !mLastValueChangeWasInteractive) {
-    return false;
-  }
-
-  return mInputType->IsTooLong();
+  return WasValueChangedInteractively() && mInputType->IsTooLong();
 }
 
 bool HTMLInputElement::IsTooShort() {
-  if (!mValueChanged || !mLastValueChangeWasInteractive) {
-    return false;
-  }
-
-  return mInputType->IsTooShort();
+  return WasValueChangedInteractively() && mInputType->IsTooShort();
 }
 
 bool HTMLInputElement::IsValueMissing() const {
   // Should use UpdateValueMissingValidityStateForRadio() for type radio.
   MOZ_ASSERT(mType != FormControlType::InputRadio);
 
-  return mInputType->IsValueMissing();
+  MOZ_ASSERT_IF(!IsRequired(), !mInputType->IsValueMissing());
+  return IsRequired() && mInputType->IsValueMissing();
 }
 
 bool HTMLInputElement::HasTypeMismatch() const {
-  return mInputType->HasTypeMismatch();
+  MOZ_ASSERT_IF(!DoesTypeMismatchApply(), !mInputType->HasTypeMismatch());
+  return DoesTypeMismatchApply() && mInputType->HasTypeMismatch();
 }
 
 Maybe<bool> HTMLInputElement::HasPatternMismatch() const {
-  return mInputType->HasPatternMismatch();
+  MOZ_ASSERT_IF(!mHasPatternAttribute,
+                mInputType->HasPatternMismatch() == Some(false));
+  return mHasPatternAttribute ? mInputType->HasPatternMismatch() : Some(false);
 }
 
 bool HTMLInputElement::IsRangeOverflow() const {
-  return mInputType->IsRangeOverflow();
+  MOZ_ASSERT_IF(!mHasRange, !mInputType->IsRangeOverflow());
+  return mHasRange && mInputType->IsRangeOverflow();
 }
 
 bool HTMLInputElement::IsRangeUnderflow() const {
-  return mInputType->IsRangeUnderflow();
+  MOZ_ASSERT_IF(!mHasRange, !mInputType->IsRangeUnderflow());
+  return mHasRange && mInputType->IsRangeUnderflow();
 }
 
 bool HTMLInputElement::ValueIsStepMismatch(const Decimal& aValue) const {
@@ -6974,10 +6971,14 @@ bool HTMLInputElement::ValueIsStepMismatch(const Decimal& aValue) const {
 }
 
 bool HTMLInputElement::HasStepMismatch() const {
-  return mInputType->HasStepMismatch();
+  MOZ_ASSERT_IF(!DoesStepApply(), !mInputType->HasStepMismatch());
+  return DoesStepApply() && mInputType->HasStepMismatch();
 }
 
-bool HTMLInputElement::HasBadInput() const { return mInputType->HasBadInput(); }
+bool HTMLInputElement::HasBadInput() const {
+  MOZ_ASSERT_IF(!DoesBadInputApply(), !mInputType->HasBadInput());
+  return DoesBadInputApply() && mInputType->HasBadInput();
+}
 
 void HTMLInputElement::UpdateTooLongValidityState() {
   SetValidityState(VALIDITY_STATE_TOO_LONG, IsTooLong());
@@ -7054,14 +7055,16 @@ void HTMLInputElement::UpdatePatternMismatchValidityState() {
   }
 }
 
-void HTMLInputElement::UpdateRangeOverflowValidityState() {
+void HTMLInputElement::UpdateRangeValidityStates() {
+  const bool wasOutOfRange = GetValidityState(VALIDITY_STATE_RANGE_OVERFLOW) ||
+                             GetValidityState(VALIDITY_STATE_RANGE_UNDERFLOW);
   SetValidityState(VALIDITY_STATE_RANGE_OVERFLOW, IsRangeOverflow());
-  UpdateInRange(true);
-}
-
-void HTMLInputElement::UpdateRangeUnderflowValidityState() {
   SetValidityState(VALIDITY_STATE_RANGE_UNDERFLOW, IsRangeUnderflow());
-  UpdateInRange(true);
+  const bool isOutOfRange = GetValidityState(VALIDITY_STATE_RANGE_OVERFLOW) ||
+                            GetValidityState(VALIDITY_STATE_RANGE_UNDERFLOW);
+  if (wasOutOfRange != isOutOfRange) {
+    UpdateInRange(true);
+  }
 }
 
 void HTMLInputElement::UpdateStepMismatchValidityState() {
@@ -7086,8 +7089,7 @@ void HTMLInputElement::UpdateAllValidityStatesButNotElementState() {
   UpdateValueMissingValidityState();
   UpdateTypeMismatchValidityState();
   UpdatePatternMismatchValidityState();
-  UpdateRangeOverflowValidityState();
-  UpdateRangeUnderflowValidityState();
+  UpdateRangeValidityStates();
   UpdateStepMismatchValidityState();
   UpdateBadInputValidityState();
 }
