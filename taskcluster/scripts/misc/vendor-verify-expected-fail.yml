@@ -21,7 +21,6 @@ expected-fail:
     security/sandbox/linux/launch/glibc_hack/moz.yaml: "TODO bug: re-vendoring fails"
     third_party/js/cfworker/moz.yaml: "TODO bug: re-vendoring fails"
     third_party/libepoxy/moz.yaml: "TODO bug: re-vendoring fails"
-    third_party/libsrtp/moz.yaml: "TODO bug: re-vendoring fails"
     third_party/opentelemetry-cpp/third_party/opentelemetry-proto/moz.yaml: "TODO bug: re-vendoring fails"
     third_party/rlbox/moz.yaml: "TODO bug: sources differ after re-vendoring"
     third_party/sqlite3/moz.yaml: "TODO bug: sources differ after re-vendoring"
