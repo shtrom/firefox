@@ -50,6 +50,16 @@ struct TestWebrtcGmpVideoEncoder : public Test {
   }
 
   void TearDown() override { mEncoder = nullptr; }
+
+  // Connect before starting the init: MediaEventSource does not replay, and a
+  // warm plugin finishes the init on the GMP thread before this thread would
+  // get a chance to subscribe.
+  void InitEncodeAndWait() {
+    auto init = TakeN(*mEncoder->InitPluginEvent(), 1);
+    EXPECT_EQ(mEncoder->InitEncode(&mCodecSettings, mSettings),
+              WEBRTC_VIDEO_CODEC_OK);
+    (void)WaitFor(init);
+  }
 };
 
 struct MockEncodedImageCallback : public webrtc::EncodedImageCallback {
@@ -67,15 +77,11 @@ auto CreateBlackFrame(int width, int height) {
 
 TEST_F(TestWebrtcGmpVideoEncoder, EmptyLifecycle) {}
 
-TEST_F(TestWebrtcGmpVideoEncoder, InitEncode) {
-  mEncoder->InitEncode(&mCodecSettings, mSettings);
-  WaitFor(*mEncoder->InitPluginEvent());
-}
+TEST_F(TestWebrtcGmpVideoEncoder, InitEncode) { InitEncodeAndWait(); }
 
 TEST_F(TestWebrtcGmpVideoEncoder, Encode) {
   using Result = webrtc::EncodedImageCallback::Result;
-  mEncoder->InitEncode(&mCodecSettings, mSettings);
-  WaitFor(*mEncoder->InitPluginEvent());
+  InitEncodeAndWait();
 
   MozPromiseHolder<GenericPromise> doneHolder;
   RefPtr donePromise = doneHolder.Ensure(__func__);
@@ -105,8 +111,7 @@ TEST_F(TestWebrtcGmpVideoEncoder, Encode) {
 
 TEST_F(TestWebrtcGmpVideoEncoder, BackPressure) {
   using Result = webrtc::EncodedImageCallback::Result;
-  mEncoder->InitEncode(&mCodecSettings, mSettings);
-  WaitFor(*mEncoder->InitPluginEvent());
+  InitEncodeAndWait();
 
   MozPromiseHolder<GenericPromise> doneHolder;
   RefPtr donePromise = doneHolder.Ensure(__func__);
@@ -163,8 +168,7 @@ TEST_F(TestWebrtcGmpVideoEncoder, BackPressure) {
 
 TEST_F(TestWebrtcGmpVideoEncoder, ReUse) {
   using Result = webrtc::EncodedImageCallback::Result;
-  mEncoder->InitEncode(&mCodecSettings, mSettings);
-  WaitFor(*mEncoder->InitPluginEvent());
+  InitEncodeAndWait();
 
   MozPromiseHolder<GenericPromise> doneHolder;
   RefPtr donePromise = doneHolder.Ensure(__func__);
@@ -209,8 +213,7 @@ TEST_F(TestWebrtcGmpVideoEncoder, ReUse) {
     block = false;
     lock.Notify();
   }
-  mEncoder->InitEncode(&mCodecSettings, mSettings);
-  WaitFor(*mEncoder->InitPluginEvent());
+  InitEncodeAndWait();
   mEncoder->RegisterEncodeCompleteCallback(&callback);
 
   EXPECT_EQ(
@@ -230,8 +233,7 @@ TEST_F(TestWebrtcGmpVideoEncoder, TrackedFrameDrops) {
   // telling us. It will drop every fifth input frame. This shall get tracked
   // as frame drops.
   mCodecSettings.SetFrameDropEnabled(true);
-  mEncoder->InitEncode(&mCodecSettings, mSettings);
-  WaitFor(*mEncoder->InitPluginEvent());
+  InitEncodeAndWait();
 
   Monitor m(__func__);
   size_t numEvents = 0;
