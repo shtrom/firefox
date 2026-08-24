@@ -25,6 +25,7 @@ def test_tasks_have_optimization(full_task_graph, filter_tasks):
         "hazard",
         "instrumented-build",
         "spidermonkey",
+        "static-analysis-autotest",
         "test",
         "valgrind",
     )

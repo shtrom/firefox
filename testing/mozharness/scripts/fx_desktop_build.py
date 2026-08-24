@@ -30,6 +30,7 @@ class FxDesktopBuild(BuildScript):
                 "get-secrets",
                 "clobber",
                 "build",
+                "static-analysis-autotest",
                 "valgrind-test",
                 "multi-l10n",
                 "package-source",
