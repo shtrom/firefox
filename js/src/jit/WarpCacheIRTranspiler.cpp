@@ -6322,9 +6322,10 @@ bool WarpCacheIRTranspiler::maybeCreateThis(MDefinition* callee,
   if (kind == CallKind::Native) {
     // Native functions keep the is-constructing MagicValue as |this|.
     // If one of the arguments uses spread syntax this can be a loop phi with
-    // MIRType::Value.
+    // MIRType::Value. If one of the arguments uses |yield|, this can be a
+    // LoadElement to restore |this| from the generator's stack storage array.
     MOZ_ASSERT(thisArg->type() == MIRType::MagicIsConstructing ||
-               thisArg->isPhi());
+               thisArg->isPhi() || thisArg->isLoadElement());
     return false;
   }
   MOZ_ASSERT(kind == CallKind::Scripted);
@@ -6342,7 +6343,7 @@ bool WarpCacheIRTranspiler::maybeCreateThis(MDefinition* callee,
   }
   // See the Native case above.
   MOZ_ASSERT(thisArg->type() == MIRType::MagicIsConstructing ||
-             thisArg->isPhi());
+             thisArg->isPhi() || thisArg->isLoadElement());
 
   auto* newTarget = unboxObjectInfallible(callInfo_->getNewTarget());
   auto* createThis = MCreateThis::New(alloc(), callee, newTarget);
