@@ -42,9 +42,10 @@ public class GeckoServiceChildProcess extends Service {
   private static ProcessState sState = ProcessState.NEW;
 
   @WrapForJNI(calledFrom = "gecko")
-  private static void getEditableParent(final IGeckoEditableChild child, final long tabId) {
+  private static void getEditableParent(
+      final IGeckoEditableChild child, final long contentId, final long tabId) {
     try {
-      sProcessManager.getEditableParent(child, tabId);
+      sProcessManager.getEditableParent(child, contentId, tabId);
     } catch (final RemoteException e) {
       Log.e(LOGTAG, "Cannot get editable", e);
     }
