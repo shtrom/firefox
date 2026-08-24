@@ -25,6 +25,7 @@
 #include "mozilla/StaticPrefs_media.h"
 #include "mozilla/XREAppData.h"
 #include "mozilla/gfx/Logging.h"
+#include "mozilla/gfx/gfxVars.h"
 #include "mozilla/glean/GfxMetrics.h"
 #include "nsAppRunner.h"
 #include "nsCRTGlue.h"
@@ -1598,6 +1599,11 @@ nsresult GfxInfo::GetFeatureStatusImpl(
 
   // Probe Vulkan on supported devices only
   if (aFeature == nsIGfxInfo::FEATURE_HARDWARE_VIDEO_DECODING_VULKAN) {
+    if (!gfxVars::UseDMABuf()) {
+      *aStatus = nsIGfxInfo::FEATURE_BLOCKED_PLATFORM_TEST;
+      aFailureId = "FEATURE_HARDWARE_VIDEO_DECODING_VULKAN_DMABUF_DISABLED"_ns;
+      return NS_OK;
+    }
     if (!StaticPrefs::
             media_hardware_video_decoding_vulkan_enabled_AtStartup()) {
       *aStatus = nsIGfxInfo::FEATURE_BLOCKED_PLATFORM_TEST;
@@ -1622,6 +1628,11 @@ nsresult GfxInfo::GetFeatureStatusImpl(
 
   // Probe VA-API/V4L2 on supported devices only
   if (aFeature == nsIGfxInfo::FEATURE_HARDWARE_VIDEO_DECODING) {
+    if (!gfxVars::UseDMABuf()) {
+      *aStatus = nsIGfxInfo::FEATURE_BLOCKED_PLATFORM_TEST;
+      aFailureId = "FEATURE_FAILURE_VIDEO_DECODING_DMABUF_DISABLED"_ns;
+      return NS_OK;
+    }
     if (!StaticPrefs::media_hardware_video_decoding_enabled_AtStartup()) {
       return ret;
     }
