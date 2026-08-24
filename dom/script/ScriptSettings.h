@@ -92,6 +92,10 @@ nsIGlobalObject* GetIncumbentGlobal();
 // Returns the global associated with the current compartment. This may be null.
 nsIGlobalObject* GetCurrentGlobal();
 
+// Walks the script settings stack for the entry global's
+// WebTaskSchedulingState. Callers on a hot path should first check
+// CycleCollectedJSContext::MayHaveWebTaskSchedulingState(), which is false
+// unless some global on this thread actually has one.
 WebTaskSchedulingState* GetWebTaskSchedulingState();
 
 // JS-implemented WebIDL presents an interesting situation with respect to the

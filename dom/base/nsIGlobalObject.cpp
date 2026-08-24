@@ -171,9 +171,17 @@ void nsIGlobalObject::TraverseObjectsInGlobal(
 
 void nsIGlobalObject::SetWebTaskSchedulingState(
     mozilla::dom::WebTaskSchedulingState* aState) {
+  // Keep CycleCollectedJSContext count of the globals that have a
+  // WebTaskSchedulingState in sync. The context is null at thread shutdown, in
+  // which case the count is going away with it anyway.
+  if (!!mWebTaskSchedulingState != !!aState) {
+    if (CycleCollectedJSContext* ccjs = CycleCollectedJSContext::Get()) {
+      aState ? ccjs->NoteWebTaskSchedulingStateAdded()
+             : ccjs->NoteWebTaskSchedulingStateRemoved();
+    }
+  }
   mWebTaskSchedulingState = aState;
 }
-
 
 void nsIGlobalObject::AddGlobalTeardownObserver(
     GlobalTeardownObserver* aObject) {
