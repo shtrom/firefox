@@ -833,6 +833,15 @@ class nsIWidget : public nsSupportsWeakReference {
   virtual void SetMicaBackdrop(bool) {}
 
   /**
+   * Called when the compositor has composited a frame of this widget's
+   * window. Overrides must call the base implementation, which notifies the
+   * widget listeners.
+   */
+  virtual void DidCompositeWindow(mozilla::layers::TransactionId aTransactionId,
+                                  const mozilla::TimeStamp& aCompositeStart,
+                                  const mozilla::TimeStamp& aCompositeEnd);
+
+  /**
    * Return size mode (minimized, maximized, normalized).
    * Returns a value from nsSizeMode (see nsIWidgetListener.h)
    */

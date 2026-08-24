@@ -1793,26 +1793,13 @@ void nsWindow::Show(bool aState) {
         }
 
         if (mWindowType == WindowType::Popup) {
-          // ensure popups are the topmost of the TOPMOST
-          // layer. Remember not to set the SWP_NOZORDER
-          // flag as that might allow the taskbar to overlap
-          // the popup.
-          flags |= SWP_NOACTIVATE | SWP_NOOWNERZORDER;
-          HWND owner = ::GetWindow(mWnd, GW_OWNER);
-          if (owner) {
-            // PopupLevel::Top popups should be above all else.  All other
-            // types should be placed in front of their owner, without
-            // changing the owner's z-level relative to other windows.
-            if (mPopupLevel != PopupLevel::Top) {
-              ::SetWindowPos(mWnd, owner, 0, 0, 0, 0, flags);
-              ::SetWindowPos(
-                  owner, mWnd, 0, 0, 0, 0,
-                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
-            } else {
-              ::SetWindowPos(mWnd, HWND_TOP, 0, 0, 0, 0, flags);
-            }
+          if (!mHasBeenShown) {
+            mHasBeenShown = true;
+            // Don't show the window until the compositor has presented content
+            // into it.
+            mPendingPopupShow = true;
           } else {
-            ::SetWindowPos(mWnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
+            ShowPopupWindowNow();
           }
         } else {
           if (mWindowType == WindowType::Dialog && !CanTakeFocus())
@@ -1822,6 +1809,7 @@ void nsWindow::Show(bool aState) {
         }
       }
     } else {
+      mPendingPopupShow = false;
       if (mWindowType != WindowType::Dialog) {
         ::ShowWindow(mWnd, SW_HIDE);
       } else {
@@ -2632,6 +2620,48 @@ void nsWindow::SetColorScheme(const Maybe<ColorScheme>& aScheme) {
                         sizeof dark);
   DwmSetWindowAttribute(mWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark,
                         sizeof dark);
+}
+
+void nsWindow::ShowPopupWindowNow() {
+  MOZ_ASSERT(NS_IsMainThread());
+  if (!mWnd) {
+    return;
+  }
+  // ensure popups are the topmost of the TOPMOST layer. Remember not to
+  // set the SWP_NOZORDER flag as that might allow the taskbar to overlap
+  // the popup.
+  const DWORD flags = SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW |
+                      SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+  HWND owner = ::GetWindow(mWnd, GW_OWNER);
+  if (owner) {
+    // PopupLevel::Top popups should be above all else.  All other
+    // types should be placed in front of their owner, without
+    // changing the owner's z-level relative to other windows.
+    if (mPopupLevel != PopupLevel::Top) {
+      ::SetWindowPos(mWnd, owner, 0, 0, 0, 0, flags);
+      ::SetWindowPos(
+          owner, mWnd, 0, 0, 0, 0,
+          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+    } else {
+      ::SetWindowPos(mWnd, HWND_TOP, 0, 0, 0, 0, flags);
+    }
+  } else {
+    ::SetWindowPos(mWnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
+  }
+}
+
+void nsWindow::DidCompositeWindow(TransactionId aTransactionId,
+                                  const TimeStamp& aCompositeStart,
+                                  const TimeStamp& aCompositeEnd) {
+  if (mPendingPopupShow) {
+    mPendingPopupShow = false;
+    // mIsVisible is false if the popup was hidden again before its content
+    // arrived.
+    if (mIsVisible) {
+      ShowPopupWindowNow();
+    }
+  }
+  nsIWidget::DidCompositeWindow(aTransactionId, aCompositeStart, aCompositeEnd);
 }
 
 void nsWindow::SetMicaBackdrop(bool aEnabled) {

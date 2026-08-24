@@ -399,6 +399,20 @@ void nsIWidget::DestroyLayerManager() {
 
 void nsIWidget::OnRenderingDeviceReset() { DestroyLayerManager(); }
 
+void nsIWidget::DidCompositeWindow(
+    mozilla::layers::TransactionId aTransactionId,
+    const mozilla::TimeStamp& aCompositeStart,
+    const mozilla::TimeStamp& aCompositeEnd) {
+  if (nsIWidgetListener* listener = GetWidgetListener()) {
+    listener->DidCompositeWindow(aTransactionId, aCompositeStart,
+                                 aCompositeEnd);
+  }
+  if (nsIWidgetListener* listener = GetAttachedWidgetListener()) {
+    listener->DidCompositeWindow(aTransactionId, aCompositeStart,
+                                 aCompositeEnd);
+  }
+}
+
 void nsIWidget::FreeShutdownObserver() {
   if (mShutdownObserver) {
     mShutdownObserver->Unregister();

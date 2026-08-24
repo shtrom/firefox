@@ -647,6 +647,10 @@ class nsWindow final : public nsIWidget {
 
   void SetColorScheme(const mozilla::Maybe<mozilla::ColorScheme>&) override;
   void SetMicaBackdrop(bool) override;
+  void DidCompositeWindow(mozilla::layers::TransactionId aTransactionId,
+                          const mozilla::TimeStamp& aCompositeStart,
+                          const mozilla::TimeStamp& aCompositeEnd) override;
+  void ShowPopupWindowNow();
 
   bool DispatchTouchEventFromWMPointer(UINT msg, LPARAM aLParam,
                                        const WinPointerInfo& aPointerInfo,
@@ -780,6 +784,9 @@ class nsWindow final : public nsIWidget {
   bool mIsShowingPreXULSkeletonUI = false;
   bool mResizable = false;
   bool mHasBeenShown = false;
+  // Whether a popup's first show is deferred until the compositor has
+  // presented content into it.
+  bool mPendingPopupShow = false;
   // Whether we're an alert window. Alert windows don't have taskbar icons and
   // don't steal focus from other windows when opened. They're also expected to
   // be of type WindowType::Dialog.
