@@ -292,12 +292,7 @@ toolbar[inactive="true"] .urlbar,
 }
 
 .urlbar-input-container {
-  /* The buttons keep the same distance to the inline edges as to the block ones,
-     which is half of the height they leave over. This resolves the height here
-     rather than reusing --urlbar-input-container-padding, which substitutes it
-     at :root and so misses a --urlbar-height set further down, as New Tab
-     does. */
-  padding-inline: calc((var(--urlbar-height) - var(--urlbar-basic-component-size)) / 2);
+  padding-inline: var(--urlbar-input-container-padding);
   min-width: 0;
   display: flex;
   align-items: center;
@@ -305,13 +300,6 @@ toolbar[inactive="true"] .urlbar,
   box-sizing: border-box;
   border-radius: var(--urlbar-border-radius);
   overflow: clip;
-
-  /* stylelint-disable-next-line media-query-no-invalid */
-  @media not -moz-pref("browser.nova.enabled") {
-    /* This branch draws a border on the container, and that insets the buttons
-       too, so it comes out of the padding. */
-    padding-inline: calc((var(--urlbar-height) - var(--urlbar-basic-component-size)) / 2 - var(--urlbar-input-container-border-width));
-  }
 
   .urlbar[breakout] > & {
     width: 100%;
