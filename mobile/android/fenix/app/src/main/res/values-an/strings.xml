@@ -30,7 +30,7 @@
   <!-- Content description for close button while in multiselect mode in tab tray -->
   <string name="tab_tray_close_multiselect_content_description">Salir d\'o modo de selección multiple</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">%1$s ye produciu per Mozilla.</string>
+  <string name="about_content" tools:ignore="BrandUsage">%1$s ye produciu per Mozilla.</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">Mitos comuns sobre la navegación privada</string>
   <!--
@@ -153,12 +153,6 @@
   <string name="browser_menu_read_close">Zarrar la vista de lectura</string>
   <!-- Browser menu button to open the current page in an external app -->
   <string name="browser_menu_open_app_link">Ubrir en aplicación</string>
-  <!--
-    Browser Toolbar
-
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">Pachina d’inicio</string>
   <!--
     Locale Settings Fragment
 
@@ -360,7 +354,7 @@
   <!-- Title for studies preferences -->
   <string name="preference_experiments_2">Estudios</string>
   <!-- Summary for studies preferences -->
-  <string name="preference_experiments_summary_2">Permite que Mozilla instale y execute estudios</string>
+  <string name="preference_experiments_summary_2" tools:ignore="BrandUsage">Permite que Mozilla instale y execute estudios</string>
   <!-- Preference for reconnecting to FxA sync -->
   <string name="preferences_sync_sign_in_to_reconnect">Inicia sesión pa reconnectar</string>
   <!-- Preference for removing FxA account -->
@@ -417,8 +411,6 @@
   <string name="library_desktop_bookmarks_unfiled">Atros marcapachinas</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">Historial</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">Nueva pestanya</string>
   <!-- Settings Page Title -->
   <string name="settings_title">Achustes</string>
   <!-- Content description (not visible, for screen readers etc.): "Close button for library settings" -->
@@ -537,8 +529,6 @@
   <string name="history_search_1">Escribe los termens de busqueda</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">Borrar historial</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">Historial borrau</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">S’ha borrau %1$s</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -572,7 +562,7 @@
   -->
   <string name="tab_crash_title_2">Lo sentimos. %1$s no puede cargar ixa pachina.</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">Ninviar informe de fallos a Mozilla</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">Ninviar informe de fallos a Mozilla</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">Zarrar pestanya</string>
   <!-- Restore tab button text on the tab crash page -->
@@ -602,10 +592,6 @@
   <string name="edit_bookmark_folder_fragment_title">Editar carpeta</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">URL</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">CARPETA</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">NOMBRE</string>
   <!-- Bookmark select folder screen title -->
   <string name="bookmark_select_folder_fragment_label">Triar carpeta</string>
   <!-- Bookmark editing error missing or improper URL -->
@@ -621,12 +607,6 @@
     Button label that take the user to the Android App setting
   -->
   <string name="phone_feature_go_to_settings">Ir a Achustes</string>
-  <!--
-    Content description (not visible, for screen readers etc.): Quick settings sheet
-    to give users access to site specific information / settings. For example:
-    Secure settings status and a button to modify site permissions
-  -->
-  <string name="quick_settings_sheet">Fuella d’achustes rapidos</string>
   <!-- Label that indicates that this option it the recommended one -->
   <string name="phone_feature_recommended">Recomendada</string>
   <!-- Button label for clearing all the information of site permissions -->
@@ -691,8 +671,6 @@
   <string name="collections_header">Coleccions</string>
   <!-- Content description (not visible, for screen readers etc.): Opens the collection menu when pressed -->
   <string name="collection_menu_button_content_description">Menú d’a colección</string>
-  <!-- Label to describe what collections are to a new user without any collections -->
-  <string name="no_collections_description2">Replega lo que t\'importa.\nAlza chuntas las busquedas similars, puestos y pestanyas pa acceder mas rapidament dimpués.</string>
   <!-- Title for the "select tabs" step of the collection creator -->
   <string name="create_collection_select_tabs">Triar pestanyas</string>
   <!-- Title for the "select collection" step of the collection creator -->
@@ -881,10 +859,8 @@
   <!--
     Enhanced Tracking Protection
 
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
+    Preference title for enhanced tracking protection settings
   -->
-  <string name="etp_settings">Achustes de protección</string>
-  <!-- Preference title for enhanced tracking protection settings -->
   <string name="preference_enhanced_tracking_protection">Protección contra seguimiento amillorada</string>
   <!-- Text displayed that links to website about enhanced tracking protection -->
   <string name="preference_enhanced_tracking_protection_explanation_learn_more">Leyer mas</string>
@@ -926,8 +902,6 @@
   <string name="preference_enhanced_tracking_protection_custom_cryptominers">Criptominers</string>
   <!-- Header for categories that are being being blocked by current Enhanced Tracking Protection settings -->
   <string name="enhanced_tracking_protection_blocked">Blocau</string>
-  <!-- Header for categories that are being not being blocked by current Enhanced Tracking Protection settings -->
-  <string name="enhanced_tracking_protection_allowed">Permitiu</string>
   <!-- Category of trackers (social media trackers) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_social_media_trackers_title">Elementos de seguimiento de retz socials</string>
   <!-- Description of social media trackers that can be blocked by Enhanced Tracking Protection -->
@@ -944,10 +918,6 @@
   <string name="etp_tracking_content_title">Conteniu de seguimiento</string>
   <!-- Description of tracking content that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_tracking_content_description">Bloca la carga de anuncios externos, vídeos y conteniu que contienga codigo de seguimiento. Puede afectar a la funcionalidat d’o puesto web.</string>
-  <!-- Enhanced Tracking Protection message that protection is currently on for this site -->
-  <string name="etp_panel_on">Las proteccions son activadas pa este puesto</string>
-  <!-- Enhanced Tracking Protection message that protection is currently off for this site -->
-  <string name="etp_panel_off">Las proteccions son desactivadas pa este puesto</string>
   <!-- Header for exceptions list for which sites enhanced tracking protection is always off -->
   <string name="enhanced_tracking_protection_exceptions">La protección contra seguimiento amillorada ye desactivada pa estes puestos</string>
   <!--
@@ -1082,11 +1052,6 @@
   <string name="confirm_clear_permission_site">Seguro que quiers eliminar este permiso pa este puesto?</string>
   <!-- label shown when there are not site exceptions to show in the site exception settings -->
   <string name="no_site_exceptions">Sin excepcions pa lo puesto</string>
-  <!--
-    text shown before the issuer name to indicate who its verified by, %1$s is the name of
-    the certificate authority that verified the ticket
-  -->
-  <string name="certificate_info_verified_by">Verificau per: %1$s</string>
   <!-- Positive action of a dialog asking to delete -->
   <string name="dialog_delete_positive">Borrar</string>
   <!-- Voice search button content description -->
@@ -1115,8 +1080,6 @@
   <string name="synced_tabs_no_open_tabs">No i hai garra pestanya ubierta</string>
   <!-- Confirmation dialog button text when top sites limit is reached. -->
   <string name="top_sites_max_limit_confirmation_button">Vale, entendiu</string>
-  <!-- Content description for close button in collection placeholder. -->
-  <string name="remove_home_collection_placeholder_content_description">Eliminar</string>
   <!-- Translations feature -->
 
   <!-- TextField Design System Component -->

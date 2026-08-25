@@ -64,12 +64,17 @@ class APZCTreeManagerParent final : public PAPZCTreeManagerParent {
 
   mozilla::ipc::IPCResult RecvSetLongTapEnabled(const bool& aTapGestureEnabled);
 
+  mozilla::ipc::IPCResult RecvNotifyApzAwareListenerAdded(
+      const ScrollableLayerGuid& aGuid);
+
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
  private:
   virtual ~APZCTreeManagerParent();
 
   bool IsGuidValid(const ScrollableLayerGuid& aGuid);
+
+  bool IsForRootLayer() const;
 
   LayersId mLayersId;
   RefPtr<APZCTreeManager> mTreeManager;

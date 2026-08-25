@@ -1,87 +1,47 @@
-From: Michael Froman <mjfroman@mac.com>
-Date: Mon, 15 Sep 2025 14:53:58 -0500
-Subject: Bug 1973648 - move applicable libwebrtc changes to our new
- libwebrtc_overrides location. r=ng
+From: Michael Froman <mfroman@mozilla.com>
+Date: Wed, 8 Oct 2025 17:49:00 +0000
+Subject: Bug 1980501 - use forward class decl rather than include
+ audio_state.h r?ng!
 
-Differential Revision: https://phabricator.services.mozilla.com/D258499
-Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/19164e58323d59c1f66f7fcf671b8d0b6366f708
+This avoids code outside of libwebrtc inadvertently including
+rtc_base/containers/flat_set.h which uses c++20 features.  Once
+the rest of the Mozilla tree is compiling with c++20, we can
+remove this modification (see Bug 1768116).
+
+Differential Revision: https://phabricator.services.mozilla.com/D267993
+Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/9c487a574d218cc1c261b646c501db4d159754f0
 ---
- call/call.cc                     | 13 -------------
- call/call.h                      | 16 ++--------------
- modules/desktop_capture/BUILD.gn |  5 +++++
- 3 files changed, 7 insertions(+), 27 deletions(-)
+ audio/audio_receive_stream.h | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
-diff --git a/call/call.cc b/call/call.cc
-index df8786c886..c23eeb3b54 100644
---- a/call/call.cc
-+++ b/call/call.cc
-@@ -482,19 +482,6 @@ class Call final : public webrtc::Call,
- };
- }  // namespace internal
- 
--std::string Call::Stats::ToString(int64_t time_ms) const {
--  char buf[1024];
--  SimpleStringBuilder ss(buf);
--  ss << "Call stats: " << time_ms << ", {";
--  ss << "send_bw_bps: " << send_bandwidth_bps << ", ";
--  ss << "recv_bw_bps: " << recv_bandwidth_bps << ", ";
--  ss << "max_pad_bps: " << max_padding_bitrate_bps << ", ";
--  ss << "pacer_delay_ms: " << pacer_delay_ms << ", ";
--  ss << "rtt_ms: " << rtt_ms;
--  ss << '}';
--  return ss.str();
--}
--
- std::unique_ptr<Call> Call::Create(CallConfig config) {
-   auto transport_send = std::make_unique<RtpTransportControllerSend>(
-       config.ExtractTransportConfig());
-diff --git a/call/call.h b/call/call.h
-index 636c0f9737..752dbfbfe5 100644
---- a/call/call.h
-+++ b/call/call.h
-@@ -27,6 +27,7 @@
- #include "api/video/video_stream_encoder_settings.h"
+diff --git a/audio/audio_receive_stream.h b/audio/audio_receive_stream.h
+index 452380030d..ed8a33e502 100644
+--- a/audio/audio_receive_stream.h
++++ b/audio/audio_receive_stream.h
+@@ -35,7 +35,11 @@
+ #include "api/transport/rtp/rtp_source.h"
+ #include "api/units/time_delta.h"
+ #include "api/units/timestamp.h"
++// This can be removed after Bug 1768116 enables
++// c++20 builds across the entire Mozilla tree.
++#if !defined(WEBRTC_MOZILLA_BUILD)
+ #include "audio/audio_state.h"
++#endif
  #include "call/audio_receive_stream.h"
- #include "call/audio_send_stream.h"
-+#include "call/call_basic_stats.h"
- #include "call/call_config.h"
- #include "call/flexfec_receive_stream.h"
- #include "call/packet_receiver.h"
-@@ -52,20 +53,7 @@ namespace webrtc {
+ #include "call/audio_state.h"
+ #include "call/syncable.h"
+@@ -48,6 +52,14 @@ class PacketRouter;
+ class RtpStreamReceiverControllerInterface;
+ class RtpStreamReceiverInterface;
  
- class Call {
-  public:
--  struct Stats {
--    std::string ToString(int64_t time_ms) const;
--
--    int send_bandwidth_bps = 0;       // Estimated available send bandwidth.
--    int max_padding_bitrate_bps = 0;  // Cumulative configured max padding.
--    int recv_bandwidth_bps = 0;       // Estimated available receive bandwidth.
--    int64_t pacer_delay_ms = 0;
--    int64_t rtt_ms = -1;
--    std::optional<int64_t> ccfb_messages_received = std::nullopt;
--    flat_map<uint32_t, SentCongestionControllerFeedbackStats>
--        sent_ccfb_stats_per_ssrc;
--    flat_map<uint32_t, ReceivedCongestionControlFeedbackStats>
--        received_ccfb_stats_per_ssrc;
--  };
-+  using Stats = CallBasicStats;
- 
-   static std::unique_ptr<Call> Create(CallConfig config);
- 
-diff --git a/modules/desktop_capture/BUILD.gn b/modules/desktop_capture/BUILD.gn
-index 6ca070fce7..82be9d5882 100644
---- a/modules/desktop_capture/BUILD.gn
-+++ b/modules/desktop_capture/BUILD.gn
-@@ -402,6 +402,11 @@ rtc_library("desktop_capture") {
-     ]
-     if (build_with_mozilla) {
-       libs -= [ "Xtst" ]
-+      # Mozilla provides custom impl of x_error_trap.*
-+      sources -= [
-+        "linux/x11/x_error_trap.cc",
-+        "linux/x11/x_error_trap.h",
-+      ]
-     }
-   }
- 
++// This can be removed after Bug 1768116 enables
++// c++20 builds across the entire Mozilla tree.
++#if defined(WEBRTC_MOZILLA_BUILD)
++namespace internal {
++class AudioState;
++}
++#endif
++
+ namespace voe {
+ class ChannelReceiveInterface;
+ }  // namespace voe

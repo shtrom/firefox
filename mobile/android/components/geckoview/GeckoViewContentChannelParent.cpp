@@ -159,6 +159,11 @@ bool GeckoViewContentChannelParent::Init(
 
   nsCOMPtr<nsIURI> uri = ipc::DeserializeURI(aArgs.uri());
 
+  if (!uri || !uri->SchemeIs("content")) {
+    rv = NS_ERROR_UNKNOWN_PROTOCOL;
+    return false;
+  }
+
   nsAutoCString remoteType;
   rv = GetRemoteType(remoteType);
   if (MOZ_UNLIKELY(NS_FAILED(rv))) {
@@ -197,8 +202,10 @@ bool GeckoViewContentChannelParent::Init(
 bool GeckoViewContentChannelParent::Init(
     const GeckoViewContentChannelConnectArgs& aArgs) {
   nsCOMPtr<nsIChannel> channel;
-  nsresult rv =
-      NS_LinkRedirectChannels(aArgs.channelId(), this, getter_AddRefs(channel));
+  dom::ContentParentId cpId =
+      static_cast<dom::ContentParent*>(Manager()->Manager())->ChildID();
+  nsresult rv = NS_LinkRedirectChannels(aArgs.channelId(), cpId, this,
+                                        getter_AddRefs(channel));
   if (NS_SUCCEEDED(rv)) {
     mChannel = channel;
   }

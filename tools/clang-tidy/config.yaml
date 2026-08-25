@@ -19,7 +19,7 @@ platforms:
 # Minimum clang-tidy version that is required for all the following checkers
 # to work properly.
 # This is also used by 'mach lint -l clang-format'
-package_version: "20.1.8"
+package_version: "22.1.8"
 
 # Header file that are platform dependant and generate false positive, we don't
 # want to analyze them.
@@ -33,6 +33,8 @@ clang_checkers:
     reliability: high
   - name: modernize-use-equals-delete
     reliability: high
+  - name: modernize-use-transparent-functors
+    reliability: high
   - name: readability-redundant-string-cstr
     reliability: high
   - name: readability-redundant-string-init
@@ -44,7 +46,42 @@ clang_checkers:
         value: safe
       - key: UseCxx20ReverseRanges
         value: false
+  - name: modernize-type-traits
+    reliability: high
+  - name: modernize-use-bool-literals
+    reliability: high
+  - name: modernize-use-std-numbers
+    reliability: high
+    config:
+      - key: DiffThreshold
+        value: 0.0000001
+  - name: bugprone-forwarding-reference-overload
+    reliability: high
   - name: bugprone-move-forwarding-reference
+    reliability: high
+  - name: bugprone-redundant-branch-condition
+    reliability: high
+  - name: bugprone-bitwise-pointer-cast
+    reliability: high
+  - name: misc-definitions-in-headers
+    reliability: high
+  - name: performance-for-range-copy
+    reliability: high
+    config:
+      - key: AllowedTypes
+        value: (mozilla::)?RefPtr
+  - name: performance-unnecessary-copy-initialization
+    reliability: high
+    config:
+      - key: AllowedTypes
+        value: (mozilla::)?(nsCOM|Ref)Ptr
+  - name: performance-inefficient-string-concatenation
+    reliability: high
+  - name: performance-inefficient-vector-operation
+    reliability: high
+  - name: performance-trivially-destructible
+    reliability: high
+  - name: modernize-use-nullptr
     reliability: high
 
 # clang_checkers:
@@ -68,7 +105,7 @@ clang_checkers:
 #     reliability: high
 #   - name: bugprone-misplaced-widening-cast
 #     reliability: high
-#   - name: bugprone-move-forwarding-reference
+#   - name: bugprone-use-after-move
 #     reliability: high
 #   - name: bugprone-multiple-statement-macro
 #     # Incompatible with our code base, see bug 1496379.

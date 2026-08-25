@@ -3,12 +3,6 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "SandboxBroker.h"
-#include "SandboxInfo.h"
-
-#include "SandboxProfilerParent.h"
-#include "SandboxLogging.h"
-
-#include "SandboxBrokerUtils.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -26,8 +20,12 @@
 #include <utility>
 
 #include "GeckoProfiler.h"
+#include "SandboxBrokerUtils.h"
+#include "SandboxInfo.h"
+#include "SandboxLogging.h"
+#include "SandboxProfilerParent.h"
 #include "SpecialSystemDirectory.h"
-#include "base/string_util.h"
+#include "base/strings/string_util.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/Sprintf.h"
@@ -529,17 +527,6 @@ static int DoStat(const char* aPath, statstruct* aBuff, int aFlags) {
   return statsyscall(aPath, aBuff);
 }
 
-static int DoLink(const char* aPath, const char* aPath2,
-                  SandboxBrokerCommon::Operation aOper) {
-  if (aOper == SandboxBrokerCommon::Operation::SANDBOX_FILE_LINK) {
-    return link(aPath, aPath2);
-  }
-  if (aOper == SandboxBrokerCommon::Operation::SANDBOX_FILE_SYMLINK) {
-    return symlink(aPath, aPath2);
-  }
-  MOZ_CRASH("SandboxBroker: Unknown link operation");
-}
-
 static int DoConnect(const char* aPath, size_t aLen, int aType,
                      bool aIsAbstract) {
   // Deny SOCK_DGRAM for the same reason it's denied for socketpair.
@@ -646,7 +633,7 @@ int SandboxBroker::SymlinkPermissions(const char* aPath,
   // Because we bail on a writable dir, SymlinkPath
   // might not restore the callers' path exactly.
   char pathBufSymlink[kMaxPathLen + 1];
-  strcpy(pathBufSymlink, aPath);
+  base::strlcpy(pathBufSymlink, aPath, sizeof(pathBufSymlink));
 
   nsCString orig =
       ReverseSymlinks(nsDependentCString(pathBufSymlink, aPathLen));
@@ -660,9 +647,9 @@ int SandboxBroker::SymlinkPermissions(const char* aPath,
   int perms = 0;
   // Resolve relative paths, propagate permissions and
   // fail if a symlink is in a writable path. The output is in perms.
-  char* result =
-      SandboxBroker::SymlinkPath(mPolicy.get(), pathBufSymlink, NULL, &perms);
-  if (result != NULL) {
+  char* result = SandboxBroker::SymlinkPath(mPolicy.get(), pathBufSymlink,
+                                            nullptr, &perms);
+  if (result != nullptr) {
     free(result);
     // We finished the translation, so we have a usable return in "perms".
     return perms;
@@ -831,13 +818,21 @@ void SandboxBroker::ThreadMain(void) {
       // Same for the second path.
       pathLen2 = strnlen(pathBuf2, kMaxPathLen);
       if (pathLen2 > 0) {
+        if (OperationPaths(req.mOp) < 2) {
+          SANDBOX_LOG("extra path for op %s from pid %d",
+                      OperationDescription(req.mOp), mChildPid);
+          shutdown(mFileDesc, SHUT_RD);
+          break;
+        }
         // Force 0 termination.
         pathBuf2[pathLen2] = '\0';
         pathLen2 = ConvertRelativePath(pathBuf2, sizeof(pathBuf2), pathLen2);
         int perms2 = mPolicy->Lookup(nsDependentCString(pathBuf2, pathLen2));
 
-        // Take the intersection of the permissions for both paths.
-        perms &= perms2;
+        // Take the intersection of the permissions for both paths
+        // (the bits which cause denials need to be handled specially).
+        constexpr int kNegPerms = FORCE_DENY | CRASH_INSTEAD;
+        perms = (perms & perms2) | ((perms | perms2) & kNegPerms);
       }
     } else {
       // Failed to receive intelligible paths.
@@ -910,9 +905,8 @@ void SandboxBroker::ThreadMain(void) {
           break;
 
         case SANDBOX_FILE_LINK:
-        case SANDBOX_FILE_SYMLINK:
           if (permissive || AllowOperation(W_OK | X_OK, perms)) {
-            if (DoLink(pathBuf, pathBuf2, req.mOp) == 0) {
+            if (link(pathBuf, pathBuf2) == 0) {
               resp.mError = 0;
             } else {
               resp.mError = -errno;

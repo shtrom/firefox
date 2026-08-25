@@ -4,7 +4,6 @@
 
 #include "APZCBasicTester.h"
 #include "APZTestCommon.h"
-
 #include "InputUtils.h"
 #include "mozilla/ScrollPositionUpdate.h"
 #include "mozilla/layers/ScrollableLayerGuid.h"
@@ -87,8 +86,8 @@ TEST_F(APZCBasicTester, ComplexTransform) {
   // CSS pixels). The displayport is 1 extra CSS pixel on all
   // sides.
 
-  RefPtr<TestAsyncPanZoomController> childApzc =
-      new TestAsyncPanZoomController(LayersId{0}, mcc, tm);
+  RefPtr childApzc =
+      mozilla::MakeRefPtr<TestAsyncPanZoomController>(LayersId{0}, mcc, tm);
 
   const char* treeShape = "x(x)";
   // LayerID                     0 1
@@ -267,7 +266,8 @@ TEST_F(APZCBasicTester, ResumeInterruptedTouchDrag_Bug1592435) {
   metadata.GetMetrics().SetVisualDestination(mainThreadOffset);
   metadata.GetMetrics().SetScrollGeneration(
       sGenerationCounter.NewMainThreadGeneration());
-  metadata.GetMetrics().SetVisualScrollUpdateType(FrameMetrics::eMainThread);
+  metadata.GetMetrics().SetVisualScrollUpdateType(
+      ScrollOffsetUpdateType::MainThread);
   scrollUpdates.Clear();
   metadata.SetScrollUpdates(scrollUpdates);
   apzc->NotifyMainThreadTransaction(

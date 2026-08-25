@@ -1,6 +1,8 @@
 /* Any copyright is dedicated to the Public Domain.
  * http://creativecommons.org/publicdomain/zero/1.0/ */
 
+// TODO Bug 2050717 - break up this test file it's gotten too long
+
 do_get_profile();
 
 const lazy = {};
@@ -76,7 +78,7 @@ async function addConvoWithSpecificCustomContentTestData(
     pageUrl: mainLink,
   });
   conversation.title = title;
-  conversation.addMessage(role, content, messageLink, 0);
+  conversation.addMessage(role, content, 0, { pageUrl: messageLink });
   await gChatStore.updateConversation(conversation);
 }
 
@@ -562,12 +564,7 @@ add_atomic_task(
     });
     conversation.title = "Unrelated title";
     // role 2 = SYSTEM
-    conversation.addMessage(
-      2,
-      { body: "system prompt xyzSystemToken99" },
-      null,
-      0
-    );
+    conversation.addMessage(2, { body: "system prompt xyzSystemToken99" }, 0);
     conversation.addUserMessage("unrelated user message");
     await gChatStore.updateConversation(conversation);
 
@@ -598,42 +595,52 @@ add_atomic_task(async function test_ChatStorage_deleteConversationById() {
   Assert.equal(conversations.length, 0, "Test conversation was not deleted");
 });
 
-// TODO: Disabled this test. pruneDatabase() needs some work to switch
-// db file size to be checked via dbstat. Additionally, after switching
-// the last line to `PRAGMA incremental_vacuum;` the disk storage is
-// not immediately freed, so this test is now failing. Will need to
-// revisit this test when pruneDatabase() is updated.
-//
-// add_atomic_task(async function test_ChatStorage_pruneDatabase() {
-//   const initialDbSize = await gChatStore.getDatabaseSize();
-//
-//   // NOTE: Add enough conversations to increase the SQLite file
-//   // by a measurable size
-//   for (let i = 0; i < 1000; i++) {
-//     await addBasicConvoTestData("1/1/2025", "a conversation");
-//   }
-//
-//   const dbSizeWithTestData = await gChatStore.getDatabaseSize();
-//
-//   Assert.greater(
-//     dbSizeWithTestData,
-//     initialDbSize,
-//     "Test conversations not saved for pruneDatabase() test"
-//   );
-//
-//   await gChatStore.pruneDatabase(0.5, 100000);
-//
-//   const dbSizeAfterPrune = await gChatStore.getDatabaseSize();
-//
-//   const proximityToInitialSize = dbSizeAfterPrune - initialDbSize;
-//   const proximityToTestDataSize = dbSizeWithTestData - initialDbSize;
-//
-//   Assert.less(
-//     proximityToInitialSize,
-//     proximityToTestDataSize,
-//     "The pruned size is not closer to the initial db size than it is to the size with test data in it"
-//   );
-// });
+add_atomic_task(async function test_ChatStorage_pruneDatabase() {
+  const CONVERSATION_COUNT = 100;
+  const MESSAGE_CONTENT_BYTES = 50_000;
+  const DELETE_BATCH_SIZE = 2;
+  const REDUCE_BY_PERCENTAGE = 0.5;
+
+  // Give each conversation one large message so it occupies its own, roughly
+  // equal chunk of storage so it's deleted predictably during testing.
+  const largeContent = "a".repeat(MESSAGE_CONTENT_BYTES);
+  const link = "https://www.firefox.com";
+
+  for (let i = 0; i < CONVERSATION_COUNT; i++) {
+    await addConvoWithSpecificTestData(
+      new Date("1/1/2025"),
+      link,
+      link,
+      "a conversation",
+      largeContent
+    );
+  }
+
+  const sizeBefore = await gChatStore.getDbBytesInUse();
+
+  await gChatStore.pruneDatabase(
+    REDUCE_BY_PERCENTAGE,
+    1_000_000,
+    DELETE_BATCH_SIZE
+  );
+
+  const sizeAfter = await gChatStore.getDbBytesInUse();
+
+  // Assert on the in-use byte size, which is what pruneDatabase() targets:
+  // the loop stops once size drops below REDUCE_BY_PERCENTAGE of the start, so
+  // this lands around ~50% every run.
+  const reduction = 1 - sizeAfter / sizeBefore;
+  Assert.greater(
+    reduction,
+    0.45,
+    "pruneDatabase() should free ~50% of in-use bytes"
+  );
+  Assert.less(
+    reduction,
+    0.55,
+    "pruneDatabase() should not over-free past ~50%"
+  );
+});
 
 add_atomic_task(async function test_applyMigrations_notCalledOnInitialSetup() {
   gSandbox.stub(gChatStore, "CURRENT_SCHEMA_VERSION").returns(0);
@@ -684,6 +691,66 @@ add_atomic_task(
     });
   }
 );
+
+const V12_INDEXES = [
+  "message_role_created_date_idx",
+  "message_parent_id_idx",
+  "message_revision_root_idx",
+];
+
+async function getIndexNames() {
+  // substr avoids a LIKE clause, which mozStorage rejects unless the pattern is
+  // a bound parameter.
+  const rows = await gChatStore.connection.execute(
+    `SELECT name FROM sqlite_master
+     WHERE type = 'index' AND substr(name, 1, 7) != 'sqlite_'
+     ORDER BY name`
+  );
+
+  return rows.map(row => row.getResultByName("name"));
+}
+
+add_atomic_task(async function test_v12_indexesExistOnFreshDatabase() {
+  // Trigger connection to db so file creates and migrations applied
+  await gChatStore.getDatabaseSize();
+
+  const indexes = await getIndexNames();
+
+  Assert.withSoftAssertions(function (soft) {
+    for (const name of V12_INDEXES) {
+      soft.ok(indexes.includes(name), `${name} exists on a fresh database`);
+    }
+    soft.ok(
+      !indexes.includes("message_ordinal_idx"),
+      "message_ordinal_idx is not created on a fresh database"
+    );
+  });
+});
+
+// A fresh database and a migrated one must end up with the same indexes,
+// otherwise query plans differ between new and upgraded profiles.
+add_atomic_task(async function test_v12_migrationMatchesFreshSchema() {
+  // Trigger connection to db so file creates and migrations applied
+  await gChatStore.getDatabaseSize();
+
+  const fresh = await getIndexNames();
+
+  // Put the schema back to its v11 shape.
+  for (const name of V12_INDEXES) {
+    await gChatStore.connection.execute(`DROP INDEX ${name}`);
+  }
+  await gChatStore.connection.execute(
+    "CREATE INDEX message_ordinal_idx ON message(ordinal)"
+  );
+
+  await gChatStore.applyMigrations(11);
+
+  Assert.deepEqual(
+    await getIndexNames(),
+    fresh,
+    "applyMigrations produces the same index set as a fresh database"
+  );
+});
 
 async function addChatHistoryTestData() {
   await addConvoWithSpecificTestData(
@@ -1155,6 +1222,38 @@ add_atomic_task(async function test_seenUrls_roundTrip() {
     restored.seenUrls.size,
     2,
     "seenUrls should have exactly 2 entries"
+  );
+});
+
+add_atomic_task(async function test_serpUrlsForAnonymousFetch_roundTrip() {
+  const conversation = new ChatConversation({});
+  conversation.title = "conversation with search result url ledger";
+  conversation.addUserMessage("test content", "https://www.firefox.com");
+  conversation.addSerpUrlsForAnonymousFetch([
+    "https://search-result.example.com/a",
+    "https://search-result.example.com/b",
+  ]);
+  await gChatStore.updateConversation(conversation);
+
+  const restored = await gChatStore.findConversationById(conversation.id);
+
+  Assert.ok(restored, "conversation should restore from DB");
+  Assert.ok(
+    restored.serpUrlsForAnonymousFetch.has(
+      "https://search-result.example.com/a"
+    ),
+    "first ledger URL should be restored"
+  );
+  Assert.ok(
+    restored.serpUrlsForAnonymousFetch.has(
+      "https://search-result.example.com/b"
+    ),
+    "second ledger URL should be restored"
+  );
+  Assert.equal(
+    restored.serpUrlsForAnonymousFetch.size,
+    2,
+    "serpUrlsForAnonymousFetch should have exactly 2 entries"
   );
 });
 

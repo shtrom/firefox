@@ -732,6 +732,13 @@ interface nsILoadInfo : nsISupports
   [infallible] attribute boolean isMetaRefresh;
 
   /**
+   * True if this navigation was served from a completed navigational prefetch.
+   * Diagnostics only (profiler network markers); don't gate behaviour on it.
+   * https://wicg.github.io/nav-speculation/prefetch.html
+   */
+  [infallible] attribute boolean activatedFromNavigationalPrefetch;
+
+  /**
    * If forceInheritPrincipal is true, the data coming from the channel should
    * inherit its principal, even when the data is loaded over http:// or another
    * protocol that would normally use a URI-based principal.
@@ -963,19 +970,14 @@ interface nsILoadInfo : nsISupports
   [infallible] readonly attribute BrowsingContext browsingContext;
 
   /**
-   * The BrowsingContext which the worker is associated.
+   * The BrowsingContextID that a request such as fetch() or importScripts() is
+   * associated with.
    *
-   * When used with workers:
-   * Note that this could be 0 if the load is not triggered in a WorkerScope.
-   * This value is only set and used in the parent process for some sitautions
-   * the channel is created in the parent process for Workers. Such as fetch().
-   * In content process, it is always 0.
-   * This value would not be propagated through IPC.
-   *
-   * When used for Reporting API:
-   * Fetch is used send reports to endpoints. The associated bc ID is
+   * Fetch is used to send reports to endpoints. The associated bc ID is
    * used so that a web developer can track the sending of reports in devtools,
    * by ultimately setting the browsing context ID on a LoadInfo object.
+   *
+   * This will be 0 when the request is from a SharedWorker or ServiceWorker.
    */
   [infallible] attribute unsigned long long associatedBrowsingContextID;
   [infallible] readonly attribute BrowsingContext associatedBrowsingContext;
@@ -1621,17 +1623,12 @@ interface nsILoadInfo : nsISupports
    * credentialless enabled in Origin Trial.
    */
   [infallible] attribute boolean isOriginTrialCoepCredentiallessEnabledForTopLevel;
+
   /**
    * This attribute will be true if this is a load triggered by a media
    * element.
    */
   [infallible] attribute boolean isMediaRequest;
-
-  /**
-   * This attribute will be true if this is a load triggered by a media
-   * element and it's an initial request.
-   */
-  [infallible] attribute boolean isMediaInitialRequest;
 
   /**
    * This attribute will be true if the fetch request is from object or embed
@@ -1656,12 +1653,6 @@ interface nsILoadInfo : nsISupports
 
   [noscript, notxpcom, nostdcall, binaryname(SetInterceptionInfo)]
   void binarySetInterceptionInfo(in nsIInterceptionInfo info);
-
-  /**
-   * Whether nsICookieInjector has injected a cookie for this request to
-   * handle a cookie banner. This is only done for top-level requests.
-   */
-  [infallible] attribute boolean hasInjectedCookieForCookieBannerHandling;
 
   cenum SchemelessInputType : 8 {
     SchemelessInputTypeUnset = 0,

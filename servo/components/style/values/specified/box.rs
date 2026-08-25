@@ -8,18 +8,21 @@ use crate::derives::*;
 pub use crate::logical_geometry::WritingModeProperty;
 use crate::parser::{Parse, ParserContext};
 use crate::properties::{LonghandId, PropertyDeclarationId, PropertyId};
+pub use crate::typed_om::{KeywordValue, ToTyped, TypedValue};
 use crate::values::generics::box_::{
-    BaselineShiftKeyword, GenericBaselineShift, GenericContainIntrinsicSize, GenericLineClamp,
-    GenericOverflowClipMargin, GenericPerspective, OverflowClipMarginBox,
+    BaselineShiftKeyword, BlockEllipsis, GenericBaselineShift, GenericContainIntrinsicSize,
+    GenericLineClamp, GenericOverflowClipMargin, GenericPerspective, MaxLines,
+    OverflowClipMarginBox,
 };
 use crate::values::specified::length::{LengthPercentage, NonNegativeLength};
-use crate::values::specified::{AllowQuirks, Integer, NonNegativeNumberOrPercentage};
+use crate::values::specified::{AllowQuirks, NonNegativeNumberOrPercentage, PositiveInteger};
 use crate::values::CustomIdent;
 use cssparser::Parser;
 use num_traits::FromPrimitive;
 use std::fmt::{self, Write};
-use style_traits::{CssWriter, KeywordsCollectFn, ParseError};
+use style_traits::{CssWriter, KeywordsCollectFn, ParseError /*CssString*/};
 use style_traits::{SpecifiedValueInfo, StyleParseErrorKind, ToCss};
+use thin_vec::ThinVec;
 
 #[cfg(not(feature = "servo"))]
 fn grid_enabled() -> bool {
@@ -39,6 +42,46 @@ fn appearance_base_enabled(_context: &ParserContext) -> bool {
 #[inline]
 fn appearance_base_select_enabled(_context: &ParserContext) -> bool {
     static_prefs::pref!("dom.select.customizable_select.enabled")
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    MallocSizeOf,
+    PartialEq,
+    Parse,
+    ToCss,
+    SpecifiedValueInfo,
+    ToComputedValue,
+    ToResolvedValue,
+    ToShmem,
+    ToTyped,
+)]
+#[css(bitflags(
+    single = "none",
+    mixed = "block,block-start,block-end",
+    overlapping_bits
+))]
+#[repr(C)]
+/// Specified value of the `margin-trim` property, which trims the margins of a
+/// container's children where they meet the container's edges.
+/// https://drafts.csswg.org/css-box-4/#propdef-margin-trim
+/// Pending https://github.com/w3c/csswg-drafts/issues/13731, we're only targetting block
+/// trimming for now and skipping `inline-start` and `inline-end`
+pub struct MarginTrim(u8);
+bitflags! {
+    impl MarginTrim: u8 {
+        /// `none` variant, no margins are trimmed.
+        const NONE = 0;
+        /// Trim the block-start margin of the first child.
+        const BLOCK_START = 1 << 0;
+        /// Trim the block-end margin of the last child.
+        const BLOCK_END = 1 << 1;
+        /// `block` shorthand: both block-axis margins.
+        const BLOCK = MarginTrim::BLOCK_START.bits() | MarginTrim::BLOCK_END.bits();
+    }
 }
 
 /// The specified value of `overflow-clip-margin`.
@@ -157,13 +200,12 @@ impl DisplayInside {
     Hash,
     MallocSizeOf,
     PartialEq,
+    ToAnimatedValue,
     ToComputedValue,
     ToResolvedValue,
     ToShmem,
-    ToTyped,
 )]
 #[repr(C)]
-#[typed(todo_derive_fields)]
 pub struct Display(u16);
 
 /// Gecko-only impl block for Display (shared stuff later in this file):
@@ -534,6 +576,36 @@ impl ToCss for Display {
     }
 }
 
+impl ToTyped for Display {
+    fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
+        // Note: The specification does not currently define how display multi
+        // keywords should be reified into Typed OM. The current behavior
+        // follows existing WPT coverage (display.html). Syncing spec with
+        // UA/WPT behavior tracked in
+        // https://github.com/w3c/csswg-drafts/issues/13907
+
+        let outside = self.outside();
+        let inside = self.inside();
+
+        #[cfg(feature = "gecko")]
+        if outside == DisplayOutside::Block && inside == DisplayInside::Ruby {
+            return Err(());
+        }
+
+        if self.is_list_item()
+            && (outside != DisplayOutside::Block || inside != DisplayInside::Flow)
+        {
+            return Err(());
+        }
+
+        let keyword = self.to_css_cssstring();
+        debug_assert!(!AsRef::<[u8]>::as_ref(&keyword).contains(&b' '));
+
+        dest.push(TypedValue::Keyword(KeywordValue(keyword)));
+        return Ok(());
+    }
+}
+
 impl Parse for Display {
     fn parse<'i, 't>(
         _: &ParserContext,
@@ -623,7 +695,7 @@ impl SpecifiedValueInfo for Display {
 pub type ContainIntrinsicSize = GenericContainIntrinsicSize<NonNegativeLength>;
 
 /// A specified value for the `line-clamp` property.
-pub type LineClamp = GenericLineClamp<Integer>;
+pub type LineClamp = GenericLineClamp<PositiveInteger>;
 
 /// A specified value for the `baseline-shift` property.
 pub type BaselineShift = GenericBaselineShift<LengthPercentage>;
@@ -716,28 +788,23 @@ pub enum AlignmentBaseline {
     /// Use the text-under baseline.
     TextBottom,
     /// Use the alphabetic baseline.
-    /// TODO: Bug 2010717 - Remove css(skip) to support alignment-baseline: alphabetic
-    #[css(skip)]
+    #[cfg(feature = "gecko")]
     Alphabetic,
     /// Use the ideographic-under baseline.
-    /// TODO: Bug 2010718 - Remove css(skip) support alignment-baseline: ideographic
-    #[css(skip)]
+    #[cfg(feature = "gecko")]
     Ideographic,
     /// In general, use the x-middle baselines; except under text-orientation: upright
     /// (where the alphabetic and x-height baselines are essentially meaningless) use
     /// the central baseline instead.
     Middle,
     /// Use the central baseline.
-    /// TODO: Bug 2010719 - Remove css(skip) to support alignment-baseline: central
-    #[css(skip)]
+    #[cfg(feature = "gecko")]
     Central,
     /// Use the math baseline.
-    /// TODO: Bug 2010720 - Remove css(skip) to support alignment-baseline: mathematical
-    #[css(skip)]
+    #[cfg(feature = "gecko")]
     Mathematical,
     /// Use the hanging baseline.
-    /// TODO: Bug 2017197 - Remove css(skip) to support alignment-baseline: hanging
-    #[css(skip)]
+    #[cfg(feature = "gecko")]
     Hanging,
     /// Use the text-over baseline.
     TextTop,
@@ -786,15 +853,16 @@ impl BaselineSource {
 
 /// https://drafts.csswg.org/css-scroll-snap-1/#snap-axis
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToCss,
@@ -812,15 +880,16 @@ pub enum ScrollSnapAxis {
 
 /// https://drafts.csswg.org/css-scroll-snap-1/#snap-strictness
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToCss,
@@ -837,14 +906,15 @@ pub enum ScrollSnapStrictness {
 
 /// https://drafts.csswg.org/css-scroll-snap-1/#scroll-snap-type
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToResolvedValue,
@@ -995,15 +1065,16 @@ impl ToCss for ScrollSnapAlign {
 }
 
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToCss,
@@ -1018,15 +1089,16 @@ pub enum ScrollSnapStop {
 }
 
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToCss,
@@ -1042,15 +1114,16 @@ pub enum OverscrollBehavior {
 }
 
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToCss,
@@ -1360,33 +1433,139 @@ impl Parse for ContainIntrinsicSize {
     }
 }
 
-impl Parse for LineClamp {
-    /// none | <positive-integer>
+impl Parse for MaxLines<PositiveInteger> {
     fn parse<'i, 't>(
         context: &ParserContext,
         input: &mut Parser<'i, 't>,
     ) -> Result<Self, ParseError<'i>> {
-        if let Ok(i) =
+        let mut lines = None;
+        let mut auto = false;
+
+        loop {
+            if lines.is_none() {
+                if let Ok(value) = input.try_parse(|i| PositiveInteger::parse(context, i)) {
+                    lines = Some(value);
+                    continue;
+                }
+            }
+
+            if !auto && input.try_parse(|i| i.expect_ident_matching("auto")).is_ok() {
+                auto = true;
+                continue;
+            }
+
+            break;
+        }
+
+        match (lines, auto) {
+            (Some(value), true) => Ok(MaxLines::lines(value, true)),
+            (Some(value), false) => Ok(MaxLines::lines(value, false)),
+            (None, true) => Ok(MaxLines::auto()),
+            (None, false) => Err(input.new_custom_error(StyleParseErrorKind::UnspecifiedError)),
+        }
+    }
+}
+
+impl Parse for LineClamp {
+    fn parse<'i, 't>(
+        context: &ParserContext,
+        input: &mut Parser<'i, 't>,
+    ) -> Result<Self, ParseError<'i>> {
+        if input.try_parse(|i| i.expect_ident_matching("none")).is_ok() {
+            return Ok(Self::none());
+        }
+
+        let mut max_lines = None;
+        let mut block_ellipsis = None;
+
+        loop {
+            if max_lines.is_none() {
+                if let Ok(value) = input.try_parse(|i| MaxLines::parse(context, i)) {
+                    max_lines = Some(value);
+                    continue;
+                }
+            }
+            if block_ellipsis.is_none() {
+                if let Ok(value) = input.try_parse(|i| BlockEllipsis::parse(context, i)) {
+                    block_ellipsis = Some(value);
+                    continue;
+                }
+            }
+
+            break;
+        }
+
+        if max_lines.is_none() && block_ellipsis.is_none() {
+            return Err(input.new_custom_error(StyleParseErrorKind::UnspecifiedError));
+        }
+
+        let webkit_legacy = input
+            .try_parse(|i| i.expect_ident_matching("-webkit-legacy"))
+            .is_ok();
+
+        let block_ellipsis = block_ellipsis.unwrap_or(BlockEllipsis::Ellipsis);
+        let max_lines = max_lines.unwrap_or_else(MaxLines::auto);
+
+        Ok(Self {
+            max_lines,
+            block_ellipsis,
+            webkit_legacy,
+        })
+    }
+}
+
+impl LineClamp {
+    /// Parses the legacy `-webkit-line-clamp` syntax.
+    pub fn parse_legacy<'i, 't>(
+        context: &ParserContext,
+        input: &mut Parser<'i, 't>,
+    ) -> Result<Self, ParseError<'i>> {
+        if let Ok(value) =
             input.try_parse(|i| crate::values::specified::PositiveInteger::parse(context, i))
         {
-            return Ok(Self(i.0));
+            return Ok(Self {
+                max_lines: MaxLines::lines(value, false),
+                block_ellipsis: BlockEllipsis::Ellipsis,
+                webkit_legacy: true,
+            });
         }
         input.expect_ident_matching("none")?;
         Ok(Self::none())
     }
+
+    /// Serializes the legacy `-webkit-line-clamp` syntax.
+    pub(crate) fn to_css_legacy<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: fmt::Write,
+    {
+        if self.is_none() {
+            return dest.write_str("none");
+        }
+
+        if !self.webkit_legacy || !self.block_ellipsis.is_ellipsis() {
+            return Ok(());
+        }
+
+        let Some(lines) = self.max_lines.lines_value() else {
+            return Ok(());
+        };
+
+        lines.to_css(dest)
+    }
 }
 
 /// https://drafts.csswg.org/css-contain-2/#content-visibility
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     FromPrimitive,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToAnimatedValue,
     ToComputedValue,
@@ -1549,19 +1728,37 @@ impl Parse for ContainerName {
 /// A specified value for the `perspective` property.
 pub type Perspective = GenericPerspective<NonNegativeLength>;
 
+impl Perspective {
+    /// Parses a `-webkit-perspective` value.
+    pub(crate) fn parse_legacy<'i>(
+        context: &ParserContext,
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i>> {
+        use crate::values::generics::NonNegative;
+        use crate::values::specified::{AllowQuirks, Length};
+        if let Ok(l) = input.try_parse(|input| {
+            Length::parse_non_negative_quirky(context, input, AllowQuirks::Always)
+        }) {
+            return Ok(Self::Length(NonNegative(l)));
+        }
+        Self::parse(context, input)
+    }
+}
+
 /// https://drafts.csswg.org/css-box/#propdef-float
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     FromPrimitive,
     Hash,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToCss,
@@ -1588,17 +1785,18 @@ impl Float {
 
 /// https://drafts.csswg.org/css2/#propdef-clear
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     FromPrimitive,
     Hash,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToCss,
@@ -1619,16 +1817,17 @@ pub enum Clear {
 
 /// https://drafts.csswg.org/css-ui/#propdef-resize
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     Hash,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToCss,
     ToShmem,
@@ -1800,6 +1999,17 @@ pub enum Appearance {
     /// A dummy variant that should be last to let the GTK widget do hackery.
     #[css(skip)]
     Count,
+}
+
+impl Appearance {
+    /// Parses a `-moz-appearance` value.
+    pub(crate) fn parse_legacy<'i>(
+        context: &ParserContext,
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i>> {
+        // TODO: Restrict the values we parse in the prefixed version.
+        Self::parse(context, input)
+    }
 }
 
 /// A kind of break between two boxes.

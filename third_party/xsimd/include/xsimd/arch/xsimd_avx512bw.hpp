@@ -12,10 +12,10 @@
 #ifndef XSIMD_AVX512BW_HPP
 #define XSIMD_AVX512BW_HPP
 
+#include "../types/xsimd_avx512bw_register.hpp"
+
 #include <array>
 #include <type_traits>
-
-#include "../types/xsimd_avx512bw_register.hpp"
 
 namespace xsimd
 {
@@ -378,6 +378,53 @@ namespace xsimd
             }
         }
 
+        // load_masked / store_masked: native vmovdqu8 / vmovdqu16 predication for
+        // 8/16-bit, replacing the common scalar fallback. No aligned masked 8/16
+        // intrinsic exists and masked moves never fault, so loadu fits both modes.
+        template <class A, class T, class Mode,
+                  class = std::enable_if_t<std::is_integral<T>::value && (sizeof(T) == 1 || sizeof(T) == 2)>>
+        XSIMD_INLINE batch<T, A> load_masked(T const* mem, batch_bool<T, A> mask, convert<T>, Mode, requires_arch<avx512bw>) noexcept
+        {
+            XSIMD_IF_CONSTEXPR(sizeof(T) == 1)
+            {
+                return _mm512_maskz_loadu_epi8((__mmask64)mask.mask(), mem);
+            }
+            else
+            {
+                return _mm512_maskz_loadu_epi16((__mmask32)mask.mask(), mem);
+            }
+        }
+
+        template <class A, class T, class Mode,
+                  class = std::enable_if_t<std::is_integral<T>::value && (sizeof(T) == 1 || sizeof(T) == 2)>>
+        XSIMD_INLINE void store_masked(T* mem, batch<T, A> const& src, batch_bool<T, A> mask, Mode, requires_arch<avx512bw>) noexcept
+        {
+            XSIMD_IF_CONSTEXPR(sizeof(T) == 1)
+            {
+                _mm512_mask_storeu_epi8((void*)mem, (__mmask64)mask.mask(), src);
+            }
+            else
+            {
+                _mm512_mask_storeu_epi16((void*)mem, (__mmask32)mask.mask(), src);
+            }
+        }
+
+        // Constant masks reuse the runtime overloads; as_batch_bool() also avoids
+        // batch_bool_constant::mask() truncating a 64-lane int8 mask to int.
+        template <class A, class T, bool... Values, class Mode,
+                  class = std::enable_if_t<std::is_integral<T>::value && (sizeof(T) == 1 || sizeof(T) == 2)>>
+        XSIMD_INLINE batch<T, A> load_masked(T const* mem, batch_bool_constant<T, A, Values...> mask, convert<T>, Mode, requires_arch<avx512bw>) noexcept
+        {
+            return load_masked(mem, mask.as_batch_bool(), convert<T> {}, Mode {}, avx512bw {});
+        }
+
+        template <class A, class T, bool... Values, class Mode,
+                  class = std::enable_if_t<std::is_integral<T>::value && (sizeof(T) == 1 || sizeof(T) == 2)>>
+        XSIMD_INLINE void store_masked(T* mem, batch<T, A> const& src, batch_bool_constant<T, A, Values...> mask, Mode, requires_arch<avx512bw>) noexcept
+        {
+            store_masked(mem, src, mask.as_batch_bool(), Mode {}, avx512bw {});
+        }
+
         // max
         template <class A, class T, class = std::enable_if_t<std::is_integral<T>::value>>
         XSIMD_INLINE batch<T, A> max(batch<T, A> const& self, batch<T, A> const& other, requires_arch<avx512bw>) noexcept
@@ -468,6 +515,43 @@ namespace xsimd
             {
                 return mul(self, other, avx512dq {});
             }
+        }
+
+        // mul_hi
+        template <class A>
+        XSIMD_INLINE batch<int8_t, A> mul_hi(batch<int8_t, A> const& self, batch<int8_t, A> const& other, requires_arch<avx512bw>) noexcept
+        {
+            // Per-128-bit-lane unpack/pack pair preserves byte ordering across
+            // the four 128-bit lanes of a ZMM, so no inter-lane permute needed.
+            __m512i a_lo = _mm512_srai_epi16(_mm512_unpacklo_epi8(self, self), 8);
+            __m512i a_hi = _mm512_srai_epi16(_mm512_unpackhi_epi8(self, self), 8);
+            __m512i b_lo = _mm512_srai_epi16(_mm512_unpacklo_epi8(other, other), 8);
+            __m512i b_hi = _mm512_srai_epi16(_mm512_unpackhi_epi8(other, other), 8);
+            __m512i p_lo = _mm512_srai_epi16(_mm512_mullo_epi16(a_lo, b_lo), 8);
+            __m512i p_hi = _mm512_srai_epi16(_mm512_mullo_epi16(a_hi, b_hi), 8);
+            return _mm512_packs_epi16(p_lo, p_hi);
+        }
+        template <class A>
+        XSIMD_INLINE batch<uint8_t, A> mul_hi(batch<uint8_t, A> const& self, batch<uint8_t, A> const& other, requires_arch<avx512bw>) noexcept
+        {
+            __m512i zero = _mm512_setzero_si512();
+            __m512i a_lo = _mm512_unpacklo_epi8(self, zero);
+            __m512i a_hi = _mm512_unpackhi_epi8(self, zero);
+            __m512i b_lo = _mm512_unpacklo_epi8(other, zero);
+            __m512i b_hi = _mm512_unpackhi_epi8(other, zero);
+            __m512i p_lo = _mm512_srli_epi16(_mm512_mullo_epi16(a_lo, b_lo), 8);
+            __m512i p_hi = _mm512_srli_epi16(_mm512_mullo_epi16(a_hi, b_hi), 8);
+            return _mm512_packus_epi16(p_lo, p_hi);
+        }
+        template <class A>
+        XSIMD_INLINE batch<int16_t, A> mul_hi(batch<int16_t, A> const& self, batch<int16_t, A> const& other, requires_arch<avx512bw>) noexcept
+        {
+            return _mm512_mulhi_epi16(self, other);
+        }
+        template <class A>
+        XSIMD_INLINE batch<uint16_t, A> mul_hi(batch<uint16_t, A> const& self, batch<uint16_t, A> const& other, requires_arch<avx512bw>) noexcept
+        {
+            return _mm512_mulhi_epu16(self, other);
         }
 
         // neq

@@ -722,23 +722,27 @@ cairo_type1_font_subset_decrypt_charstring (const unsigned char *in, int size, u
     }
 }
 
-static const unsigned char *
-cairo_type1_font_subset_decode_integer (const unsigned char *p, int *integer)
+static cairo_status_t
+cairo_type1_font_subset_decode_integer (const unsigned char **p, const unsigned char *end, int *integer)
 {
-    if (*p <= 246) {
-        *integer = *p++ - 139;
-    } else if (*p <= 250) {
-        *integer = (p[0] - 247) * 256 + p[1] + 108;
-        p += 2;
-    } else if (*p <= 254) {
-        *integer = -(p[0] - 251) * 256 - p[1] - 108;
-        p += 2;
+    const unsigned char *pp = *p;
+    if (*pp <= 246 && pp + 1 <= end) {
+        *integer = *pp - 139;
+        *p += 1;
+    } else if (*pp <= 250 && pp + 2 <= end) {
+        *integer = (pp[0] - 247) * 256 + pp[1] + 108;
+        *p += 2;
+    } else if (*pp <= 254 && pp + 2 <= end) {
+        *integer = -(pp[0] - 251) * 256 - pp[1] - 108;
+        *p += 2;
+    } else if (pp + 5 <= end) {
+        *integer = ((uint32_t)pp[1] << 24) | (pp[2] << 16) | (pp[3] << 8) | pp[4];
+        *p += 5;
     } else {
-        *integer = ((uint32_t)p[1] << 24) | (p[2] << 16) | (p[3] << 8) | p[4];
-        p += 5;
+        return CAIRO_INT_STATUS_UNSUPPORTED;
     }
 
-    return p;
+    return CAIRO_STATUS_SUCCESS;
 }
 
 static cairo_status_t
@@ -946,7 +950,7 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
                     break;
 
 		case TYPE1_CHARSTRING_COMMAND_POP:
-		    if (font->ps_stack.sp < 1) {
+		    if (font->ps_stack.sp < 1 || font->build_stack.sp >= TYPE1_STACKSIZE) {
 			status = CAIRO_INT_STATUS_UNSUPPORTED;
 			goto cleanup;
 		    }
@@ -963,7 +967,9 @@ cairo_type1_font_subset_parse_charstring (cairo_type1_font_subset_t *font,
             /* integer argument */
 	    if (font->build_stack.sp < TYPE1_STACKSIZE) {
 		int val;
-		p = cairo_type1_font_subset_decode_integer (p, &val);
+		status = cairo_type1_font_subset_decode_integer (&p, end, &val);
+		if (unlikely (status))
+		    goto cleanup;
 		font->build_stack.stack[font->build_stack.sp++] = val;
 	    } else {
 		status = CAIRO_INT_STATUS_UNSUPPORTED;
@@ -1062,6 +1068,8 @@ cairo_type1_font_for_each_subr (cairo_type1_font_subset_t  *font,
     p = array_start;
     while (p + 3 < cleartext_end && strncmp (p, "dup", 3) == 0) {
 	p = skip_token (p, cleartext_end);
+	if (p == NULL)
+	    return CAIRO_INT_STATUS_UNSUPPORTED;
 
 	/* get subr number */
 	subr_num = strtol (p, &end, 10);
@@ -1079,7 +1087,14 @@ cairo_type1_font_for_each_subr (cairo_type1_font_subset_t  *font,
 
 	/* Skip past -| or RD to binary data.  There is exactly one space
 	 * between the -| or RD token and the encrypted data, thus '+ 1'. */
-	subr_string = skip_token (end, cleartext_end) + 1;
+	subr_string = skip_token (end, cleartext_end);
+	if (subr_string == NULL)
+	    return CAIRO_INT_STATUS_UNSUPPORTED;
+	subr_string++;
+
+	/* The declared subr length must lie within the cleartext buffer. */
+	if (subr_length < 0 || subr_length > cleartext_end - subr_string)
+	    return CAIRO_INT_STATUS_UNSUPPORTED;
 
 	np = NULL;
 	np_length = 0;
@@ -1095,6 +1110,8 @@ cairo_type1_font_for_each_subr (cairo_type1_font_subset_t  *font,
 	/* Some fonts have "noaccess put" instead of "NP" */
 	if (p + 3 < cleartext_end && strncmp (p, "put", 3) == 0) {
 	    p = skip_token (p, cleartext_end);
+	    if (p == NULL)
+		return CAIRO_INT_STATUS_UNSUPPORTED;
 	    while (p < cleartext_end && _cairo_isspace(*p))
 		p++;
 
@@ -1240,6 +1257,8 @@ cairo_type1_font_subset_for_each_glyph (cairo_type1_font_subset_t *font,
     while (*p == '/') {
 	name = p + 1;
 	p = skip_token (p, dict_end);
+	if (p == NULL)
+	    return CAIRO_INT_STATUS_UNSUPPORTED;
 	name_length = p - name;
 
 	charstring_length = strtol (p, &end, 10);
@@ -1248,7 +1267,14 @@ cairo_type1_font_subset_for_each_glyph (cairo_type1_font_subset_t *font,
 
 	/* Skip past -| or RD to binary data.  There is exactly one space
 	 * between the -| or RD token and the encrypted data, thus '+ 1'. */
-	charstring = skip_token (end, dict_end) + 1;
+	charstring = skip_token (end, dict_end);
+	if (charstring == NULL)
+	    return CAIRO_INT_STATUS_UNSUPPORTED;
+	charstring++;
+
+	/* The declared charstring length must lie within the cleartext buffer. */
+	if (charstring_length < 0 || charstring_length > dict_end - charstring)
+	    return CAIRO_INT_STATUS_UNSUPPORTED;
 
 	/* Skip binary data and |- or ND token. */
 	p = skip_token (charstring + charstring_length, dict_end);

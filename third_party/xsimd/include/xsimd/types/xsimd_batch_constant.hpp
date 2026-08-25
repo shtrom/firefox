@@ -12,12 +12,13 @@
 #ifndef XSIMD_BATCH_CONSTANT_HPP
 #define XSIMD_BATCH_CONSTANT_HPP
 
+#include "../config/xsimd_config.hpp"
+#include "./xsimd_batch.hpp"
+#include "./xsimd_utils.hpp"
+
 #include <cstddef>
 #include <functional>
 #include <utility>
-
-#include "./xsimd_batch.hpp"
-#include "./xsimd_utils.hpp"
 
 namespace xsimd
 {
@@ -96,6 +97,34 @@ namespace xsimd
         static constexpr std::size_t countl_one() noexcept
         {
             return countl_one_impl(truncated_mask(), size);
+        }
+
+        // true when the set lanes form one contiguous run starting at lane 0
+        // (the empty and full masks are prefixes)
+        static constexpr bool is_prefix() noexcept
+        {
+            return (truncated_mask() & (truncated_mask() + 1u)) == 0u;
+        }
+
+        // true when the set lanes form one contiguous run ending at the last
+        // lane (the empty and full masks are suffixes)
+        static constexpr bool is_suffix() noexcept
+        {
+            return ((truncated_mask() ^ low_mask(size)) & ((truncated_mask() ^ low_mask(size)) + 1u)) == 0u;
+        }
+
+        // length of the set run when the mask is a pure prefix (first k lanes
+        // set, rest clear), else size + 1 so `prefix() == k` stays exact
+        static constexpr std::size_t prefix() noexcept
+        {
+            return is_prefix() ? countr_one() : size + 1;
+        }
+
+        // length of the set run when the mask is a pure suffix (last k lanes
+        // set, rest clear), else size + 1 so `suffix() == k` stays exact
+        static constexpr std::size_t suffix() noexcept
+        {
+            return is_suffix() ? countl_one() : size + 1;
         }
 
     private:
@@ -408,7 +437,7 @@ namespace xsimd
             return {};
         }
 
-#if __cplusplus >= 202002L
+#if XSIMD_CPP_VERSION >= 202002L
         template <std::array Arr, class A, std::size_t... Is>
         XSIMD_INLINE constexpr batch_constant<typename decltype(Arr)::value_type, A, Arr[Is]...>
         make_batch_constant(std::index_sequence<Is...>) noexcept
@@ -431,7 +460,7 @@ namespace xsimd
             return {};
         }
 
-#if __cplusplus >= 202002L
+#if XSIMD_CPP_VERSION >= 202002L
         template <typename T, std::array Arr, class A, std::size_t... Is>
         XSIMD_INLINE constexpr batch_bool_constant<T, A, Arr[Is]...>
         make_batch_bool_constant(std::index_sequence<Is...>) noexcept
@@ -497,7 +526,7 @@ namespace xsimd
         return {};
     }
 
-#if __cplusplus >= 202002L
+#if XSIMD_CPP_VERSION >= 202002L
     /**
      * @brief Build a @c batch_constant from a std::array (C++20)
      *
@@ -524,7 +553,7 @@ namespace xsimd
         return {};
     }
 
-#if __cplusplus >= 202002L
+#if XSIMD_CPP_VERSION >= 202002L
     /**
      * @brief Build a @c batch_constant from a std::array of boolean (C++20)
      *

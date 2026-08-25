@@ -2124,6 +2124,29 @@ class CGDefineHTMLAttributeSlots(CGThing):
 
 
 def finalizeHook(descriptor, gcx, obj):
+    def cleanUpObservableArrayProxy(descriptor, obj, getReservedSlotFunc):
+        ret = ""
+        parent = descriptor.interface.parent
+        if parent:
+            ret += cleanUpObservableArrayProxy(descriptor.getDescriptor(parent.identifier.name), obj, getReservedSlotFunc)
+        for m in descriptor.interface.members:
+            if m.isAttr() and m.type.isObservableArray():
+                ret += fill(
+                    """
+                    {
+                      JS::Value val = ${getReservedSlotFunc}(${obj}, ${slot});
+                      if (!val.isUndefined()) {
+                        JSObject* proxyObj = &val.toObject();
+                        js::SetProxyReservedSlot(proxyObj, OBSERVABLE_ARRAY_DOM_INTERFACE_SLOT, JS::UndefinedValue());
+                      }
+                    }
+                    """,
+                    getReservedSlotFunc=getReservedSlotFunc,
+                    obj=obj,
+                    slot=memberReservedSlot(m, descriptor),
+                )
+        return ret
+
     finalize = fill(
         """
         ${setReservedSlot}(${obj}, DOM_OBJECT_SLOT, JS::UndefinedValue());
@@ -2131,6 +2154,7 @@ def finalizeHook(descriptor, gcx, obj):
         setReservedSlot=setReservedSlotFunc(descriptor),
         obj=obj,
     )
+    finalize += cleanUpObservableArrayProxy(descriptor, obj, getReservedSlotFunc(descriptor))
     if descriptor.interface.getExtendedAttribute("LegacyOverrideBuiltIns"):
         finalize += fill(
             """
@@ -2154,21 +2178,6 @@ def finalizeHook(descriptor, gcx, obj):
             """,
             obj=obj,
         )
-    for m in descriptor.interface.members:
-        if m.isAttr() and m.type.isObservableArray():
-            finalize += fill(
-                """
-                {
-                  JS::Value val = ${getReservedSlot}(obj, ${slot});
-                  if (!val.isUndefined()) {
-                    JSObject* proxyObj = &val.toObject();
-                    js::SetProxyReservedSlot(proxyObj, OBSERVABLE_ARRAY_DOM_INTERFACE_SLOT, JS::UndefinedValue());
-                  }
-                }
-                """,
-                getReservedSlot=getReservedSlotFunc(descriptor),
-                slot=memberReservedSlot(m, descriptor),
-            )
     iface = getReflectedHTMLAttributesIface(descriptor)
     if iface:
         finalize += "%s::ReflectedHTMLAttributeSlots::Finalize(%s);\n" % (
@@ -2759,7 +2768,7 @@ def clearableCachedAttrs(descriptor):
     return (
         m
         for m in descriptor.interface.members
-        if m.isAttr() and
+        if m.isAttr() and not m.type.isObservableArray() and
         # Constants should never need clearing!
         m.dependsOn != "Nothing" and m.slotIndices is not None
     )
@@ -7743,11 +7752,11 @@ def convertConstIDLValueToJSVal(value):
     if tag == IDLType.Tags.uint32:
         return "JS::NumberValue(%sU)" % (value.value)
     if tag in [IDLType.Tags.int64, IDLType.Tags.uint64]:
-        return "JS::CanonicalizedDoubleValue(%s)" % numericValue(tag, value.value)
+        return "JS::DoubleValue(%s)" % numericValue(tag, value.value)
     if tag == IDLType.Tags.bool:
         return "JS::BooleanValue(%s)" % (toStringBool(value.value))
     if tag in [IDLType.Tags.float, IDLType.Tags.double]:
-        return "JS::CanonicalizedDoubleValue(%s)" % (value.value)
+        return "JS::DoubleValue(%s)" % (value.value)
     raise TypeError("Const value of unhandled type: %s" % value.type)
 
 
@@ -7987,7 +7996,7 @@ def getWrapTemplateForType(
         return _setValue(value, setter="setNumber")
 
     def setDouble(value):
-        return _setValue("JS_NumberValue(%s)" % value)
+        return _setValue("JS::NumberValue(%s)" % value)
 
     def setBoolean(value):
         return _setValue(value, setter="setBoolean")
@@ -9970,10 +9979,23 @@ class CGMethodCall(CGThing):
         methodName = GetLabelForErrorReporting(descriptor, method, isConstructor)
         argDesc = "argument %d"
 
-        if method.getExtendedAttribute("UseCounter"):
-            useCounterName = methodName.replace(".", "_").replace(" ", "_")
+        useCounterAttr = method.getExtendedAttribute("UseCounter")
+        if useCounterAttr:
+            baseCounterName = methodName.replace(".", "_").replace(" ", "_")
+            perOverload = (
+                isinstance(useCounterAttr, list) and "PerOverload" in useCounterAttr
+            )
         else:
-            useCounterName = None
+            baseCounterName = None
+            perOverload = False
+
+        def signatureCounterName(signature):
+            if not baseCounterName:
+                return None
+            if not perOverload:
+                return baseCounterName
+            suffix = "_".join(arg.type.name for arg in signature[1])
+            return f"{baseCounterName}_{suffix}" if suffix else baseCounterName
 
         if method.isStatic():
             nativeType = descriptor.nativeType
@@ -10003,7 +10025,7 @@ class CGMethodCall(CGThing):
                 method,
                 argConversionStartsAt=argConversionStartsAt,
                 isConstructor=isConstructor,
-                useCounterName=useCounterName,
+                useCounterName=signatureCounterName(signature),
             )
 
         signatures = method.signatures()
@@ -12464,8 +12486,8 @@ class CGMemberJITInfo(CGThing):
             IDLType.Tags.unrestricted_double,
             IDLType.Tags.double,
         ]:
-            # These all use JS_NumberValue, which can return int or double.
-            # But TI treats "double" as meaning "int or double", so we're
+            # These all use JS::NumberValue, which can return int or double.
+            # JSJitInfo treats "double" as meaning "int or double", so we're
             # good to return JSVAL_TYPE_DOUBLE here.
             return "JSVAL_TYPE_DOUBLE"
         if tag != IDLType.Tags.uint32:
@@ -12547,8 +12569,8 @@ class CGMemberJITInfo(CGThing):
             IDLType.Tags.unrestricted_double,
             IDLType.Tags.double,
         ]:
-            # These all use JS_NumberValue, which can return int or double.
-            # But TI treats "double" as meaning "int or double", so we're
+            # These all use JS::NumberValue, which can return int or double.
+            # JSJitInfo treats "double" as meaning "int or double", so we're
             # good to return JSVAL_TYPE_DOUBLE here.
             return "JSJitInfo::Double"
         if tag != IDLType.Tags.uint32:
@@ -18039,7 +18061,7 @@ class CGDictionary(CGThing):
                 if (!obj) {
                   return false;
                 }
-                rval.set(JS::ObjectValue(*obj));
+                rval.setObject(*obj);
 
                 """
             )
@@ -18237,6 +18259,25 @@ class CGDictionary(CGThing):
             body=body.define(),
         )
 
+    def getStructMemberDefault(self, m, memberDefault):
+        # A member with a real IDL default keeps it.
+        if memberDefault is not None:
+            return memberDefault
+        # Required bare scalar members (numeric / boolean / enum, not nullable and
+        # not inside an Optional<>) are otherwise left uninitialized and only set
+        # by Init(). Value-initialize them so static-analysis tools don't report
+        # an uninitialized field; the cost is a single zero-store that Init()
+        # overwrites, and non-scalar members already have their own constructors.
+        member = m[0]
+        t = member.type
+        if (
+            not member.canHaveMissingValue()
+            and not t.nullable()
+            and (t.isPrimitive() or t.isEnum())
+        ):
+            return "{}"
+        return None
+
     def getStructs(self):
         d = self.dictionary
         selfName = self.makeClassName(d)
@@ -18246,11 +18287,12 @@ class CGDictionary(CGThing):
                 self.getMemberType(m),
                 visibility="public",
                 body=self.getMemberInitializer(m),
-                hasIgnoreInitCheckFlag=memberDefault is None,
-                defaultValue=memberDefault,
+                hasIgnoreInitCheckFlag=structDefault is None,
+                defaultValue=structDefault,
             )
-            for m, memberDefault in [
-                (m, self.getMemberDefaultValue(m)) for m in self.memberInfo
+            for m, structDefault in [
+                (m, self.getStructMemberDefault(m, self.getMemberDefaultValue(m)))
+                for m in self.memberInfo
             ]
         ]
         if d.parent:
@@ -19896,13 +19938,13 @@ class CGNativeMember(ClassMethod):
                 # No need for a third element in the isMember case
                 return "nsString", None, None
             # Outparam
-            return "void", "", "aRetVal = ${declName};\n"
+            return "void", "", "aRetVal = std::move(${declName});\n"
         if type.isByteString() or type.isUTF8String():
             if isMember:
                 # No need for a third element in the isMember case
                 return "nsCString", None, None
             # Outparam
-            return "void", "", "aRetVal = ${declName};\n"
+            return "void", "", "aRetVal = std::move(${declName});\n"
         if type.isEnum():
             enumName = type.unroll().inner.identifier.name
             if type.nullable():
@@ -20659,11 +20701,17 @@ class CGExampleClass(CGBindingImplClass):
                 )
             )
         else:
+            isFinal = not descriptor.interface.hasChildInterfaces()
+            isupportsVariant = (
+                "NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL"
+                if isFinal
+                else "NS_DECL_CYCLE_COLLECTING_ISUPPORTS"
+            )
             extradeclarations = (
                 "public:\n"
-                "  NS_DECL_CYCLE_COLLECTING_ISUPPORTS\n"
+                "  %s\n"
                 "  NS_DECL_CYCLE_COLLECTION_WRAPPERCACHE_CLASS(%s)\n"
-                "\n" % self.nativeLeafName(descriptor)
+                "\n" % (isupportsVariant, self.nativeLeafName(descriptor))
             )
 
         if descriptor.interface.hasChildInterfaces():
@@ -21112,7 +21160,12 @@ class CGJSImplClass(CGBindingImplClass):
                 ClassBase("nsSupportsWeakReference"),
                 ClassBase("nsWrapperCache"),
             ]
-            isupportsDecl = "NS_DECL_CYCLE_COLLECTING_ISUPPORTS\n"
+            isFinal = not descriptor.interface.hasChildInterfaces()
+            isupportsDecl = (
+                "NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL\n"
+                if isFinal
+                else "NS_DECL_CYCLE_COLLECTING_ISUPPORTS\n"
+            )
             ccDecl = (
                 "NS_DECL_CYCLE_COLLECTION_WRAPPERCACHE_CLASS(%s)\n" % descriptor.name
             )
@@ -23305,8 +23358,8 @@ def getObservableArrayBackingObject(descriptor, attr, objName="obj", errorReturn
     assert attr.type.isObservableArray()
 
     # GetObservableArrayBackingObject may return a wrapped object for Xrays, so
-    # when we create it we need to unwrap it to store the interface in the
-    # reserved slot.
+    # we store the unwrapped interface in the reserved slot when we create it,
+    # in NewObservableArrayProxyObject.
     return fill(
         """
         JS::Rooted<JSObject*> backingObj(cx);
@@ -23638,11 +23691,7 @@ class CGObservableArraySetterGenerator(CGGeneric):
             self,
             fill(
                 """
-                if (xpc::WrapperFactory::IsXrayWrapper(obj)) {
-                  JS_ReportErrorASCII(cx, "Accessing from Xray wrapper is not supported.");
-                  return false;
-                }
-
+                // Unwrap wrappers (including CCW and XrayWrapper) to get the actual Proxy object.
                 JS::Rooted<JSObject*> unwrappedObj(cx, js::UncheckedUnwrap(obj, /* stopAtWindowProxy = */ false));
                 MOZ_ASSERT(IsDOMObject(unwrappedObj));
                 {

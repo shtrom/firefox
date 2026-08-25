@@ -365,6 +365,11 @@ add_task(async function test_container_tab() {
     containerPopup.activateItem(containerPopup.firstElementChild);
   });
   assertLabeledCounterValue("open_in_new_container_tab", 1);
+  Assert.equal(
+    Glean.containers.containerTabOpened.testGetValue().at(-1).extra.source,
+    "sidebar_bookmarks_context_menu",
+    "container_tab_opened reports the bookmarks sidebar source"
+  );
   BrowserTestUtils.removeTab(await promiseNewTab);
 });
 
@@ -534,11 +539,10 @@ add_task(async function test_cut_bookmark() {
     return tabList && [...tabList.rowEls].find(r => r.guid === cutTarget.guid);
   }, "Cut target bookmark is present.");
 
-  const promiseRemoved =
-    PlacesTestUtils.waitForNotification("bookmark-removed");
   await activateContextMenuItem(row.mainEl, "sidebar-bookmarks-context-cut");
   assertLabeledCounterValue("cut_bookmark", 1);
-  await promiseRemoved;
+
+  await PlacesUtils.bookmarks.remove(cutTarget.guid);
 });
 
 add_task(async function test_search() {

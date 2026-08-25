@@ -5,11 +5,10 @@
 package mozilla.components.feature.importer
 
 import android.net.Uri
+import mozilla.components.concept.bookmarks.file.BookmarksImporterError
 import mozilla.components.lib.state.Action
 
-/**
- * Actions for the [ImporterStore].
- */
+/** Actions for the [ImporterStore]. */
 sealed interface ImporterAction : Action {
 
     /** The import UI became visible. */
@@ -24,14 +23,15 @@ sealed interface ImporterAction : Action {
     /** An import started. */
     data object ImportStarted : ImporterAction
 
-    /** The in-progress import completed successfully.
+    /**
+     * The in-progress import completed successfully.
      *
      * @property bookmarksImported the number of bookmarks imported
-     **/
+     */
     data class ImportFinished(val bookmarksImported: Int) : ImporterAction
 
     /** The in-progress import completed with a failure. */
-    data object ImportFailed : ImporterAction
+    data class ImportFailed(val error: BookmarksImporterError) : ImporterAction
 
     /** The user canceled the in-progress import. */
     data object ImportCancelled : ImporterAction

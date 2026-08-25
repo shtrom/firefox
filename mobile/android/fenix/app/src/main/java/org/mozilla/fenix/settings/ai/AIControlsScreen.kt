@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -48,6 +50,7 @@ import mozilla.components.compose.base.PromoCard
 import mozilla.components.compose.base.annotation.FlexibleWindowPreview
 import mozilla.components.compose.base.button.TextButton
 import mozilla.components.concept.ai.controls.AIControllableFeature
+import mozilla.components.concept.ai.controls.isEnabled
 import org.mozilla.fenix.R
 import org.mozilla.fenix.compose.list.IconListItem
 import org.mozilla.fenix.compose.list.SwitchListItem
@@ -172,9 +175,7 @@ private fun AIControlsHeader(
             onClick = onBannerLearnMoreClick,
         )
         if (isBlocked) {
-            BlockedInfoCard(
-                modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
-            )
+            BlockedInfoCard(modifier = Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp))
         }
     }
 }
@@ -187,10 +188,11 @@ private fun BlockAIEnhancementsToggle(
     SwitchListItem(
         label = stringResource(R.string.ai_controls_block_ai_title),
         checked = isBlocked,
-        description = stringResource(
-            R.string.ai_controls_block_ai_description,
-            stringResource(R.string.app_name),
-        ),
+        description =
+            stringResource(
+                R.string.ai_controls_block_ai_description,
+                stringResource(R.string.app_name),
+            ),
         maxDescriptionLines = Int.MAX_VALUE,
         showSwitchAfter = true,
         onClick = { onToggle(isBlocked) },
@@ -203,10 +205,11 @@ private fun AIFeaturesHeader() {
         HorizontalDivider()
         SettingsSectionHeader(
             text = stringResource(R.string.ai_controls_ai_powered_features),
-            modifier = Modifier.padding(
-                horizontal = FirefoxTheme.layout.space.dynamic200,
-                vertical = 8.dp,
-            ),
+            modifier =
+                Modifier.padding(
+                    horizontal = FirefoxTheme.layout.space.dynamic200,
+                    vertical = 8.dp,
+                ),
         )
     }
 }
@@ -217,24 +220,26 @@ private fun FeatureRow(
     onFeatureToggle: (AIControllableFeature, Boolean) -> Unit,
     onFeatureNavLinkClick: (AIFeatureMetadataDestination, String) -> Unit,
 ) {
-    val isEnabled by feature.isEnabled.collectAsStateWithLifecycle(initialValue = true)
+    val isEnabled by feature.isEnabled.collectAsStateWithLifecycle(initialValue = null)
 
-    Column {
-        SwitchListItem(
-            label = stringResource(feature.description.titleRes),
-            checked = isEnabled,
-            enabled = true,
-            description = stringResource(feature.description.descriptionRes),
-            maxDescriptionLines = Int.MAX_VALUE,
-            showSwitchAfter = true,
-            onClick = { onFeatureToggle(feature, !isEnabled) },
-        )
-
-        feature.destination?.let {
-            NavLink(
-                text = stringResource(it.label),
-                onClick = { onFeatureNavLinkClick(it, feature.id.value) },
+    isEnabled?.let { isEnabled ->
+        Column {
+            SwitchListItem(
+                label = stringResource(feature.description.titleRes),
+                checked = isEnabled,
+                enabled = true,
+                description = stringResource(feature.description.descriptionRes),
+                maxDescriptionLines = Int.MAX_VALUE,
+                showSwitchAfter = true,
+                onClick = { onFeatureToggle(feature, !isEnabled) },
             )
+
+            feature.destination?.let {
+                NavLink(
+                    text = stringResource(it.label),
+                    onClick = { onFeatureNavLinkClick(it, feature.id.value) },
+                )
+            }
         }
     }
 }
@@ -246,34 +251,33 @@ private fun AIChoiceBanner(onLearnMoreClick: () -> Unit) {
 
     PromoCard(
         description = null,
-        modifier = Modifier.padding(
-            start = 16.dp,
-            end = 16.dp,
-            top = 8.dp,
-            bottom = 16.dp,
-        ),
+        modifier =
+            Modifier.padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = 8.dp,
+                bottom = 16.dp,
+            ),
         title = stringResource(R.string.ai_controls_banner_headline, stringResource(R.string.app_name)),
-        footer = description to LinkTextState(
-            text = learnMoreText,
-            url = "",
-            onClick = { onLearnMoreClick() },
-        ),
+        footer =
+            description to
+                LinkTextState(
+                    text = learnMoreText,
+                    url = "",
+                    onClick = { onLearnMoreClick() },
+                ),
         illustration = {
             Image(
                 painter = painterResource(R.drawable.fox_ai_on_state),
                 contentDescription = null,
-                modifier = Modifier
-                    .width(62.dp)
-                    .height(63.dp),
+                modifier = Modifier.width(62.dp).height(63.dp),
             )
         },
     )
 }
 
 @Composable
-private fun BlockedInfoCard(
-    modifier: Modifier = Modifier,
-) {
+private fun BlockedInfoCard(modifier: Modifier = Modifier) {
     InfoCard(
         description = stringResource(R.string.ai_controls_blocked_info_banner),
         type = InfoType.Warning,
@@ -298,7 +302,7 @@ private fun BlockAIDialog(
             )
         },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 val appName = stringResource(R.string.app_name)
                 val bodyText = stringResource(R.string.ai_controls_block_dialog_body, appName, appName)
                 val whatBlocked = stringResource(R.string.ai_controls_block_dialog_what_will_be_blocked)
@@ -337,9 +341,7 @@ private fun BlockAIDialog(
             TextButton(
                 text = stringResource(R.string.ai_controls_block_dialog_block),
                 onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
             )
         },
     )
@@ -351,25 +353,26 @@ private fun NavLink(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .fillMaxWidth()
-            .padding(
-                start = FirefoxTheme.layout.space.dynamic200,
-                end = FirefoxTheme.layout.space.dynamic200,
-                top = 4.dp,
-            )
-            .height(48.dp),
+        modifier =
+            Modifier.clickable(onClick = onClick)
+                .fillMaxWidth()
+                .padding(
+                    start = FirefoxTheme.layout.space.dynamic200,
+                    end = FirefoxTheme.layout.space.dynamic200,
+                    top = 4.dp,
+                )
+                .height(48.dp)
     ) {
         LinkText(
             text = text,
-            linkTextStates = listOf(
-                LinkTextState(
-                    text = text,
-                    url = "",
-                    onClick = { onClick() },
+            linkTextStates =
+                listOf(
+                    LinkTextState(
+                        text = text,
+                        url = "",
+                        onClick = { onClick() },
+                    )
                 ),
-            ),
             linkTextDecoration = TextDecoration.Underline,
         )
     }
@@ -377,9 +380,7 @@ private fun NavLink(
 
 @FlexibleWindowPreview
 @Composable
-private fun AIControlsScreenPreview(
-    @PreviewParameter(PreviewThemeProvider::class) theme: Theme,
-) {
+private fun AIControlsScreenPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
     FirefoxTheme(theme) {
         AIControlsScreen(
             showDialog = false,
@@ -395,9 +396,7 @@ private fun AIControlsScreenPreview(
 
 @Preview
 @Composable
-private fun BlockAIDialogPreview(
-    @PreviewParameter(PreviewThemeProvider::class) theme: Theme,
-) {
+private fun BlockAIDialogPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
     FirefoxTheme(theme) {
         BlockAIDialog(
             registeredFeatures = emptyList(),
@@ -409,23 +408,19 @@ private fun BlockAIDialogPreview(
 
 @Preview
 @Composable
-private fun BlockedInfoCardPreview(
-    @PreviewParameter(PreviewThemeProvider::class) theme: Theme,
-) {
+private fun BlockedInfoCardPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
     FirefoxTheme(theme) {
         BlockedInfoCard()
     }
 }
 
-/**
- * Provides [SettingsSearchItem]s for the AI Controls settings screen for use in settings search.
- */
+/** Provides [SettingsSearchItem]s for the AI Controls settings screen for use in settings search. */
 object AIControlsSearchProvider : SettingsSearchProvider {
     private val preferenceFileInformation = PreferenceFileInformation.AIControlsPreferences
 
     /**
-     * Preference key used to identify the top-level "Block AI enhancements" toggle when navigating
-     * from a settings search result.
+     * Preference key used to identify the top-level "Block AI enhancements" toggle when navigating from a settings
+     * search result.
      */
     const val BLOCK_AI_ENHANCEMENTS_KEY = "BLOCK_AI_ENHANCEMENTS"
 
@@ -441,7 +436,7 @@ object AIControlsSearchProvider : SettingsSearchProvider {
                     preferenceKey = BLOCK_AI_ENHANCEMENTS_KEY,
                     categoryHeader = categoryHeader,
                     preferenceFileInformation = preferenceFileInformation,
-                ),
+                )
             )
 
             for (feature in context.components.aiFeatureRegistry.getFeatures().sortedForDisplay()) {
@@ -452,7 +447,7 @@ object AIControlsSearchProvider : SettingsSearchProvider {
                         preferenceKey = feature.id.value,
                         categoryHeader = categoryHeader,
                         preferenceFileInformation = preferenceFileInformation,
-                    ),
+                    )
                 )
             }
         }

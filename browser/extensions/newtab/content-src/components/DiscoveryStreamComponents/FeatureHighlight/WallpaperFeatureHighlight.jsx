@@ -5,6 +5,7 @@
 import React, { useCallback } from "react";
 import { useSelector } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
+import { WALLPAPER_CATEGORIES } from "content-src/lib/constants.mjs";
 import { FeatureHighlight } from "./FeatureHighlight";
 
 export function WallpaperFeatureHighlight({
@@ -16,6 +17,8 @@ export function WallpaperFeatureHighlight({
 }) {
   // @nova-cleanup(remove-pref): Remove the nova.enabled pref check and keep the Nova copy and image path as the default once Nova ships.
   const isNova = useSelector(state => state.Prefs.values["nova.enabled"]);
+  // Message content from OMC; drives the copy, feature id, and deep-link category.
+  const { messageData } = useSelector(state => state.Messages);
   const onDismiss = useCallback(() => {
     handleDismiss();
     handleBlock();
@@ -23,20 +26,69 @@ export function WallpaperFeatureHighlight({
 
   const onToggleClick = useCallback(
     elementId => {
-      dispatch({ type: at.SHOW_PERSONALIZE });
+      // Deep-link the customize panel into a wallpaper category. OMC can
+      // target any known category per-message (not just Firefox): an unset
+      // value defaults to Firefox to keep existing messages working, a known
+      // category is forwarded as-is, and an explicit empty or unrecognized
+      // value opens the top-level panel (no deep-link).
+      const { wallpaperCategory } = messageData?.content || {};
+      let category = WALLPAPER_CATEGORIES.Firefox;
+      if (wallpaperCategory !== undefined) {
+        category = Object.values(WALLPAPER_CATEGORIES).includes(
+          wallpaperCategory
+        )
+          ? wallpaperCategory
+          : null;
+      }
+      // The custom-wallpaper category has no dedicated subsection yet, so
+      // deep-linking into it opens a blank panel. Fall back to the top-level
+      // panel for now; remove this guard once a user's uploaded custom
+      // wallpapers get their own subsection.
+      if (category === WALLPAPER_CATEGORIES.CustomWallpaper) {
+        category = null;
+      }
+      dispatch({
+        type: at.SHOW_PERSONALIZE,
+        data: { wallpaperCategory: category },
+      });
       dispatch(ac.UserEvent({ event: "SHOW_PERSONALIZE" }));
       handleClick(elementId);
       onDismiss();
     },
-    [dispatch, onDismiss, handleClick]
+    [dispatch, onDismiss, handleClick, messageData]
   );
 
-  // Extract the strings and feature ID from OMC
-  const { messageData } = useSelector(state => state.Messages);
+  const { messageType } = messageData?.content || {};
+  const isSemiFinal =
+    isNova && messageType === "WorldCupSemiFinalWallpaperHighlight";
+  const isWorldCup =
+    isNova && (messageType === "WorldCupWallpaperHighlight" || isSemiFinal);
+
+  const worldCupTitleL10nId = isSemiFinal
+    ? "newtab-sports-widget-message-wallpapers-semifinals-title"
+    : "newtab-sports-widget-message-wallpapers-title";
+  const worldCupSubtitleL10nId = isSemiFinal
+    ? "newtab-sports-widget-message-wallpapers-semifinals-body"
+    : "newtab-sports-widget-message-wallpapers-body";
+
+  const novaHighlightImage = isWorldCup
+    ? "chrome://newtab/content/data/content/assets/highlights/wallpaper-callout.png"
+    : "chrome://newtab/content/data/content/assets/highlights/firefox-mascot-prop-paintbucket-rgb.svg";
+  const novaImgWidth = isWorldCup ? "319" : "207";
+  const novaImgHeight = isWorldCup ? "204" : "156";
+  const novaTitleL10nId = isWorldCup
+    ? worldCupTitleL10nId
+    : "newtab-wallpaper-feature-highlight-title";
+  const novaSubtitleL10nId = isWorldCup
+    ? worldCupSubtitleL10nId
+    : "newtab-wallpaper-feature-highlight-subtitle";
+  const novaCtaL10nId = isWorldCup
+    ? "newtab-sports-widget-message-wallpapers-cta"
+    : "newtab-wallpaper-feature-highlight-cta";
 
   return (
     <div
-      className={`wallpaper-feature-highlight ${messageData.content?.darkModeDismiss ? "is-inverted-dark-dismiss-button" : ""}`}
+      className={`wallpaper-feature-highlight ${isWorldCup ? "world-cup-variant" : ""} ${messageData.content?.darkModeDismiss ? "is-inverted-dark-dismiss-button" : ""}`}
     >
       <FeatureHighlight
         position={position}
@@ -57,7 +109,7 @@ export function WallpaperFeatureHighlight({
                 srcSet={
                   messageData.content?.darkModeImageURL ||
                   (isNova
-                    ? "chrome://newtab/content/data/content/assets/highlights/firefox-mascot-prop-paintbucket-rgb.svg"
+                    ? novaHighlightImage
                     : "chrome://newtab/content/data/content/assets/highlights/omc-newtab-wallpapers.svg")
                 }
                 media="(prefers-color-scheme: dark)"
@@ -66,14 +118,14 @@ export function WallpaperFeatureHighlight({
                 srcSet={
                   messageData.content?.imageURL ||
                   (isNova
-                    ? "chrome://newtab/content/data/content/assets/highlights/firefox-mascot-prop-paintbucket-rgb.svg"
+                    ? novaHighlightImage
                     : "chrome://newtab/content/data/content/assets/highlights/omc-newtab-wallpapers.svg")
                 }
                 media="(prefers-color-scheme: light)"
               />
               <img
-                width={isNova ? "207" : "320"}
-                height={isNova ? "156" : "195"}
+                width={isNova ? novaImgWidth : "320"}
+                height={isNova ? novaImgHeight : "195"}
                 alt=""
               />
             </picture>
@@ -85,7 +137,7 @@ export function WallpaperFeatureHighlight({
                   className="title"
                   data-l10n-id={
                     isNova
-                      ? "newtab-wallpaper-feature-highlight-title"
+                      ? novaTitleL10nId
                       : messageData.content.title ||
                         "newtab-new-user-custom-wallpaper-title"
                   }
@@ -98,7 +150,7 @@ export function WallpaperFeatureHighlight({
                   className="subtitle"
                   data-l10n-id={
                     isNova
-                      ? "newtab-wallpaper-feature-highlight-subtitle"
+                      ? novaSubtitleL10nId
                       : messageData.content.subtitle ||
                         "newtab-new-user-custom-wallpaper-subtitle"
                   }
@@ -118,7 +170,7 @@ export function WallpaperFeatureHighlight({
                   onClick={() => onToggleClick("open-customize-menu")}
                   data-l10n-id={
                     isNova
-                      ? "newtab-wallpaper-feature-highlight-cta"
+                      ? novaCtaL10nId
                       : messageData.content.cta ||
                         "newtab-new-user-custom-wallpaper-cta"
                   }

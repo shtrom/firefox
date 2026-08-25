@@ -166,14 +166,19 @@ impl<'a, 'b: 'a> StyleAdjuster<'a, 'b> {
         use crate::properties::longhands::_moz_box_orient::computed_value::T as BoxOrient;
         use crate::values::specified::box_::{DisplayInside, DisplayOutside};
         let box_style = self.style.get_box();
-        if box_style.clone__webkit_line_clamp().is_none() {
+        if box_style.clone_line_clamp().is_none() {
             return;
         }
+        let line_clamp = box_style.clone_line_clamp();
         let disp = box_style.clone_display();
-        if disp.inside() != DisplayInside::WebkitBox {
+        if disp.inside() != DisplayInside::WebkitBox && line_clamp.webkit_legacy
+            || disp.inside() == DisplayInside::WebkitBox
+                && self.style.get_xul().clone__moz_box_orient() != BoxOrient::Vertical
+        {
             return;
         }
-        if self.style.get_xul().clone__moz_box_orient() != BoxOrient::Vertical {
+        // Inline elements should not have line-clamp applied.
+        if disp.inside() == DisplayInside::Flow && disp.outside() == DisplayOutside::Inline {
             return;
         }
         let new_display = if disp.outside() == DisplayOutside::Block {
@@ -766,7 +771,6 @@ impl<'a, 'b: 'a> StyleAdjuster<'a, 'b> {
     /// the computed value of 'line-height' is 'normal'.
     ///
     /// https://github.com/w3c/csswg-drafts/issues/3257
-    #[cfg(feature = "gecko")]
     fn adjust_for_appearance<E>(&mut self, element: Option<E>)
     where
         E: TElement,
@@ -1075,11 +1079,10 @@ impl<'a, 'b: 'a> StyleAdjuster<'a, 'b> {
         self.adjust_for_table_text_align();
         self.adjust_for_writing_mode(layout_parent_style);
         #[cfg(feature = "gecko")]
-        {
-            self.adjust_for_ruby(element);
-            self.adjust_for_appearance(element);
-            self.adjust_for_marker_pseudo(author_specified_properties);
-        }
+        self.adjust_for_ruby(element);
+        self.adjust_for_appearance(element);
+        #[cfg(feature = "gecko")]
+        self.adjust_for_marker_pseudo(author_specified_properties);
         if !try_tactic.is_empty() {
             self.adjust_for_try_tactic(try_tactic);
         }

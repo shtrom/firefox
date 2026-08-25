@@ -52,156 +52,147 @@
  **************************************************************
  **************************************************************/
 
+#include "nsWindow.h"
+
+#include <appmodel.h>
+#include <commctrl.h>
+#include <mmsystem.h>  // needed for WIN32_LEAN_AND_MEAN
+#include <process.h>
+#include <propkey.h>
+#include <propvarutil.h>
+#include <psapi.h>
+#include <richedit.h>
+#include <rpc.h>
+#include <shellapi.h>
+#include <unknwn.h>
+#include <windows.h>
+#include <wtsapi32.h>
+#include <zmouse.h>
+
+#include <algorithm>
+
+#include "InProcessWinCompositorWidget.h"
+#include "InputDeviceUtils.h"
+#include "KeyboardLayout.h"
+#include "ScreenHelperWin.h"
+#include "SystemTimeConverter.h"
+#include "WidgetUtils.h"
+#include "WinMouseScrollHandler.h"
+#include "WinTaskbar.h"
+#include "WinWindowOcclusionTracker.h"
 #include "gfx2DGlue.h"
+#include "gfxConfig.h"
+#include "gfxDWriteFonts.h"
 #include "gfxEnv.h"
 #include "gfxPlatform.h"
-
+#include "gfxWindowsPlatform.h"
+#include "imgIContainer.h"
 #include "mozilla/AppShutdown.h"
 #include "mozilla/AutoRestore.h"
+#include "mozilla/Components.h"
 #include "mozilla/Likely.h"
-#include "mozilla/PreXULSkeletonUI.h"
 #include "mozilla/Logging.h"
 #include "mozilla/MathAlgorithms.h"
 #include "mozilla/MiscEvents.h"
 #include "mozilla/MouseEvents.h"
+#include "mozilla/PreXULSkeletonUI.h"
+#include "mozilla/Preferences.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/ScopeExit.h"
+#include "mozilla/StaticPrefs_apz.h"
 #include "mozilla/StaticPrefs_browser.h"
+#include "mozilla/StaticPrefs_dom.h"
+#include "mozilla/StaticPrefs_gfx.h"
+#include "mozilla/StaticPrefs_layout.h"
+#include "mozilla/StaticPrefs_ui.h"
+#include "mozilla/StaticPrefs_widget.h"
 #include "mozilla/SwipeTracker.h"
-#include "mozilla/TouchEvents.h"
+#include "mozilla/TextEventDispatcherListener.h"
+#include "mozilla/TextEvents.h"  // For WidgetKeyboardEvent
 #include "mozilla/TimeStamp.h"
-
-#include "mozilla/ipc/MessageChannel.h"
-#include <algorithm>
-
-#include "mozilla/widget/WinEventObserver.h"
-#include "mozilla/widget/WinMessages.h"
-#include "nsLookAndFeel.h"
-#include "nsMenuPopupFrame.h"
-#include "nsWindow.h"
-#include "nsWindowTaskbarConcealer.h"
-#include "nsAppRunner.h"
-
-#include <appmodel.h>
-#include <shellapi.h>
-#include <windows.h>
-#include <wtsapi32.h>
-#include <process.h>
-#include <commctrl.h>
-#include <unknwn.h>
-#include <psapi.h>
-#include <rpc.h>
-#include <propvarutil.h>
-#include <propkey.h>
-
-#include "mozilla/Logging.h"
-#include "prtime.h"
-#include "prenv.h"
-
-#include "nsContentUtils.h"
-#include "nsISupportsPrimitives.h"
-#include "nsITheme.h"
-#include "nsIObserverService.h"
-#include "nsIScreenManager.h"
-#include "imgIContainer.h"
-#include "nsIFile.h"
-#include "nsIRollupListener.h"
-#include "nsIClipboard.h"
-#include "WinMouseScrollHandler.h"
-#include "nsFontMetrics.h"
-#include "nsIFontEnumerator.h"
-#include "nsFont.h"
-#include "nsRect.h"
-#include "nsThreadUtils.h"
-#include "nsNativeCharsetUtils.h"
-#include "nsCRT.h"
-#include "nsAppDirectoryServiceDefs.h"
-#include "nsWidgetsCID.h"
-#include "nsTHashtable.h"
-#include "nsHashKeys.h"
-#include "nsString.h"
-#include "mozilla/Components.h"
-#include "nsNativeThemeWin.h"
-#include "nsXULPopupManager.h"
-#include "nsWindowsDllInterceptor.h"
-#include "nsLayoutUtils.h"
-#include "nsWindowGfx.h"
-#include "gfxWindowsPlatform.h"
-#include "gfxDWriteFonts.h"
-#include "nsPrintfCString.h"
-#include "mozilla/Preferences.h"
-#include "SystemTimeConverter.h"
-#include "WinTaskbar.h"
-#include "WidgetUtils.h"
-#include "WinWindowOcclusionTracker.h"
-#include "nsIWidgetListener.h"
+#include "mozilla/TouchEvents.h"
+#include "mozilla/WindowsVersion.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/MouseEventBinding.h"
 #include "mozilla/dom/Touch.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/gfx/GPUProcessManager.h"
 #include "mozilla/intl/LocaleService.h"
+#include "mozilla/ipc/MessageChannel.h"
 #include "mozilla/layers/WebRenderLayerManager.h"
-#include "mozilla/WindowsVersion.h"
-#include "mozilla/TextEvents.h"  // For WidgetKeyboardEvent
-#include "mozilla/TextEventDispatcherListener.h"
-#include "mozilla/widget/nsAutoRollup.h"
 #include "mozilla/widget/PlatformWidgetTypes.h"
 #include "mozilla/widget/Screen.h"
-#include "nsStyleConsts.h"
+#include "mozilla/widget/WinEventObserver.h"
+#include "mozilla/widget/WinMessages.h"
+#include "mozilla/widget/nsAutoRollup.h"
+#include "nsAppDirectoryServiceDefs.h"
+#include "nsAppRunner.h"
 #include "nsBidiKeyboard.h"
-#include "nsStyleConsts.h"
-#include "gfxConfig.h"
-#include "InProcessWinCompositorWidget.h"
-#include "InputDeviceUtils.h"
-#include "ScreenHelperWin.h"
-#include "mozilla/StaticPrefs_apz.h"
-#include "mozilla/StaticPrefs_dom.h"
-#include "mozilla/StaticPrefs_gfx.h"
-#include "mozilla/StaticPrefs_layout.h"
-#include "mozilla/StaticPrefs_ui.h"
-#include "mozilla/StaticPrefs_widget.h"
-#include "nsNativeAppSupportWin.h"
-
+#include "nsCRT.h"
+#include "nsComponentManagerUtils.h"
+#include "nsContentUtils.h"
+#include "nsFont.h"
+#include "nsFontMetrics.h"
+#include "nsHashKeys.h"
+#include "nsIClipboard.h"
+#include "nsIFile.h"
+#include "nsIFontEnumerator.h"
 #include "nsIGfxInfo.h"
-#include "nsUXThemeConstants.h"
-#include "KeyboardLayout.h"
+#include "nsIObserverService.h"
+#include "nsIRollupListener.h"
+#include "nsIScreenManager.h"
+#include "nsISupportsPrimitives.h"
+#include "nsITheme.h"
+#include "nsIWidgetListener.h"
+#include "nsLayoutUtils.h"
+#include "nsLookAndFeel.h"
+#include "nsMenuPopupFrame.h"
+#include "nsNativeAppSupportWin.h"
+#include "nsNativeCharsetUtils.h"
 #include "nsNativeDragTarget.h"
-#include <mmsystem.h>  // needed for WIN32_LEAN_AND_MEAN
-#include <zmouse.h>
-#include <richedit.h>
+#include "nsNativeThemeWin.h"
+#include "nsPrintfCString.h"
+#include "nsRect.h"
+#include "nsString.h"
+#include "nsStyleConsts.h"
+#include "nsTHashtable.h"
+#include "nsThreadUtils.h"
+#include "nsUXThemeConstants.h"
+#include "nsWidgetsCID.h"
+#include "nsWindowGfx.h"
+#include "nsWindowTaskbarConcealer.h"
+#include "nsWindowsDllInterceptor.h"
+#include "nsXULPopupManager.h"
+#include "prenv.h"
+#include "prtime.h"
 
 #ifdef ACCESSIBILITY
 #  ifdef DEBUG
 #    include "mozilla/a11y/Logging.h"
 #  endif
-#  include "mozilla/a11y/Compatibility.h"
-#  include "oleidl.h"
 #  include <uiautomation.h>
 #  include <winuser.h>
-#  include "nsAccessibilityService.h"
+
+#  include "mozilla/a11y/Compatibility.h"
 #  include "mozilla/a11y/DocAccessible.h"
 #  include "mozilla/a11y/LazyInstantiator.h"
 #  include "mozilla/a11y/Platform.h"
+#  include "nsAccessibilityService.h"
+#  include "oleidl.h"
 #  if !defined(WINABLEAPI)
 #    include <winable.h>
 #  endif  // !defined(WINABLEAPI)
 #endif
 
-#include "WindowsUIUtils.h"
-
-#include "nsWindowDefs.h"
-
-#include "nsCrashOnException.h"
-
-#include "nsIContent.h"
-
-#include "mozilla/BackgroundHangMonitor.h"
-#include "WinIMEHandler.h"
-
-#include "npapi.h"
-
 #include <d3d11.h>
+
+#include "WinIMEHandler.h"
+#include "WindowsUIUtils.h"
+#include "mozilla/BackgroundHangMonitor.h"
+#include "npapi.h"
+#include "nsCrashOnException.h"
+#include "nsIContent.h"
+#include "nsWindowDefs.h"
 
 // ERROR from wingdi.h (below) gets undefined by some code.
 // #define ERROR               0
@@ -212,17 +203,15 @@
 #  define SM_CONVERTIBLESLATEMODE 0x2003
 #endif
 
+#include "DirectManipulationOwner.h"
+#include "InputData.h"
+#include "mozilla/TaskController.h"
 #include "mozilla/gfx/DeviceManagerDx.h"
 #include "mozilla/layers/APZInputBridge.h"
+#include "mozilla/layers/IAPZCTreeManager.h"
 #include "mozilla/layers/InputAPZContext.h"
 #include "mozilla/layers/KnowsCompositor.h"
-#include "InputData.h"
-
-#include "mozilla/TaskController.h"
 #include "mozilla/webrender/WebRenderAPI.h"
-#include "mozilla/layers/IAPZCTreeManager.h"
-
-#include "DirectManipulationOwner.h"
 
 using namespace mozilla;
 using namespace mozilla::dom;
@@ -334,6 +323,7 @@ InjectTouchInputPtr nsWindow::sInjectTouchFuncPtr;
 
 bool nsWindow::sIsNativePointLocked = false;
 bool nsWindow::sIsUsingRawInputForMouseMove = false;
+nsWindow* nsWindow::sNativePointLockedWindow = nullptr;
 
 static SystemTimeConverter<DWORD>& TimeConverter() {
   static SystemTimeConverter<DWORD> timeConverterSingleton;
@@ -780,21 +770,6 @@ class InitializeVirtualDesktopManagerTask : public Task {
   }
 };
 
-// Ground-truth query: does Windows claim the window is cloaked right now?
-static bool IsCloaked(HWND hwnd) {
-  DWORD cloakedState;
-  HRESULT hr = ::DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &cloakedState,
-                                       sizeof(cloakedState));
-
-  if (FAILED(hr)) {
-    MOZ_LOG(sCloakingLog, LogLevel::Warning,
-            ("failed (%08lX) to query cloaking state for HWND %p", hr, hwnd));
-    return false;
-  }
-
-  return cloakedState != 0;
-}
-
 }  // namespace mozilla
 
 /**************************************************************
@@ -1072,7 +1047,7 @@ nsresult nsWindow::Create(nsIWidget* aParent, const LayoutDeviceIntRect& aRect,
       // If we successfully consumed the pre-XUL skeleton UI, just update
       // our internal state to match what is currently being displayed.
       mIsVisible = true;
-      mIsCloaked = mozilla::IsCloaked(mWnd);
+      mIsCloaked = WinUtils::QueryCloaked(mWnd);
       mFrameState->ConsumePreXULSkeletonState(WasPreXULSkeletonUIMaximized());
 
       mBounds = mLastPaintBounds = GetBounds();
@@ -1176,9 +1151,21 @@ nsresult nsWindow::Create(nsIWidget* aParent, const LayoutDeviceIntRect& aRect,
         PropVariantClear(&pv);
       }
     }
-    HICON icon = ::LoadIconW(
-        ::GetModuleHandleW(nullptr),
-        MAKEINTRESOURCEW(usePrivateAumid ? IDI_PBMODE : IDI_APPICON));
+    // Resolve the icon resource once. A custom-icon override (if any) wins for
+    // normal windows; Private Browsing windows always keep IDI_PBMODE and
+    // ignore the override, matching WinTaskbar::SetAllWindowIcons. Since these
+    // are resources embedded in the executable, the load cannot fail on a
+    // missing file, so there's no need to set a default icon first.
+    uint16_t iconId;
+    if (usePrivateAumid) {
+      iconId = IDI_PBMODE;
+    } else {
+      uint16_t iconOverride =
+          mozilla::widget::WinTaskbar::GetWindowIconOverride();
+      iconId = iconOverride ? iconOverride : IDI_APPICON;
+    }
+    HICON icon =
+        ::LoadIconW(::GetModuleHandleW(nullptr), MAKEINTRESOURCEW(iconId));
     SetBigIcon(icon);
     SetSmallIcon(icon);
   }
@@ -1269,14 +1256,6 @@ nsresult nsWindow::Create(nsIWidget* aParent, const LayoutDeviceIntRect& aRect,
 
   mDefaultIMC.Init(this);
   IMEHandler::InitInputContext(this, mInputContext);
-
-  static bool a11yPrimed = false;
-  if (!a11yPrimed && mWindowType == WindowType::TopLevel) {
-    a11yPrimed = true;
-    if (Preferences::GetInt("accessibility.force_disabled", 0) == -1) {
-      ::PostMessage(mWnd, MOZ_WM_STARTA11Y, 0, 0);
-    }
-  }
 
   RecreateDirectManipulationIfNeeded();
 
@@ -1423,13 +1402,6 @@ static DWORD WindowStylesRemovedForBorderStyle(BorderStyle aStyle) {
   if (!(aStyle & BorderStyle::Title)) {
     toRemove |= WS_DLGFRAME;
   }
-  if (!(aStyle & (BorderStyle::Menu | BorderStyle::Close))) {
-    // Looks like getting rid of the system menu also does away with the close
-    // box. So, we only get rid of the system menu and the close box if you
-    // want neither. How does the Windows "Dialog" window class get just
-    // closebox and no sysmenu? Who knows.
-    toRemove |= WS_SYSMENU;
-  }
   if (!(aStyle & BorderStyle::ResizeH)) {
     toRemove |= WS_THICKFRAME;
   }
@@ -1522,13 +1494,7 @@ DWORD nsWindow::WindowExStyle() {
  **************************************************************/
 
 bool nsWindow::ShouldAssociateWithWinAppSDK() const {
-  // We currently don't need any SDK functionality for for PiP windows,
-  // and using the SDK on these windows causes them to go under the
-  // taskbar (bug 1995838).
-  //
-  // TODO(emilio): That might not be true anymore after bug 1993474,
-  // consider re-testing and removing that special-case.
-  return IsTopLevelWidget() && mPiPType == PiPType::NoPiP;
+  return IsTopLevelWidget();
 }
 
 bool nsWindow::AssociateWithNativeWindow() {
@@ -1685,6 +1651,17 @@ void nsWindow::Show(bool aState) {
       ::NotifyWinEvent(EVENT_OBJECT_FOCUS, mWnd, OBJID_CLIENT, CHILDID_SELF);
     }
 #endif  // defined(ACCESSIBILITY)
+
+    // A window that took over the pre-XUL skeleton UI was born in its size mode
+    // rather than transitioning into it, so
+    // TaskbarConcealer::OnWindowMaximized() was never called and Windows may
+    // misdetect the maximized window as fullscreen. BrowserGlue applies the
+    // custom titlebar before showing the window, so mCustomNonClient is already
+    // accurate here.
+    if (mCustomNonClient &&
+        mFrameState->GetSizeMode() == nsSizeMode_Maximized) {
+      TaskbarConcealer::OnWindowMaximized(this, /* aForce = */ true);
+    }
   }
 
   MOZ_ASSERT_IF(mWindowType == WindowType::Popup,
@@ -3620,6 +3597,17 @@ void nsWindow::SetIcon(const nsAString& aIconSpec) {
 #endif
 }
 
+void nsWindow::SetIconFromExeResource(uint16_t aResourceId) {
+  // A resource ID of 0 means "no override" -> fall back to the default icon.
+  HICON icon =
+      ::LoadIconW(::GetModuleHandleW(nullptr),
+                  MAKEINTRESOURCEW(aResourceId ? aResourceId : IDI_APPICON));
+  if (icon) {
+    SetBigIcon(icon);
+    SetSmallIcon(icon);
+  }
+}
+
 void nsWindow::SetBigIconNoData() {
   HICON bigIcon =
       ::LoadIconW(::GetModuleHandleW(nullptr), gStockApplicationIcon);
@@ -4422,6 +4410,7 @@ void nsWindow::DispatchFocusToTopLevelWindow(bool aIsActivate) {
   }
 }
 
+/* static */
 HWND nsWindow::WindowAtMouse() {
   DWORD pos = ::GetMessagePos();
   POINT mp;
@@ -4430,8 +4419,22 @@ HWND nsWindow::WindowAtMouse() {
   return ::WindowFromPoint(mp);
 }
 
+/* static */
+HWND nsWindow::NsWindowAtMouse() {
+  HWND curWnd = WindowAtMouse();
+
+  while (curWnd && !WinUtils::GetNSWindowPtr(curWnd)) {
+    curWnd = GetAncestor(curWnd, GA_PARENT);
+  }
+
+  return curWnd;
+}
+
+/* static */
 bool nsWindow::IsTopLevelMouseExit(HWND aWnd) {
-  HWND mouseWnd = WindowAtMouse();
+  // We are testing a mouseexit sent to Gecko.  Ignore non-Gecko child
+  // windows, like the one added to the titlebar by the Windows App SDK.
+  HWND mouseWnd = NsWindowAtMouse();
 
   // WinUtils::GetTopLevelHWND() will return a HWND for the window frame
   // (which includes the non-client area).  If the mouse has moved into
@@ -4785,15 +4788,6 @@ bool nsWindow::ProcessMessageInternal(UINT msg, WPARAM& wParam, LPARAM& lParam,
       *aRetValue = !shouldCancelQuit;
       result = true;
     } break;
-
-    case MOZ_WM_STARTA11Y:
-#if defined(ACCESSIBILITY)
-      (void)GetAccessible();
-      result = true;
-#else
-      result = false;
-#endif
-      break;
 
     case WM_ENDSESSION: {
       // For WM_ENDSESSION, wParam indicates whether we need to shutdown
@@ -6258,7 +6252,7 @@ LRESULT nsWindow::ProcessKeyDownMessage(const MSG& aMsg,
 
 nsresult nsWindow::SynthesizeNativeKeyEvent(
     int32_t aNativeKeyboardLayout, int32_t aNativeKeyCode,
-    uint32_t aModifierFlags, const nsAString& aCharacters,
+    nsIWidget::NativeModifiers aModifierFlags, const nsAString& aCharacters,
     const nsAString& aUnmodifiedCharacters,
     nsISynthesizedEventCallback* aCallback) {
   AutoSynthesizedEventCallbackNotifier notifier(aCallback);
@@ -6271,7 +6265,7 @@ nsresult nsWindow::SynthesizeNativeKeyEvent(
 
 nsresult nsWindow::SynthesizeNativeMouseEvent(
     LayoutDeviceIntPoint aPoint, NativeMouseMessage aNativeMessage,
-    MouseButton aButton, nsIWidget::Modifiers aModifierFlags,
+    MouseButton aButton, nsIWidget::NativeModifiers aModifierFlags,
     nsISynthesizedEventCallback* aCallback) {
   AutoSynthesizedEventCallbackNotifier notifier(aCallback);
 
@@ -6336,7 +6330,7 @@ nsresult nsWindow::SynthesizeNativeMouseEvent(
 
 nsresult nsWindow::SynthesizeNativeMouseScrollEvent(
     LayoutDeviceIntPoint aPoint, uint32_t aNativeMessage, double aDeltaX,
-    double aDeltaY, double aDeltaZ, uint32_t aModifierFlags,
+    double aDeltaY, double aDeltaZ, nsIWidget::NativeModifiers aModifierFlags,
     uint32_t aAdditionalFlags, nsISynthesizedEventCallback* aCallback) {
   AutoSynthesizedEventCallbackNotifier notifier(aCallback);
   return MouseScrollHandler::SynthesizeNativeMouseScrollEvent(
@@ -6421,6 +6415,9 @@ void nsWindow::OnWindowPosChanged(WINDOWPOS* wp) {
       return;
     }
   }
+
+  // Recompute tiled state.
+  SetIsTiled(mWnd && ::IsWindowArranged(mWnd));
 
   // Notify visibility change when window is activated.
   if (!(wp->flags & SWP_NOACTIVATE) && NeedsToTrackWindowOcclusionState()) {
@@ -6531,6 +6528,8 @@ void nsWindow::OnWindowPosChanged(WINDOWPOS* wp) {
     // Send a gecko resize event
     OnResize(clientSize);
   }
+
+  MaybeUpdateNativeLockedRegion();
 }
 
 void nsWindow::OnWindowPosChanging(WINDOWPOS* info) {
@@ -6900,6 +6899,8 @@ void nsWindow::OnDestroy() {
   mWidgetListener = nullptr;
   mAttachedWidgetListener = nullptr;
 
+  ReleaseNativeLockedRegion();
+
   DestroyDirectManipulation();
 
   // Before destroying the native window, we need to clean up the resource
@@ -7075,7 +7076,7 @@ void nsWindow::OnCloakEvent(HWND aWnd, bool aCloaked) {
   }
 
   const char* const kWasCloakedStr = pWin->mIsCloaked ? "cloaked" : "uncloaked";
-  if (mozilla::IsCloaked(aWnd) == pWin->mIsCloaked) {
+  if (WinUtils::QueryCloaked(aWnd) == pWin->mIsCloaked) {
     MOZ_LOG(sCloakingLog, LogLevel::Debug,
             ("Received redundant %s event for %s HWND %p; discarding",
              kEventName, kWasCloakedStr, aWnd));
@@ -7102,7 +7103,7 @@ void nsWindow::OnCloakEvent(HWND aWnd, bool aCloaked) {
       return;
     }
 
-    const bool isCloaked = mozilla::IsCloaked(hwnd);
+    const bool isCloaked = WinUtils::QueryCloaked(hwnd);
     if (isCloaked != pWin->mIsCloaked) {
       changedWindows.AppendElement(Item{pWin, isCloaked});
     }
@@ -8683,15 +8684,20 @@ void nsWindow::LockNativePointer(NativePointerLockMode aNativePointerLockMode) {
   // sIsNativePointLocked.
   sIsNativePointLocked = true;
   SetNativePointerLockMode(aNativePointerLockMode);
+  SetNativeLockedRegion();
 }
 
 void nsWindow::UnlockNativePointer() {
   if (NS_WARN_IF(!IsNativePointerLocked())) {
     return;
   }
+  if (NS_WARN_IF(sNativePointLockedWindow != this)) {
+    return;
+  }
 
   // SetNativePointerLockMode() have to be called before resetting
   // sIsNativePointLocked.
+  ReleaseNativeLockedRegion();
   SetNativePointerLockMode(NativePointerLockMode::Regular);
   sIsNativePointLocked = false;
 }
@@ -8716,6 +8722,49 @@ void nsWindow::SetNativePointerLockMode(
   RegisterRawInputDevices(&device, 1, sizeof(device));
 
   sIsUsingRawInputForMouseMove = usingRawInput;
+}
+
+void nsWindow::MaybeUpdateNativeLockedRegion() {
+  if (sNativePointLockedWindow != this) {
+    return;
+  }
+
+  MOZ_ASSERT(StaticPrefs::dom_pointer_lock_native_lock_enabled());
+  MOZ_ASSERT(IsNativePointerLocked());
+
+  // When the mouse hits the edge of the window, it may become visible again
+  // and remain visible. To prevent this, we add a small border around the
+  // edge.
+  static constexpr int kRegionBorder = 5;
+  LayoutDeviceIntRect lockedRegionRect = GetClientBounds();
+  lockedRegionRect.Deflate(kRegionBorder, kRegionBorder);
+
+  RECT winRect = WinUtils::ToWinRect(lockedRegionRect);
+  ClipCursor(&winRect);
+}
+
+void nsWindow::SetNativeLockedRegion() {
+  if (!StaticPrefs::dom_pointer_lock_native_lock_enabled()) {
+    return;
+  }
+
+  MOZ_ASSERT(!sNativePointLockedWindow);
+  MOZ_ASSERT(IsNativePointerLocked());
+
+  sNativePointLockedWindow = this;
+  MaybeUpdateNativeLockedRegion();
+}
+
+void nsWindow::ReleaseNativeLockedRegion() {
+  if (sNativePointLockedWindow != this) {
+    return;
+  }
+
+  MOZ_ASSERT(StaticPrefs::dom_pointer_lock_native_lock_enabled());
+  MOZ_ASSERT(IsNativePointerLocked());
+
+  sNativePointLockedWindow = nullptr;
+  ClipCursor(nullptr);
 }
 
 #ifdef DEBUG

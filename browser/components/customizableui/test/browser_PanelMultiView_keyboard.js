@@ -8,7 +8,7 @@
  */
 
 const kEmbeddedDocUrl =
-  'data:text/html,<textarea id="docTextarea">value</textarea><button id="docButton"></button>';
+  getRootDirectory(gTestPath) + "file_embedded_document.html";
 
 let gAnchor;
 let gPanel;
@@ -737,6 +737,18 @@ add_task(async function testTabbingThroughNonDelegatingShadowRoots() {
   await expectFocusAfterKey("Shift+Tab", gNonDelegatingShadowRootButton);
   await expectFocusAfterKey("Shift+Tab", gNonDelegatingShadowRootInput);
   await expectFocusAfterKey("Shift+Tab", backButton);
+
+  await hidePopup();
+});
+
+// Test that tab is not confused if we are focused on an input in a shadowRoot
+add_task(async function testTabbingThroughNonDelegatingShadowRoots() {
+  await openPopup();
+  await showSubView(gNonDelegatingComponentView);
+
+  gNonDelegatingShadowRoot.focus();
+  gNonDelegatingShadowRootInput.focus();
+  await expectFocusAfterKey("Tab", gNonDelegatingShadowRootButton);
 
   await hidePopup();
 });

@@ -37,6 +37,9 @@ class GeckoInstance:
     required_prefs = {
         # Make sure Shield doesn't hit the network.
         "app.normandy.api_url": "",
+        # Disable scroll axis lock, WebDriver should be able to scroll arbitrary
+        # directions.
+        "apz.axis_lock.mode": 0,
         # Increase the APZ content response timeout in tests to 1 minute.
         # This is to accommodate the fact that test environments tends to be slower
         # than production environments (with the b2g emulator being the slowest of them
@@ -178,6 +181,8 @@ class GeckoInstance:
         "security.remote_settings.intermediates.enabled": False,
         # Disable logging for remote settings
         "services.settings.loglevel": "off",
+        # Disable the WebAuthn consents prompt
+        "security.webauthn.related_origin_requests_mode": 1,
         # Ensure blocklist updates don't hit the network
         "services.settings.server": "data:,#remote-settings-dummy/v1",
         # Disable password capture, so that tests that include forms aren"t
@@ -432,11 +437,14 @@ class GeckoInstance:
             "MOZ_CRASHREPORTER_SHUTDOWN": "1",
         })
 
-        extra_args = ["-marionette", "-remote-allow-system-access"]
+        # Default to allow system access unless it is already set.
+        if env.get("MOZ_REMOTE_ALLOW_SYSTEM_ACCESS") is None:
+            env.update({"MOZ_REMOTE_ALLOW_SYSTEM_ACCESS": "1"})
+
         args = {
             "binary": self.binary,
             "profile": self.profile,
-            "cmdargs": extra_args + self.app_args,
+            "cmdargs": self.app_args + ["-marionette"],
             "env": env,
             "symbols_path": self.symbols_path,
             "process_args": process_args,
@@ -638,6 +646,11 @@ class DesktopInstance(GeckoInstance):
         # Enable output for dump() and chrome console API
         "browser.dom.window.dump.enabled": True,
         "devtools.console.stdout.chrome": True,
+        # Don't open the downloads panel every time a download begins.
+        # The first download ever run in a new profile will still open the panel,
+        # but because "browser.download.panel.shown" is set to true,
+        # this preference is going to act as the first download already happened.
+        "browser.download.focusPanelOnOpen": False,
         # Indicate that the download panel has been shown once so that whichever
         # download test runs first doesn"t show the popup inconsistently
         "browser.download.panel.shown": True,
@@ -650,6 +663,8 @@ class DesktopInstance(GeckoInstance):
         # Background thumbnails in particular cause grief, and disabling thumbnails
         # in general can"t hurt - we re-enable them when tests need them
         "browser.pagethumbnails.capturing_disabled": True,
+        # Do not show the preonboarding modal/splash which can interfere with tests
+        "browser.preonboarding.enabled": False,
         # Disable safe browsing / tracking protection updates
         "browser.safebrowsing.update.enabled": False,
         # Disable updates to search engines

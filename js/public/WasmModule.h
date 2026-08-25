@@ -16,7 +16,7 @@ namespace JS {
 
 /**
  * The WasmModule interface allows the embedding to hold a reference to the
- * underying C++ implementation of a JS WebAssembly.Module object for purposes
+ * underlying C++ implementation of a JS WebAssembly.Module object for purposes
  * of efficient postMessage() and (de)serialization from a random thread.
  *
  * In particular, this allows postMessage() of a WebAssembly.Module:
@@ -32,7 +32,6 @@ namespace JS {
 struct WasmModule : js::AtomicRefCounted<WasmModule> {
   virtual ~WasmModule() = default;
   virtual JSObject* createObject(JSContext* cx) const = 0;
-  virtual JSObject* createObjectForAsmJS(JSContext* cx) const = 0;
 };
 
 extern JS_PUBLIC_API bool IsWasmModuleObject(HandleObject obj);

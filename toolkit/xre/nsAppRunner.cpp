@@ -29,6 +29,7 @@
 #include "mozilla/ScopeExit.h"
 #include "mozilla/StaticPrefs_browser.h"
 #include "mozilla/StaticPrefs_fission.h"
+#include "mozilla/StaticPrefs_security.h"
 #include "mozilla/StaticPrefs_widget.h"
 #include "mozilla/glean/SecuritySandboxMetrics.h"
 #include "mozilla/Telemetry.h"
@@ -116,7 +117,6 @@
 #  include "detect_win32k_conflicts.h"
 #  include "mozilla/PreXULSkeletonUI.h"
 #  include "mozilla/DllPrefetchExperimentRegistryInfo.h"
-#  include "mozilla/WindowsBCryptInitialization.h"
 #  include "mozilla/WindowsDllBlocklist.h"
 #  include "mozilla/WindowsMsctfInitialization.h"
 #  include "mozilla/WindowsOleAut32Initialization.h"
@@ -289,10 +289,12 @@ static const char kPrefSetDefaultBrowserUserChoicePref[] =
 
 #if defined(XP_WIN)
 static const char kPrefThemeId[] = "extensions.activeThemeID";
+#  if defined(MOZ_DEFAULT_BROWSER_AGENT)
 static const char kPrefBrowserStartupBlankWindow[] =
     "browser.startup.blankWindow";
 static const char kPrefPreXulSkeletonUI[] = "browser.startup.preXulSkeletonUI";
-#endif  // defined(XP_WIN)
+#  endif  // defined(MOZ_DEFAULT_BROWSER_AGENT)
+#endif    // defined(XP_WIN)
 
 #if defined(MOZ_WIDGET_GTK)
 constexpr nsLiteralCString kStartupTokenNames[] = {
@@ -1279,6 +1281,11 @@ nsXULAppInfo::GetRemoteType(nsACString& aRemoteType) {
 constinit static nsCString gLastAppVersion;
 constinit static nsCString gLastAppBuildID;
 
+// Whether the loaded profile's compatibility.ini carries EncryptedDatabases=1.
+// Populated by CheckCompatibility() (which already parses compatibility.ini)
+// and consulted by the encryption-compatibility gate in XRE_mainStartup.
+static bool gProfileEncryptedDatabases = false;
+
 NS_IMETHODIMP
 nsXULAppInfo::GetLastAppVersion(nsACString& aResult) {
   if (XRE_IsContentProcess()) {
@@ -1503,6 +1510,59 @@ nsXULAppInfo::InvalidateCachesOnRestart() {
   return NS_OK;
 }
 
+nsresult mozilla::MarkProfileEncryptedDatabases() {
+  // Append the EncryptedDatabases marker to compatibility.ini (modeled on
+  // InvalidateCachesOnRestart above). Read back by CheckCompatibility() on the
+  // next startup so the encryption gate can refuse to launch a build whose
+  // pref disagrees with the now-encrypted profile. Append-only: the marker is
+  // never removed (a profile that has held encrypted databases stays marked).
+  nsCOMPtr<nsIFile> file;
+  nsresult rv =
+      NS_GetSpecialDirectory(NS_APP_PROFILE_DIR_STARTUP, getter_AddRefs(file));
+  // No resolvable startup profile directory (xpcshell, or a background task /
+  // very early startup with no profile yet): there is no persistent
+  // compatibility.ini to gate a future launch, so there is nothing to mark and
+  // nothing to protect. Treat this as a benign no-op. Returning a failure here
+  // would flip sMarkerWriteFailed (see MarkProfileEncryptedIfNeeded) and refuse
+  // every DEK mint for the session, breaking all in-profile opens under
+  // xpcshell with the pref on. A genuine write failure on an existing profile
+  // is still surfaced below.
+  if (NS_FAILED(rv) || !file) return NS_OK;
+
+  file->AppendNative(FILE_COMPATIBILITY_INFO);
+
+  nsINIParser parser;
+  rv = parser.Init(file);
+  if (NS_FAILED(rv)) {
+    // No compatibility.ini yet (WriteVersion creates it once per profile);
+    // the marker will be written on a later startup.
+    return NS_OK;
+  }
+
+  nsAutoCString buf;
+  rv = parser.GetString("Compatibility", "EncryptedDatabases", buf);
+  if (NS_SUCCEEDED(rv)) {
+    // Already marked.
+    return NS_OK;
+  }
+
+  PRFileDesc* fd;
+  rv = file->OpenNSPRFileDesc(PR_RDWR | PR_APPEND, 0600, &fd);
+  if (NS_FAILED(rv)) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+  static const char kEncryptedHeader[] =
+      NS_LINEBREAK "EncryptedDatabases=1" NS_LINEBREAK;
+  PR_Write(fd, kEncryptedHeader, sizeof(kEncryptedHeader) - 1);
+  PR_Close(fd);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULAppInfo::MarkProfileEncryptedDatabases() {
+  return mozilla::MarkProfileEncryptedDatabases();
+}
+
 NS_IMETHODIMP
 nsXULAppInfo::GetReplacedLockTime(PRTime* aReplacedLockTime) {
   if (!gProfileLock) return NS_ERROR_NOT_AVAILABLE;
@@ -1713,6 +1773,11 @@ nsXULAppInfo::SetEnabled(bool aEnabled) {
       return NS_ERROR_FAILURE;
     }
 
+    nsresult rv = CrashReporter::OOPInit(xreBinDirectory, true);
+    if (rv != NS_OK) {
+      return rv;
+    }
+
     return CrashReporter::SetExceptionHandler(xreBinDirectory, true);
   }
 
@@ -1721,7 +1786,14 @@ nsXULAppInfo::SetEnabled(bool aEnabled) {
     return NS_OK;
   }
 
-  return CrashReporter::UnsetExceptionHandler();
+  nsresult rv = CrashReporter::UnsetExceptionHandler();
+#if !defined(MOZ_WIDGET_ANDROID)
+  // Don't deinit on Android as we can't get back up again
+  // (bug 2040673 comment 20).
+  // TODO: Fix it
+  CrashReporter::OOPDeinit();
+#endif
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -2350,10 +2422,10 @@ class ShowProfileSelectorObserver final : public nsIObserver {
   NS_DECL_ISUPPORTS
   NS_DECL_NSIOBSERVER
 
-  ShowProfileSelectorObserver() {}
+  ShowProfileSelectorObserver() = default;
 
  protected:
-  ~ShowProfileSelectorObserver() {}
+  ~ShowProfileSelectorObserver() = default;
 };
 
 NS_IMPL_ISUPPORTS(ShowProfileSelectorObserver, nsIObserver);
@@ -2370,6 +2442,8 @@ ShowProfileSelectorObserver::Observe(nsISupports* aSubject, const char* aTopic,
   return NS_OK;
 }
 
+#  if defined(MOZ_DEFAULT_BROWSER_AGENT)
+
 static void SetupSkeletonUIPrefs() {
   ReflectSkeletonUIPrefToRegistry(nullptr, nullptr);
   Preferences::RegisterCallback(&ReflectSkeletonUIPrefToRegistry,
@@ -2385,6 +2459,8 @@ static void SetupSkeletonUIPrefs() {
   nsCOMPtr<nsIObserver> obs = new ShowProfileSelectorObserver();
   obsService->AddObserver(obs, "profile-show-selector-changed", false);
 }
+
+#  endif  // defined(MOZ_DEFAULT_BROWSER_AGENT)
 
 #  if defined(MOZ_LAUNCHER_PROCESS)
 
@@ -2722,6 +2798,13 @@ static nsresult ProfileMissingDialog(nsINativeAppSupport* aNative) {
   }
 #  endif  // MOZ_BACKGROUNDTASKS
 
+  if (gfxPlatform::IsHeadless()) {
+    // Nothing can dismiss a modal dialog in headless mode, so report the
+    // failure on stderr and exit instead of spinning in the event loop.
+    Output(true, "Could not find profile folder.\n");
+    return NS_ERROR_ABORT;
+  }
+
   nsresult rv;
 
   ScopedXPCOMStartup xpcom;
@@ -2763,6 +2846,76 @@ static nsresult ProfileMissingDialog(nsINativeAppSupport* aNative) {
 
     ps->Alert(nullptr, missingTitle.get(), missingMessage.get());
 
+    return NS_ERROR_ABORT;
+  }
+#endif  // MOZ_WIDGET_ANDROID
+}
+
+// Shows the "encryption pref vs on-disk state" mismatch dialog and
+// returns NS_ERROR_ABORT so the caller can exit cleanly. aMsgKey /
+// aTitleKey select which of the two scenarios (encrypted-but-pref-off
+// or pref-on-but-plaintext) is being reported.
+static nsresult ProfileEncryptionMismatchDialog(const char* aMsgKey,
+                                                const char* aTitleKey,
+                                                nsINativeAppSupport* aNative) {
+#ifdef MOZ_WIDGET_ANDROID
+  Output(true, "Profile encryption state does not match launching build.\n");
+  return NS_ERROR_ABORT;
+#else
+#  ifdef MOZ_BACKGROUNDTASKS
+  if (BackgroundTasks::IsBackgroundTaskMode()) {
+    printf_stderr(
+        "Profile encryption state does not match launching build in "
+        "backgroundtask mode\n");
+    return NS_ERROR_ABORT;
+  }
+#  endif  // MOZ_BACKGROUNDTASKS
+
+  if (gfxPlatform::IsHeadless()) {
+    // Nothing can dismiss a modal dialog in headless mode.
+    Output(true, "Profile encryption state does not match launching build.\n");
+    return NS_ERROR_ABORT;
+  }
+
+  nsresult rv;
+
+  ScopedXPCOMStartup xpcom;
+  rv = xpcom.Initialize();
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = xpcom.SetWindowCreator(aNative);
+  NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+
+#  ifdef XP_MACOSX
+  InitializeMacApp();
+#  endif
+
+  {  // extra scoping is needed so we release these components before xpcom
+     // shutdown
+    nsCOMPtr<nsIStringBundleService> sbs =
+        mozilla::components::StringBundle::Service();
+    NS_ENSURE_TRUE(sbs, NS_ERROR_FAILURE);
+
+    nsCOMPtr<nsIStringBundle> sb;
+    sbs->CreateBundle(kProfileProperties, getter_AddRefs(sb));
+    NS_ENSURE_TRUE_LOG(sb, NS_ERROR_FAILURE);
+
+    NS_ConvertUTF8toUTF16 appName(gAppData->name);
+    AutoTArray<nsString, 3> params = {appName, appName, appName};
+
+    nsAutoString msg;
+    rv = sb->FormatStringFromName(aMsgKey, params, msg);
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_ABORT);
+
+    nsAutoString title;
+    params.SetLength(1);
+    rv = sb->FormatStringFromName(aTitleKey, params, title);
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_ABORT);
+
+    nsCOMPtr<nsIPromptService> ps(do_GetService(NS_PROMPTSERVICE_CONTRACTID));
+    NS_ENSURE_TRUE(ps, NS_ERROR_FAILURE);
+
+    ps->Alert(nullptr, title.get(), msg.get());
     return NS_ERROR_ABORT;
   }
 #endif  // MOZ_WIDGET_ANDROID
@@ -3573,6 +3726,7 @@ static bool CheckCompatibility(nsIFile* aProfileDir, const nsCString& aVersion,
   *aIsDowngrade = false;
   gLastAppVersion.SetIsVoid(true);
   gLastAppBuildID.SetIsVoid(true);
+  gProfileEncryptedDatabases = false;
 
   nsCOMPtr<nsIFile> file;
   aProfileDir->Clone(getter_AddRefs(file));
@@ -3582,6 +3736,17 @@ static bool CheckCompatibility(nsIFile* aProfileDir, const nsCString& aVersion,
   nsINIParser parser;
   nsresult rv = parser.Init(file);
   if (NS_FAILED(rv)) return false;
+
+  // The EncryptedDatabases marker is independent of version compatibility, so
+  // read it here -- compatibility.ini is already parsed -- before the early
+  // returns below. Consumed by the encryption gate in XRE_mainStartup.
+  {
+    nsAutoCString encBuf;
+    gProfileEncryptedDatabases =
+        NS_SUCCEEDED(
+            parser.GetString("Compatibility", "EncryptedDatabases", encBuf)) &&
+        encBuf.EqualsLiteral("1");
+  }
 
   rv = parser.GetString("Compatibility", "LastVersion", aLastVersion);
   if (NS_FAILED(rv)) {
@@ -3701,10 +3866,111 @@ static void WriteVersion(nsIFile* aProfileDir, const nsCString& aVersion,
   if (invalidateCache)
     PR_Write(fd, kInvalidationHeader, sizeof(kInvalidationHeader) - 1);
 
+  // Re-emit the SQLite at-rest encryption marker (set in
+  // gProfileEncryptedDatabases by CheckCompatibility); WriteVersion truncates
+  // compatibility.ini, so otherwise the marker is lost on update and the
+  // next-startup encryption gate would mistake an encrypted profile for a
+  // plaintext one.
+  static const char kEncryptedHeader[] = NS_LINEBREAK "EncryptedDatabases=1";
+  if (gProfileEncryptedDatabases)
+    PR_Write(fd, kEncryptedHeader, sizeof(kEncryptedHeader) - 1);
+
   static const char kNL[] = NS_LINEBREAK;
   PR_Write(fd, kNL, sizeof(kNL) - 1);
 
   PR_Close(fd);
+}
+
+// Read the first 24 bytes of the first existing canonical app DB and
+// classify its encryption state by header inspection. No SQLite, no
+// mozStorage -- a pure file read. Returns NoDBs if none of the canonical
+// DBs exist in the profile.
+enum class DBHeaderResult { Encrypted, Plaintext, NoDBs };
+
+static DBHeaderResult DetectEncryptedDBHeader(nsIFile* aProfileDir) {
+  // Canonical DB list: any one of these existing is evidence of a
+  // non-fresh profile. Order matters for cheapness only.
+  static const char* const kCandidates[] = {
+      "cookies.sqlite", "places.sqlite",   "permissions.sqlite",
+      "storage.sqlite", "favicons.sqlite",
+  };
+
+  for (const char* name : kCandidates) {
+    nsCOMPtr<nsIFile> file;
+    if (NS_FAILED(aProfileDir->Clone(getter_AddRefs(file))) || !file) continue;
+    if (NS_FAILED(file->AppendNative(nsDependentCString(name)))) continue;
+
+    bool exists = false;
+    if (NS_FAILED(file->Exists(&exists)) || !exists) continue;
+
+    PRFileDesc* fd = nullptr;
+    if (NS_FAILED(file->OpenNSPRFileDesc(PR_RDONLY, 0, &fd)) || !fd) continue;
+
+    // SQLite database header layout (https://sqlite.org/fileformat.html): the
+    // page size is a big-endian u16 at offset 16 and the per-page reserved-byte
+    // count is a u8 at offset 20. obfsvfs always writes 8192-byte pages with 32
+    // reserved bytes, which is how an at-rest-encrypted database is recognized.
+    static constexpr int32_t kSQLiteHeaderReadBytes = 24;
+    static constexpr int32_t kSQLiteHeaderMinBytes = 21;
+    static constexpr size_t kSQLitePageSizeOffset = 16;
+    static constexpr size_t kSQLiteReservedOffset = 20;
+    static constexpr uint16_t kObfsPageSize = 8192;
+    static constexpr uint8_t kObfsReservedBytes = 32;
+
+    uint8_t hdr[kSQLiteHeaderReadBytes];
+    int32_t got = PR_Read(fd, hdr, sizeof(hdr));
+    PR_Close(fd);
+    if (got < kSQLiteHeaderMinBytes) continue;
+
+    uint16_t pageSize = (uint16_t(hdr[kSQLitePageSizeOffset]) << 8) |
+                        uint16_t(hdr[kSQLitePageSizeOffset + 1]);
+    uint8_t reserved = hdr[kSQLiteReservedOffset];
+
+    if (pageSize == kObfsPageSize && reserved == kObfsReservedBytes) {
+      return DBHeaderResult::Encrypted;
+    }
+    return DBHeaderResult::Plaintext;
+  }
+  return DBHeaderResult::NoDBs;
+}
+
+enum class EncryptionCompatResult {
+  OK,
+  RefuseEncryptedButPrefOff,
+  RefuseMigrationRequired,
+};
+
+// Decide whether the on-disk state and the launching build's encryption
+// pref are compatible. Must be called after CheckCompatibility() has run
+// (it populates gProfileEncryptedDatabases). aPrefEnabled is the current
+// value of security.storage.encryption.sqlite.enabled.
+static EncryptionCompatResult CheckEncryptionCompatibility(nsIFile* aProfileDir,
+                                                           bool aPrefEnabled) {
+  // Pref off: we cannot read an encrypted profile, so refuse it. The marker is
+  // the fast path, but it can be absent on a profile that a prior build
+  // encrypted without recording it (e.g. storage initialized too late to
+  // mark), so also inspect the on-disk headers. The probe runs only when the
+  // marker is absent, so the common (plaintext, never-encrypted) profile pays
+  // it once at startup; an encrypted-looking profile is hard-failed rather
+  // than opened as plaintext and corrupted.
+  if (!aPrefEnabled) {
+    if (gProfileEncryptedDatabases ||
+        DetectEncryptedDBHeader(aProfileDir) == DBHeaderResult::Encrypted) {
+      return EncryptionCompatResult::RefuseEncryptedButPrefOff;
+    }
+    return EncryptionCompatResult::OK;
+  }
+
+  // Pref on, marker absent (or =0). Disambiguate by header inspection:
+  // - empty profile or already-encrypted DBs -> OK (the marker is
+  //   (re)written by the storage layer on profile-after-change).
+  // - plaintext DBs present -> refuse, migration required.
+  if (!gProfileEncryptedDatabases &&
+      DetectEncryptedDBHeader(aProfileDir) == DBHeaderResult::Plaintext) {
+    return EncryptionCompatResult::RefuseMigrationRequired;
+  }
+
+  return EncryptionCompatResult::OK;
 }
 
 /**
@@ -4389,8 +4655,7 @@ int XREMain::XRE_mainInit(bool* aExitFlag,
     nsCOMPtr<nsIFile> userAppDataDir;
     if (NS_SUCCEEDED(mDirProvider.GetUserAppDataDirectory(
             getter_AddRefs(userAppDataDir)))) {
-      CrashReporter::SetupExtraData(userAppDataDir,
-                                    nsDependentCString(mAppData->buildID));
+      CrashReporter::SetupExtraData(userAppDataDir, mAppData->xreDirectory);
     }
   } else {
     // We might have registered a runtime exception module very early in process
@@ -4426,21 +4691,11 @@ int XREMain::XRE_mainInit(bool* aExitFlag,
   SetupMacApplicationDelegate(&gRestartedByOS);
 
   if (EnvHasValue("MOZ_LAUNCHED_CHILD")) {
-    // This is needed, on relaunch, to force the OS to use the "Cocoa Dock
-    // API".  Otherwise the call to ReceiveNextEvent() below will make it
-    // use the "Carbon Dock API".  For more info see bmo bug 377166.
+    // Initialize the shared NSApplication early on relaunch so the dock
+    // tile for the child process gets registered before the original
+    // process exits. `[NSApplication sharedApplication]` calls
+    // `_NSDoOneTimeDockRegistration` internally, which is enough.
     EnsureUseCocoaDockAPI();
-
-    // When the app relaunches, the original process exits.  This causes
-    // the dock tile to stop bouncing, lose the "running" triangle, and
-    // if the tile does not permanently reside in the Dock, even disappear.
-    // This can be confusing to the user, who is expecting the app to launch.
-    // Calling ReceiveNextEvent without requesting any event is enough to
-    // cause a dock tile for the child process to appear.
-    const EventTypeSpec kFakeEventList[] = {{INT_MAX, INT_MAX}};
-    EventRef event;
-    ::ReceiveNextEvent(GetEventTypeCount(kFakeEventList), kFakeEventList,
-                       kEventDurationNoWait, false, &event);
   }
 
   if (CheckArg("foreground")) {
@@ -4644,7 +4899,8 @@ enum struct ShouldNotProcessUpdatesReason {
   DevToolsLaunching,
   NotAnUpdatingTask,
   OtherInstanceRunning,
-  FirstStartup
+  FirstStartup,
+  DisabledByEnvironment
 };
 
 const char* ShouldNotProcessUpdatesReasonAsString(
@@ -4656,6 +4912,8 @@ const char* ShouldNotProcessUpdatesReasonAsString(
       return "NotAnUpdatingTask";
     case ShouldNotProcessUpdatesReason::OtherInstanceRunning:
       return "OtherInstanceRunning";
+    case ShouldNotProcessUpdatesReason::DisabledByEnvironment:
+      return "DisabledByEnvironment";
     default:
       MOZ_CRASH("impossible value for ShouldNotProcessUpdatesReason");
   }
@@ -4669,6 +4927,13 @@ Maybe<ShouldNotProcessUpdatesReason> ShouldNotProcessUpdates(
   if (ARG_FOUND == CheckArgExists("first-startup")) {
     NS_WARNING("ShouldNotProcessUpdates(): FirstStartup");
     return Some(ShouldNotProcessUpdatesReason::FirstStartup);
+  }
+
+  // Bug 2055849: Don't process updates if MOZ_DISABLE_UPDATE_PROCESSING is set.
+  // Set by default when using https://github.com/mozilla/firefox-devtools-mcp.
+  if (EnvHasValue("MOZ_DISABLE_UPDATE_PROCESSING")) {
+    NS_WARNING("ShouldNotProcessUpdates(): DisabledByEnvironment");
+    return Some(ShouldNotProcessUpdatesReason::DisabledByEnvironment);
   }
 
   // Do not process updates if we're launching devtools, as evidenced by
@@ -4938,6 +5203,23 @@ int XREMain::XRE_mainStartup(bool* aExitFlag,
       if (!disableWaylandProxy && XRE_IsParentProcess() && waylandEnabled) {
         auto* proxyLog = getenv("WAYLAND_PROXY_LOG");
         WaylandProxy::SetVerbose(proxyLog && *proxyLog);
+
+#    ifdef NIGHTLY_BUILD
+        bool captureProtocolErrors = true;
+#    else
+        bool captureProtocolErrors = false;
+#    endif
+        // MOZ_WAYLAND_PROTOCOL_ERROR_DETAILS=0 turns capture off on Nightly;
+        // any other non-empty value turns it on elsewhere.
+        if (auto* errorDetails = getenv("MOZ_WAYLAND_PROTOCOL_ERROR_DETAILS")) {
+          captureProtocolErrors = *errorDetails && *errorDetails != '0';
+        }
+        WaylandProxy::SetCaptureProtocolErrors(captureProtocolErrors);
+
+        WaylandProxy::SetThreadStartCallback(
+            [] { PROFILER_REGISTER_THREAD("WaylandProxy"); });
+        WaylandProxy::SetThreadStopCallback(
+            [] { PROFILER_UNREGISTER_THREAD(); });
         WaylandProxy::SetCompositorUnavailableHandler(
             WlCompositorUnavailableHandler);
         WaylandProxy::SetCompositorSilentDisconnectHandler(
@@ -5391,6 +5673,35 @@ int XREMain::XRE_mainStartup(bool* aExitFlag,
   MOZ_RELEASE_ASSERT(!cachesOK || lastVersion.Equals(version),
                      "Caches cannot be good if the version has changed.");
 
+  // Refuse to launch if the profile's on-disk encryption state and the
+  // launching build's pref disagree: silently opening encrypted DBs with
+  // the wrong VFS (or plaintext DBs as ciphertext) would corrupt them.
+  // This must run before any storage code. Skip in backgroundtask mode:
+  // those tasks operate on profile files independently of any SQLite
+  // consumer and must succeed regardless of the gate.
+#ifdef MOZ_BACKGROUNDTASKS
+  if (!BackgroundTasks::IsBackgroundTaskMode())
+#endif
+  {
+    bool prefEnabled =
+        StaticPrefs::security_storage_encryption_sqlite_enabled();
+    EncryptionCompatResult ec =
+        CheckEncryptionCompatibility(mProfD, prefEnabled);
+    if (ec != EncryptionCompatResult::OK) {
+      const char* msgKey =
+          ec == EncryptionCompatResult::RefuseEncryptedButPrefOff
+              ? "profileEncryptedButPrefOff"
+              : "profileNotEncryptedButPrefOn";
+      const char* titleKey =
+          ec == EncryptionCompatResult::RefuseEncryptedButPrefOff
+              ? "profileEncryptedButPrefOffTitle"
+              : "profileNotEncryptedButPrefOnTitle";
+      (void)ProfileEncryptionMismatchDialog(msgKey, titleKey, mNativeApp);
+      *aExitFlag = true;
+      return 0;
+    }
+  }
+
 #ifdef MOZ_BLOCK_PROFILE_DOWNGRADE
   // The argument check must come first so the argument is always removed from
   // the command line regardless of whether this is a downgrade or not.
@@ -5463,7 +5774,8 @@ int XREMain::XRE_mainStartup(bool* aExitFlag,
   bool startupCacheValid = true;
 
   if (!cachesOK || !versionOK) {
-    QuotaManager::InvalidateQuotaCache();
+    QuotaManager::InvalidateQuotaCache(
+        QuotaManager::CacheInvalidationLevel::Soft);
 
     startupCacheValid = RemoveComponentRegistries(mProfD, mProfLD, false);
 
@@ -5871,7 +6183,6 @@ nsresult XREMain::XRE_mainRun() {
           RegisterApplicationRestartChanged,
           PREF_WIN_REGISTER_APPLICATION_RESTART);
       SetupAlteredPrefetchPref();
-      SetupSkeletonUIPrefs();
 #  if defined(MOZ_LAUNCHER_PROCESS)
       SetupLauncherProcessPref();
 #  endif  // defined(MOZ_LAUNCHER_PROCESS)
@@ -5882,6 +6193,7 @@ nsresult XREMain::XRE_mainRun() {
       if (!BackgroundTasks::IsBackgroundTaskMode())
 #    endif  // defined(MOZ_BACKGROUNDTASKS)
       {
+        SetupSkeletonUIPrefs();
         Preferences::RegisterCallbackAndCall(
             &OnDefaultAgentTelemetryPrefChanged,
             kPrefHealthReportUploadEnabled);
@@ -5907,6 +6219,7 @@ nsresult XREMain::XRE_mainRun() {
       for (const auto& name : kStartupTokenNames) {
         g_unsetenv(name.get());
       }
+      nsAppShell::InitSessionRestore();
 #endif
 
 #ifdef XP_MACOSX
@@ -5926,7 +6239,7 @@ nsresult XREMain::XRE_mainRun() {
       free(tempArgv);
       NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
-#  ifdef MOZILLA_OFFICIAL
+#  if defined(MOZILLA_OFFICIAL) || defined(DMG_INSTALL_HELPER_DEBUG)
       // Check if we're running from a DMG or an app translocated location and
       // allow the user to install to the Applications directory.
       if (MacRunFromDmgUtils::MaybeInstallAndRelaunch()) {
@@ -6024,6 +6337,13 @@ nsresult XREMain::XRE_mainRun() {
   // We're entering the main run loop now, so we don't need to keep holding onto
   // the `nsICommandLineRunner` anymore.
   cmdLine = nullptr;
+
+#ifdef ACCESSIBILITY
+  // If accessibility.force_disabled is force enabled, start accessibility
+  // now rather than waiting for something to request it. This is the one
+  // place we can do this reliably on every platform.
+  a11y::MaybeStartForceEnabled();
+#endif
 
   {
     rv = appStartup->Run();
@@ -6194,11 +6514,6 @@ int XREMain::XRE_main(int argc, char* argv[], const BootstrapConfig& aConfig) {
 #  if defined(MOZ_SANDBOX)
   mAppData->sandboxBrokerServices = aConfig.sandboxBrokerServices;
 #  endif  // defined(MOZ_SANDBOX)
-
-  {
-    DebugOnly<bool> result = WindowsBCryptInitialization();
-    MOZ_ASSERT(result);
-  }
 
 #  if defined(_M_IX86) || defined(_M_X64)
   {
@@ -6484,7 +6799,11 @@ bool XRE_UseNativeEventProcessing() {
     case GeckoProcessType_GMPlugin:
       return mozilla::gmp::GMPProcessChild::UseNativeEventProcessing();
     case GeckoProcessType_Content:
+#if defined(XP_DARWIN)
+      return false;
+#else
       return StaticPrefs::dom_ipc_useNativeEventProcessing_content();
+#endif  // defined (XP_DARWIN)
     default:
       return true;
   }

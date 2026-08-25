@@ -15,13 +15,12 @@ from taskgraph.util.attributes import keymatch
 from taskgraph.util.keyed_by import evaluate_keyed_by
 from taskgraph.util.readonlydict import ReadOnlyDict
 from taskgraph.util.schema import Schema, resolve_keyed_by
-from taskgraph.util.taskcluster import get_artifact_path
+from taskgraph.util.taskcluster import get_artifact_path, get_index_url
 from taskgraph.util.templates import merge
 
 from gecko_taskgraph.transforms.test.variant import TEST_VARIANTS
 from gecko_taskgraph.util.perftest import is_external_browser
 from gecko_taskgraph.util.platforms import platform_family
-from gecko_taskgraph.util.taskcluster import get_index_url
 
 transforms = TransformSequence()
 
@@ -337,7 +336,16 @@ def setup_browsertime(config, tasks):
 
         ts = {
             "by-test-platform": {
-                "android.*": ["browsertime", "linux64-geckodriver", "linux64-node"],
+                "android-em-14-arm64.*": [
+                    "browsertime",
+                    "macosx64-geckodriver",
+                    "macosx64-aarch64-node",
+                ],
+                "android-(?!em-14-arm64).*": [
+                    "browsertime",
+                    "linux64-geckodriver",
+                    "linux64-node",
+                ],
                 "linux.*": ["browsertime", "linux64-geckodriver", "linux64-node"],
                 "macosx1470.*": [
                     "browsertime",
@@ -369,7 +377,8 @@ def setup_browsertime(config, tasks):
 
         fs = {
             "by-test-platform": {
-                "android.*": ["linux64-ffmpeg-7.1"],
+                "android-em-14-arm64.*": ["mac64-ffmpeg-7.1"],
+                "android-(?!em-14-arm64).*": ["linux64-ffmpeg-7.1"],
                 "linux.*": ["linux64-ffmpeg-7.1"],
                 "macosx1470.*": ["mac64-ffmpeg-7.1"],
                 "macosx1400.*": ["mac64-ffmpeg-7.1"],
@@ -380,7 +389,12 @@ def setup_browsertime(config, tasks):
         }
 
         cd_fetches = {
-            "android.*": [
+            "android-em-14-arm64.*": [
+                "mac-cft-cd-arm-backup",
+                "mac-cft-cd-arm-stable",
+                "mac-cft-cd-arm-beta",
+            ],
+            "android-(?!em-14-arm64).*": [
                 "linux64-cft-cd-backup",
                 "linux64-cft-cd-stable",
                 "linux64-cft-cd-beta",
@@ -414,11 +428,10 @@ def setup_browsertime(config, tasks):
 
         chromium_fetches = {
             "linux.*": ["linux64-cft-cd-canary"],
-            "macosx1400.*": ["mac-cft-cd-arm-canary"],
-            "macosx1470.*": ["mac-cft-cd-canary"],
             "macosx1500.*": ["mac-cft-cd-arm-canary"],
             "windows.*-64.*": ["win64-cft-cd-canary"],
-            "android.*": ["linux64-cft-cd-canary"],
+            "android-em-14-arm64.*": ["mac-cft-cd-arm-canary"],
+            "android-(?!em-14-arm64).*": ["linux64-cft-cd-canary"],
         }
 
         cd_extracted_name = {
@@ -470,6 +483,16 @@ def setup_browsertime(config, tasks):
                     "$MOZ_FETCHES_DIR/ffmpeg-n7.1-latest-win64-gpl-shared-7.1/bin/ffmpeg.exe",
                 ],
                 "macosx.*": [
+                    "--browsertime-node",
+                    "$MOZ_FETCHES_DIR/node/bin/node",
+                    "--browsertime-geckodriver",
+                    "$MOZ_FETCHES_DIR/geckodriver",
+                    "--browsertime-chromedriver",
+                    "$MOZ_FETCHES_DIR/" + cd_extracted_name["mac"],
+                    "--browsertime-ffmpeg",
+                    "$MOZ_FETCHES_DIR/ffmpeg-7.1/bin/ffmpeg",
+                ],
+                "android-em-14-arm64.*": [
                     "--browsertime-node",
                     "$MOZ_FETCHES_DIR/node/bin/node",
                     "--browsertime-geckodriver",
@@ -742,6 +765,33 @@ def apply_raptor_tier_optimization(config, tasks):
 
         if task["attributes"].get("unittest_variant"):
             task["tier"] = max(task["tier"], 2)
+        yield task
+
+
+@transforms.add
+def apply_bug2043540_optimization(config, tasks):
+    """Bug 2043540 - reduce mochitest-browser-chrome cadence on macosx1015-64
+    (Catalina) to relieve the backed-up 10.15 ESR pool.
+
+    Applied as a transform (rather than YAML `optimization:`) because the test
+    schema declares `optimization` and `schedules-component` as mutually
+    exclusive; mochitest-browser-chrome has schedules-component set. The
+    transform runs after schema validation, so setting task["optimization"]
+    here is safe.
+
+    skip-unless-backstop preserves coverage on m-c, beta, release, and ESR
+    branches (params["backstop"] is True for non-integration projects) and
+    only skips on regular autoland pushes (~95% of Catalina mbc cycles).
+    Applied to both opt and debug builds; the standalone debug variants
+    already carry skip-unless-backstop, so re-applying it is idempotent.
+    """
+    for task in tasks:
+        test_platform = task.get("test-platform", "")
+        if (
+            task.get("test-name") == "mochitest-browser-chrome"
+            and "macosx1015-64" in test_platform
+        ):
+            task["optimization"] = {"test-backstop": None}
         yield task
 
 

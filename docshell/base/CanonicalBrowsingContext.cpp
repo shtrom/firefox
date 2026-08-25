@@ -171,7 +171,7 @@ CanonicalBrowsingContext::CanonicalBrowsingContext(WindowContext* aParentWindow,
   MOZ_RELEASE_ASSERT(XRE_IsParentProcess());
 
   if (IsTop()) {
-    mScopedPrefs = new ScopedPrefs();
+    mScopedPrefs = MakeRefPtr<ScopedPrefs>();
   }
 
   // The initial URI in a BrowsingContext is always "about:blank".
@@ -213,9 +213,22 @@ const CanonicalBrowsingContext* CanonicalBrowsingContext::Cast(
 }
 
 already_AddRefed<CanonicalBrowsingContext> CanonicalBrowsingContext::Cast(
-    already_AddRefed<BrowsingContext>&& aContext) {
+    already_AddRefed<BrowsingContext> aContext) {
   MOZ_RELEASE_ASSERT(XRE_IsParentProcess());
   return aContext.downcast<CanonicalBrowsingContext>();
+}
+
+bool CanonicalBrowsingContext::IsKnownInSubTree(uint64_t aProcessId) {
+  bool isKnownInTree = false;
+  PreOrderWalk([&](BrowsingContext* aContext) {
+    if (aContext->Canonical()->IsOwnedByProcess(aProcessId)) {
+      isKnownInTree = true;
+      return WalkFlag::Stop;
+    }
+    return WalkFlag::Next;
+  });
+
+  return isKnownInTree;
 }
 
 ContentParent* CanonicalBrowsingContext::GetContentParent() const {
@@ -261,7 +274,7 @@ nsISecureBrowserUI* CanonicalBrowsingContext::GetSecureBrowserUI() {
     return nullptr;
   }
   if (!mSecureBrowserUI) {
-    mSecureBrowserUI = new nsSecureBrowserUI(this);
+    mSecureBrowserUI = MakeRefPtr<nsSecureBrowserUI>(this);
   }
   return mSecureBrowserUI;
 }
@@ -506,7 +519,7 @@ nsISHistory* CanonicalBrowsingContext::GetSessionHistory() {
   // Check GetChildSessionHistory() to make sure that this BrowsingContext has
   // session history enabled.
   if (!mSessionHistory && GetChildSessionHistory()) {
-    mSessionHistory = new nsSHistory(this);
+    mSessionHistory = MakeRefPtr<nsSHistory>(this);
   }
 
   return mSessionHistory;
@@ -614,7 +627,7 @@ CanonicalBrowsingContext::CreateLoadingSessionHistoryEntryForLoad(
              mActiveEntry) {
     entry = mActiveEntry;
   } else {
-    entry = new SessionHistoryEntry(aLoadState, aChannel);
+    entry = MakeRefPtr<SessionHistoryEntry>(aLoadState, aChannel);
     if (!IsTop() && (mActiveEntry || !mLoadingEntries.IsEmpty())) {
       entry->SetIsSubFrame(true);
     }
@@ -957,8 +970,6 @@ RefPtr<PrintPromise> CanonicalBrowsingContext::Print(
 #ifndef NS_PRINTING
   return PrintPromise::CreateAndReject(NS_ERROR_NOT_AVAILABLE, __func__);
 #else
-// Content analysis is not supported on non-Windows platforms.
-#  if defined(XP_WIN)
   bool needContentAnalysis = false;
   nsCOMPtr<nsIContentAnalysis> contentAnalysis =
       mozilla::components::nsIContentAnalysis::Service();
@@ -1001,7 +1012,6 @@ RefPtr<PrintPromise> CanonicalBrowsingContext::Print(
             });
     return done;
   }
-#  endif
   return PrintWithNoContentAnalysis(aPrintSettings, false, nullptr);
 #endif
 }
@@ -1367,7 +1377,7 @@ void CanonicalBrowsingContext::SessionHistoryCommit(
 already_AddRefed<nsDocShellLoadState> CanonicalBrowsingContext::CreateLoadInfo(
     SessionHistoryEntry* aEntry, NavigationType aNavigationType) {
   const SessionHistoryInfo& info = aEntry->Info();
-  RefPtr<nsDocShellLoadState> loadState(new nsDocShellLoadState(info.GetURI()));
+  RefPtr loadState = MakeRefPtr<nsDocShellLoadState>(info.GetURI());
   info.FillLoadInfo(*loadState);
   UniquePtr<LoadingSessionHistoryInfo> loadingInfo;
   loadingInfo = MakeUnique<LoadingSessionHistoryInfo>(aEntry);
@@ -1440,9 +1450,11 @@ void CanonicalBrowsingContext::SetActiveSessionHistoryEntry(
     oldActiveEntry->SetScrollPosition(aPreviousScrollPos.ref().x,
                                       aPreviousScrollPos.ref().y);
   }
-  mActiveEntry = new SessionHistoryEntry(aInfo);
+  mActiveEntry = MakeRefPtr<SessionHistoryEntry>(aInfo);
   mActiveEntry->SetDocshellID(GetHistoryID());
-  mActiveEntry->AdoptBFCacheEntry(oldActiveEntry);
+  if (oldActiveEntry) {
+    mActiveEntry->AdoptBFCacheEntry(oldActiveEntry);
+  }
   if (aUpdatedCacheKey != 0) {
     mActiveEntry->SharedInfo()->mCacheKey = aUpdatedCacheKey;
   }
@@ -1643,7 +1655,7 @@ void CanonicalBrowsingContext::NavigationTraverse(
   MOZ_LOG_FMT(gNavigationAPILog, LogLevel::Debug, "Traverse navigation to {}",
               aKey.ToString().get());
   nsSHistory* shistory = static_cast<nsSHistory*>(GetSessionHistory());
-  if (!shistory) {
+  if (!shistory || !mActiveEntry) {
     return aResolver(NS_ERROR_DOM_INVALID_STATE_ERR);
   }
   RefPtr<SessionHistoryEntry> targetEntry;
@@ -1716,9 +1728,23 @@ void CanonicalBrowsingContext::DispatchWheelZoomChange(bool aIncrease) {
 }
 
 void CanonicalBrowsingContext::CanonicalDiscard() {
+  // Top (tab) BC case: mTabMediaController is only ever created on the
+  // top-level BC, so this tears down the tab's own controller.
   if (mTabMediaController) {
     mTabMediaController->Shutdown();
     mTabMediaController = nullptr;
+  }
+
+  // Child BC case: a child never owns mTabMediaController, but the tab's
+  // controller may still hold audibility state for this context. Clear it now
+  // so audiblechange fires correctly when an audible iframe is removed.
+  // GetMediaController() forwards to Top() for a child, so it returns the tab's
+  // controller (the one handled above for a top BC) rather than recreating a
+  // controller for this child.
+  if (!IsTop()) {
+    if (RefPtr<MediaController> mc = GetMediaController()) {
+      mc->NotifyBrowsingContextDiscarded(Id());
+    }
   }
 
   if (mCurrentLoad) {
@@ -1879,13 +1905,6 @@ void CanonicalBrowsingContext::NotifyStartDelayedAutoplayMedia() {
   });
 }
 
-void CanonicalBrowsingContext::NotifyMediaMutedChanged(bool aMuted,
-                                                       ErrorResult& aRv) {
-  MOZ_ASSERT(!GetParent(),
-             "Notify media mute change on non top-level context!");
-  SetMuted(aMuted, aRv);
-}
-
 uint32_t CanonicalBrowsingContext::CountSiteOrigins(
     GlobalObject& aGlobal,
     const Sequence<OwningNonNull<BrowsingContext>>& aRoots) {
@@ -1925,6 +1944,17 @@ void CanonicalBrowsingContext::UpdateMediaControlAction(
   ContentMediaControlKeyHandler::HandleMediaControlAction(this, aAction);
   Group()->EachParent([&](ContentParent* aParent) {
     (void)aParent->SendUpdateMediaControlAction(this, aAction);
+  });
+}
+
+void CanonicalBrowsingContext::UpdateMediaSessionInterrupt(
+    AudioFocusInterruptAction aAction) {
+  if (IsDiscarded()) {
+    return;
+  }
+  ContentMediaControlKeyHandler::HandleAudioFocusInterrupt(this, aAction);
+  Group()->EachParent([&](ContentParent* aParent) {
+    (void)aParent->SendUpdateMediaSessionInterrupt(this, aAction);
   });
 }
 
@@ -2342,14 +2372,14 @@ nsresult CanonicalBrowsingContext::PendingRemotenessChange::FinishSubframe() {
 
   nsCOMPtr<nsIPrincipal> initialPrincipal =
       NullPrincipal::Create(target->OriginAttributesRef());
-  RefPtr<nsOpenWindowInfo> openWindowInfo = new nsOpenWindowInfo();
+  RefPtr openWindowInfo = MakeRefPtr<nsOpenWindowInfo>();
   openWindowInfo->mPrincipalToInheritForAboutBlank = initialPrincipal;
   WindowGlobalInit windowInit =
       WindowGlobalActor::AboutBlankInitializer(target, initialPrincipal);
 
   // Create and initialize our new BrowserBridgeParent.
   TabId tabId(nsContentUtils::GenerateTabId());
-  RefPtr<BrowserBridgeParent> bridge = new BrowserBridgeParent();
+  RefPtr bridge = MakeRefPtr<BrowserBridgeParent>();
   nsresult rv =
       bridge->InitWithProcess(embedderBrowser, mContentParentKeepAlive.get(),
                               windowInit, chromeFlags, tabId);
@@ -2530,8 +2560,8 @@ CanonicalBrowsingContext::ChangeRemoteness(
   auto promise = MakeRefPtr<RemotenessPromise::Private>(__func__);
   promise->UseDirectTaskDispatch(__func__);
 
-  RefPtr<PendingRemotenessChange> change =
-      new PendingRemotenessChange(this, promise, aPendingSwitchId, aOptions);
+  RefPtr change = MakeRefPtr<PendingRemotenessChange>(
+      this, promise, aPendingSwitchId, aOptions);
   mPendingRemotenessChange = change;
 
   // If we're replacing BrowsingContext, determine which BrowsingContextGroup
@@ -2684,7 +2714,7 @@ MediaController* CanonicalBrowsingContext::GetMediaController() {
   // Only content browsing context can create media controller, we won't create
   // controller for chrome document, such as the browser UI.
   if (!mTabMediaController && !IsDiscarded() && IsContent()) {
-    mTabMediaController = new MediaController(Id());
+    mTabMediaController = MakeRefPtr<MediaController>(Id());
   }
   return mTabMediaController;
 }
@@ -2845,9 +2875,29 @@ void CanonicalBrowsingContext::HistoryCommitIndexAndLength(
 
   shistory->EvictOutOfRangeDocumentViewers(index);
 
+  nsTArray<NavigationEntriesTruncation> truncations;
+  if (Navigation::IsAPIEnabled()) {
+    PreOrderWalk([&truncations](BrowsingContext* aContext) {
+      RefPtr<SessionHistoryEntry> activeEntry =
+          aContext->Canonical()->GetActiveSessionHistoryEntry();
+      if (!activeEntry) {
+        return;
+      }
+      uint32_t count = 0;
+      nsSHistory::WalkContiguousEntriesInOrder(activeEntry,
+                                               [&count](SessionHistoryEntry*) {
+                                                 ++count;
+                                                 return true;
+                                               });
+      if (count) {
+        truncations.AppendElement(NavigationEntriesTruncation{aContext, count});
+      }
+    });
+  }
+
   Group()->EachParent([&](ContentParent* aParent) {
     (void)aParent->SendHistoryCommitIndexAndLength(this, index, length,
-                                                   aChangeID);
+                                                   aChangeID, truncations);
   });
 
   shistory->NotifyOnHistoryCommit();
@@ -2986,7 +3036,7 @@ void CanonicalBrowsingContext::SetRestoreData(SessionStoreRestoreData* aData,
     return;
   }
 
-  mRestoreState = new RestoreState();
+  mRestoreState = MakeRefPtr<RestoreState>();
   mRestoreState->mData = aData;
   mRestoreState->mPromise = promise;
 }
@@ -3542,7 +3592,10 @@ nsresult CanonicalBrowsingContext::ClearBfcacheByPrincipal(
 
 void CanonicalBrowsingContext::SetIsActive(bool aIsActive, ErrorResult& aRv) {
 #ifdef DEBUG
-  if (MOZ_UNLIKELY(!ManuallyManagesActiveness())) {
+  if (MOZ_UNLIKELY(!GetEmbedderElement())) {
+    // Cannot check manualactiveness attribute, bug 2043216.
+    NS_WARNING("Setting activeness for browsingcontext without embedder");
+  } else if (MOZ_UNLIKELY(!ManuallyManagesActiveness())) {
     xpc_DumpJSStack(true, true, false);
     MOZ_ASSERT_UNREACHABLE(
         "Trying to manually manage activeness of a browsing context that isn't "

@@ -28,6 +28,7 @@
 
 #if defined(XP_WIN)
 #  include <winternl.h>  // must include before util/WindowsWrapper.h's `#undef`s
+
 #  include "util/WindowsWrapper.h"
 #elif defined(XP_DARWIN)
 #  include <mach/exc.h>
@@ -750,8 +751,7 @@ static void MachExceptionHandlerThread() {
     // the kernel. The kernel is waiting for us to reply with instructions.
     // Our default is the "not handled" reply (by setting the RetCode field
     // of the reply to KERN_FAILURE) which tells the kernel to continue
-    // searching at the process and system level. If this is an asm.js
-    // expected exception, we handle it and return KERN_SUCCESS.
+    // searching at the process and system level.
     bool handled = HandleMachException(request);
     kern_return_t replyCode = handled ? KERN_SUCCESS : KERN_FAILURE;
 
@@ -1049,11 +1049,17 @@ bool wasm::MemoryAccessTraps(const RegisterState& regs, uint8_t* addr,
       break;
     case Trap::NullPointerDereference:
     case Trap::BadCast:
+      if ((uintptr_t)addr >= NullPtrGuardSize) {
+        return false;
+      }
       break;
 #  ifdef WASM_HAS_HEAPREG
     case Trap::IndirectCallToNull:
-      // We use the null pointer exception from loading the heapreg to
-      // handle indirect calls to null.
+      // Null pointer plus the appropriate offset.
+      if (addr !=
+          reinterpret_cast<uint8_t*>(wasm::Instance::offsetOfMemory0Base())) {
+        return false;
+      }
       break;
 #  endif
     default:
@@ -1082,19 +1088,10 @@ bool wasm::MemoryAccessTraps(const RegisterState& regs, uint8_t* addr,
       break;
     case Trap::NullPointerDereference:
     case Trap::BadCast:
-      if ((uintptr_t)addr >= NullPtrGuardSize) {
-        return false;
-      }
-      break;
 #  ifdef WASM_HAS_HEAPREG
     case Trap::IndirectCallToNull:
-      // Null pointer plus the appropriate offset.
-      if (addr !=
-          reinterpret_cast<uint8_t*>(wasm::Instance::offsetOfMemory0Base())) {
-        return false;
-      }
-      break;
 #  endif
+      break;
     default:
       MOZ_CRASH("Should not happen");
   }

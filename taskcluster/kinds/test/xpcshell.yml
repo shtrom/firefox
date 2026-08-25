@@ -5,9 +5,9 @@
 task-defaults:
     worker-type:
         by-test-platform:
-            windows.*-(32|64).*-asan/.*: win11-64-25h2-large
-            windows.*aarch64.*/.*: win11-a64-25h2
-            windows.*/.*: win11-64-25h2
+            windows11.*-(32|64).*-asan/.*: win11-64-25h2-large
+            windows11.*aarch64.*/.*: win11-a64-25h2
+            windows11.*/.*: win11-64-25h2
             default: default
     suite:
         category: xpcshell
@@ -55,6 +55,7 @@ xpcshell:
         - no-fission
         - msix
         - inc-origin-init
+        - privatebrowsing
     instance-size:
         by-variant:
             conditioned_profile:
@@ -80,10 +81,11 @@ xpcshell:
                     default: []
             msix:
                 by-test-platform:
-                    windows11-64-24h2(-shippable)?/opt: built-projects
-                    windows11-64-24h2/debug: built-projects
+                    windows11-64-25h2(-shippable)?/opt: built-projects
+                    windows11-64-25h2/debug: built-projects
                     default: []
             inc-origin-init: []
+            privatebrowsing: []
             default:
                 by-test-platform:
                     android.*: built-projects

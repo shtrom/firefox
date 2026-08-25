@@ -307,33 +307,6 @@ bool MWasmAlignmentCheck::congruentTo(const MDefinition* ins) const {
   return byteSize_ == check->byteSize() && congruentIfOperandsEqual(check);
 }
 
-MDefinition::AliasType MAsmJSLoadHeap::mightAlias(
-    const MDefinition* def) const {
-  if (def->isAsmJSStoreHeap()) {
-    const MAsmJSStoreHeap* store = def->toAsmJSStoreHeap();
-    if (store->accessType() != accessType()) {
-      return AliasType::MayAlias;
-    }
-    if (!base()->isConstant() || !store->base()->isConstant()) {
-      return AliasType::MayAlias;
-    }
-    const MConstant* otherBase = store->base()->toConstant();
-    if (base()->toConstant()->equals(otherBase)) {
-      return AliasType::MayAlias;
-    }
-    return AliasType::NoAlias;
-  }
-  return AliasType::MayAlias;
-}
-
-bool MAsmJSLoadHeap::congruentTo(const MDefinition* ins) const {
-  if (!ins->isAsmJSLoadHeap()) {
-    return false;
-  }
-  const MAsmJSLoadHeap* load = ins->toAsmJSLoadHeap();
-  return load->accessType() == accessType() && congruentIfOperandsEqual(load);
-}
-
 MDefinition::AliasType MWasmLoadInstanceDataField::mightAlias(
     const MDefinition* def) const {
   if (def->isWasmStoreInstanceDataField()) {
@@ -909,6 +882,10 @@ bool MWasmResume::initHandler(size_t index, uint32_t tagInstanceDataOffset,
   handlers_[index].resultsAreaOffset = resultsAreaOffset;
   return true;
 }
+
+AliasSet MWasmSuspend::getAliasSet() const {
+  return MWasmCallBase::wasmCallAliasSet();
+}
 #endif  // ENABLE_WASM_JSPI
 
 MIonToWasmCall* MIonToWasmCall::New(TempAllocator& alloc,
@@ -977,6 +954,7 @@ MWasmShuffleSimd128* jit::BuildWasmShuffleSimd128(TempAllocator& alloc,
 static MDefinition* FoldTrivialWasmTests(TempAllocator& alloc,
                                          wasm::RefType sourceType,
                                          wasm::RefType destType) {
+  // Ignore everything involving uninhabitable types, because they are weird.
   if (!sourceType.isInhabitable() || !destType.isInhabitable()) {
     return nullptr;
   }
@@ -988,7 +966,7 @@ static MDefinition* FoldTrivialWasmTests(TempAllocator& alloc,
 
   // If two types are completely disjoint, then all casts between them are
   // impossible.
-  if (!wasm::RefType::castPossible(destType, sourceType)) {
+  if (!wasm::RefType::valuesInCommon(destType, sourceType)) {
     return MConstant::NewInt32(alloc, 0);
   }
 
@@ -998,6 +976,7 @@ static MDefinition* FoldTrivialWasmTests(TempAllocator& alloc,
 static MDefinition* FoldTrivialWasmCasts(MDefinition* ref,
                                          wasm::RefType sourceType,
                                          wasm::RefType destType) {
+  // Ignore everything involving uninhabitable types, because they are weird.
   if (!sourceType.isInhabitable() || !destType.isInhabitable()) {
     return nullptr;
   }

@@ -6,7 +6,6 @@
 /* import-globals-from main.js */
 /* import-globals-from home.js */
 /* import-globals-from search.js */
-/* import-globals-from containers.js */
 /* import-globals-from privacy.js */
 /* import-globals-from sync.js */
 /* import-globals-from moreFromMozilla.js */
@@ -19,6 +18,7 @@
 /** @import {SettingControlConfig, SettingOptionConfig} from "chrome://browser/content/preferences/widgets/setting-control.mjs" */
 /** @import {SettingGroup} from "chrome://browser/content/preferences/widgets/setting-group.mjs" */
 /** @import {SettingPane, SettingPaneConfig} from "chrome://browser/content/preferences/widgets/setting-pane.mjs" */
+/** @import {FocusHistory} from "chrome://browser/content/preferences/FocusHistory.mjs" */
 
 /**
  * @typedef {object} PaneShownEventDetail
@@ -97,7 +97,7 @@ if (Cc["@mozilla.org/gio-service;1"]) {
 ChromeUtils.defineESModuleGetters(this, {
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   ContextualIdentityService:
-    "resource://gre/modules/ContextualIdentityService.sys.mjs",
+    "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   DownloadUtils: "resource://gre/modules/DownloadUtils.sys.mjs",
   ExperimentAPI: "resource://nimbus/ExperimentAPI.sys.mjs",
   ExtensionPreferencesManager:
@@ -107,7 +107,7 @@ ChromeUtils.defineESModuleGetters(this, {
   FileUtils: "resource://gre/modules/FileUtils.sys.mjs",
   FirefoxRelay: "resource://gre/modules/FirefoxRelay.sys.mjs",
   HomePage: "resource:///modules/HomePage.sys.mjs",
-  LangPackMatcher: "resource://gre/modules/LangPackMatcher.sys.mjs",
+  LangPackMatcher: "moz-src:///intl/locale/LangPackMatcher.sys.mjs",
   LoginHelper: "resource://gre/modules/LoginHelper.sys.mjs",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   OSKeyStore: "resource://gre/modules/OSKeyStore.sys.mjs",
@@ -206,6 +206,34 @@ let resolveLegacyCategory = ChromeUtils.importESModule(
   }
 ).resolveLegacyCategory;
 
+var { ScrollOffsets } = ChromeUtils.importESModule(
+  "chrome://global/content/ScrollOffsets.mjs",
+  {
+    global: "current",
+  }
+);
+
+var { FocusHistory } = ChromeUtils.importESModule(
+  "chrome://browser/content/preferences/FocusHistory.mjs",
+  {
+    global: "current",
+  }
+);
+
+/** @type {ScrollOffsets} */
+var scrollOffsets;
+
+/** @type {FocusHistory} */
+var focusHistory = new FocusHistory();
+
+/**
+ * Id of the history entry currently shown. Tracked so the entry being
+ * left can be passed to `focusHistory.save()` before transitioning.
+ *
+ * @type {number?}
+ */
+var gCurrentHistoryEntryId = null;
+
 /**
  * Register initial config-based setting panes here. If you need to register a
  * pane elsewhere, use {@link SettingPaneManager['registerPane']}.
@@ -238,7 +266,8 @@ const CONFIG_PANES = Object.freeze({
     groupIds: [
       "appearance",
       "browserTheme",
-      "browserLayout",
+      "browserIconEntry",
+      "windowDensity",
       "relatedSettings",
     ],
     module: "chrome://browser/content/preferences/config/appearance.mjs",
@@ -246,7 +275,7 @@ const CONFIG_PANES = Object.freeze({
     visible: () => srdSectionPrefs.all,
   },
   ai: {
-    l10nId: "preferences-ai-controls-header2",
+    l10nId: "preferences-ai-controls-header3",
     iconSrc: "chrome://global/skin/icons/highlights.svg",
     groupIds: ["aiControlsDescription", "aiFeatures", "aiStatesDescription"],
     module: "chrome://browser/content/preferences/config/aiFeatures.mjs",
@@ -254,7 +283,7 @@ const CONFIG_PANES = Object.freeze({
       Services.prefs.getBoolPref("browser.preferences.aiControls", false),
   },
   downloads: {
-    l10nId: "pane-downloads2",
+    l10nId: "pane-downloads3",
     iconSrc: "chrome://browser/skin/downloads/downloads.svg",
     groupIds: ["downloads", "applications"],
     module: "chrome://browser/content/preferences/config/downloads.mjs",
@@ -316,7 +345,7 @@ const CONFIG_PANES = Object.freeze({
     replaces: "home",
   },
   languages: {
-    l10nId: "preferences-languages-header2",
+    l10nId: "preferences-languages-header3",
     iconSrc: "chrome://browser/skin/translations.svg",
     groupIds: [
       "browserLanguage",
@@ -332,6 +361,14 @@ const CONFIG_PANES = Object.freeze({
     l10nId: "autofill-addresses-manage-addresses-title",
     groupIds: ["manageAddresses"],
     iconSrc: "chrome://browser/skin/notification-icons/geo.svg",
+    module:
+      "chrome://browser/content/preferences/config/passwords-autofill.mjs",
+  },
+  managePersonalInfo: {
+    parent: "passwordsAutofill",
+    l10nId: "autofill-personal-info-manage-title",
+    groupIds: ["managePersonalInfo"],
+    iconSrc: "chrome://browser/skin/personal-info-16.svg",
     module:
       "chrome://browser/content/preferences/config/passwords-autofill.mjs",
   },
@@ -365,7 +402,7 @@ const CONFIG_PANES = Object.freeze({
   personalizeSmartWindow: {
     parent: "ai",
     l10nId: "ai-window-personalize-header",
-    iconSrc: "chrome://browser/skin/smart-window-mono.svg",
+    iconSrc: "chrome://browser/skin/smart-window-mono-32.svg",
     badge: "beta",
     groupIds: ["assistantDefaultGroup", "assistantModelGroup", "memoriesGroup"],
     module: "chrome://browser/content/preferences/config/aiFeatures.mjs",
@@ -373,7 +410,7 @@ const CONFIG_PANES = Object.freeze({
   passwordsAutofill: {
     l10nId: "preferences-passwords-autofill-header",
     iconSrc: "chrome://browser/skin/login.svg",
-    groupIds: ["passwords", "addresses", "payments"],
+    groupIds: ["passwords", "payments", "addresses", "personalInfo"],
     module:
       "chrome://browser/content/preferences/config/passwords-autofill.mjs",
     visible: () => srdSectionEnabled("passwordsAutofill"),
@@ -412,11 +449,13 @@ const CONFIG_PANES = Object.freeze({
     iconSrc: "chrome://browser/skin/fxa/avatar-empty.svg",
     groupIds: [
       "defaultBrowserSync",
+      "accountDisabled",
       "account",
       "sync",
       "importBrowserData",
       "profiles",
       "backup",
+      "referrals",
     ],
     module: "chrome://browser/content/preferences/config/account-sync.mjs",
     replaces: "sync",
@@ -432,8 +471,10 @@ const CONFIG_PANES = Object.freeze({
   tabsBrowsing: {
     l10nId: "tabs-browsing-section",
     groupIds: [
+      "browserLayout",
       "tabs",
       "pageNavigation",
+      "keyboardShortcuts",
       "media",
       "performance",
       "recommendations",
@@ -453,6 +494,12 @@ const CONFIG_PANES = Object.freeze({
     module: "chrome://browser/content/preferences/config/translations.mjs",
     visible: () => srdSectionEnabled("translations"),
   },
+  containers: {
+    parent: srdSectionEnabled("tabsBrowsing") ? "tabsBrowsing" : "general",
+    l10nId: "containers-section-header2",
+    groupIds: ["containers", "siteContainers"],
+    module: "chrome://browser/content/preferences/config/containers.mjs",
+  },
 });
 
 var gLastCategory = { category: undefined, subcategory: undefined };
@@ -471,7 +518,7 @@ function register_module(categoryName, categoryObject) {
       }
       this._initted = true;
       let template = document.getElementById("template-" + categoryName);
-      if (template) {
+      if (template && !srdSectionPrefs.all) {
         // Replace the template element with the nodes inside of it.
         template.replaceWith(template.content);
 
@@ -501,6 +548,10 @@ function init_all() {
   // the entire document.
   Preferences.queueUpdateOfAllElements();
 
+  scrollOffsets = new ScrollOffsets(
+    /** @type {HTMLElement} */ (document.querySelector(".main-content"))
+  );
+
   let redesignEnabled = srdSectionPrefs.all;
 
   if (!redesignEnabled) {
@@ -511,7 +562,6 @@ function init_all() {
   register_module("paneHome", gHomePane);
   register_module("paneSearch", gSearchPane);
   register_module("panePrivacy", gPrivacyPane);
-  register_module("paneContainers", gContainersPane);
 
   // Restore the cached Firefox Labs nav button visibility so it shows
   // immediately when recipes are expected to be available, before
@@ -558,6 +608,20 @@ function init_all() {
       groupIds: ["customHomepage"],
       module: "chrome://browser/content/preferences/config/home-startup.mjs",
     });
+
+    if (
+      AppConstants.platform == "win" &&
+      Services.prefs.getBoolPref("browser.shell.customIcon.enabled", false) &&
+      !Services.sysinfo.getProperty("hasWinPackageId")
+    ) {
+      SettingPaneManager.registerPane("browserIcon", {
+        parent: "appearance",
+        iconSrc: "chrome://browser/skin/sidebar/firefox.svg",
+        l10nId: "appearance-browser-icon-subpage-title",
+        groupIds: ["browserIconBasic", "browserIconBonus"],
+        module: "chrome://browser/content/preferences/config/browser-icon.mjs",
+      });
+    }
   } else {
     NimbusFeatures.moreFromMozilla.recordExposureEvent({ once: true });
     if (NimbusFeatures.moreFromMozilla.getVariable("enabled")) {
@@ -605,8 +669,33 @@ function init_all() {
   });
 }
 
+/**
+ * Fires when navigating back/forward from or to
+ * a hashed URL or if the hash is changed in the URL bar.
+ */
 function onHashChange() {
-  gotoPref(null, "Hash");
+  /**
+   * If there is a query that was active, it would be on `history.state.searchQuery`,
+   * in which case this reapplies it or {@link gotoPref} will inadvertently
+   * redirect to the default pane if the input is empty. Then it replays the search
+   * after {@link gotoPref} settles so results are shown and highlighted again.
+   */
+  let restoredQuery =
+    document.location.hash === "#searchResults" &&
+    history.state?.searchQuery &&
+    !gSearchResultsPane.searchInput.value
+      ? history.state.searchQuery
+      : null;
+  if (restoredQuery) {
+    gSearchResultsPane.searchInput.value = restoredQuery;
+  }
+  gotoPref(null, "Hash").then(() => {
+    if (restoredQuery) {
+      gSearchResultsPane.searchFunction({
+        target: gSearchResultsPane.searchInput,
+      });
+    }
+  });
 }
 
 function onBeforeunload() {
@@ -681,6 +770,18 @@ async function gotoPref(
   // Updating the hash (below) or changing the selected category
   // will re-enter gotoPref.
   if (gLastCategory.category == category && !subcategory) {
+    document.dispatchEvent(
+      /** @type {PaneShownEvent} */ (
+        new CustomEvent("paneshown", {
+          bubbles: true,
+          cancelable: true,
+          detail: {
+            category,
+            subcategory,
+          },
+        })
+      )
+    );
     return;
   }
 
@@ -723,9 +824,42 @@ async function gotoPref(
     if (
       !(!document.location.hash && category == kDefaultCategoryInternalName)
     ) {
-      document.location.hash = friendlyName;
+      let targetHash = "#" + friendlyName;
+      if (document.location.hash != targetHash) {
+        if (aShowReason == "Click") {
+          // A user clicked on a category, so add a history entry so back navigates between panes.
+          history.pushState(category, document.title, targetHash);
+        } else {
+          // Adding a new entry here would trap the back button on about:preferences.
+          history.replaceState(category, document.title, targetHash);
+        }
+      }
     }
   }
+  /**
+   * On back/forward (aShowReason == "Hash") reuse the entry's saved id
+   * so its scroll position gets restored. Any other reason is a new
+   * entry with a fresh id.
+   */
+  let historyEntryId =
+    (aShowReason == "Hash" && history.state?.historyEntryId) ||
+    scrollOffsets.newHistoryEntryId();
+
+  /**
+   * Capture the previous category before gLastCategory is reassigned below,
+   * so the sub-pane drill-down check can compare names.
+   */
+  let prevCategory = gLastCategory.category;
+
+  // Save the previous entry's scroll offset and focused element before
+  // switching, so that returning to it later restores the user's place.
+  scrollOffsets.save();
+  scrollOffsets.setView(historyEntryId);
+  if (gCurrentHistoryEntryId != null) {
+    focusHistory.save(gCurrentHistoryEntryId);
+  }
+  gCurrentHistoryEntryId = historyEntryId;
+
   // Need to set the gLastCategory before setting categories.currentView since
   // the change-view event will re-enter the gotoPref codepath.
   gLastCategory.category = category;
@@ -748,7 +882,31 @@ async function gotoPref(
   }
 
   categories.currentView = currentView;
-  window.history.replaceState(category, document.title);
+
+  /**
+   * Record the current and previous category on the history entry. The
+   * previous category lets the sub-pane back arrow tell when the parent
+   * pane sits one entry back in history (and therefore its saved scroll
+   * position should be restored). Preserved across browser back/forward
+   * navigations.
+   */
+  let previousCategory = null;
+  if (aShowReason == "Hash") {
+    previousCategory = history.state?.previousCategory ?? null;
+  } else if (aShowReason == "Click" && prevCategory) {
+    previousCategory = internalPrefCategoryNameToFriendlyName(prevCategory);
+  }
+  // history.state may be a string (set as `category` by the pushState/
+  // replaceState calls above), so only spread it when it's an object.
+  let prevState =
+    history.state && typeof history.state === "object" ? history.state : null;
+  let newState = {
+    ...prevState,
+    historyEntryId,
+    category: internalPrefCategoryNameToFriendlyName(category),
+    previousCategory,
+  };
+  window.history.replaceState(newState, document.title);
 
   let categoryInfo = gCategoryInits.get(category);
   if (!categoryInfo) {
@@ -777,7 +935,8 @@ async function gotoPref(
   search(category, "data-category");
 
   if (aShowReason != "Initial") {
-    document.querySelector(".main-content").scrollTop = 0;
+    scrollOffsets.restore();
+    focusHistory.restore(historyEntryId);
   }
 
   // Check to see if the category module wants to do any special
@@ -1006,7 +1165,6 @@ function appendSearchKeywords(aId, keywords) {
 
 function maybeDisplayPoliciesNotice() {
   if (Services.policies.status == Services.policies.ACTIVE) {
-    document.getElementById("policies-container").removeAttribute("hidden");
     document
       .getElementById("policies-container-content")
       .removeAttribute("hidden");

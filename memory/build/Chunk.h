@@ -151,7 +151,7 @@ struct arena_chunk_t {
   arena_t* mArena;
 
   // Linkage for the arena's list of dirty chunks.
-  mozilla::DoublyLinkedListElement<arena_chunk_t> mChunksDirtyElim;
+  mozilla::DoublyLinkedListElement<arena_chunk_t> mChunksDirtyElement;
 
 #ifdef MALLOC_DOUBLE_PURGE
   // If we're double-purging, we maintain a linked list of chunks which
@@ -160,7 +160,7 @@ struct arena_chunk_t {
   //
   // We're currently lazy and don't remove a chunk from this list when
   // all its madvised pages are recommitted.
-  mozilla::DoublyLinkedListElement<arena_chunk_t> mChunksMavisedElim;
+  mozilla::DoublyLinkedListElement<arena_chunk_t> mChunksMadvisedElement;
 #endif
 
   // Number of dirty pages that may be purged, the header is never counted
@@ -169,7 +169,7 @@ struct arena_chunk_t {
 
   // This will point to the page index of the first run that may have dirty
   // pages.
-  uint16_t mDirtyRunHint;
+  uint16_t mDirtyRunHint = 0;
 
   bool mIsPurging = false;
   bool mDying = false;
@@ -185,12 +185,12 @@ struct arena_chunk_t {
 namespace mozilla {
 struct DirtyChunkListTrait {
   static DoublyLinkedListElement<arena_chunk_t>& Get(arena_chunk_t* aThis) {
-    return aThis->mChunksDirtyElim;
+    return aThis->mChunksDirtyElement;
   }
 
   static const DoublyLinkedListElement<arena_chunk_t>& Get(
       const arena_chunk_t* aThis) {
-    return aThis->mChunksDirtyElim;
+    return aThis->mChunksDirtyElement;
   }
 
   using SearchKey = arena_chunk_t*;

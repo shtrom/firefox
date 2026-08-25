@@ -4,7 +4,13 @@
 
 LOCAL_INCLUDES += [
     "../..",
+    "../../../../../third_party/abseil-cpp",
     "../../../../../third_party/content_analysis_sdk/browser/include/",
+]
+
+# Platform-independent tests.
+UNIFIED_SOURCES += [
+    "TestContentAnalysisRuleParser.cpp",
 ]
 
 if CONFIG["OS_TARGET"] == "WINNT":

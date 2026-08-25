@@ -51,8 +51,6 @@ void RemoteDecoderChild::DestroyIPDL() {
   }
 }
 
-void RemoteDecoderChild::IPDLActorDestroyed() { mIPDLSelfRef = nullptr; }
-
 // MediaDataDecoder methods
 
 RefPtr<MediaDataDecoder::InitPromise> RemoteDecoderChild::Init() {
@@ -297,7 +295,7 @@ RemoteMediaManagerChild* RemoteDecoderChild::GetManager() {
   if (!CanSend()) {
     return nullptr;
   }
-  return static_cast<RemoteMediaManagerChild*>(Manager());
+  return mozilla::ipc::ActorCast<RemoteMediaManagerChild>(Manager());
 }
 
 }  // namespace mozilla

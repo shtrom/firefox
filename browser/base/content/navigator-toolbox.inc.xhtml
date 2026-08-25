@@ -7,7 +7,7 @@
 
   <!-- Menu -->
   <toolbar type="menubar" id="toolbar-menubar"
-           class="browser-toolbar chromeclass-menubar browser-titlebar"
+           class="browser-toolbar browser-titlebar"
            customizable="true"
            mode="icons"
            autohide="true"
@@ -36,14 +36,6 @@
     <hbox flex="1" align="end" class="toolbar-items">
       <toolbartabstop/>
       <hbox id="TabsToolbar-customization-target" flex="1">
-        <toolbarbutton id="firefox-view-button"
-                       class="toolbarbutton-1 chromeclass-toolbar-additional"
-                       data-l10n-id="toolbar-button-firefox-view-2"
-                       role="button"
-                       aria-pressed="false"
-                       cui-areatype="toolbar"
-                       removable="true"/>
-
         <tabs id="tabbrowser-tabs"
               is="tabbrowser-tabs"
               aria-multiselectable="true"
@@ -53,8 +45,10 @@
               stopwatchid="tabClick">
 # If the name (tabbrowser-arrowscrollbox) or structure of this changes
 # significantly, there is an optimization in
-# DisplayPortUtils::MaybeCreateDisplayPortInFirstScrollFrameEncountered based
-# the current structure that we may want to revisit.
+# DisplayPortUtils::MaybeCreateDisplayPortInFirstScrollFrameEncountered based on
+# the current structure that we may want to revisit. It relies on the
+# arrowscrollbox's own scroll container being a direct child frame, so that it
+# can be given a displayport without walking the tabs inside it.
           <div id="pinned-drop-indicator">
             <html:img id="pinned-drop-indicator-icon" src="chrome://browser/skin/pin.svg" role="presentation" loading="lazy"/>
             <span id="pinned-drop-indicator-text" data-l10n-id="pinned-tabs-drop-indicator"></span>
@@ -64,7 +58,7 @@
           <splitter orient="vertical" id="vertical-pinned-tabs-splitter" resizebefore="sibling" resizeafter="none" hidden="true"/>
           <hbox class="tab-drop-indicator" hidden="true"/>
           <arrowscrollbox id="tabbrowser-arrowscrollbox" orient="horizontal" flex="1" clicktoscroll="" scrolledtostart="" scrolledtoend="">
-            <tab is="tabbrowser-tab" class="tabbrowser-tab" selected="true" visuallyselected="" fadein=""/>
+            <tab is="tabbrowser-tab" class="tabbrowser-tab" selected="" visuallyselected="" fadein=""/>
             <hbox id="tabbrowser-arrowscrollbox-periphery">
               <toolbartabstop/>
               <toolbarbutton id="tabs-newtab-button"
@@ -91,6 +85,9 @@
                        cui-areatype="toolbar"
                        removable="true"/>
 
+        <toolbarspring cui-areatype="toolbar"
+                       class="chromeclass-toolbar-additional"/>
+
         <toolbarbutton id="alltabs-button"
                        class="toolbarbutton-1 chromeclass-toolbar-additional tabs-alltabs-button"
                        delegatesanchor="true"
@@ -101,17 +98,7 @@
       </hbox>
     </hbox>
 
-    <hbox class="titlebar-spacer" type="post-tabs"/>
-
 #include private-browsing-indicator.inc.xhtml
-
-    <toolbarbutton id="ai-window-toggle"
-                    class="toolbarbutton-1 chromeclass-toolbar-additional"
-                    data-l10n-id="toolbar-button-ai-window-toggle"
-                    cui-areatype="toolbar"
-                    removable="false"
-                    aria-haspopup="true"
-                    hidden="true"/>
 
     <toolbarbutton class="content-analysis-indicator toolbarbutton-1 content-analysis-indicator-icon"/>
 
@@ -120,7 +107,7 @@
   </toolbar>
 
   <toolbar id="nav-bar"
-           class="browser-toolbar chromeclass-location"
+           class="browser-toolbar"
            data-l10n-id="navbar-accessible"
            fullscreentoolbar="true" mode="icons" customizable="true"
            customizationtarget="nav-bar-customization-target"
@@ -158,19 +145,11 @@
         <toolbarbutton id="reload-button" class="toolbarbutton-1"
                        data-l10n-id="toolbar-button-reload"
                        command="Browser:ReloadOrDuplicate"
-                       tooltip="dynamic-shortcut-tooltip">
-          <box class="toolbarbutton-animatable-box">
-            <image class="toolbarbutton-animatable-image"/>
-          </box>
-        </toolbarbutton>
+                       tooltip="dynamic-shortcut-tooltip"/>
         <toolbarbutton id="stop-button" class="toolbarbutton-1"
                        data-l10n-id="toolbar-button-stop"
                        command="Browser:Stop"
-                       tooltip="dynamic-shortcut-tooltip">
-          <box class="toolbarbutton-animatable-box">
-            <image class="toolbarbutton-animatable-image"/>
-          </box>
-        </toolbarbutton>
+                       tooltip="dynamic-shortcut-tooltip"/>
       </toolbaritem>
       <toolbarspring cui-areatype="toolbar" class="chromeclass-toolbar-additional"/>
       <toolbarspring cui-areatype="toolbar"
@@ -180,7 +159,6 @@
                    overflows="false"/>
       <toolbaritem id="urlbar-container"
                    class="urlbar-container"
-                   context="urlbarView-context-menu"
                    removable="false"
                    overflows="false">
         <menupopup id="urlbarView-context-menu">
@@ -214,9 +192,27 @@
             <image id="remote-control-icon"/>
           </box>
 
-          <box id="trust-icon-container" align="center" role="button" data-l10n-id="urlbar-identity-button" urlbar-slot="site-info">
+          <box
+            id="trust-icon-container"
+            align="center"
+            role="button"
+            data-l10n-id="urlbar-identity-button2"
+            data-l10n-args='{"count":0}'
+            data-l10n-attrs="aria-label"
+            urlbar-slot="site-info"
+          >
             <image id="trust-icon"/>
             <label id="trust-label" crop="center" flex="1" data-l10n-id="urlbar-trust-icon-notsecure-label" />
+            <span id="trust-icon-tracker-count-longform-wrapper">
+              <label
+                id="trust-icon-tracker-count-longform"
+                data-l10n-id="urlbar-trust-icon-trackers-blocked-longform-label"
+                data-l10n-args='{"count":0}'
+              />
+            </span>
+            <span id="trust-icon-tracker-count-shortform-wrapper">
+              <label id="trust-icon-tracker-count-shortform" />
+            </span>
           </box>
 
           <!-- Use onclick instead of normal popup= syntax since the popup
@@ -237,10 +233,15 @@
                 class="identity-box"
                 pageproxystate="invalid"
                 urlbar-slot="site-info">
+            <!-- Shown when trustPanel.featureGate is off, or for
+            chromeUI/extensionPage where tracker blocking never runs, so we
+            never update `data-l10n-args`. -->
             <box id="identity-icon-box"
                   role="button"
                   align="center"
-                  data-l10n-id="urlbar-identity-button"
+                  data-l10n-id="urlbar-identity-button2"
+                  data-l10n-args='{"count":0}'
+                  data-l10n-attrs="aria-label"
                   class="identity-box-button">
               <image id="identity-icon"/>
               <label id="identity-icon-label" crop="center" flex="1"/>
@@ -381,7 +382,8 @@
                 <image class="urlbar-icon"/>
               </hbox>
             </hbox>
-            <hbox id="userContext-icons" hidden="true">
+            <hbox id="userContext-icons" hidden="true"
+                  role="button">
               <label id="userContext-label"/>
               <image id="userContext-indicator"/>
             </hbox>
@@ -426,6 +428,13 @@
                   data-l10n-id="urlbar-split-view-button"
                   hidden="true">
               <image class="urlbar-icon" id="split-view-button-icon" />
+            </hbox>
+            <hbox id="share-button"
+                  class="urlbar-page-action"
+                  role="button"
+                  data-l10n-id="urlbar-share-button"
+                  hidden="true">
+              <image class="urlbar-icon"/>
             </hbox>
             <hbox id="pageActionButton"
                   class="urlbar-page-action"
@@ -509,6 +518,19 @@
     <toolbarbutton id="taskbar-tabs-audio" class="toolbarbutton-1 chromeclass-toolbar-additional"
                     removable="false" overflows="false"/>
 
+    <toolbaritem id="smartwindow-group-tabs-button"
+                 class="chromeclass-toolbar-additional"
+                 hidden="true"
+                 overflows="false"
+                 removable="false">
+      <toolbarbutton id="smartwindow-group-tabs-button-inner"
+                      class="toolbarbutton-1"
+                      aria-haspopup="dialog"
+                      aria-expanded="false"
+                      data-l10n-id="smartwindow-organize-tabs-button">
+      </toolbarbutton>
+    </toolbaritem>
+
     <toolbaritem id="smartwindow-ask-button"
                  class="chromeclass-toolbar-additional"
                  hidden="true"
@@ -548,7 +570,7 @@
 
   <toolbar id="PersonalToolbar"
            mode="icons"
-           class="browser-toolbar chromeclass-directories"
+           class="browser-toolbar"
            context="toolbar-context-menu"
            data-l10n-id="bookmarks-toolbar"
            data-l10n-attrs="toolbarname"

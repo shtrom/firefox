@@ -228,6 +228,9 @@ interface nsIXPCComponents_Results {
   /** Factory already exists */
   NS_ERROR_FACTORY_EXISTS: 0xc1f30100;
 
+  /** Invalid signature */
+  NS_ERROR_INVALID_SIGNATURE: 0x804b003a;
+
   // added from nsError.h on Feb 28 2001...
 
   /** Stream closed */
@@ -631,6 +634,9 @@ interface nsIXPCComponents_Results {
 
   // Codes defined in WebIDL https://heycam.github.io/webidl/#idl-DOMException-error-names
 
+  /** A network error occurred. */
+  NS_ERROR_DOM_NETWORK_ERR: 0x80530013;
+
   /** The object can not be found here. */
   NS_ERROR_DOM_NOT_FOUND_ERR: 0x80530008;
 
@@ -705,7 +711,7 @@ interface nsIXPCComponents_Results {
   /** Client initialization attempted before origin has been initialized. */
   NS_ERROR_DOM_QM_CLIENT_INIT_ORIGIN_UNINITIALIZED: 0x80730001;
 
-  // * Codes related to IndexedDB
+  // Codes related to IndexedDB
 
   /** A mutation operation was attempted on a database that did not allow mutations. */
   NS_ERROR_DOM_INDEXEDDB_NOT_ALLOWED_ERR: 0x80660006;

@@ -4,6 +4,8 @@
 
 package mozilla.components.feature.media.focus
 
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import mozilla.components.browser.state.state.BrowserState
@@ -16,8 +18,10 @@ import mozilla.components.feature.media.service.AbstractMediaSessionService
 import mozilla.components.feature.media.service.MediaSessionServiceDelegate
 import mozilla.components.support.base.android.NotificationsDelegate
 import mozilla.components.support.test.any
+import mozilla.components.support.test.argumentCaptor
 import mozilla.components.support.test.mock
 import mozilla.components.support.test.robolectric.testContext
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -39,21 +43,20 @@ class AudioFocusTest {
 
     @Test
     fun `Successful request will not change media session in state`() {
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
-            .`when`(audioManager).requestAudioFocus(any())
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED).`when`(audioManager).requestAudioFocus(any())
 
         val controller: MediaSession.Controller = mock()
-        val mediaSessionState = MediaSessionState(
-            controller,
-            playbackState = MediaSession.PlaybackState.PLAYING,
-        )
-        val tabSession = createTab(
-            "https://www.mozilla.org",
-            mediaSessionState = mediaSessionState,
-        )
-        val initialState = BrowserState(
-            tabs = listOf(tabSession),
-        )
+        val mediaSessionState =
+            MediaSessionState(
+                controller,
+                playbackState = MediaSession.PlaybackState.PLAYING,
+            )
+        val tabSession =
+            createTab(
+                "https://www.mozilla.org",
+                mediaSessionState = mediaSessionState,
+            )
+        val initialState = BrowserState(tabs = listOf(tabSession))
         val store = BrowserStore(initialState)
         val service: AbstractMediaSessionService = mock()
         val crashReporter: CrashReporting = mock()
@@ -71,21 +74,20 @@ class AudioFocusTest {
 
     @Test
     fun `Failed request will pause media session`() {
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
-            .`when`(audioManager).requestAudioFocus(any())
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_FAILED).`when`(audioManager).requestAudioFocus(any())
 
         val controller: MediaSession.Controller = mock()
-        val mediaSessionState = MediaSessionState(
-            controller,
-            playbackState = MediaSession.PlaybackState.PLAYING,
-        )
-        val tabSession = createTab(
-            "https://www.mozilla.org",
-            mediaSessionState = mediaSessionState,
-        )
-        val initialState = BrowserState(
-            tabs = listOf(tabSession),
-        )
+        val mediaSessionState =
+            MediaSessionState(
+                controller,
+                playbackState = MediaSession.PlaybackState.PLAYING,
+            )
+        val tabSession =
+            createTab(
+                "https://www.mozilla.org",
+                mediaSessionState = mediaSessionState,
+            )
+        val initialState = BrowserState(tabs = listOf(tabSession))
         val store = BrowserStore(initialState)
         val service: AbstractMediaSessionService = mock()
         val crashReporter: CrashReporting = mock()
@@ -103,21 +105,20 @@ class AudioFocusTest {
 
     @Test
     fun `Delayed request will pause media`() {
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_DELAYED)
-            .`when`(audioManager).requestAudioFocus(any())
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_DELAYED).`when`(audioManager).requestAudioFocus(any())
 
         val controller: MediaSession.Controller = mock()
-        val mediaSessionState = MediaSessionState(
-            controller,
-            playbackState = MediaSession.PlaybackState.PLAYING,
-        )
-        val tabSession = createTab(
-            "https://www.mozilla.org",
-            mediaSessionState = mediaSessionState,
-        )
-        val initialState = BrowserState(
-            tabs = listOf(tabSession),
-        )
+        val mediaSessionState =
+            MediaSessionState(
+                controller,
+                playbackState = MediaSession.PlaybackState.PLAYING,
+            )
+        val tabSession =
+            createTab(
+                "https://www.mozilla.org",
+                mediaSessionState = mediaSessionState,
+            )
+        val initialState = BrowserState(tabs = listOf(tabSession))
         val store = BrowserStore(initialState)
         val service: AbstractMediaSessionService = mock()
         val crashReporter: CrashReporting = mock()
@@ -138,8 +139,7 @@ class AudioFocusTest {
         var notified = false
         val store = BrowserStore(BrowserState(tabs = listOf(createTab("https://www.mozilla.org"))))
         val audioFocus = AudioFocus(audioManager, store, onTransientFocusLoss = { notified = it })
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_DELAYED)
-            .`when`(audioManager).requestAudioFocus(any())
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_DELAYED).`when`(audioManager).requestAudioFocus(any())
 
         audioFocus.request("tabId")
 
@@ -147,106 +147,21 @@ class AudioFocusTest {
     }
 
     @Test
-    fun `Will pause and resume playing media on and after transient focus loss`() {
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
-            .`when`(audioManager).requestAudioFocus(any())
-
-        val controller: MediaSession.Controller = mock()
-        val mediaSessionState = MediaSessionState(
-            controller,
-            playbackState = MediaSession.PlaybackState.PLAYING,
-        )
-        val tabSession = createTab(
-            "https://www.mozilla.org",
-            mediaSessionState = mediaSessionState,
-        )
-        val initialState = BrowserState(
-            tabs = listOf(tabSession),
-        )
-        val store = BrowserStore(initialState)
-        val service: AbstractMediaSessionService = mock()
-        val crashReporter: CrashReporting = mock()
-        val notificationsDelegate: NotificationsDelegate = mock()
-        val delegate = MediaSessionServiceDelegate(testContext, service, store, crashReporter, notificationsDelegate)
-
-        delegate.onCreate()
-
-        val audioFocus = AudioFocus(audioManager, store)
-        audioFocus.request(tabSession.id)
-
-        verify(audioManager).requestAudioFocus(any())
-        verifyNoMoreInteractions(mediaSessionState.controller)
-
-        audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
-
-        verify(mediaSessionState.controller).pause()
-        verifyNoMoreInteractions(mediaSessionState.controller)
-
-        audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_GAIN)
-
-        verify(mediaSessionState.controller).play()
-        verifyNoMoreInteractions(mediaSessionState.controller)
-    }
-
-    @Test
-    fun `Will not resume paused media after transient focus loss`() {
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
-            .`when`(audioManager).requestAudioFocus(any())
-
-        val controller: MediaSession.Controller = mock()
-        val mediaSessionState = MediaSessionState(
-            controller,
-            playbackState = MediaSession.PlaybackState.PAUSED,
-        )
-        val tabSession = createTab(
-            "https://www.mozilla.org",
-            mediaSessionState = mediaSessionState,
-        )
-        val initialState = BrowserState(
-            tabs = listOf(tabSession),
-        )
-        val store = BrowserStore(initialState)
-        val service: AbstractMediaSessionService = mock()
-        val crashReporter: CrashReporting = mock()
-        val notificationsDelegate: NotificationsDelegate = mock()
-        val delegate = MediaSessionServiceDelegate(testContext, service, store, crashReporter, notificationsDelegate)
-
-        delegate.onCreate()
-
-        val audioFocus = AudioFocus(audioManager, store)
-        audioFocus.request(tabSession.id)
-
-        verify(audioManager).requestAudioFocus(any())
-        verifyNoMoreInteractions(mediaSessionState.controller)
-
-        audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
-
-        verify(mediaSessionState.controller).pause()
-        verifyNoMoreInteractions(mediaSessionState.controller)
-
-        audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_GAIN)
-
-        verify(mediaSessionState.controller, never()).play()
-        verifyNoMoreInteractions(mediaSessionState.controller)
-    }
-
-    @Test
     fun `Will resume media sessio nplayback when gaining focus after being delayed`() {
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_DELAYED)
-            .`when`(audioManager).requestAudioFocus(any())
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_DELAYED).`when`(audioManager).requestAudioFocus(any())
 
         val controller: MediaSession.Controller = mock()
-        val mediaSessionState = MediaSessionState(
-            controller,
-            playbackState = MediaSession.PlaybackState.PLAYING,
-        )
-        val tabSession = createTab(
-            "https://www.mozilla.org",
-            mediaSessionState = mediaSessionState,
-        )
-        val initialState = BrowserState(
-            tabs = listOf(tabSession),
-        )
+        val mediaSessionState =
+            MediaSessionState(
+                controller,
+                playbackState = MediaSession.PlaybackState.PLAYING,
+            )
+        val tabSession =
+            createTab(
+                "https://www.mozilla.org",
+                mediaSessionState = mediaSessionState,
+            )
+        val initialState = BrowserState(tabs = listOf(tabSession))
         val store = BrowserStore(initialState)
         val service: AbstractMediaSessionService = mock()
         val crashReporter: CrashReporting = mock()
@@ -264,6 +179,7 @@ class AudioFocusTest {
         audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_GAIN)
 
         verify(mediaSessionState.controller).play()
+        verify(mediaSessionState.controller).onSystemAudioFocusChanged(MediaSession.SystemAudioFocusChange.GAIN)
         verifyNoMoreInteractions(mediaSessionState.controller)
     }
 
@@ -272,17 +188,17 @@ class AudioFocusTest {
         doReturn(-1).`when`(audioManager).requestAudioFocus(any())
 
         val controller: MediaSession.Controller = mock()
-        val mediaSessionState = MediaSessionState(
-            controller,
-            playbackState = MediaSession.PlaybackState.PLAYING,
-        )
-        val tabSession = createTab(
-            "https://www.mozilla.org",
-            mediaSessionState = mediaSessionState,
-        )
-        val initialState = BrowserState(
-            tabs = listOf(tabSession),
-        )
+        val mediaSessionState =
+            MediaSessionState(
+                controller,
+                playbackState = MediaSession.PlaybackState.PLAYING,
+            )
+        val tabSession =
+            createTab(
+                "https://www.mozilla.org",
+                mediaSessionState = mediaSessionState,
+            )
+        val initialState = BrowserState(tabs = listOf(tabSession))
         val store = BrowserStore(initialState)
         val service: AbstractMediaSessionService = mock()
         val crashReporter: CrashReporting = mock()
@@ -297,21 +213,20 @@ class AudioFocusTest {
 
     @Test
     fun `An unknown focus change event will be ignored`() {
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
-            .`when`(audioManager).requestAudioFocus(any())
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED).`when`(audioManager).requestAudioFocus(any())
 
         val controller: MediaSession.Controller = mock()
-        val mediaSessionState = MediaSessionState(
-            controller,
-            playbackState = MediaSession.PlaybackState.PLAYING,
-        )
-        val tabSession = createTab(
-            "https://www.mozilla.org",
-            mediaSessionState = mediaSessionState,
-        )
-        val initialState = BrowserState(
-            tabs = listOf(tabSession),
-        )
+        val mediaSessionState =
+            MediaSessionState(
+                controller,
+                playbackState = MediaSession.PlaybackState.PLAYING,
+            )
+        val tabSession =
+            createTab(
+                "https://www.mozilla.org",
+                mediaSessionState = mediaSessionState,
+            )
+        val initialState = BrowserState(tabs = listOf(tabSession))
         val store = BrowserStore(initialState)
         val service: AbstractMediaSessionService = mock()
         val crashReporter: CrashReporting = mock()
@@ -327,47 +242,6 @@ class AudioFocusTest {
         verifyNoMoreInteractions(mediaSessionState.controller)
 
         audioFocus.onAudioFocusChange(999)
-        verifyNoMoreInteractions(mediaSessionState.controller)
-    }
-
-    @Test
-    fun `An audio focus loss will pause media and regain will not resume automatically`() {
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
-            .`when`(audioManager).requestAudioFocus(any())
-
-        val controller: MediaSession.Controller = mock()
-        val mediaSessionState = MediaSessionState(
-            controller,
-            playbackState = MediaSession.PlaybackState.PLAYING,
-        )
-        val tabSession = createTab(
-            "https://www.mozilla.org",
-            mediaSessionState = mediaSessionState,
-        )
-        val initialState = BrowserState(
-            tabs = listOf(tabSession),
-        )
-        val store = BrowserStore(initialState)
-        val service: AbstractMediaSessionService = mock()
-        val crashReporter: CrashReporting = mock()
-        val notificationsDelegate: NotificationsDelegate = mock()
-        val delegate = MediaSessionServiceDelegate(testContext, service, store, crashReporter, notificationsDelegate)
-
-        delegate.onCreate()
-
-        val audioFocus = AudioFocus(audioManager, store)
-        audioFocus.request(tabSession.id)
-
-        verify(audioManager).requestAudioFocus(any())
-        verifyNoMoreInteractions(mediaSessionState.controller)
-
-        audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS)
-
-        verify(mediaSessionState.controller).pause()
-        verifyNoMoreInteractions(mediaSessionState.controller)
-
-        audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_GAIN)
-        verify(mediaSessionState.controller, never()).play()
         verifyNoMoreInteractions(mediaSessionState.controller)
     }
 
@@ -408,8 +282,7 @@ class AudioFocusTest {
 
     @Test
     fun `WHEN audio focus is abandoned THEN transient loss callback is invoked with false`() {
-        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
-            .`when`(audioManager).requestAudioFocus(any())
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED).`when`(audioManager).requestAudioFocus(any())
 
         var notified = true
         val store = BrowserStore(BrowserState(tabs = listOf(createTab("https://www.mozilla.org"))))
@@ -419,5 +292,109 @@ class AudioFocusTest {
         audioFocus.abandon()
 
         assertFalse(notified)
+    }
+
+    @Test
+    fun `WHEN requesting focus for playback THEN the request uses media usage`() {
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED).`when`(audioManager).requestAudioFocus(any())
+        val store = BrowserStore(BrowserState(tabs = listOf(createTab("https://www.mozilla.org"))))
+        val audioFocus = AudioFocus(audioManager, store)
+
+        audioFocus.request("tab", MediaSession.AudioSessionType.PLAYBACK)
+
+        val captor = argumentCaptor<AudioFocusRequest>()
+        verify(audioManager).requestAudioFocus(captor.capture())
+        assertEquals(AudioAttributes.USAGE_MEDIA, captor.value.audioAttributes.usage)
+    }
+
+    @Test
+    fun `WHEN requesting focus for transient THEN the request uses notification usage`() {
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED).`when`(audioManager).requestAudioFocus(any())
+        val store = BrowserStore(BrowserState(tabs = listOf(createTab("https://www.mozilla.org"))))
+        val audioFocus = AudioFocus(audioManager, store)
+
+        audioFocus.request("tab", MediaSession.AudioSessionType.TRANSIENT)
+
+        val captor = argumentCaptor<AudioFocusRequest>()
+        verify(audioManager).requestAudioFocus(captor.capture())
+        assertEquals(AudioAttributes.USAGE_NOTIFICATION, captor.value.audioAttributes.usage)
+    }
+
+    @Test
+    fun `WHEN requesting focus for play-and-record THEN the request uses voice-communication usage`() {
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED).`when`(audioManager).requestAudioFocus(any())
+        val store = BrowserStore(BrowserState(tabs = listOf(createTab("https://www.mozilla.org"))))
+        val audioFocus = AudioFocus(audioManager, store)
+
+        audioFocus.request("tab", MediaSession.AudioSessionType.PLAY_AND_RECORD)
+
+        val captor = argumentCaptor<AudioFocusRequest>()
+        verify(audioManager).requestAudioFocus(captor.capture())
+        assertEquals(
+            AudioAttributes.USAGE_VOICE_COMMUNICATION,
+            captor.value.audioAttributes.usage,
+        )
+    }
+
+    @Test
+    fun `WHEN requesting focus for ambient THEN no audio focus is requested`() {
+        val store = BrowserStore(BrowserState(tabs = listOf(createTab("https://www.mozilla.org"))))
+        val audioFocus = AudioFocus(audioManager, store)
+
+        audioFocus.request("tab", MediaSession.AudioSessionType.AMBIENT)
+
+        verify(audioManager, never()).requestAudioFocus(any())
+    }
+
+    @Test
+    fun `WHEN requesting focus for auto THEN the request uses durable media focus`() {
+        // auto is the default type when the embedder opt-in pref is off and no
+        // type was forwarded, so this asserts the legacy behaviour is preserved.
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED).`when`(audioManager).requestAudioFocus(any())
+        val store = BrowserStore(BrowserState(tabs = listOf(createTab("https://www.mozilla.org"))))
+        val audioFocus = AudioFocus(audioManager, store)
+
+        audioFocus.request("tab", MediaSession.AudioSessionType.AUTO)
+
+        // The full request must match the pre-patch one byte for byte:
+        // AUDIOFOCUS_GAIN + USAGE_MEDIA + CONTENT_TYPE_MUSIC.
+        val captor = argumentCaptor<AudioFocusRequest>()
+        verify(audioManager).requestAudioFocus(captor.capture())
+        assertEquals(AudioManager.AUDIOFOCUS_GAIN, captor.value.focusGain)
+        assertEquals(AudioAttributes.USAGE_MEDIA, captor.value.audioAttributes.usage)
+        assertEquals(
+            AudioAttributes.CONTENT_TYPE_MUSIC,
+            captor.value.audioAttributes.contentType,
+        )
+    }
+
+    @Test
+    fun `onAudioFocusChange routes system audio focus to the audio session interrupt`() {
+        doReturn(AudioManager.AUDIOFOCUS_REQUEST_GRANTED).`when`(audioManager).requestAudioFocus(any())
+
+        val controller: MediaSession.Controller = mock()
+        val mediaSessionState =
+            MediaSessionState(
+                controller,
+                playbackState = MediaSession.PlaybackState.PLAYING,
+            )
+        val tabSession =
+            createTab(
+                "https://www.mozilla.org",
+                mediaSessionState = mediaSessionState,
+            )
+        val store = BrowserStore(BrowserState(tabs = listOf(tabSession)))
+
+        val audioFocus = AudioFocus(audioManager, store)
+        audioFocus.request(tabSession.id)
+
+        audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+        verify(controller).onSystemAudioFocusChanged(MediaSession.SystemAudioFocusChange.TRANSIENT_LOSS)
+
+        audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_GAIN)
+        verify(controller).onSystemAudioFocusChanged(MediaSession.SystemAudioFocusChange.GAIN)
+
+        audioFocus.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS)
+        verify(controller).onSystemAudioFocusChanged(MediaSession.SystemAudioFocusChange.PERMANENT_LOSS)
     }
 }

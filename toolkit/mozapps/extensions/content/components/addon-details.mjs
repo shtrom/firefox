@@ -12,7 +12,8 @@ import {
   isAllowedInPrivateBrowsing,
   nl2br,
 } from "../aboutaddons-utils.mjs";
-import { ScrollOffsets } from "../view-controller.mjs";
+import { gViewController } from "../view-controller.mjs";
+import { shouldShowNativeThemeCheckbox } from "./native-theme-colors-checkbox.mjs";
 
 const { AddonManager } = ChromeUtils.importESModule(
   "resource://gre/modules/AddonManager.sys.mjs"
@@ -72,6 +73,12 @@ export class AddonDetails extends AboutAddonsHTMLElement {
                 data-l10n-id="addon-detail-description-expand"
                 hidden
               ></button>
+            </div>
+            <div class="addon-detail-default-theme-options">
+              <native-theme-colors-checkbox
+                class="native-theme-checkbox-detail"
+                hidden
+              ></native-theme-colors-checkbox>
             </div>
             <div class="addon-detail-contribute">
               <label data-l10n-id="detail-contributions-description"></label>
@@ -296,7 +303,8 @@ export class AddonDetails extends AboutAddonsHTMLElement {
       // When a details view is rendered again, the default details view is
       // unconditionally shown. So if any other tab is selected, do not save
       // the current scroll offset, but start at the top of the page instead.
-      ScrollOffsets.canRestore = this.deck.selectedViewName === "details";
+      gViewController.scrollOffsets.canRestore =
+        this.deck.selectedViewName === "details";
     } else if (
       e.type == "click" &&
       e.target == this.descriptionShowMoreButton
@@ -489,6 +497,10 @@ export class AddonDetails extends AboutAddonsHTMLElement {
     // Set the add-on for the preferences section.
     this.inlineOptions = this.querySelector("inline-options-browser");
     this.inlineOptions.setAddon(addon);
+
+    // Set the visibility of the native theme colors checkbox.
+    this.querySelector(".native-theme-checkbox-detail").hidden =
+      !shouldShowNativeThemeCheckbox(addon);
 
     // Full description.
     this.renderDescription(addon);

@@ -5,11 +5,14 @@
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 const lazy = XPCOMUtils.declareLazy({
+  ConfigSearchEngine:
+    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   ContextId: "moz-src:///browser/modules/ContextId.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   SearchSERPTelemetry:
     "moz-src:///browser/components/search/SearchSERPTelemetry.sys.mjs",
   SearchUtils: "moz-src:///toolkit/components/search/SearchUtils.sys.mjs",
+  SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   UrlbarSearchUtils:
     "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
 });
@@ -54,9 +57,11 @@ class BrowserSearchTelemetryHandler {
    */
   KNOWN_SEARCH_SOURCES = Object.freeze({
     about_home: "abouthome",
+    about_newtab: "newtab",
     contextmenu: "contextmenu",
     contextmenu_visual: "contextmenu_visual",
-    about_newtab: "newtab",
+    errorpage: "errorpage",
+    newtab_searchbar: "newtab-searchbar",
     searchbar: "searchbar",
     smartbar: "smartbar",
     smartwindow_assistant: "smartwindow_assistant",
@@ -146,8 +151,8 @@ class BrowserSearchTelemetryHandler {
    *
    * @param {MozBrowser} browser
    *        The browser where the search originated.
-   * @param {SearchEngine} engine
-   *        The engine handling the search.
+   * @param {SearchEngine|string} engine
+   *        The engine handling the search or its id.
    * @param {keyof typeof BrowserSearchTelemetry.KNOWN_SEARCH_SOURCES} source
    *        Where the search originated from.
    * @param {object} [details] Options object.
@@ -167,6 +172,9 @@ class BrowserSearchTelemetryHandler {
    * @throws if source is not in the known sources list.
    */
   recordSearch(browser, engine, source, details = {}) {
+    if (typeof engine == "string") {
+      engine = lazy.SearchService.getEngineById(engine);
+    }
     if (engine.clickUrl) {
       this.#reportSearchInGlean(engine.clickUrl);
     }
@@ -195,7 +203,7 @@ class BrowserSearchTelemetryHandler {
         // above KNOWN_SEARCH_SOURCES.
         if (
           details.alias &&
-          engine.isConfigEngine &&
+          engine instanceof lazy.ConfigSearchEngine &&
           engine.aliases.includes(details.alias)
         ) {
           // This is a keyword search using a config engine.
@@ -225,7 +233,8 @@ class BrowserSearchTelemetryHandler {
 
       Glean.sap.counts.record({
         source,
-        provider_id: engine.isConfigEngine ? engine.id : "other",
+        provider_id:
+          engine instanceof lazy.ConfigSearchEngine ? engine.id : "other",
         provider_name: engine.name,
         // If no code is reported, we must returned undefined, Glean will then
         // not report the field.
@@ -235,17 +244,19 @@ class BrowserSearchTelemetryHandler {
 
       // Dispatch the search signal to other handlers.
       switch (source) {
-        case "urlbar":
-        case "searchbar":
-        case "smartbar":
-        case "urlbar_searchmode":
-        case "urlbar_persisted":
-        case "urlbar_handoff":
-          this._handleSearchAndUrlbar(browser, engine, source, details);
-          break;
         case "about_home":
         case "about_newtab":
           this.#recordSearch(browser, source, "enter");
+          break;
+        case "errorpage":
+        case "newtab_searchbar":
+        case "searchbar":
+        case "smartbar":
+        case "urlbar":
+        case "urlbar_handoff":
+        case "urlbar_persisted":
+        case "urlbar_searchmode":
+          this._handleSearchAndUrlbar(browser, engine, source, details);
           break;
         default:
           this.#recordSearch(browser, source);
@@ -274,14 +285,15 @@ class BrowserSearchTelemetryHandler {
    *
    * @param {SearchEngine} engine
    *   The engine whose search form is being visited.
-   * @param {"searchbar"|"smartbar"|"urlbar"} source
+   * @param {"newtab_searchbar"|"searchbar"|"smartbar"|"urlbar"} source
    *   Where the search form was opened from. This is a sub-set of the
    *   KNOWN_SEARCH_SOURCES.
    */
   recordSearchForm(engine, source) {
     Glean.sap.searchFormCounts.record({
       source,
-      provider_id: engine.isConfigEngine ? engine.id : "other",
+      provider_id:
+        engine instanceof lazy.ConfigSearchEngine ? engine.id : "other",
     });
   }
 
@@ -308,7 +320,7 @@ class BrowserSearchTelemetryHandler {
     }
 
     let name = source.replace(/_([a-z])/g, (m, p) => p.toUpperCase());
-    let label = engine?.isConfigEngine ? engine.id : "none";
+    let label = engine instanceof lazy.ConfigSearchEngine ? engine.id : "none";
     Glean.sapImpressionCounts[name][label].add(1);
   }
 

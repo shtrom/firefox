@@ -845,7 +845,6 @@ CoderResult CodeGlobalDesc(Coder<mode>& coder,
   MOZ_TRY(CodeInitExpr(coder, &item->initial_));
   MOZ_TRY(CodePod(coder, &item->offset_));
   MOZ_TRY(CodePod(coder, &item->isMutable_));
-  MOZ_TRY(CodePod(coder, &item->isWasm_));
   MOZ_TRY(CodePod(coder, &item->isExport_));
   MOZ_TRY(CodePod(coder, &item->importIndex_));
   return Ok();
@@ -939,7 +938,6 @@ CoderResult CodeTableDesc(Coder<mode>& coder, CoderArg<mode, TableDesc> item) {
   MOZ_TRY(CodeTableType(coder, &item->type));
   MOZ_TRY(CodePod(coder, &item->isImported));
   MOZ_TRY(CodePod(coder, &item->isExported));
-  MOZ_TRY(CodePod(coder, &item->isAsmJS));
   MOZ_TRY(
       (CodeMaybe<mode, InitExpr, &CodeInitExpr<mode>>(coder, &item->initExpr)));
   return Ok();
@@ -978,7 +976,7 @@ template <CoderMode mode>
 CoderResult CodeCallSites(Coder<mode>& coder, CoderArg<mode, CallSites> item) {
   WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::CallSites, 160);
   MOZ_TRY(CodePodVector(coder, &item->kinds_));
-  MOZ_TRY(CodePodVector(coder, &item->lineOrBytecodes_));
+  MOZ_TRY(CodePodVector(coder, &item->bytecodeOffsets_));
   MOZ_TRY(CodePodVector(coder, &item->returnAddressOffsets_));
   // Inlining requires lazy tiering, which does not support serialization yet.
   MOZ_RELEASE_ASSERT(item->inlinedCallerOffsetsMap_.empty());
@@ -991,9 +989,9 @@ template <CoderMode mode>
 CoderResult CodeScriptedCaller(Coder<mode>& coder,
                                CoderArg<mode, ScriptedCaller> item) {
   WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::ScriptedCaller, 16);
-  MOZ_TRY((CodeUniqueChars(coder, &item->filename)));
-  MOZ_TRY((CodePod(coder, &item->filenameIsURL)));
+  MOZ_TRY((CodeUniqueChars(coder, &item->source)));
   MOZ_TRY((CodePod(coder, &item->line)));
+  MOZ_TRY((CodePod(coder, &item->kind)));
   return Ok();
 }
 
@@ -1160,13 +1158,9 @@ CoderResult CodeCodeMetadata(Coder<mode>& coder,
   // NOTE: keep the field sequence here in sync with the sequence in the
   // declaration of CodeMetadata.
 
-  WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::CodeMetadata, 736);
-  // Serialization doesn't handle asm.js or debug enabled modules
-  MOZ_RELEASE_ASSERT(mode == MODE_SIZE || !item->isAsmJS());
+  WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::CodeMetadata, 656);
 
   MOZ_TRY(Magic(coder, Marker::CodeMetadata));
-
-  MOZ_TRY(CodePod(coder, &item->kind));
   MOZ_TRY((CodeRefPtr<mode, const CompileArgs, &CodeCompileArgs>(
       coder, &item->compileArgs)));
 
@@ -1194,9 +1188,6 @@ CoderResult CodeCodeMetadata(Coder<mode>& coder,
   MOZ_TRY((CodeMaybe<mode, uint32_t, &CodePod>(coder, &item->dataCount)));
   MOZ_TRY((CodePodVector(coder, &item->exportedFuncIndices)));
 
-  // We do not serialize `asmJSSigToTableIndex` because we don't serialize
-  // asm.js.
-
   MOZ_TRY(CodePodVector(coder, &item->customSectionRanges));
 
   MOZ_TRY((CodeMaybe<mode, BytecodeRange, &CodePod>(coder,
@@ -1215,10 +1206,6 @@ CoderResult CodeCodeMetadata(Coder<mode>& coder,
   MOZ_TRY(CodePod(coder, &item->tablesOffsetStart));
   MOZ_TRY(CodePod(coder, &item->tagsOffsetStart));
   MOZ_TRY(CodePod(coder, &item->instanceDataLength));
-
-  if constexpr (mode == MODE_DECODE) {
-    MOZ_ASSERT(!item->isAsmJS());
-  }
 
   return Ok();
 }
@@ -1404,7 +1391,11 @@ CoderResult CodeCodeBlock(Coder<mode>& coder,
 
 CoderResult CodeSharedCode(Coder<MODE_DECODE>& coder, wasm::SharedCode* item,
                            const wasm::ModuleMetadata& moduleMeta) {
-  WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::Code, 976);
+#ifdef ENABLE_WASM_JSPI
+  WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::Code, 1008);
+#else
+  WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::Code, 968);
+#endif
 
   FuncImportVector funcImports;
   MOZ_TRY(CodePodVector(coder, &funcImports));
@@ -1415,7 +1406,7 @@ CoderResult CodeSharedCode(Coder<MODE_DECODE>& coder, wasm::SharedCode* item,
       coder, &sharedStubsLinkData)));
   MOZ_TRY(CodeCodeBlock(coder, &sharedStubs, *sharedStubsLinkData));
   sharedStubs->sendToProfiler(*moduleMeta.codeMeta, *moduleMeta.codeTailMeta,
-                              nullptr, FuncIonPerfSpewerSpan(),
+                              FuncIonPerfSpewerSpan(),
                               FuncBaselinePerfSpewerSpan());
 
   UniqueLinkData optimizedCodeLinkData;
@@ -1424,13 +1415,12 @@ CoderResult CodeSharedCode(Coder<MODE_DECODE>& coder, wasm::SharedCode* item,
       coder, &optimizedCodeLinkData)));
   MOZ_TRY(CodeCodeBlock(coder, &optimizedCode, *optimizedCodeLinkData));
   optimizedCode->sendToProfiler(*moduleMeta.codeMeta, *moduleMeta.codeTailMeta,
-                                nullptr, FuncIonPerfSpewerSpan(),
+                                FuncIonPerfSpewerSpan(),
                                 FuncBaselinePerfSpewerSpan());
 
   // Create and initialize the code
   MutableCode code = js_new<Code>(CompileMode::Once, *moduleMeta.codeMeta,
-                                  *moduleMeta.codeTailMeta,
-                                  /*codeMetaForAsmJS=*/nullptr);
+                                  *moduleMeta.codeTailMeta);
   if (!code || !code->initialize(
                    std::move(funcImports), std::move(sharedStubs),
                    std::move(sharedStubsLinkData), std::move(optimizedCode),
@@ -1449,9 +1439,24 @@ CoderResult CodeSharedCode(Coder<MODE_DECODE>& coder, wasm::SharedCode* item,
   code->setUpdateCallRefMetricsStubOffset(offsetOfCallRefMetricsStub);
 
 #ifdef ENABLE_WASM_JSPI
-  uint32_t offsetOfContBaseFrame = 0;
-  MOZ_TRY(CodePod(coder, &offsetOfContBaseFrame));
-  code->setContBaseFrameOffset(offsetOfContBaseFrame);
+  {
+    uint32_t count = 0;
+    MOZ_TRY(CodePod(coder, &count));
+    MOZ_RELEASE_ASSERT(count <= MaxTypes);
+    ContBaseFrameOffsetMap contBaseFrameOffsets;
+    if (!contBaseFrameOffsets.reserve(count)) {
+      return Err(OutOfMemory());
+    }
+    for (uint32_t i = 0; i < count; i++) {
+      uint32_t typeIndex = 0;
+      uint32_t offset = 0;
+      MOZ_TRY(CodePod(coder, &typeIndex));
+      MOZ_TRY(CodePod(coder, &offset));
+      MOZ_RELEASE_ASSERT(typeIndex < MaxTypes);
+      contBaseFrameOffsets.putNewInfallible(typeIndex, offset);
+    }
+    code->setContBaseFrameOffsets(std::move(contBaseFrameOffsets));
+  }
 #endif
 
   *item = code;
@@ -1461,7 +1466,11 @@ CoderResult CodeSharedCode(Coder<MODE_DECODE>& coder, wasm::SharedCode* item,
 template <CoderMode mode>
 CoderResult CodeSharedCode(Coder<mode>& coder,
                            CoderArg<mode, wasm::SharedCode> item) {
-  WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::Code, 976);
+#ifdef ENABLE_WASM_JSPI
+  WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::Code, 1008);
+#else
+  WASM_VERIFY_SERIALIZATION_FOR_SIZE(wasm::Code, 968);
+#endif
   STATIC_ASSERT_ENCODING_OR_SIZING;
   // Don't encode the CodeMetadata or CodeTailMetadata, that is handled by
   // wasm::ModuleMetadata.
@@ -1488,8 +1497,18 @@ CoderResult CodeSharedCode(Coder<mode>& coder,
   MOZ_TRY(CodePod(coder, &offsetOfCallRefMetricsStub));
 
 #ifdef ENABLE_WASM_JSPI
-  uint32_t offsetOfContBaseFrame = (*item)->contBaseFrameOffset();
-  MOZ_TRY(CodePod(coder, &offsetOfContBaseFrame));
+  {
+    const ContBaseFrameOffsetMap& contBaseFrameOffsets =
+        (*item)->contBaseFrameOffsets();
+    uint32_t count = contBaseFrameOffsets.count();
+    MOZ_TRY(CodePod(coder, &count));
+    for (auto iter = contBaseFrameOffsets.iter(); !iter.done(); iter.next()) {
+      uint32_t typeIndex = iter.get().key();
+      uint32_t offset = iter.get().value();
+      MOZ_TRY(CodePod(coder, &typeIndex));
+      MOZ_TRY(CodePod(coder, &offset));
+    }
+  }
 #endif
 
   return Ok();

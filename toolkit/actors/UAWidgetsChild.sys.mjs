@@ -95,15 +95,15 @@ export class UAWidgetsChild extends JSWindowActorChild {
       case "input":
         uri = "chrome://global/content/elements/datetimebox.js";
         widgetName = "DateTimeBoxWidget";
-        prefKeys = ["privacy.resistFingerprinting"];
+        prefKeys = [
+          "dom.forms.datetime.timepicker",
+          "privacy.resistFingerprinting",
+        ];
         break;
       case "marquee":
         uri = "chrome://global/content/elements/marquee.js";
         widgetName = "MarqueeWidget";
         break;
-      case "img":
-        uri = "chrome://global/content/elements/textrecognition.js";
-        widgetName = "TextRecognitionWidget";
     }
 
     if (!uri || !widgetName) {

@@ -245,8 +245,9 @@ class StartupCache : public nsIMemoryReporter {
 
   static nsresult InitSingleton();
   static void WriteTimeout(nsITimer* aTimer, void* aClosure);
-  void MaybeWriteOffMainThread(WriteType aWriteType);
-  void ThreadedPrefetch(uint8_t* aStart, size_t aSize);
+  void MaybeWriteOffMainThread(WriteType aWriteType,
+                               bool aUseLowPriorityIO = true);
+  void ThreadedPrefetch(const uint8_t* aStart, size_t aSize);
 
   Monitor mPrefetchComplete{"StartupCachePrefetch"};
   bool mPrefetchInProgress MOZ_GUARDED_BY(mPrefetchComplete){false};

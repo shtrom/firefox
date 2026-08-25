@@ -182,20 +182,26 @@ struct hb_aat_apply_context_t :
       buffer_glyph_set->add_array (glyphs, count);
     for (unsigned int i = 0; i < count; i++)
     {
+      bool at_end_of_text = buffer->idx == buffer->len;
+      if (at_end_of_text)
+	if (unlikely (!buffer->output_glyph (glyphs[i]))) return false;
+
+      hb_glyph_info_t &info = at_end_of_text ? buffer->prev () : buffer->cur ();
       if (glyphs[i] == DELETED_GLYPH)
       {
         buffer->scratch_flags |= HB_BUFFER_SCRATCH_FLAG_AAT_HAS_DELETED;
-	_hb_glyph_info_set_aat_deleted (&buffer->cur());
+	_hb_glyph_info_set_aat_deleted (&info);
       }
       else
       {
 #ifndef HB_NO_OT_LAYOUT
 	if (has_glyph_classes)
-	  _hb_glyph_info_set_glyph_props (&buffer->cur(),
+	  _hb_glyph_info_set_glyph_props (&info,
 					  gdef.get_glyph_props (glyphs[i]));
 #endif
       }
-      if (unlikely (!buffer->output_glyph (glyphs[i]))) return false;
+      if (!at_end_of_text)
+	if (unlikely (!buffer->output_glyph (glyphs[i]))) return false;
     }
     return true;
   }
@@ -228,6 +234,11 @@ struct hb_aat_apply_context_t :
   void replace_glyph_inplace (unsigned i, hb_codepoint_t glyph)
   {
     buffer->info[i].codepoint = glyph;
+    if (glyph == DELETED_GLYPH)
+    {
+      buffer->scratch_flags |= HB_BUFFER_SCRATCH_FLAG_AAT_HAS_DELETED;
+      _hb_glyph_info_set_aat_deleted (&buffer->info[i]);
+    }
     if (likely (using_buffer_glyph_set))
       buffer_glyph_set->add (glyph);
 #ifndef HB_NO_OT_LAYOUT
@@ -792,7 +803,7 @@ struct Lookup
   public:
   DEFINE_SIZE_UNION (2, format.v);
 };
-DECLARE_NULL_NAMESPACE_BYTES_TEMPLATE1 (AAT, Lookup, 2);
+DECLARE_NULL_NAMESPACE_BYTES_TEMPLATE1 (AAT, Lookup, 13);
 
 /*
  * (Extended) State Table
@@ -1134,31 +1145,37 @@ struct ObsoleteTypes
   typedef ClassTable<HBUINT16> ClassTypeWide;
 
   template <typename T>
-  static unsigned int offsetToIndex (unsigned int offset,
-				     const void *base,
-				     const T *array)
+  static int offsetToIndex (int64_t offset,
+			    const void *base,
+			    const T *array)
   {
+    int64_t array_offset = (const char *) array - (const char *) base;
+    int bad_index = INT_MAX / T::static_size;
+
     /* https://github.com/harfbuzz/harfbuzz/issues/3483 */
     /* If offset is less than base, return an offset that would
      * result in an address half a 32bit address-space away,
      * to make sure sanitize fails even on 32bit builds. */
-    if (unlikely (offset < unsigned ((const char *) array - (const char *) base)))
-      return INT_MAX / T::static_size;
+    if (unlikely (offset < array_offset))
+      return bad_index;
 
     /* https://github.com/harfbuzz/harfbuzz/issues/2816 */
-    return (offset - unsigned ((const char *) array - (const char *) base)) / T::static_size;
+    int64_t index = (offset - array_offset) / T::static_size;
+    if (unlikely (index > bad_index))
+      return bad_index;
+    return index;
   }
   template <typename T>
-  static unsigned int byteOffsetToIndex (unsigned int offset,
-					 const void *base,
-					 const T *array)
+  static int byteOffsetToIndex (int64_t offset,
+				const void *base,
+				const T *array)
   {
     return offsetToIndex (offset, base, array);
   }
   template <typename T>
-  static unsigned int wordOffsetToIndex (unsigned int offset,
-					 const void *base,
-					 const T *array)
+  static int wordOffsetToIndex (int64_t offset,
+				const void *base,
+				const T *array)
   {
     return offsetToIndex (2 * offset, base, array);
   }

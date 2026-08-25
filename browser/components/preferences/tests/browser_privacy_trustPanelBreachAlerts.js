@@ -12,7 +12,7 @@ const CHECKBOX_ID = "trustPanelBreachAlertsMain";
 
 add_task(async function test_pref_mapping() {
   await BrowserTestUtils.withNewTab(
-    { gBrowser, url: "about:preferences#privacy-connectionSecurity" },
+    { gBrowser, url: "about:preferences#connectionSecurity" },
     async function (browser) {
       let doc = browser.contentDocument;
       let win = browser.contentWindow;
@@ -48,17 +48,17 @@ add_task(async function test_section_hidden_when_feature_gate_disabled() {
   });
 
   await BrowserTestUtils.withNewTab(
-    { gBrowser, url: "about:preferences#privacy-connectionSecurity" },
+    { gBrowser, url: "about:preferences#connectionSecurity" },
     async function (browser) {
       let doc = browser.contentDocument;
-      await BrowserTestUtils.waitForCondition(
+      await TestUtils.waitForCondition(
         () => doc.querySelector(GROUP_SELECTOR),
         "Wait for setting group"
       );
       let settingGroup = doc.querySelector(GROUP_SELECTOR);
 
       // The visibility logic is asynchronous for Lit-based setting groups.
-      await BrowserTestUtils.waitForCondition(
+      await TestUtils.waitForCondition(
         () => BrowserTestUtils.isHidden(settingGroup),
         "Wait for setting group to be hidden"
       );
@@ -85,16 +85,16 @@ add_task(async function test_section_shown_when_feature_gate_enabled() {
   });
 
   await BrowserTestUtils.withNewTab(
-    { gBrowser, url: "about:preferences#privacy-connectionSecurity" },
+    { gBrowser, url: "about:preferences#connectionSecurity" },
     async function (browser) {
       let doc = browser.contentDocument;
-      await BrowserTestUtils.waitForCondition(
+      await TestUtils.waitForCondition(
         () => doc.querySelector(GROUP_SELECTOR),
         "Wait for setting group"
       );
       let settingGroup = doc.querySelector(GROUP_SELECTOR);
 
-      await BrowserTestUtils.waitForCondition(
+      await TestUtils.waitForCondition(
         () => BrowserTestUtils.isVisible(settingGroup),
         "Wait for setting group to be visible"
       );
@@ -103,6 +103,10 @@ add_task(async function test_section_shown_when_feature_gate_enabled() {
         "Privacy panel setting group is visible when featureGate is true"
       );
 
+      await TestUtils.waitForCondition(
+        () => doc.getElementById(CHECKBOX_ID),
+        "Wait for checkbox"
+      );
       let checkbox = doc.getElementById(CHECKBOX_ID);
       is_element_visible(
         checkbox,
@@ -125,12 +129,16 @@ add_task(async function test_checkbox_toggle_updates_pref() {
   });
 
   await BrowserTestUtils.withNewTab(
-    { gBrowser, url: "about:preferences#privacy-connectionSecurity" },
+    { gBrowser, url: "about:preferences#connectionSecurity" },
     async function (browser) {
       await SpecialPowers.spawn(
         browser,
         [CHECKBOX_ID, BREACH_ALERTS_PREF],
         async (checkboxId, breachAlertsPref) => {
+          await ContentTaskUtils.waitForCondition(
+            () => content.document.getElementById(checkboxId),
+            "Wait for checkbox"
+          );
           let checkbox = content.document.getElementById(checkboxId);
           ok(checkbox, "Checkbox should exist");
           ok(checkbox.checked, "The checkbox should be checked initially");
@@ -178,10 +186,10 @@ add_task(async function test_checkbox_reflects_pref() {
     });
 
     await BrowserTestUtils.withNewTab(
-      { gBrowser, url: "about:preferences#privacy-connectionSecurity" },
+      { gBrowser, url: "about:preferences#connectionSecurity" },
       async function (browser) {
         let doc = browser.contentDocument;
-        await BrowserTestUtils.waitForCondition(
+        await TestUtils.waitForCondition(
           () => doc.getElementById(CHECKBOX_ID),
           "Wait for checkbox"
         );
@@ -209,9 +217,13 @@ add_task(
     });
 
     await BrowserTestUtils.withNewTab(
-      { gBrowser, url: "about:preferences#privacy-connectionSecurity" },
+      { gBrowser, url: "about:preferences#connectionSecurity" },
       async function (browser) {
         let doc = browser.contentDocument;
+        await TestUtils.waitForCondition(
+          () => doc.getElementById(CHECKBOX_ID),
+          "Wait for checkbox"
+        );
         let checkbox = doc.getElementById(CHECKBOX_ID);
         ok(checkbox, "The checkbox should still exist in the DOM");
         is_element_hidden(
@@ -235,9 +247,13 @@ add_task(async function test_hidden_when_both_gates_disabled() {
   });
 
   await BrowserTestUtils.withNewTab(
-    { gBrowser, url: "about:preferences#privacy-connectionSecurity" },
+    { gBrowser, url: "about:preferences#connectionSecurity" },
     async function (browser) {
       let doc = browser.contentDocument;
+      await TestUtils.waitForCondition(
+        () => doc.getElementById(CHECKBOX_ID),
+        "Wait for checkbox"
+      );
       let checkbox = doc.getElementById(CHECKBOX_ID);
       is_element_hidden(
         checkbox,
@@ -260,9 +276,13 @@ add_task(async function test_visibility_after_global_gate_toggle() {
   });
 
   await BrowserTestUtils.withNewTab(
-    { gBrowser, url: "about:preferences#privacy-connectionSecurity" },
+    { gBrowser, url: "about:preferences#connectionSecurity" },
     async function (browser) {
       let doc = browser.contentDocument;
+      await TestUtils.waitForCondition(
+        () => doc.getElementById(CHECKBOX_ID),
+        "Wait for checkbox"
+      );
       let checkbox = doc.getElementById(CHECKBOX_ID);
       is_element_visible(checkbox, "Visible when both gates are enabled");
 
@@ -274,6 +294,10 @@ add_task(async function test_visibility_after_global_gate_toggle() {
       await BrowserTestUtils.browserLoaded(browser);
 
       doc = browser.contentDocument;
+      await TestUtils.waitForCondition(
+        () => doc.getElementById(CHECKBOX_ID),
+        "Wait for checkbox after reload"
+      );
       checkbox = doc.getElementById(CHECKBOX_ID);
       is_element_hidden(
         checkbox,

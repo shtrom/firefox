@@ -1122,6 +1122,13 @@ SECKEY_ECParamsToKeySize(const SECItem *encodedParams)
     /* The encodedParams data contains 0x06 (SEC_ASN1_OBJECT_ID),
      * followed by the length of the curve oid and the curve oid.
      */
+    if (!encodedParams || !encodedParams->data ||
+        encodedParams->len < 2 ||
+        encodedParams->data[0] != SEC_ASN1_OBJECT_ID ||
+        (unsigned)encodedParams->data[1] > encodedParams->len - 2) {
+        PORT_SetError(SEC_ERROR_BAD_DER);
+        return 0;
+    }
     oid.len = encodedParams->data[1];
     oid.data = encodedParams->data + 2;
     if ((tag = SECOID_FindOIDTag(&oid)) == SEC_OID_UNKNOWN)
@@ -1256,6 +1263,13 @@ SECKEY_ECParamsToBasePointOrderLen(const SECItem *encodedParams)
     /* The encodedParams data contains 0x06 (SEC_ASN1_OBJECT_ID),
      * followed by the length of the curve oid and the curve oid.
      */
+    if (!encodedParams || !encodedParams->data ||
+        encodedParams->len < 2 ||
+        encodedParams->data[0] != SEC_ASN1_OBJECT_ID ||
+        (unsigned)encodedParams->data[1] > encodedParams->len - 2) {
+        PORT_SetError(SEC_ERROR_BAD_DER);
+        return 0;
+    }
     oid.len = encodedParams->data[1];
     oid.data = encodedParams->data + 2;
     if ((tag = SECOID_FindOIDTag(&oid)) == SEC_OID_UNKNOWN)
@@ -2809,7 +2823,8 @@ SECKEY_GetECCOid(const SECKEYECParams *params)
      * representing a named curve. Here, we strip away everything
      * before the actual OID and use the OID to look up a named curve.
      */
-    if (params->data[0] != SEC_ASN1_OBJECT_ID)
+    if (!params || !params->data || params->len < 2 ||
+        params->data[0] != SEC_ASN1_OBJECT_ID)
         return 0;
     oid.len = params->len - 2;
     oid.data = params->data + 2;

@@ -6,7 +6,9 @@
 #define mozilla_layers_CompositorBridgeParent_h
 
 #include <stdint.h>  // for uint64_t
+
 #include <unordered_map>
+
 #include "mozilla/Maybe.h"
 #include "mozilla/Monitor.h"        // for Monitor
 #include "mozilla/RefPtr.h"         // for RefPtr
@@ -14,6 +16,7 @@
 #include "mozilla/TimeStamp.h"      // for TimeStamp
 #include "mozilla/gfx/Point.h"      // for IntSize
 #include "mozilla/ipc/ProtocolUtils.h"
+#include "mozilla/layers/APZInputBridgeParent.h"
 #include "mozilla/layers/CompositorController.h"
 #include "mozilla/layers/CompositorVsyncSchedulerOwner.h"
 #include "mozilla/layers/FocusTarget.h"
@@ -21,7 +24,6 @@
 #include "mozilla/layers/LayersTypes.h"
 #include "mozilla/layers/PCompositorBridgeParent.h"
 #include "mozilla/layers/PWebRenderBridgeParent.h"
-#include "mozilla/layers/APZInputBridgeParent.h"
 #include "mozilla/webrender/WebRenderTypes.h"
 
 namespace mozilla {
@@ -91,7 +93,8 @@ class CompositorBridgeParentBase : public PCompositorBridgeParent,
  public:
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING(CompositorBridgeParentBase, final);
 
-  explicit CompositorBridgeParentBase(CompositorManagerParent* aManager);
+  explicit CompositorBridgeParentBase(CompositorManagerParent* aManager,
+                                      uint32_t aNamespace);
 
   virtual bool SetTestSampleTime(const LayersId& aId, const TimeStamp& aTime) {
     return true;
@@ -149,6 +152,18 @@ class CompositorBridgeParentBase : public PCompositorBridgeParent,
   // successfully or with failure) by the time this returns. Must be called
   // from the Compositor thread.
   virtual void EnsureWebRenderBridgeParentInitialized() = 0;
+
+  bool OwnsExternalImageId(const wr::ExternalImageId& aId) const;
+
+  bool OwnsPipelineId(const wr::PipelineId& aPipelineId) const;
+
+  CompositorManagerParent* GetCompositorManager() const {
+    return mCompositorManager;
+  }
+
+  uint32_t GetNamespace() const { return mNamespace; }
+
+  void SetNamespace(uint32_t aNamespace) { mNamespace = aNamespace; }
 
  protected:
   virtual ~CompositorBridgeParentBase();
@@ -214,6 +229,7 @@ class CompositorBridgeParentBase : public PCompositorBridgeParent,
 
  protected:
   RefPtr<CompositorManagerParent> mCompositorManager;
+  uint32_t mNamespace;
 };
 
 MOZ_MAKE_ENUM_CLASS_BITWISE_OPERATORS(
@@ -227,13 +243,11 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
   friend class PCompositorBridgeParent;
 
  public:
-  explicit CompositorBridgeParent(CompositorManagerParent* aManager,
-                                  CSSToLayoutDeviceScale aScale,
-                                  const TimeDuration& aVsyncRate,
-                                  const CompositorOptions& aOptions,
-                                  bool aUseExternalSurfaceSize,
-                                  const gfx::IntSize& aSurfaceSize,
-                                  uint64_t aInnerWindowId);
+  explicit CompositorBridgeParent(
+      CompositorManagerParent* aManager, uint32_t aNamespace,
+      CSSToLayoutDeviceScale aScale, const TimeDuration& aVsyncRate,
+      const CompositorOptions& aOptions, bool aUseExternalSurfaceSize,
+      const gfx::IntSize& aSurfaceSize, uint64_t aInnerWindowId);
 
   void InitSameProcess(widget::CompositorWidget* aWidget,
                        const LayersId& aLayerTreeId);
@@ -442,6 +456,42 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
   static bool CallWithLayerTreeState(
       LayersId aId, const std::function<void(LayerTreeState&)>& aFunc);
 
+  // The indirect layer tree map and its lock are private. Code outside of
+  // CompositorBridgeParent must go through the accessors below, which makes the
+  // dangerous std::map::operator[] (which silently resurrects an erased entry
+  // with a null state) unavailable to callers. WithIndirectLayerTreesLock is
+  // the only way to take the lock; it passes a proof token that the *UnderLock
+  // accessors require.
+  template <typename Function>
+  static auto WithIndirectLayerTreesLock(Function&& aFn) {
+    StaticMonitorAutoLock lock(sIndirectLayerTreesLock);
+    return aFn(lock);
+  }
+
+  // Non-inserting lookup; returns nullptr if there is no entry for |aId|.
+  static LayerTreeState* GetLayerTreeStateUnderLock(
+      LayersId aId, const StaticMonitorAutoLock& aProofOfLock);
+
+  // Returns the entry for |aId|, inserting a fresh one if absent. This is the
+  // only way for external callers to add an entry, so insertion is always
+  // explicit at the call site.
+  static LayerTreeState& EnsureLayerTreeStateUnderLock(
+      LayersId aId, const StaticMonitorAutoLock& aProofOfLock);
+
+  // Erases the entry for |aId| if present.
+  static void EraseLayerTreeStateUnderLock(
+      LayersId aId, const StaticMonitorAutoLock& aProofOfLock);
+
+  // Iterates every entry. aFn should take (LayersId, LayerTreeState&).
+  template <typename Function>
+  static void ForEachLayerTreeStateUnderLock(
+      const StaticMonitorAutoLock& aProofOfLock, Function&& aFn) {
+    sIndirectLayerTreesLock.AssertCurrentThreadOwns();
+    for (auto& entry : sIndirectLayerTrees) {
+      aFn(entry.first, entry.second);
+    }
+  }
+
   /**
    * Given the layers id for a content process, get the APZCTreeManagerParent
    * for the corresponding *root* layers id. That is, the APZCTreeManagerParent,
@@ -592,9 +642,20 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
   bool ResumeCompositionAndResize(int x, int y, int width, int height);
   bool IsPaused();
 
-  typedef std::map<LayersId, CompositorBridgeParent::LayerTreeState>
-      LayerTreeMap;
+  // A std::map, but with operator[] deleted. operator[] silently inserts a
+  // default (null) entry on a missing key, and using it to read or mutate an
+  // already-erased layer tree during shutdown resurrects a bogus entry. Callers
+  // must instead go through the accessors below, which make lookup vs insertion
+  // explicit: GetLayerTreeStateUnderLock (non-inserting),
+  // CallWithLayerTreeState (mutate-if-present), EnsureLayerTreeStateUnderLock
+  // (explicit insert) and EraseLayerTreeStateUnderLock.
+  struct LayerTreeMap
+      : public std::map<LayersId, CompositorBridgeParent::LayerTreeState> {
+    mapped_type& operator[](const key_type&) = delete;
+    mapped_type& operator[](key_type&&) = delete;
+  };
 
+ private:
   static StaticMonitor sIndirectLayerTreesLock;
   static LayerTreeMap sIndirectLayerTrees
       MOZ_GUARDED_BY(sIndirectLayerTreesLock);

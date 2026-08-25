@@ -3,21 +3,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "ImageLogging.h"  // Must appear first
-
 #include "nsAVIFDecoder.h"
 
 #include <aom/aomdx.h>
 
 #include "DAV1DDecoder.h"
-#include "gfxPlatform.h"
-#include "YCbCrUtils.h"
-#include "libyuv.h"
-
+#include "ImageLogging.h"  // Must appear first
 #include "SurfacePipeFactory.h"
-
-#include "mozilla/glean/ImageDecodersMetrics.h"
+#include "YCbCrUtils.h"
+#include "gfxPlatform.h"
+#include "libyuv.h"
 #include "mozilla/UniquePtrExtensions.h"
+#include "mozilla/glean/ImageDecodersMetrics.h"
+#include "nsThreadUtils.h"
 
 using namespace mozilla::gfx;
 
@@ -504,6 +502,19 @@ void AVIFDecodedData::SetCicpValues(
   mMatrixCoefficients = mc;
 }
 
+// dav1d's default of one worker thread per logical CPU is too much overhead.
+// Scale with image size the same way the AV1 video path does at
+// https://searchfox.org/firefox-main/rev/7d5b291d2351f7d04c504b03fa22ec3dcdf81b54/dom/media/platforms/agnostic/DAV1DDecoder.cpp#86
+static int GetDav1dThreadCount(int32_t aWidth) {
+  size_t decoderThreads = 2;
+  if (aWidth >= 2048) {
+    decoderThreads = 8;
+  } else if (aWidth >= 1024) {
+    decoderThreads = 4;
+  }
+  return static_cast<int>(std::min(decoderThreads, GetNumberOfProcessors()));
+}
+
 class Dav1dDecoder final : AVIFDecoderInterface {
  public:
   ~Dav1dDecoder() {
@@ -521,9 +532,9 @@ class Dav1dDecoder final : AVIFDecoderInterface {
   }
 
   static DecodeResult Create(UniquePtr<AVIFDecoderInterface>& aDecoder,
-                             bool aHasAlpha) {
+                             bool aHasAlpha, int32_t aWidth) {
     UniquePtr<Dav1dDecoder> d(new Dav1dDecoder());
-    Dav1dResult r = d->Init(aHasAlpha);
+    Dav1dResult r = d->Init(aHasAlpha, aWidth);
     if (r == 0) {
       aDecoder.reset(d.release());
     }
@@ -584,7 +595,7 @@ class Dav1dDecoder final : AVIFDecoderInterface {
     MOZ_LOG(sAVIFLog, LogLevel::Verbose, ("Create Dav1dDecoder=%p", this));
   }
 
-  Dav1dResult Init(bool aHasAlpha) {
+  Dav1dResult Init(bool aHasAlpha, int32_t aWidth) {
     MOZ_ASSERT(!mColorContext);
     MOZ_ASSERT(!mAlphaContext);
 
@@ -592,7 +603,7 @@ class Dav1dDecoder final : AVIFDecoderInterface {
     dav1d_default_settings(&settings);
     settings.all_layers = 0;
     settings.max_frame_delay = 1;
-    // TODO: tune settings a la DAV1DDecoder for AV1 (Bug 1681816)
+    settings.n_threads = GetDav1dThreadCount(aWidth);
 
     Dav1dResult r = dav1d_open(&mColorContext, &settings);
     if (r != 0) {
@@ -611,15 +622,14 @@ class Dav1dDecoder final : AVIFDecoderInterface {
     return 0;
   }
 
-  static Dav1dResult GetPicture(Dav1dContext& aContext,
-                                const MediaRawData& aBytes,
+  static Dav1dResult GetPicture(Dav1dContext& aContext, MediaRawData& aBytes,
                                 Dav1dPicture* aPicture,
                                 bool aShouldSendTelemetry) {
     MOZ_ASSERT(aPicture);
 
     Dav1dData dav1dData;
     Dav1dResult r = dav1d_data_wrap(&dav1dData, aBytes.Data(), aBytes.Size(),
-                                    Dav1dFreeCallback_s, nullptr);
+                                    Dav1dFreeCallback_s, &aBytes);
 
     MOZ_LOG(
         sAVIFLog, r == 0 ? LogLevel::Verbose : LogLevel::Error,
@@ -629,12 +639,22 @@ class Dav1dDecoder final : AVIFDecoderInterface {
       return r;
     }
 
+    // After a successful dav1d_data_wrap call, dav1d effectively owns a
+    // reference to the buffer that aBytes holds until dav1d calls the passed in
+    // free callback Dav1dFreeCallback_s. We handle this with an AddRef here and
+    // a Release in Dav1dFreeCallback_s.
+    aBytes.AddRef();
+
     r = dav1d_send_data(&aContext, &dav1dData);
 
     MOZ_LOG(sAVIFLog, r == 0 ? LogLevel::Debug : LogLevel::Error,
             ("dav1d_send_data -> %d", r));
 
     if (r != 0) {
+      // On failure dav1d leaves the caller's reference to the data intact;
+      // drop it (this invokes Dav1dFreeCallback_s once dav1d holds no other
+      // references).
+      dav1d_data_unref(&dav1dData);
       return r;
     }
 
@@ -658,10 +678,9 @@ class Dav1dDecoder final : AVIFDecoderInterface {
     return r;
   }
 
-  // A dummy callback for dav1d_data_wrap
   static void Dav1dFreeCallback_s(const uint8_t* aBuf, void* aCookie) {
-    // The buf is managed by the mParser inside Dav1dDecoder itself. Do
-    // nothing here.
+    MOZ_ASSERT(aCookie);
+    static_cast<MediaRawData*>(aCookie)->Release();
   }
 
   static UniquePtr<AVIFDecodedData> Dav1dPictureToDecodedData(
@@ -999,8 +1018,8 @@ UniquePtr<AVIFDecodedData> Dav1dDecoder::Dav1dPictureToDecodedData(
     OwnedDav1dPicture aAlphaPlane, bool aPremultipliedAlpha) {
   MOZ_ASSERT(aPicture);
 
-  static_assert(std::is_same<int, decltype(aPicture->p.w)>::value);
-  static_assert(std::is_same<int, decltype(aPicture->p.h)>::value);
+  static_assert(std::is_same_v<int, decltype(aPicture->p.w)>);
+  static_assert(std::is_same_v<int, decltype(aPicture->p.h)>);
 
   UniquePtr<AVIFDecodedData> data = MakeUnique<AVIFDecodedData>();
 
@@ -1283,8 +1302,12 @@ Mp4parseStatus nsAVIFDecoder::CreateParser() {
 
 nsAVIFDecoder::DecodeResult nsAVIFDecoder::CreateDecoder() {
   if (!mDecoder) {
+    // The parser may not have been able to determine the image size in rare
+    // cases (telemetry suggests 0.03% of all avifs) fall back to the minimum
+    // thread count.
+    int32_t width = HasSize() ? Size().width : 0;
     DecodeResult r = StaticPrefs::image_avif_use_dav1d()
-                         ? Dav1dDecoder::Create(mDecoder, mHasAlpha)
+                         ? Dav1dDecoder::Create(mDecoder, mHasAlpha, width)
                          : AOMDecoder::Create(mDecoder, mHasAlpha);
 
     MOZ_LOG(sAVIFLog, LogLevel::Debug,

@@ -10,18 +10,17 @@
 
 use crate::derives::*;
 use crate::parser::{Parse, ParserContext};
+use crate::typed_om::{KeywordValue, NumericType, NumericValue, ToTyped, TypedValue, UnitValue};
 use crate::values::distance::{ComputeSquaredDistance, SquaredDistance};
 use crate::values::generics::position::IsTreeScoped;
 use crate::Atom;
 pub use cssparser::{serialize_identifier, serialize_name, CowRcStr, Parser};
 pub use cssparser::{SourceLocation, Token};
+use num_traits::Zero;
 use precomputed_hash::PrecomputedHash;
 use selectors::parser::SelectorParseErrorKind;
 use std::fmt::{self, Debug, Write};
-use style_traits::{
-    CssString, CssWriter, KeywordValue, MathSum, NumericValue, ParseError, StyleParseErrorKind,
-    ToCss, ToTyped, TypedValue, UnitValue,
-};
+use style_traits::{CssString, CssWriter, ParseError, StyleParseErrorKind, ToCss};
 use thin_vec::ThinVec;
 use to_shmem::impl_trivial_to_shmem;
 
@@ -46,6 +45,47 @@ pub fn normalize(v: CSSFloat) -> CSSFloat {
         0.0
     } else {
         v
+    }
+}
+
+/// Computes the minimum value of the two floats. The CSS Values and Units definition
+/// for min() considers -0 to be less than +0 (whereas Rust considers them equal).
+/// https://drafts.csswg.org/css-values-4/#css-signed-zero
+#[inline]
+pub fn calc_min(a: CSSFloat, b: CSSFloat) -> CSSFloat {
+    match (a.is_sign_negative(), b.is_sign_negative()) {
+        (true, false) => a,
+        (false, true) => b,
+        _ => a.min(b),
+    }
+}
+
+/// Computes the maximum value of the two floats. The CSS Values and Units definition
+/// for max() considers +0 to be greater than -0 (whereas Rust considers them equal).
+/// https://drafts.csswg.org/css-values-4/#css-signed-zero
+#[inline]
+pub fn calc_max(a: CSSFloat, b: CSSFloat) -> CSSFloat {
+    match (a.is_sign_negative(), b.is_sign_negative()) {
+        (true, false) => b,
+        (false, true) => a,
+        _ => a.max(b),
+    }
+}
+
+/// Computes the sign of the given value. The CSS Values and Units definition for
+/// sign() returns +0 or -0 for an input of +0 or -0, respectively (whereas the
+/// Rust f32::signum() function returns +1 or -1, respectively).
+/// https://drafts.csswg.org/css-values-4/#funcdef-sign
+#[inline]
+pub fn calc_sign(value: CSSFloat) -> CSSFloat {
+    if value.is_nan() {
+        f32::NAN
+    } else if value.is_zero() {
+        value
+    } else if value.is_sign_negative() {
+        -1.0
+    } else {
+        1.0
     }
 }
 
@@ -159,6 +199,7 @@ where
     MallocSizeOf,
     PartialEq,
     SpecifiedValueInfo,
+    ToAnimatedValue,
     ToComputedValue,
     ToResolvedValue,
     ToShmem,
@@ -452,36 +493,27 @@ where
     dest.write_char('%')
 }
 
-/// Reify a percentage with calc.
-pub fn reify_percentage(
-    value: CSSFloat,
-    was_calc: bool,
-    dest: &mut ThinVec<TypedValue>,
-) -> Result<(), ()> {
+/// Reify a percentage.
+pub fn reify_percentage(value: CSSFloat, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
     let numeric_value = NumericValue::Unit(UnitValue {
+        numeric_type: NumericType::percent(),
         value: value * 100.,
         unit: CssString::from("percent"),
     });
 
-    // https://drafts.css-houdini.org/css-typed-om-1/#reify-a-math-expression
-    if was_calc {
-        dest.push(TypedValue::Numeric(NumericValue::Sum(MathSum {
-            values: ThinVec::from([numeric_value]),
-        })));
-    } else {
-        dest.push(TypedValue::Numeric(numeric_value));
-    }
-
+    dest.push(TypedValue::Numeric(numeric_value));
     Ok(())
 }
 
 /// Convenience void type to disable some properties and values through types.
-#[cfg_attr(feature = "servo", derive(Deserialize, MallocSizeOf, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
+    MallocSizeOf,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToAnimatedValue,
     ToComputedValue,

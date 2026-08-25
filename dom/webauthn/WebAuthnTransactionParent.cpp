@@ -12,6 +12,7 @@
 #include "mozilla/StaticPrefs_security.h"
 #include "mozilla/dom/PWindowGlobalParent.h"
 #include "mozilla/dom/WindowGlobalParent.h"
+#include "nsComponentManagerUtils.h"
 #include "nsIWebAuthnRelatedOriginFetcher.h"
 #include "nsThreadUtils.h"
 
@@ -113,7 +114,8 @@ class RelatedOriginCheckHandler final
     if (!mFetcher) {
       return NS_ERROR_DOM_SECURITY_ERR;
     }
-    auto* manager = static_cast<WindowGlobalParent*>(mParent->Manager());
+    auto* manager =
+        mozilla::ipc::ActorCast<WindowGlobalParent>(mParent->Manager());
     return mFetcher->CheckRelatedOriginRequest(
         manager, aRpId, aOp == WebAuthnOp::Create, aShowPrompt, this);
   }
@@ -190,7 +192,7 @@ void WebAuthnTransactionParent::CompleteTransaction() {
 }
 
 void WebAuthnTransactionParent::DisconnectTransaction() {
-  mTransactionId.reset();
+  Maybe<uint64_t> transactionId = std::move(mTransactionId);
   mRegisterPromiseRequest.DisconnectIfExists();
   mSignPromiseRequest.DisconnectIfExists();
   if (mRelatedOriginCheckHandler) {
@@ -207,8 +209,8 @@ void WebAuthnTransactionParent::DisconnectTransaction() {
     mPendingSignInfo.reset();
     resolver(NS_ERROR_DOM_ABORT_ERR);
   }
-  if (mWebAuthnService) {
-    mWebAuthnService->Reset();
+  if (mWebAuthnService && transactionId.isSome()) {
+    mWebAuthnService->Cancel(transactionId.ref());
   }
 }
 
@@ -232,7 +234,8 @@ mozilla::ipc::IPCResult WebAuthnTransactionParent::RecvRequestRegister(
   uint64_t aTransactionId = NextId();
   mTransactionId = Some(aTransactionId);
 
-  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
+  WindowGlobalParent* manager =
+      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
 
   if (!IsWebAuthnAllowedInContext(manager)) {
     aResolver(NS_ERROR_DOM_SECURITY_ERR);
@@ -262,7 +265,8 @@ mozilla::ipc::IPCResult WebAuthnTransactionParent::RecvRequestRegister(
 }
 
 void WebAuthnTransactionParent::RelatedOriginApproved() {
-  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
+  WindowGlobalParent* manager =
+      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
   nsAutoCString origin;
   nsresult rv =
       GetWebAuthnClientDataOrigin(manager->DocumentPrincipal(), origin);
@@ -308,7 +312,8 @@ void WebAuthnTransactionParent::ContinueWithRegister(
     RequestRegisterResolver&& aResolver) {
   MOZ_ASSERT(mTransactionId.isSome());
 
-  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
+  WindowGlobalParent* manager =
+      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
   nsIPrincipal* principal = manager->DocumentPrincipal();
   uint64_t aTransactionId = mTransactionId.ref();
 
@@ -489,7 +494,8 @@ mozilla::ipc::IPCResult WebAuthnTransactionParent::RecvRequestSign(
   uint64_t transactionId = NextId();
   mTransactionId = Some(transactionId);
 
-  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
+  WindowGlobalParent* manager =
+      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
 
   if (!IsWebAuthnAllowedInContext(manager)) {
     aResolver(NS_ERROR_DOM_SECURITY_ERR);
@@ -508,6 +514,16 @@ mozilla::ipc::IPCResult WebAuthnTransactionParent::RecvRequestSign(
     ContinueWithSign(origin, aTransactionInfo, std::move(aResolver));
     return IPC_OK();
   }
+
+  // Bug 2043449: A conditionally mediated request must not trigger a related
+  // origin request, which may prompt the user. Fail with a security error
+  // instead.
+  if (aTransactionInfo.ConditionallyMediated()) {
+    mTransactionId.reset();
+    aResolver(NS_ERROR_DOM_SECURITY_ERR);
+    return IPC_OK();
+  }
+
   rv = BeginRelatedOriginCheck(aTransactionInfo.RpId(), WebAuthnOp::Assert);
   if (NS_FAILED(rv)) {
     aResolver(NS_ERROR_DOM_SECURITY_ERR);
@@ -542,7 +558,8 @@ void WebAuthnTransactionParent::ContinueWithSign(
     RequestSignResolver&& aResolver) {
   MOZ_ASSERT(mTransactionId.isSome());
 
-  WindowGlobalParent* manager = static_cast<WindowGlobalParent*>(Manager());
+  WindowGlobalParent* manager =
+      mozilla::ipc::ActorCast<WindowGlobalParent>(Manager());
   nsIPrincipal* principal = manager->DocumentPrincipal();
   uint64_t transactionId = mTransactionId.ref();
 

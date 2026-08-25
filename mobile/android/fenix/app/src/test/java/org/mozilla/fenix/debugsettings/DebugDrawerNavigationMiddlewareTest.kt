@@ -28,16 +28,19 @@ class DebugDrawerNavigationMiddlewareTest {
     private lateinit var store: DebugDrawerStore
 
     @Before
-    fun setup() = runTest(testDispatcher) {
-        store = DebugDrawerStore(
-            middlewares = listOf(
-                DebugDrawerNavigationMiddleware(
-                    navController = navController,
-                    scope = testCoroutineScope,
-                ),
-            ),
-        )
-    }
+    fun setup() =
+        runTest(testDispatcher) {
+            store =
+                DebugDrawerStore(
+                    middlewares =
+                        listOf(
+                            DebugDrawerNavigationMiddleware(
+                                navController = navController,
+                                scope = testCoroutineScope,
+                            )
+                        )
+                )
+        }
 
     @Test
     fun `WHEN home is the next destination THEN the back stack is cleared and the user is returned to home`() =
@@ -122,6 +125,16 @@ class DebugDrawerNavigationMiddlewareTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             verify { navController.navigate(DebugDrawerRoute.TabProcessTools.route) }
+        }
+
+    @Test
+    fun `WHEN the distribution tools screen is the next destination THEN the distribution tools screen is navigated to`() =
+        runTest(testDispatcher) {
+            store.dispatch(DebugDrawerAction.NavigateTo.DistributionTools)
+
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            verify { navController.navigate(DebugDrawerRoute.DistributionTools.route) }
         }
 
     @Test

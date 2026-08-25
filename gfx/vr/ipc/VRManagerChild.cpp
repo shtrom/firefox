@@ -4,26 +4,26 @@
 
 #include "VRManagerChild.h"
 
+#include "VRDisplayClient.h"
 #include "VRLayerChild.h"
 #include "VRManagerParent.h"
 #include "VRThread.h"
-#include "VRDisplayClient.h"
-#include "nsGlobalWindowInner.h"
 #include "mozilla/ProfilerMarkers.h"
 #include "mozilla/StaticPtr.h"
-#include "mozilla/layers/CompositorThread.h"  // for CompositorThread
+#include "mozilla/dom/ContentChild.h"
+#include "mozilla/dom/GamepadManager.h"
 #include "mozilla/dom/Navigator.h"
 #include "mozilla/dom/VREventObserver.h"
 #include "mozilla/dom/WebXRBinding.h"
 #include "mozilla/dom/WindowBinding.h"  // for FrameRequestCallback
-#include "mozilla/dom/XRSystem.h"
 #include "mozilla/dom/XRFrame.h"
-#include "mozilla/dom/ContentChild.h"
-#include "nsContentUtils.h"
-#include "mozilla/dom/GamepadManager.h"
+#include "mozilla/dom/XRSystem.h"
 #include "mozilla/ipc/Endpoint.h"
+#include "mozilla/layers/CompositorThread.h"  // for CompositorThread
 #include "mozilla/layers/SyncObject.h"
 #include "mozilla/layers/TextureForwarder.h"
+#include "nsContentUtils.h"
+#include "nsGlobalWindowInner.h"
 
 using namespace mozilla::dom;
 
@@ -43,8 +43,9 @@ static TimeDuration sAverageFrameInterval;
 
 void ReleaseVRManagerParentSingleton() { sVRManagerParentSingleton = nullptr; }
 
-VRManagerChild::VRManagerChild()
-    : mRuntimeCapabilities(VRDisplayCapabilityFlags::Cap_None),
+VRManagerChild::VRManagerChild(uint32_t aNamespace)
+    : mNamespace(aNamespace),
+      mRuntimeCapabilities(VRDisplayCapabilityFlags::Cap_None),
       mFrameRequestCallbackCounter(0),
       mWaitingForEnumeration(false),
       mBackend(layers::LayersBackend::LAYERS_NONE) {
@@ -103,10 +104,11 @@ TimeStamp VRManagerChild::GetIdleDeadlineHint(TimeStamp aDefault) {
 }
 
 /* static */
-bool VRManagerChild::InitForContent(Endpoint<PVRManagerChild>&& aEndpoint) {
+bool VRManagerChild::InitForContent(Endpoint<PVRManagerChild>&& aEndpoint,
+                                    uint32_t aNamespace) {
   MOZ_ASSERT(NS_IsMainThread());
 
-  RefPtr<VRManagerChild> child(new VRManagerChild());
+  RefPtr<VRManagerChild> child(new VRManagerChild(aNamespace));
   if (!aEndpoint.Bind(child)) {
     return false;
   }
@@ -115,22 +117,23 @@ bool VRManagerChild::InitForContent(Endpoint<PVRManagerChild>&& aEndpoint) {
 }
 
 /*static*/
-void VRManagerChild::InitSameProcess() {
+void VRManagerChild::InitSameProcess(uint32_t aNamespace) {
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(!sVRManagerChildSingleton);
 
-  sVRManagerChildSingleton = new VRManagerChild();
-  sVRManagerParentSingleton = VRManagerParent::CreateSameProcess();
+  sVRManagerChildSingleton = new VRManagerChild(aNamespace);
+  sVRManagerParentSingleton = VRManagerParent::CreateSameProcess(aNamespace);
   sVRManagerChildSingleton->Open(sVRManagerParentSingleton, CompositorThread(),
                                  mozilla::ipc::ChildSide);
 }
 
 /* static */
-void VRManagerChild::InitWithGPUProcess(Endpoint<PVRManagerChild>&& aEndpoint) {
+void VRManagerChild::InitWithGPUProcess(Endpoint<PVRManagerChild>&& aEndpoint,
+                                        uint32_t aNamespace) {
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(!sVRManagerChildSingleton);
 
-  sVRManagerChildSingleton = new VRManagerChild();
+  sVRManagerChildSingleton = new VRManagerChild(aNamespace);
   if (!aEndpoint.Bind(sVRManagerChildSingleton)) {
     MOZ_CRASH("Couldn't Open() Compositor channel.");
   }
@@ -466,7 +469,7 @@ void VRManagerChild::FireDOMVRDisplayPresentChangeEvent(uint32_t aDisplayID) {
 
   if (!IsPresenting()) {
     sMostRecentFrameEnd = TimeStamp();
-    sAverageFrameInterval = 0;
+    sAverageFrameInterval = nullptr;
   }
 }
 

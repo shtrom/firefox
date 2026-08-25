@@ -10,6 +10,9 @@ ChromeUtils.defineESModuleGetters(lazy, {
   AboutReaderParent: "resource:///actors/AboutReaderParent.sys.mjs",
   AIWindow:
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+  AppProvidedConfigEngine:
+    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
+  ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
   BrowserUsageTelemetry: "resource:///modules/BrowserUsageTelemetry.sys.mjs",
   CustomizableUI:
     "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
@@ -180,7 +183,7 @@ export var UITour = {
     [
       "urlbar",
       {
-        query: "#urlbar",
+        query: "#urlbar-container",
         widgetName: "urlbar-container",
       },
     ],
@@ -463,9 +466,11 @@ export var UITour = {
             return data.email
               ? lazy.FxAccounts.config.promiseEmailURI(
                   data.email,
+                  "sync",
                   data.entrypoint || "uitour"
                 )
               : lazy.FxAccounts.config.promiseConnectAccountURI(
+                  "sync",
                   data.entrypoint || "uitour"
                 );
           })
@@ -512,7 +517,7 @@ export var UITour = {
 
       case "showConnectAnotherDevice": {
         lazy.FxAccounts.config
-          .promiseConnectDeviceURI(data.entrypoint || "uitour")
+          .promiseConnectDeviceURI("sync", data.entrypoint || "uitour")
           .then(uri => {
             const url = new URL(uri);
             // Call our helper to validate extraURLParams and populate URLSearchParams
@@ -1586,11 +1591,14 @@ export var UITour = {
           .then(engines => {
             let { defaultEngine } = lazy.SearchService;
             this.sendPageCallback(aBrowser, aCallbackID, {
-              searchEngineIdentifier: defaultEngine.isAppProvided
-                ? defaultEngine.id
-                : null,
+              searchEngineIdentifier:
+                defaultEngine instanceof lazy.AppProvidedConfigEngine
+                  ? defaultEngine.id
+                  : null,
               engines: engines
-                .filter(engine => engine.isAppProvided)
+                .filter(
+                  engine => engine instanceof lazy.AppProvidedConfigEngine
+                )
                 .map(engine => TARGET_SEARCHENGINE_PREFIX + engine.id),
             });
           })
@@ -1858,6 +1866,11 @@ export var UITour = {
       }
       appinfo.profileCreatedWeeksAgo = createdWeeksAgo;
       appinfo.profileResetWeeksAgo = resetWeeksAgo;
+
+      try {
+        await lazy.ASRouter.waitForInitialized;
+        appinfo.previousSessionEnd = lazy.ASRouter.state.previousSessionEnd;
+      } catch (e) {}
 
       this.sendPageCallback(aBrowser, aCallbackID, appinfo);
     })().catch(err => {

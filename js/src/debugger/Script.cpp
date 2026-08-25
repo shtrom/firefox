@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "debugger/Script-inl.h"
-
 #include "mozilla/Maybe.h"   // for Some, Maybe
 #include "mozilla/Span.h"    // for Span
 #include "mozilla/Vector.h"  // for Vector
@@ -48,11 +46,12 @@
 #include "wasm/WasmJS.h"              // for WasmInstanceObject
 #include "wasm/WasmTypeDecls.h"       // for Bytes
 
+#include "debugger/Script-inl.h"
 #include "gc/Marking-inl.h"       // for MaybeForwardedObjectIs
 #include "vm/BytecodeUtil-inl.h"  // for BytecodeRangeWithPosition
 #include "vm/JSAtomUtils-inl.h"   // for PrimitiveValueToId
-#include "vm/JSObject-inl.h"  // for NewBuiltinClassInstance, NewObjectWithGivenProto, NewTenuredObjectWithGivenProto
-#include "vm/JSScript-inl.h"  // for JSScript::global
+#include "vm/JSObject-inl.h"  // for NewBuiltinClassInstance, NewObjectWithGivenProto
+#include "vm/JSScript-inl.h"          // for JSScript::global
 #include "vm/ObjectOperations-inl.h"  // for GetProperty
 #include "vm/Realm-inl.h"             // for AutoRealm::AutoRealm
 
@@ -106,8 +105,8 @@ NativeObject* DebuggerScript::initClass(JSContext* cx,
 DebuggerScript* DebuggerScript::create(JSContext* cx, HandleObject proto,
                                        Handle<DebuggerScriptReferent> referent,
                                        Handle<NativeObject*> debugger) {
-  DebuggerScript* scriptobj =
-      NewTenuredObjectWithGivenProto<DebuggerScript>(cx, proto);
+  DebuggerScript* scriptobj = NewObjectWithGivenProto<DebuggerScript>(
+      cx, proto, {.newKind = TenuredObject});
   if (!scriptobj) {
     return nullptr;
   }
@@ -494,7 +493,6 @@ bool DebuggerScript::CallData::getFormat() {
 
 static bool PushFunctionScript(JSContext* cx, Debugger* dbg, HandleFunction fun,
                                HandleObject array) {
-  // Ignore asm.js natives.
   if (!IsInterpretedNonSelfHostedFunction(fun)) {
     return true;
   }
@@ -1493,16 +1491,11 @@ static bool BytecodeIsEffectful(JSScript* script, size_t offset) {
     case JSOp::SetFunName:
     case JSOp::MutateProto:
     case JSOp::DynamicImport:
-#ifdef ENABLE_SOURCE_PHASE_IMPORTS
-    case JSOp::DynamicImportSource:
-#endif
     case JSOp::InitialYield:
     case JSOp::Yield:
     case JSOp::Await:
     case JSOp::CanSkipAwait:
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
     case JSOp::AddDisposable:
-#endif
       return true;
 
     case JSOp::Nop:
@@ -1522,10 +1515,8 @@ static bool BytecodeIsEffectful(JSScript* script, size_t offset) {
     case JSOp::Try:
     case JSOp::Throw:
     case JSOp::ThrowWithStack:
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
     case JSOp::TakeDisposeCapability:
     case JSOp::CreateSuppressedError:
-#endif
     case JSOp::Goto:
     case JSOp::TableSwitch:
     case JSOp::Case:
@@ -1704,10 +1695,8 @@ static bool BytecodeIsEffectful(JSScript* script, size_t offset) {
     case JSOp::GetBoundName:
     case JSOp::Exception:
     case JSOp::ExceptionAndStack:
-    case JSOp::IsGenClosing:
     case JSOp::FinalYieldRval:
     case JSOp::Resume:
-    case JSOp::CheckResumeKind:
     case JSOp::AfterYield:
     case JSOp::MaybeExtractAwaitValue:
     case JSOp::Generator:
@@ -1717,7 +1706,6 @@ static bool BytecodeIsEffectful(JSScript* script, size_t offset) {
     case JSOp::Finally:
     case JSOp::GetRval:
     case JSOp::ThrowMsg:
-    case JSOp::ForceInterpreter:
       return false;
 
     case JSOp::InitAliasedLexical: {

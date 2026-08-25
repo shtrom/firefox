@@ -5,27 +5,27 @@
 #ifndef nsHostResolver_h_
 #define nsHostResolver_h_
 
-#include "nscore.h"
-#include "prnetdb.h"
-#include "PLDHashTable.h"
-#include "mozilla/CondVar.h"
-#include "mozilla/DataMutex.h"
-#include "mozilla/RWLock.h"
-#include "nsISupportsImpl.h"
-#include "nsIDNSListener.h"
-#include "nsTArray.h"
 #include "GetAddrInfo.h"
 #include "HostRecordQueue.h"
-#include "mozilla/net/DNS.h"
-#include "mozilla/net/DashboardTypes.h"
+#include "PLDHashTable.h"
 #include "mozilla/Atomics.h"
-#include "mozilla/TimeStamp.h"
-#include "nsHostRecord.h"
-#include "nsRefPtrHashtable.h"
-#include "nsIThreadPool.h"
-#include "mozilla/net/NetworkConnectivityService.h"
-#include "mozilla/net/DNSByTypeRecord.h"
+#include "mozilla/CondVar.h"
+#include "mozilla/DataMutex.h"
+#include "mozilla/Mutex.h"
 #include "mozilla/StaticPrefs_network.h"
+#include "mozilla/TimeStamp.h"
+#include "mozilla/net/DNS.h"
+#include "mozilla/net/DNSByTypeRecord.h"
+#include "mozilla/net/DashboardTypes.h"
+#include "mozilla/net/NetworkConnectivityService.h"
+#include "nsHostRecord.h"
+#include "nsIDNSListener.h"
+#include "nsISupportsImpl.h"
+#include "nsIThreadPool.h"
+#include "nsRefPtrHashtable.h"
+#include "nsTArray.h"
+#include "nscore.h"
+#include "prnetdb.h"
 
 namespace mozilla {
 namespace net {
@@ -283,6 +283,11 @@ class nsHostResolver : public nsISupports, public AHostResolver {
       nsIDNSService::DNSFlags aFlags, uint16_t af, bool aPb, nsresult& aStatus)
       MOZ_REQUIRES(mDBLock) MOZ_REQUIRES(mQueue.mLock);
 
+  bool OtherFamilyHasUsablePositiveResult(const nsHostKey& aKey, uint16_t aAf,
+                                          const mozilla::TimeStamp& aNow,
+                                          nsIDNSService::DNSFlags aFlags)
+      MOZ_REQUIRES(mDBLock);
+
   enum {
     METHOD_HIT = 1,
     METHOD_RENEWAL = 2,
@@ -296,7 +301,7 @@ class nsHostResolver : public nsISupports, public AHostResolver {
   // mutable so SizeOfIncludingThis can be const
   // Protects mRecordDB. When held together with mQueue.mLock, always acquire
   // mDBLock first.
-  mutable mozilla::RWLock mDBLock{"nsHostResolver.mDBLock"};
+  mutable Mutex mDBLock{"nsHostResolver.mDBLock"};
   mozilla::net::HostRecordQueue mQueue;
   nsRefPtrHashtable<nsGenericHashKey<nsHostKey>, nsHostRecord> mRecordDB
       MOZ_GUARDED_BY(mDBLock);

@@ -8,6 +8,7 @@
 #include <bitset>
 
 #include "irregexp/imported/regexp-nodes.h"
+#include "irregexp/RegExpShim.h"
 
 namespace v8 {
 namespace internal {
@@ -114,8 +115,10 @@ class QuickCheckDetails {
     DCHECK_GT(characters_, index);
     return positions_ + index;
   }
-  uint32_t mask() { return mask_; }
-  uint32_t value() { return value_; }
+  uint32_t mask() const { return mask_; }
+  uint32_t value() const { return value_; }
+  void set_mask(uint32_t mask) { mask_ = mask; }
+  void set_value(uint32_t value) { value_ = value; }
 
  private:
   static constexpr int kMaxPositions = 4;
@@ -223,7 +226,38 @@ class BoyerMooreLookahead : public ZoneObject {
   void SetRest(int from_map) {
     for (int i = from_map; i < length_; i++) SetAll(i);
   }
-  void EmitSkipInstructions(RegExpMacroAssembler* masm);
+  // Emits a Boyer-Moore skip-scan prelude for the unanchored search, if
+  // profitable. Returns true iff code that owns the search was emitted: either
+  // a skip-scan, or an unconditional Fail() when some lookahead position can
+  // never match. In both cases the caller must not emit a competing scan over
+  // the same loop. Returns false iff nothing was emitted (PC unchanged) and the
+  // caller should fall back to another strategy.
+  bool EmitSkipInstructions(RegExpMacroAssembler* masm);
+
+  // Exposes the BitInTable skip-scan inputs without emitting: picks the most
+  // discriminating lookahead interval and builds the boolean (and SIMD nibble)
+  // table for it. *offset is the lookahead position to test (the SkipUntil*
+  // cp_offset); *advance_by is the per-iteration stride. Returns false if no
+  // worthwhile interval exists. Used by ChoiceNode::EmitOneOfMasked3Search to
+  // build the leading scan of a fused SkipUntilOneOfMasked3.
+  bool BuildSkipTable(RegExpMacroAssembler* masm, int* offset, int* advance_by,
+                      Handle<ByteArray>* table,
+                      Handle<ByteArray>* nibble_table);
+
+  // Fills |boolean_skip_table| (one byte per character, indexed mod kTableSize)
+  // with 1 for every character in the lookahead maps [min_lookahead,
+  // max_lookahead] and 0 elsewhere, and optionally the SIMD |nibble_table|.
+  // Returns the resulting skip stride. With a single map (min == max) this is
+  // just that position's membership table.
+  int GetSkipTable(
+      int min_lookahead, int max_lookahead,
+      DirectHandle<ByteArray> boolean_skip_table,
+      DirectHandle<ByteArray> nibble_table = DirectHandle<ByteArray>{});
+
+  // Transient probes opt out so they don't clobber the shared bm_info_ (see
+  // Node::set_bm_info).
+  bool caches_node_info() const { return caches_node_info_; }
+  void set_caches_node_info(bool value) { caches_node_info_ = value; }
 
  private:
   // This is the value obtained by EatsAtLeast.  If we do not have at least this
@@ -235,11 +269,8 @@ class BoyerMooreLookahead : public ZoneObject {
   // 0xff for Latin1, 0xffff for UTF-16.
   int max_char_;
   ZoneList<BoyerMoorePositionInfo*>* bitmaps_;
+  bool caches_node_info_ = true;
 
-  int GetSkipTable(
-      int min_lookahead, int max_lookahead,
-      DirectHandle<ByteArray> boolean_skip_table,
-      DirectHandle<ByteArray> nibble_table = DirectHandle<ByteArray>{});
   bool FindWorthwhileInterval(int* from, int* to);
   int FindBestInterval(int max_number_of_chars, int old_biggest_points,
                        int* from, int* to);
@@ -260,13 +291,14 @@ class Trace {
  public:
   // A value for a property that is either known to be true, known to be false,
   // or not known.
-  enum TriBool { UNKNOWN = -1, FALSE_VALUE = 0, TRUE_VALUE = 1 };
+  enum TriBool { FALSE_VALUE = 0, TRUE_VALUE = 1, UNKNOWN = 2 };
 
   Trace()
       : cp_offset_(0),
         flush_budget_(100),  // Note: this is a 16 bit field.
-        at_start_(UNKNOWN),
-        has_any_actions_(false),
+        flags_(AtStartField::encode(UNKNOWN) |
+               HasAnyActionsField::encode(false) |
+               ParkedGrantField::encode(ParkedGrant::kNone)),
         action_(nullptr),
         backtrack_(nullptr),
         special_loop_state_(nullptr),
@@ -277,8 +309,7 @@ class Trace {
   Trace(const Trace& other) V8_NOEXCEPT
       : cp_offset_(other.cp_offset_),
         flush_budget_(other.flush_budget_),
-        at_start_(other.at_start_),
-        has_any_actions_(other.has_any_actions_),
+        flags_(other.flags_),
         action_(nullptr),
         backtrack_(other.backtrack_),
         special_loop_state_(other.special_loop_state_),
@@ -312,7 +343,7 @@ class Trace {
   int cp_offset() const { return cp_offset_; }
 
   // Does any trace in the chain have an action?
-  bool has_any_actions() const { return has_any_actions_; }
+  bool has_any_actions() const { return HasAnyActionsField::decode(flags_); }
   // Does this particular trace object have an action?
   bool has_action() const { return action_ != nullptr; }
   ActionNode* action() const { return action_; }
@@ -327,13 +358,28 @@ class Trace {
   // a trivial trace is recorded in a label in the node so that gotos can be
   // generated to that code.
   bool is_trivial() const {
-    return backtrack_ == nullptr && !has_any_actions_ && cp_offset_ == 0 &&
+    return backtrack_ == nullptr && !has_any_actions() && cp_offset_ == 0 &&
            characters_preloaded_ == 0 && bound_checked_up_to_ == 0 &&
-           quick_check_performed_.characters() == 0 && at_start_ == UNKNOWN;
+           quick_check_performed_.characters() == 0 && at_start() == UNKNOWN;
   }
-  TriBool at_start() const { return at_start_; }
-  void set_at_start(TriBool at_start) { at_start_ = at_start; }
+  TriBool at_start() const { return AtStartField::decode(flags_); }
+  void set_at_start(TriBool at_start) {
+    flags_ = AtStartField::update(flags_, at_start);
+  }
   Label* backtrack() const { return backtrack_; }
+  // What the loop-exit backtrack target tolerates when a drain-omitted loop
+  // unwinds to it with the input position parked at the loop's greedy extent
+  // (see ParkedGrant for the levels, and the terminology block in
+  // regexp-nodes.h for "loop-exit backtrack").  The parked position can be
+  // anywhere in [trace position, subject end] -- including the end itself, so
+  // the search-retry re-entry reloads with a bounds check.
+  //
+  // The grant is issued only at emission sites where the target's behavior is
+  // known by construction, and is revoked automatically whenever the backtrack
+  // target changes (see set_backtrack).  Crossing a choice into an alternative
+  // additionally requires that no sibling can match at a skipped position
+  // (see ChoiceNode::EmitChoices).
+  ParkedGrant parked_grant() const { return ParkedGrantField::decode(flags_); }
   SpecialLoopState* special_loop_state() const { return special_loop_state_; }
   int characters_preloaded() const { return characters_preloaded_; }
   int bound_checked_up_to() const { return bound_checked_up_to_; }
@@ -349,9 +395,24 @@ class Trace {
   void add_action(ActionNode* new_action) {
     DCHECK(action_ == nullptr);  // Otherwise we lose an action.
     action_ = new_action;
-    has_any_actions_ = true;
+    flags_ = HasAnyActionsField::update(flags_, true);
   }
-  void set_backtrack(Label* backtrack) { backtrack_ = backtrack; }
+  // Clears any inherited parked-position grant; see parked_grant() for when
+  // an alternative must do this.
+  void reset_parked_grant() {
+    flags_ = ParkedGrantField::update(flags_, ParkedGrant::kNone);
+  }
+  void set_backtrack(Label* backtrack) {
+    backtrack_ = backtrack;
+    // A parked-position grant is tied to the specific target it was issued
+    // for; a new target must obtain its own.
+    reset_parked_grant();
+  }
+  void set_parked_grant(ParkedGrant grant) {
+    DCHECK_NOT_NULL(backtrack_);
+    DCHECK_NE(grant, ParkedGrant::kNone);
+    flags_ = ParkedGrantField::update(flags_, grant);
+  }
   void set_special_loop_state(SpecialLoopState* state) {
     special_loop_state_ = state;
   }
@@ -368,7 +429,7 @@ class Trace {
   EmitResult AdvanceCurrentPositionInTrace(int by, Compiler* compiler);
   const Trace* next() const { return next_; }
 
-  class ConstIterator final {
+  class V8_GSL_POINTER ConstIterator final {
    public:
     ConstIterator& operator++() {
       trace_ = trace_->next();
@@ -414,10 +475,16 @@ class Trace {
                                 const DynamicBitSet& registers_to_clear);
   void ScanDeferredActions(Trace* top, int reg, RegisterFlushInfo* info);
 
+  // Whether we are at the start of the string.
+  using AtStartField = base::BitField<TriBool, 0, 2>;
+  // Whether any trace in the chain has an action.
+  using HasAnyActionsField = AtStartField::Next<bool, 1>;
+  // See parked_grant.
+  using ParkedGrantField = HasAnyActionsField::Next<ParkedGrant, 2>;
+
   int cp_offset_;
   uint16_t flush_budget_;
-  TriBool at_start_ : 8;      // Whether we are at the start of the string.
-  bool has_any_actions_ : 8;  // Whether any trace in the chain has an action.
+  uint32_t flags_;
   ActionNode* action_;
   Label* backtrack_;
   SpecialLoopState* special_loop_state_;
@@ -509,7 +576,7 @@ class FrequencyCollator {
   int total_samples_;
 };
 
-class Compiler {
+class V8_EXPORT_PRIVATE Compiler {
  public:
   Compiler(Isolate* isolate, Zone* zone, int capture_count, Flags flags,
            bool is_one_byte);

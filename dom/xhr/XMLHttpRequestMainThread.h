@@ -226,6 +226,8 @@ class XMLHttpRequestMainThread final : public XMLHttpRequest,
       const ClientInfo& aClientInfo,
       const Maybe<ServiceWorkerDescriptor>& aController);
 
+  void SetAssociatedBrowsingContextID(uint64_t aId);
+
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIStreamListener
@@ -636,6 +638,7 @@ class XMLHttpRequestMainThread final : public XMLHttpRequest,
 
   Maybe<ClientInfo> mClientInfo;
   Maybe<ServiceWorkerDescriptor> mController;
+  uint64_t mAssociatedBrowsingContextID = 0;
 
   uint16_t mState;
 
@@ -792,7 +795,7 @@ class nsXMLHttpRequestXPCOMifier final : public nsIStreamListener,
                                          public nsIInterfaceRequestor,
                                          public nsITimerCallback,
                                          public nsINamed {
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL
   NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(nsXMLHttpRequestXPCOMifier,
                                            nsIStreamListener)
 

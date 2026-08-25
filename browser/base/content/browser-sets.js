@@ -8,6 +8,11 @@ document.addEventListener(
     const lazy = {};
     ChromeUtils.defineESModuleGetters(lazy, {
       TranslationsParent: "resource://gre/actors/TranslationsParent.sys.mjs",
+      AIWindowUI:
+        "moz-src:///browser/components/aiwindow/ui/modules/AIWindowUI.sys.mjs",
+      ContainerCreationPanel:
+        "chrome://browser/content/usercontext/ContainerCreationPanel.mjs",
+      Referrals: "resource:///modules/referrals/Referrals.sys.mjs",
     });
 
     // <commandset id="mainCommandSet"> defined in browser-sets.inc.xhtml
@@ -17,7 +22,15 @@ document.addEventListener(
       .addEventListener("command", event => {
         switch (event.target.id) {
           case "cmd_newNavigator":
-            OpenBrowserWindow();
+            if (AIWindow.isDefaultWindow) {
+              AIWindow.launchWindow(
+                gBrowser?.selectedBrowser,
+                true,
+                "keyboard_shortcut"
+              );
+            } else {
+              OpenBrowserWindow();
+            }
             break;
           case "cmd_handleBackspace":
             BrowserCommands.handleBackspace();
@@ -132,6 +145,12 @@ document.addEventListener(
               targetLanguage: "derive",
             }).catch(console.error);
             break;
+          case "cmd_editPDF":
+            switchToTabHavingURI("about:pdf", true);
+            break;
+          case "cmd_openReferrals":
+            lazy.Referrals.openReferralsTab(window, "app_menu");
+            break;
           case "Browser:AddBookmarkAs":
             PlacesCommandHook.bookmarkPage();
             break;
@@ -173,13 +192,27 @@ document.addEventListener(
             BrowserCommands.duplicateTab();
             break;
           case "Browser:NextTab":
-            gBrowser.tabContainer.advanceSelectedTab(1, true);
+            gBrowser.tabContainer.advanceSelectedTab(
+              1,
+              true,
+              event.sourceEvent
+            );
             break;
           case "Browser:PrevTab":
-            gBrowser.tabContainer.advanceSelectedTab(-1, true);
+            gBrowser.tabContainer.advanceSelectedTab(
+              -1,
+              true,
+              event.sourceEvent
+            );
             break;
           case "Browser:ShowAllTabs":
             gTabsPanel.showAllTabsPanel();
+            break;
+          case "Browser:AddTabSplitView":
+            BrowserCommands.addTabSplitView();
+            break;
+          case "Browser:SeparateTabSplitView":
+            BrowserCommands.separateTabSplitView();
             break;
           case "cmd_fullZoomReduce":
             FullZoom.reduce();
@@ -212,8 +245,19 @@ document.addEventListener(
           case "Browser:NewUserContextTab":
             openNewUserContextTab(event.sourceEvent);
             break;
+          case "Browser:AddContainer":
+            lazy.ContainerCreationPanel.open(
+              window,
+              event.sourceEvent?.target?.dataset.containerEntrypoint
+            );
+            break;
           case "Browser:OpenAboutContainers":
-            openPreferences("paneContainers");
+            openPreferences("paneContainers", {
+              urlParams: {
+                entrypoint:
+                  event.sourceEvent?.target?.dataset.containerEntrypoint,
+              },
+            });
             break;
           // deliberate fallthrough
           case "Profiles:CreateProfile":
@@ -301,10 +345,21 @@ document.addEventListener(
         case "viewBookmarksSidebarKb":
           SidebarController.toggle("viewBookmarksSidebar");
           break;
+        case "viewOpenTabsSidebarKb":
+          SidebarController.toggle("viewOpenTabsSidebar");
+          break;
         case "viewBookmarksToolbarKb":
           BookmarkingUI.toggleBookmarksToolbar("shortcut");
           break;
         case "viewGenaiChatSidebarKb": {
+          const currentURI = window.gBrowser.selectedBrowser.currentURI;
+          const isSmartWindowFullPageMode =
+            AIWindow.isAIWindowContentPage(currentURI);
+          if (AIWindow.isAIWindowActive(window) && !isSmartWindowFullPageMode) {
+            lazy.AIWindowUI.toggleSidebar(window);
+            break;
+          }
+
           const pref = "browser.ml.chat.enabled";
           const enabled = Services.prefs.getBoolPref(pref);
           Glean.genaiChatbot.keyboardShortcut.record({
@@ -338,12 +393,23 @@ document.addEventListener(
         case "key_selectTab7":
         case "key_selectTab8": {
           let index = event.target.id.at(-1) - 1;
-          gBrowser.selectTabAtIndex(index, event);
+          gBrowser.selectTabAtIndex(index, {
+            event,
+            metricsContext: gBrowser.TabMetrics.userTriggeredContext(
+              gBrowser.TabMetrics.METRIC_SOURCE.KEYBOARD
+            ),
+          });
           break;
         }
-        case "key_selectLastTab":
-          gBrowser.selectTabAtIndex(-1, event);
+        case "key_selectLastTab": {
+          gBrowser.selectTabAtIndex(-1, {
+            event,
+            metricsContext: gBrowser.TabMetrics.userTriggeredContext(
+              gBrowser.TabMetrics.METRIC_SOURCE.KEYBOARD
+            ),
+          });
           break;
+        }
 
         case "key_openHelpMac":
           openHelpLink("firefox-osxkey");

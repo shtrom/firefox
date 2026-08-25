@@ -10,7 +10,7 @@ use crate::derives::*;
 use crate::parser::{Parse, ParserContext};
 use crate::values::computed::resolution::Resolution as ComputedResolution;
 use crate::values::computed::{Context, ToComputedValue};
-use crate::values::specified::calc::{CalcNode, CalcNumeric, Leaf};
+use crate::values::specified::calc::{CalcNode, CalcNumeric, Leaf, PercentageContext};
 use crate::values::tagged_numeric::{NumericUnion, Unpacked};
 use crate::values::CSSFloat;
 use cssparser::{match_ignore_ascii_case, Parser, Token};
@@ -32,6 +32,18 @@ pub enum ResolutionUnit {
 }
 
 impl ResolutionUnit {
+    /// Returns the resolution unit for the given string.
+    #[inline]
+    pub fn from_str(unit: &str) -> Result<Self, ()> {
+        Ok(match_ignore_ascii_case! { &unit,
+            "dpi" => Self::Dpi,
+            "dppx" => Self::Dppx,
+            "dpcm" => Self::Dpcm,
+            "x" => Self::X,
+            _ => return Err(())
+        })
+    }
+
     /// Returns this unit as a string.
     #[inline]
     pub fn as_str(self) -> &'static str {
@@ -88,15 +100,15 @@ impl NoCalcResolution {
         }
     }
 
+    /// Returns the unit of the resolution.
+    #[inline]
+    pub fn resolution_unit(&self) -> ResolutionUnit {
+        self.unit
+    }
+
     /// Parse a resolution given a value and unit.
     pub fn parse_dimension(value: CSSFloat, unit: &str) -> Result<Self, ()> {
-        let unit = match_ignore_ascii_case! { &unit,
-            "dpi" => ResolutionUnit::Dpi,
-            "dppx" => ResolutionUnit::Dppx,
-            "dpcm" => ResolutionUnit::Dpcm,
-            "x" => ResolutionUnit::X,
-            _ => return Err(())
-        };
+        let unit = ResolutionUnit::from_str(unit)?;
         Ok(Self::new(unit, value))
     }
 }
@@ -214,9 +226,14 @@ impl Parse for Resolution {
                 .map_err(|()| location.new_custom_error(StyleParseErrorKind::UnspecifiedError)),
             Token::Function(ref name) => {
                 let function = CalcNode::math_function(context, name, location)?;
-                CalcNode::parse_resolution(context, input, function)
-                    .map(Box::new)
-                    .map(Self::new_calc)
+                CalcNode::parse_resolution(
+                    context,
+                    input,
+                    function,
+                    PercentageContext::not_allowed(),
+                )
+                .map(Box::new)
+                .map(Self::new_calc)
             },
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
         }

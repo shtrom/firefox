@@ -15,6 +15,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
+import kotlin.test.assertIs
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -37,7 +38,6 @@ import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.PermissionStorage
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.utils.Settings
-import kotlin.test.assertIs
 
 class DefaultDeleteBrowsingDataControllerTest {
 
@@ -56,200 +56,228 @@ class DefaultDeleteBrowsingDataControllerTest {
 
     @Before
     fun setup() {
-        controller = spyk(
-            DefaultDeleteBrowsingDataController(
-                deleteDataUseCases = DefaultDeleteBrowsingDataController.DeleteDataUseCases(
-                    removeAllTabs = removeAllTabs,
-                    removeAllDownloads = removeAllDownloads,
-                ),
-                dataStorage = DefaultDeleteBrowsingDataController.DataStorage(
-                    history = historyStorage,
-                    permissions = permissionStorage,
-                ),
-                stores = DefaultDeleteBrowsingDataController.Stores(
-                    appStore = appStore,
-                    browserStore = store,
-                ),
-                engine = engine,
-                settings = settings,
-                coroutineContext = testDispatcher,
-            ),
-        )
-    }
-
-    @Test
-    fun deleteTabs() = runTest(testDispatcher) {
-        controller.deleteTabs()
-
-        verify {
-            removeAllTabs.invoke(false)
-        }
-    }
-
-    @Test
-    fun deleteBrowsingHistory() = runTest(testDispatcher) {
-        controller.deleteBrowsingHistory()
-
-        coVerify(ordering = Ordering.ORDERED) {
-            historyStorage.deleteEverything()
-            store.dispatch(EngineAction.PurgeHistoryAction)
-            store.dispatch(RecentlyClosedAction.RemoveAllClosedTabAction)
-        }
-    }
-
-    @Test
-    fun deleteCookiesAndSiteData() = runTest(testDispatcher) {
-        controller.deleteCookiesAndSiteData()
-
-        verify {
-            engine.clearData(
-                Engine.BrowsingData.select(
-                    Engine.BrowsingData.COOKIES,
-                    Engine.BrowsingData.AUTH_SESSIONS,
-                ),
+        controller =
+            spyk(
+                DefaultDeleteBrowsingDataController(
+                    deleteDataUseCases =
+                        DefaultDeleteBrowsingDataController.DeleteDataUseCases(
+                            removeAllTabs = removeAllTabs,
+                            removeAllDownloads = removeAllDownloads,
+                        ),
+                    dataStorage =
+                        DefaultDeleteBrowsingDataController.DataStorage(
+                            history = historyStorage,
+                            permissions = permissionStorage,
+                        ),
+                    stores =
+                        DefaultDeleteBrowsingDataController.Stores(
+                            appStore = appStore,
+                            browserStore = store,
+                        ),
+                    engine = engine,
+                    settings = settings,
+                    coroutineContext = testDispatcher,
+                )
             )
-            engine.clearData(Engine.BrowsingData.select(Engine.BrowsingData.DOM_STORAGES))
-        }
     }
 
     @Test
-    fun deleteCachedFiles() = runTest(testDispatcher) {
-        val onSuccessSlot = slot<() -> Unit>()
-        val onErrorSlot = slot<(Throwable) -> Unit>()
+    fun deleteTabs() =
+        runTest(testDispatcher) {
+            controller.deleteTabs()
 
-        every {
-            engine.manageTranslationsLanguageModel(
-                options = any(),
-                onSuccess = capture(onSuccessSlot),
-                onError = capture(onErrorSlot),
-            )
-        } just Runs
-
-        controller.deleteCachedFiles()
-
-        verify {
-            engine.manageTranslationsLanguageModel(
-                options = ModelManagementOptions(
-                    operation = ModelOperation.DELETE,
-                    operationLevel = OperationLevel.CACHE,
-                ),
-                onSuccess = any(),
-                onError = any(),
-            )
-            engine.clearData(Engine.BrowsingData.select(Engine.BrowsingData.ALL_CACHES))
+            verify {
+                removeAllTabs.invoke(false)
+            }
         }
-
-        assertTrue(onSuccessSlot.isCaptured)
-        assertTrue(onErrorSlot.isCaptured)
-    }
 
     @Test
-    fun deleteSitePermissions() = runTest(testDispatcher) {
-        controller.deleteSitePermissions()
+    fun deleteBrowsingHistory() =
+        runTest(testDispatcher) {
+            val onSuccessSlot = slot<() -> Unit>()
+            val onErrorSlot = slot<(Throwable) -> Unit>()
+            every {
+                engine.clearTrackingProtectionData(
+                    onSuccess = capture(onSuccessSlot),
+                    onError = capture(onErrorSlot),
+                )
+            } answers { onSuccessSlot.captured.invoke() }
 
-        coVerify {
-            engine.clearData(Engine.BrowsingData.select(Engine.BrowsingData.ALL_SITE_SETTINGS))
-            permissionStorage.deleteAllSitePermissions()
+            controller.deleteBrowsingHistory()
+
+            coVerify(ordering = Ordering.ORDERED) {
+                historyStorage.deleteEverything()
+                store.dispatch(EngineAction.PurgeHistoryAction)
+                store.dispatch(RecentlyClosedAction.RemoveAllClosedTabAction)
+                engine.clearTrackingProtectionData(onSuccess = any(), onError = any())
+            }
+            assertTrue(onSuccessSlot.isCaptured)
+            assertTrue(onErrorSlot.isCaptured)
         }
-    }
 
     @Test
-    fun deleteDownloads() = runTest(testDispatcher) {
-        controller.deleteDownloads()
+    fun deleteCookiesAndSiteData() =
+        runTest(testDispatcher) {
+            controller.deleteCookiesAndSiteData()
 
-        verify {
-            removeAllDownloads.invoke()
+            verify {
+                engine.clearData(
+                    Engine.BrowsingData.select(
+                        Engine.BrowsingData.COOKIES,
+                        Engine.BrowsingData.AUTH_SESSIONS,
+                    )
+                )
+                engine.clearData(Engine.BrowsingData.select(Engine.BrowsingData.DOM_STORAGES))
+            }
         }
-    }
 
     @Test
-    fun `clearBrowsingDataOnQuit - when no data types are selected - completes immediately`() = runTest(testDispatcher) {
-        var onDeletionCompleteCount = 0
-        val onDeletionComplete: () -> Unit = { onDeletionCompleteCount++ }
+    fun deleteCachedFiles() =
+        runTest(testDispatcher) {
+            val onSuccessSlot = slot<() -> Unit>()
+            val onErrorSlot = slot<(Throwable) -> Unit>()
 
-        every { settings.getDeleteDataOnQuit(any()) } returns false // No types are selected
+            every {
+                engine.manageTranslationsLanguageModel(
+                    options = any(),
+                    onSuccess = capture(onSuccessSlot),
+                    onError = capture(onErrorSlot),
+                )
+            } just Runs
 
-        controller.clearBrowsingDataOnQuit(onDeletionComplete)
+            controller.deleteCachedFiles()
 
-        coVerify(exactly = 0) { appStore.dispatch(any()) }
-        coVerify(exactly = 0) { controller.deleteType(any()) }
+            verify {
+                engine.manageTranslationsLanguageModel(
+                    options =
+                        ModelManagementOptions(
+                            operation = ModelOperation.DELETE,
+                            operationLevel = OperationLevel.CACHE,
+                        ),
+                    onSuccess = any(),
+                    onError = any(),
+                )
+                engine.clearData(Engine.BrowsingData.select(Engine.BrowsingData.ALL_CACHES))
+            }
 
-        assertEquals(1, onDeletionCompleteCount)
-    }
+            assertTrue(onSuccessSlot.isCaptured)
+            assertTrue(onErrorSlot.isCaptured)
+        }
 
     @Test
-    fun `clearBrowsingDataOnQuit - when one data type is selected - deletes it and completes`() = runTest(testDispatcher) {
-        var onDeletionCompleteCount = 0
-        val onDeletionComplete: () -> Unit = { onDeletionCompleteCount++ }
+    fun deleteSitePermissions() =
+        runTest(testDispatcher) {
+            controller.deleteSitePermissions()
 
-        val typeToDelete = DeleteBrowsingDataOnQuitType.TABS
-
-        every { settings.getDeleteDataOnQuit(any()) } returns false // Reset all
-        every { settings.getDeleteDataOnQuit(typeToDelete) } returns true // Select one type
-
-        controller.clearBrowsingDataOnQuit(onDeletionComplete)
-
-        coVerify {
-            appStore.dispatch(AppAction.DeleteAndQuitStarted)
-            controller.deleteType(typeToDelete)
+            coVerify {
+                engine.clearData(Engine.BrowsingData.select(Engine.BrowsingData.ALL_SITE_SETTINGS))
+                permissionStorage.deleteAllSitePermissions()
+            }
         }
-
-        coVerify(exactly = 1) { controller.deleteType(any()) }
-        assertEquals(1, onDeletionCompleteCount)
-    }
 
     @Test
-    fun `clearBrowsingDataOnQuit - when multiple data types are selected - deletes all of them`() = runTest(testDispatcher) {
-        var onDeletionCompleteCount = 0
-        val onDeletionComplete: () -> Unit = { onDeletionCompleteCount++ }
+    fun deleteDownloads() =
+        runTest(testDispatcher) {
+            controller.deleteDownloads()
 
-        val typesToDelete = listOf(
-            DeleteBrowsingDataOnQuitType.HISTORY,
-            DeleteBrowsingDataOnQuitType.COOKIES,
-        )
-
-        every { settings.getDeleteDataOnQuit(any()) } returns false // Reset all
-        typesToDelete.forEach { type ->
-            every { settings.getDeleteDataOnQuit(type) } returns true
+            verify {
+                removeAllDownloads.invoke()
+            }
         }
-
-        controller.clearBrowsingDataOnQuit(onDeletionComplete)
-
-        coVerify { appStore.dispatch(AppAction.DeleteAndQuitStarted) }
-        typesToDelete.forEach { type ->
-            coVerify { controller.deleteType(type) }
-        }
-
-        coVerify(exactly = typesToDelete.size) { controller.deleteType(any()) }
-        assertEquals(1, onDeletionCompleteCount)
-    }
 
     @Test
-    fun `clearBrowsingDataOnQuit - onDeletionComplete is called even if one deletion throws an exception`() = runTest(testDispatcher) {
-        var onDeletionCompleteCount = 0
-        val onDeletionComplete: () -> Unit = { onDeletionCompleteCount++ }
+    fun `clearBrowsingDataOnQuit - when no data types are selected - completes immediately`() =
+        runTest(testDispatcher) {
+            var onDeletionCompleteCount = 0
+            val onDeletionComplete: () -> Unit = { onDeletionCompleteCount++ }
 
-        val failingType = DeleteBrowsingDataOnQuitType.CACHE
-        val succeedingType = DeleteBrowsingDataOnQuitType.TABS
+            every { settings.getDeleteDataOnQuit(any()) } returns false // No types are selected
 
-        val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-            assertIs<RuntimeException>(throwable)
-            assertEquals("Deletion failed!", throwable.message)
-        }
-
-        every { settings.getDeleteDataOnQuit(failingType) } returns true
-        every { settings.getDeleteDataOnQuit(succeedingType) } returns true
-
-        coEvery { controller.deleteType(failingType) } throws RuntimeException("Deletion failed!")
-        coJustRun { controller.deleteType(succeedingType) }
-
-        withContext(coroutineContext + exceptionHandler) {
             controller.clearBrowsingDataOnQuit(onDeletionComplete)
+
+            coVerify(exactly = 0) { appStore.dispatch(any()) }
+            coVerify(exactly = 0) { controller.deleteType(any()) }
+
+            assertEquals(1, onDeletionCompleteCount)
         }
 
-        coVerify { controller.deleteType(failingType) }
-        coVerify { controller.deleteType(succeedingType) }
+    @Test
+    fun `clearBrowsingDataOnQuit - when one data type is selected - deletes it and completes`() =
+        runTest(testDispatcher) {
+            var onDeletionCompleteCount = 0
+            val onDeletionComplete: () -> Unit = { onDeletionCompleteCount++ }
 
-        assertEquals(1, onDeletionCompleteCount)
-    }
+            val typeToDelete = DeleteBrowsingDataOnQuitType.TABS
+
+            every { settings.getDeleteDataOnQuit(any()) } returns false // Reset all
+            every { settings.getDeleteDataOnQuit(typeToDelete) } returns true // Select one type
+
+            controller.clearBrowsingDataOnQuit(onDeletionComplete)
+
+            coVerify {
+                appStore.dispatch(AppAction.DeleteAndQuitStarted)
+                controller.deleteType(typeToDelete)
+            }
+
+            coVerify(exactly = 1) { controller.deleteType(any()) }
+            assertEquals(1, onDeletionCompleteCount)
+        }
+
+    @Test
+    fun `clearBrowsingDataOnQuit - when multiple data types are selected - deletes all of them`() =
+        runTest(testDispatcher) {
+            var onDeletionCompleteCount = 0
+            val onDeletionComplete: () -> Unit = { onDeletionCompleteCount++ }
+
+            val typesToDelete =
+                listOf(
+                    DeleteBrowsingDataOnQuitType.HISTORY,
+                    DeleteBrowsingDataOnQuitType.COOKIES,
+                )
+
+            every { settings.getDeleteDataOnQuit(any()) } returns false // Reset all
+            typesToDelete.forEach { type ->
+                every { settings.getDeleteDataOnQuit(type) } returns true
+            }
+
+            controller.clearBrowsingDataOnQuit(onDeletionComplete)
+
+            coVerify { appStore.dispatch(AppAction.DeleteAndQuitStarted) }
+            typesToDelete.forEach { type ->
+                coVerify { controller.deleteType(type) }
+            }
+
+            coVerify(exactly = typesToDelete.size) { controller.deleteType(any()) }
+            assertEquals(1, onDeletionCompleteCount)
+        }
+
+    @Test
+    fun `clearBrowsingDataOnQuit - onDeletionComplete is called even if one deletion throws an exception`() =
+        runTest(testDispatcher) {
+            var onDeletionCompleteCount = 0
+            val onDeletionComplete: () -> Unit = { onDeletionCompleteCount++ }
+
+            val failingType = DeleteBrowsingDataOnQuitType.CACHE
+            val succeedingType = DeleteBrowsingDataOnQuitType.TABS
+
+            val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+                assertIs<RuntimeException>(throwable)
+                assertEquals("Deletion failed!", throwable.message)
+            }
+
+            every { settings.getDeleteDataOnQuit(failingType) } returns true
+            every { settings.getDeleteDataOnQuit(succeedingType) } returns true
+
+            coEvery { controller.deleteType(failingType) } throws RuntimeException("Deletion failed!")
+            coJustRun { controller.deleteType(succeedingType) }
+
+            withContext(coroutineContext + exceptionHandler) {
+                controller.clearBrowsingDataOnQuit(onDeletionComplete)
+            }
+
+            coVerify { controller.deleteType(failingType) }
+            coVerify { controller.deleteType(succeedingType) }
+
+            assertEquals(1, onDeletionCompleteCount)
+        }
 }

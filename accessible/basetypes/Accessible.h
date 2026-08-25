@@ -5,11 +5,11 @@
 #ifndef Accessible_H_
 #define Accessible_H_
 
-#include "mozilla/a11y/Role.h"
-#include "mozilla/a11y/AccTypes.h"
-#include "nsStringFwd.h"
-#include "nsRect.h"
 #include "Units.h"
+#include "mozilla/a11y/AccTypes.h"
+#include "mozilla/a11y/Role.h"
+#include "nsRect.h"
+#include "nsStringFwd.h"
 
 class nsAtom;
 class nsStaticAtom;
@@ -500,6 +500,11 @@ class Accessible {
    * Return the class of the DOM node this Accessible represents.
    */
   virtual void DOMNodeClass(nsString& aClass) const = 0;
+
+  /**
+   * Return the Heading Level this accessible represents.
+   */
+  virtual int32_t HeadingLevel() const = 0;
 
   //////////////////////////////////////////////////////////////////////////////
   // ActionAccessible

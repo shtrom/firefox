@@ -74,8 +74,7 @@ NS_IMPL_ISUPPORTS_CYCLE_COLLECTION_INHERITED(SVGUseElement, SVGUseElementBase,
 //----------------------------------------------------------------------
 // Implementation
 
-SVGUseElement::SVGUseElement(
-    already_AddRefed<mozilla::dom::NodeInfo>&& aNodeInfo)
+SVGUseElement::SVGUseElement(already_AddRefed<mozilla::dom::NodeInfo> aNodeInfo)
     : SVGUseElementBase(std::move(aNodeInfo)), mReferencedElementTracker(this) {
   SetEnabledCallbacks(kCharacterDataChanged | kAttributeChanged |
                       kContentAppended | kContentInserted |
@@ -419,7 +418,7 @@ void SVGUseElement::UpdateShadowTree() {
   if (!shadow) {
     ShadowRootInit init;
     init.mMode = ShadowRootMode::Closed;
-    shadow = AttachShadowWithoutNameChecks(init);
+    shadow = AttachShadowWithoutNameChecks(init, Nothing());
   }
   MOZ_ASSERT(shadow);
 

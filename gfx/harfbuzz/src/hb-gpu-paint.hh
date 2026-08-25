@@ -273,6 +273,13 @@ struct hb_gpu_paint_t
    * which matches HB_GPU_PAINT_GROUP_DEPTH in the fragment shader. */
   unsigned group_depth = 0;
 
+  /* Cumulative work budget for the current paint walk; reset by
+   * hb_gpu_paint_clear().  Charged with the curves consumed by each
+   * clip-glyph encode, so per-glyph outline limits cannot multiply
+   * with the paint-graph traversal limits of the font tables
+   * driving us (e.g. COLR). */
+  int64_t work_left = HB_GPU_PAINT_MAX_WORK;
+
   /* Stack of pending clips.  Each color/gradient op consumes the
    * current state of this stack: the layer is rendered where ALL
    * stacked clips are opaque (intersection).  Capped at depth
@@ -287,10 +294,10 @@ struct hb_gpu_paint_t
     hb_font_t            *font;     /* borrowed; nullptr for path clips */
     hb_transform_t<float> transform;
     /* Path clips are encoded into a sub-blob at push_clip_path_end
-     * time; glyph clips re-encode per consuming layer.  For path
-     * clips, sub_blob_index is the pre-baked index and ext_* the
-     * captured design-unit extents.  For glyph clips, sub_blob_index
-     * is -1 and the ext_* fields are unused. */
+     * time; glyph clips are encoded lazily on first consuming layer
+     * and cached.  sub_blob_index is -1 until the encode happens,
+     * then holds the index into c->sub_blobs and ext_* hold the
+     * design-unit extents. */
     int                   sub_blob_index;
     int                   ext_x0, ext_y0, ext_x1, ext_y1;
   };

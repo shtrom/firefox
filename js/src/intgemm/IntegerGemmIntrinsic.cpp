@@ -11,8 +11,8 @@
 #include "mozilla/TimeStamp.h"
 
 #include <gemmology_fwd.h>
-#include "fmt/format.h"
 
+#include "fmt/format.h"
 #include "js/ErrorReport.h"
 #include "js/HeapAPI.h"
 #include "vm/ArrayBufferObject.h"
@@ -97,7 +97,7 @@ struct AutoProfilerMarker {
           text, sizeof(text) - 1, aFormatStr,
           fmt::make_format_args<fmt::buffered_context<CharT>>(aArgs...));
 
-      MOZ_ASSERT(size > sizeof(text) - 1,
+      MOZ_ASSERT(size <= sizeof(text) - 1,
                  "Truncated marker, consider increasing the buffer");
 
       *out = 0;
@@ -457,6 +457,16 @@ int32_t js::intgemm::IntrI8SelectColumnsOfB(wasm::Instance* instance,
   const uint32_t* colIndexListPtr =
       reinterpret_cast<const uint32_t*>(&memBase[colIndexList]);
   int8_t* outputPtr = reinterpret_cast<int8_t*>(&memBase[output]);
+
+  // Every selected column index must reference a valid column of B. Otherwise
+  // SelectColumnsB would read outside the bounds-checked input matrix, since it
+  // uses each index to compute an offset into inputMatrixBPrepared.
+  for (uint32_t i = 0; i < sizeColIndexList; i++) {
+    if (colIndexListPtr[i] >= colsB) {
+      return -1;
+    }
+  }
+
   AutoProfilerMarker marker(cx->runtime()->geckoProfiler(),
                             "integemm::SelectColumnsB",
                             "rowsB: {} colsB: {} sizecolList: {}, sizeB: {}",

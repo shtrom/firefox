@@ -52,7 +52,12 @@ class nsIConstraintValidation : public nsISupports {
     VALIDITY_STATE_CUSTOM_ERROR = 0x1 << 9,
   };
 
-  void SetValidityState(ValidityStateType aState, bool aValue);
+  void SetValidityState(ValidityStateType aState, bool aValue) {
+    if (GetValidityState(aState) == aValue) {
+      return;
+    }
+    DoSetValidityState(aState, aValue);
+  }
 
   /**
    * Check the validity of this object. If it is not valid, file a "invalid"
@@ -87,6 +92,9 @@ class nsIConstraintValidation : public nsISupports {
   RefPtr<mozilla::dom::ValidityState> mValidity;
 
  private:
+  // Internal, possibly not-inlined version to call if the new state differs.
+  void DoSetValidityState(ValidityStateType aState, bool aValue);
+
   /**
    * A bitfield representing the current validity state of the element.
    * Each bit represent an error. All bits to zero means the element is valid.

@@ -48,6 +48,7 @@
 #include "vm/StringObject.h"
 #include "vm/Watchtower.h"
 #include "vm/WrapperObject.h"
+
 #include "gc/Marking-inl.h"
 #include "vm/Compartment-inl.h"  // JS::Compartment::wrap
 #include "vm/JSObject-inl.h"
@@ -127,7 +128,7 @@ JS_PUBLIC_API JSPrincipals* JS::GetRealmPrincipals(JS::Realm* realm) {
 }
 
 JS_PUBLIC_API bool JS::GetDebuggerObservesWasm(JS::Realm* realm) {
-  return realm->debuggerObservesAsmJS();
+  return realm->debuggerObservesWasm();
 }
 
 JS_PUBLIC_API void JS::SetRealmPrincipals(JS::Realm* realm,
@@ -178,10 +179,9 @@ JS_PUBLIC_API bool JS_WrapPropertyDescriptor(
   return cx->compartment()->wrap(cx, desc);
 }
 
-JS_PUBLIC_API void JS_TraceShapeCycleCollectorChildren(JS::CallbackTracer* trc,
-                                                       JS::GCCellPtr shape) {
-  MOZ_ASSERT(shape.is<Shape>());
-  TraceCycleCollectorChildren(trc, &shape.as<Shape>());
+JS_PUBLIC_API void JS_TraceShapeCycleCollectorChildren(JSTracer* trc,
+                                                       Shape* shape) {
+  TraceCycleCollectorChildren(trc, shape);
 }
 
 static bool DefineHelpProperty(JSContext* cx, HandleObject obj,
@@ -280,6 +280,10 @@ JS_PUBLIC_API bool JS::GetBuiltinClass(JSContext* cx, HandleObject obj,
   }
 
   return true;
+}
+
+JS_PUBLIC_API bool JS::IsPlainObject(JSObject* obj) {
+  return obj->is<PlainObject>();
 }
 
 JS_PUBLIC_API bool js::IsArgumentsObject(HandleObject obj) {
@@ -719,11 +723,23 @@ AutoAssertNoContentJS::~AutoAssertNoContentJS() {
 
 JS_PUBLIC_API void js::EnableCodeCoverage() { js::coverage::EnableLCov(); }
 
-JS_PUBLIC_API uint64_t js::GetMemoryUsageForZone(Zone* zone) {
+JS_PUBLIC_API size_t js::GetMemoryUsageForZone(Zone* zone) {
   // We do not include zone->sharedMemoryUseCounts since that's already included
   // in zone->mallocHeapSize.
-  return zone->gcHeapSize.bytes() + zone->mallocHeapSize.bytes() +
-         zone->jitHeapSize.bytes();
+  return GetGCHeapSizeForZone(zone) + GetMallocHeapSizeForZone(zone) +
+         GetJITHeapSizeForZone(zone);
+}
+
+JS_PUBLIC_API size_t js::GetGCHeapSizeForZone(Zone* zone) {
+  return zone->gcHeapSize.bytes();
+}
+
+JS_PUBLIC_API size_t js::GetMallocHeapSizeForZone(Zone* zone) {
+  return zone->mallocHeapSize.bytes();
+}
+
+JS_PUBLIC_API size_t js::GetJITHeapSizeForZone(Zone* zone) {
+  return zone->jitHeapSize.bytes();
 }
 
 JS_PUBLIC_API const gc::SharedMemoryMap& js::GetSharedMemoryUsageForZone(

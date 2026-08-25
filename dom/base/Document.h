@@ -66,6 +66,7 @@
 #include "nsDebug.h"
 #include "nsGkAtoms.h"
 #include "nsHashKeys.h"
+#include "nsHashtablesFwd.h"
 #include "nsIChannel.h"
 #include "nsIChannelEventSink.h"
 #include "nsIClassifiedChannel.h"
@@ -120,6 +121,7 @@
 #else
 namespace mozilla {
 namespace dom {
+class BooleanOrImportNodeOptions;
 class ElementCreationOptionsOrString;
 }  // namespace dom
 }  // namespace mozilla
@@ -198,7 +200,6 @@ struct LangGroupFontPrefs;
 class PendingFullscreenEvent;
 class PermissionDelegateHandler;
 class PresShell;
-class ScrollTimelineAnimationTracker;
 class ServoStyleSet;
 enum class StyleOrigin : uint8_t;
 class SMILAnimationController;
@@ -275,6 +276,9 @@ class Selection;
 class ServiceWorkerDescriptor;
 class ShadowRoot;
 class SimpleContentList;
+class SpeculationRules;
+class SpeculationRuleSet;
+class SpeculationRulesManager;
 class SVGDocument;
 class SVGElement;
 class SVGSVGElement;
@@ -713,6 +717,8 @@ class Document : public nsINode,
   virtual void SetSuppressParserErrorConsoleMessages(bool aSuppress) {}
   virtual bool SuppressParserErrorConsoleMessages() { return false; }
 
+  NS_IMPL_FROMNODE_HELPER(Document, IsDocument())
+
   // nsINode
   void InsertChildBefore(
       nsIContent* aKid, nsIContent* aBeforeThis, bool aNotify, ErrorResult& aRv,
@@ -1101,7 +1107,11 @@ class Document : public nsINode,
     //   are completing the initial about:blank load
     // - and Document::EndLoad was already called, so the method is almost done
     //   (we're likely called from there right now).
-    return InitialAboutBlankLoadCompleting() && !IsExpectingEndLoad();
+    // - and we are the initial document that should load sync. Specifically,
+    //   we are not IsInitialButExplicitlyOpened (bug 2041104).
+    bool ret = InitialAboutBlankLoadCompleting() && !IsExpectingEndLoad() &&
+               IsInitialDocument();
+    return ret;
   }
 
   void SetLoadedAsData(bool aLoadedAsData, bool aConsiderForMemoryReporting);
@@ -1942,9 +1952,6 @@ class Document : public nsINode,
   void RemoveFromIdTable(Element* aElement, nsAtom* aId);
   void AddToNameTable(Element* aElement, nsAtom* aName);
   void RemoveFromNameTable(Element* aElement, nsAtom* aName);
-  void AddToDocumentNameTable(nsGenericHTMLElement* aElement, nsAtom* aName);
-  void RemoveFromDocumentNameTable(nsGenericHTMLElement* aElement,
-                                   nsAtom* aName);
 
   /**
    * Returns all elements in the top layer in the insertion order.
@@ -2395,13 +2402,23 @@ class Document : public nsINode,
    * Create an element with the specified name, prefix and namespace ID.
    * Returns null if element name parsing failed.
    */
-  already_AddRefed<Element> CreateElem(const nsAString& aName, nsAtom* aPrefix,
-                                       int32_t aNamespaceID,
-                                       const nsAString* aIs = nullptr);
+  already_AddRefed<Element> CreateElem(
+      const nsAString& aName, nsAtom* aPrefix, int32_t aNamespaceID,
+      const nsAString* aIs = nullptr,
+      mozilla::Maybe<RefPtr<mozilla::dom::CustomElementRegistry>>
+          aCustomElementRegistry = mozilla::Nothing());
 
   // https://dom.spec.whatwg.org/#effective-global-custom-element-registry
-  mozilla::dom::CustomElementRegistry*
-  GetEffectiveGlobalCustomElementRegistry();
+  mozilla::dom::CustomElementRegistry* GetEffectiveGlobalCustomElementRegistry()
+      const;
+
+  // Whether this document is the key of a scoped custom element registry.
+  bool HasScopedCustomElementRegistry() const {
+    return mHasScopedCustomElementRegistry;
+  }
+  void SetHasScopedCustomElementRegistry(bool aValue) {
+    mHasScopedCustomElementRegistry = aValue;
+  }
 
   /**
    * Get the security info (i.e. SSL state etc) that the document got
@@ -2940,19 +2957,6 @@ class Document : public nsINode,
   // If HasAnimationController is true, this is guaranteed to return non-null.
   SMILAnimationController* GetAnimationController();
 
-  // Gets the tracker for scroll-driven animations that are waiting to start.
-  // Returns nullptr if there is no scroll-driven animation tracker for this
-  // document which will be the case if there have never been any scroll-driven
-  // animations in the document.
-  ScrollTimelineAnimationTracker* GetScrollTimelineAnimationTracker() {
-    return mScrollTimelineAnimationTracker;
-  }
-
-  // Gets the tracker for scroll-driven animations that are waiting to start and
-  // creates it if it doesn't already exist. As a result, the return value
-  // will never be nullptr.
-  ScrollTimelineAnimationTracker* GetOrCreateScrollTimelineAnimationTracker();
-
   /**
    * Prevents user initiated events from being dispatched to the document and
    * subdocuments.
@@ -3055,6 +3059,16 @@ class Document : public nsINode,
   }
 
   bool IsDNSPrefetchAllowed() const { return mAllowDNSPrefetch; }
+
+  // Returns the SpeculationRulesManager for this document, creating it
+  // lazily on first call.
+  SpeculationRulesManager* EnsureSpeculationRulesManager();
+
+  // Returns the SpeculationRulesManager if one has been created; nullptr
+  // otherwise.
+  SpeculationRulesManager* GetSpeculationRulesManager() const {
+    return mSpeculationRulesManager.get();
+  }
 
   /**
    * Returns true if this document is allowed to contain XUL element and
@@ -3415,9 +3429,15 @@ class Document : public nsINode,
   void FlushPendingLinkUpdates();
 
   bool HasWarnedAbout(DeprecatedOperations aOperation) const;
-  void WarnOnceAbout(
+  void WarnOnceAbout(DeprecatedOperations aOperation, bool asError = false,
+                     const nsTArray<nsString>& aParams = nsTArray<nsString>(),
+                     const mozilla::SourceLocation& aLocation =
+                         mozilla::JSCallingLocation::Get()) const;
+  void WarnOnceAndReportAbout(
       DeprecatedOperations aOperation, bool asError = false,
-      const nsTArray<nsString>& aParams = nsTArray<nsString>()) const;
+      const nsTArray<nsString>& aParams = nsTArray<nsString>(),
+      const mozilla::JSCallingLocation& aLocation =
+          mozilla::JSCallingLocation::Get()) const;
 
 #define DOCUMENT_WARNING(_op) e##_op,
   enum DocumentWarnings {
@@ -3469,6 +3489,14 @@ class Document : public nsINode,
   bool MayHaveAnimationObservers() { return mMayHaveAnimationObservers; }
 
   void SetMayHaveAnimationObservers() { mMayHaveAnimationObservers = true; }
+
+  bool MayHaveContainerTimingAttributes() const {
+    return mMayHaveContainerTimingAttributes;
+  }
+
+  void SetMayHaveContainerTimingAttributes() {
+    mMayHaveContainerTimingAttributes = true;
+  }
 
   bool IsInSyncOperation() { return mInSyncOperationCount != 0; }
 
@@ -3528,8 +3556,9 @@ class Document : public nsINode,
   already_AddRefed<Comment> CreateComment(const nsAString& aData) const;
   already_AddRefed<ProcessingInstruction> CreateProcessingInstruction(
       const nsAString& target, const nsAString& data, ErrorResult& rv) const;
-  already_AddRefed<nsINode> ImportNode(nsINode& aNode, bool aDeep,
-                                       ErrorResult& rv) const;
+  already_AddRefed<nsINode> ImportNode(
+      nsINode& aNode, const BooleanOrImportNodeOptions& aOptions,
+      ErrorResult& rv) const;
   // TODO: Convert this to MOZ_CAN_RUN_SCRIPT (bug 1415230)
   MOZ_CAN_RUN_SCRIPT_BOUNDARY nsINode* AdoptNode(
       nsINode& aAdoptedNode, ErrorResult& rv, bool aAcceptShadowRoot = false);
@@ -3637,12 +3666,18 @@ class Document : public nsINode,
   TimeStamp LastFocusTime() const;
   void SetLastFocusTime(const TimeStamp& aFocusTime);
 
-  void SetFocusNavigationStartingPoint(nsIContent* aContent,
-                                       bool aWillBeRemoved = false);
-  nsIContent* GetFocusNavigationStartingPoint() const {
-    return mFocusNavigationStartingPoint;
+  void SetPreviouslyFocusedContent(nsIContent* aContent,
+                                   bool aWillBeRemoved = false);
+  nsIContent* GetPreviouslyFocusedContent() const {
+    return mPreviouslyFocusedContent;
   }
   bool WasFocusedElementRemoved() const { return mWasFocusedElementRemoved; }
+  void SetSelectionMoreRecentThanFocus(bool aValue) {
+    mSelectionMoreRecentThanFocus = aValue;
+  }
+  bool IsSelectionMoreRecentThanFocus() const {
+    return mSelectionMoreRecentThanFocus;
+  }
 
   // Event handlers are all on nsINode already
   bool MozSyntheticDocument() const { return IsSyntheticDocument(); }
@@ -3656,28 +3691,27 @@ class Document : public nsINode,
     return !GetFullscreenError(aCallerType);
   }
 
+  // Picture-in-Picture API
+  bool PictureInPictureEnabled();
+  Element* GetPictureInPictureElementInternal() const;
+  void SetPictureInPictureElement(Element* aElement);
+  already_AddRefed<Promise> ExitPictureInPicture(ErrorResult& aRv);
+
   void GetWireframeWithoutFlushing(bool aIncludeNodes, Nullable<Wireframe>&);
 
   MOZ_CAN_RUN_SCRIPT void GetWireframe(bool aIncludeNodes,
                                        Nullable<Wireframe>&);
 
-  // https://html.spec.whatwg.org/#close-entire-popover-list
-  MOZ_CAN_RUN_SCRIPT void CloseEntirePopoverList(PopoverAttributeState aMode,
-                                                 bool aFocusPreviousElement,
-                                                 bool aFireEvents);
-
-  // Hides all popovers until the given end point, see
-  // https://html.spec.whatwg.org/multipage/popover.html#hide-all-popovers-until
-  MOZ_CAN_RUN_SCRIPT void HideAllPopoversUntil(nsINode& aEndpoint,
-                                               bool aFocusPreviousElement,
-                                               bool aFireEvents);
-
-  // Hides all popovers, until the given end point, see
   // https://html.spec.whatwg.org/#hide-popover-stack-until
-  MOZ_CAN_RUN_SCRIPT void HidePopoverStackUntil(PopoverAttributeState aMode,
-                                                nsINode& aEndpoint,
-                                                bool aFocusPreviousElement,
-                                                bool aFireEvents);
+  MOZ_CAN_RUN_SCRIPT void HidePopoverStackUntil(
+      Element* aEndpoint, PopoverAttributeState aStackType,
+      bool aFocusPreviousElement, bool aFireEvents);
+
+  // Hides hint then auto popover stacks until the given endpoint.
+  // https://html.spec.whatwg.org/#hide-popovers-until
+  MOZ_CAN_RUN_SCRIPT void HidePopoversUntil(Element* aEndpoint,
+                                            bool aFocusPreviousElement,
+                                            bool aFireEvents);
 
   // Hides the given popover element, see
   // https://html.spec.whatwg.org/multipage/popover.html#hide-popover-algorithm
@@ -3690,7 +3724,9 @@ class Document : public nsINode,
   // popover opened in mode is in the given state.
   // See https://html.spec.whatwg.org/multipage/popover.html#auto-popover-list
   // See https://html.spec.whatwg.org/#showing-hint-popover-list
-  nsTArray<Element*> PopoverListOf(PopoverAttributeState aMode) const;
+  nsTArray<RefPtr<Element>> PopoverListOf(PopoverAttributeState aMode) const;
+  bool IsInPopoverListOf(const Element& aElement,
+                         PopoverAttributeState aMode) const;
 
   // Return document's popover list's last element of a particular mode.
   // See
@@ -3699,6 +3735,21 @@ class Document : public nsINode,
 
   void AddPopoverToTopLayer(Element&);
   void RemovePopoverFromTopLayer(Element&);
+
+  Element* PopoverHintStackParent() const;
+  void SetPopoverHintStackParent(Element* aParent);
+
+  bool IsShowingPopover() const { return mShowingPopover; }
+  void SetShowingPopover(bool aShowing) { mShowingPopover = aShowing; }
+
+  uint32_t HidingPopoverNestingCount() const {
+    return mHidingPopoverNestingCount;
+  }
+  void IncrementHidingPopoverNestingCount() { ++mHidingPopoverNestingCount; }
+  void DecrementHidingPopoverNestingCount() {
+    MOZ_ASSERT(mHidingPopoverNestingCount > 0);
+    --mHidingPopoverNestingCount;
+  }
 
   Element* GetTopLayerTop();
   // Return the fullscreen element in the top layer
@@ -3772,7 +3823,11 @@ class Document : public nsINode,
    */
   already_AddRefed<nsRange> CaretRangeFromPoint(int32_t aX, int32_t aY);
 
-  Element* GetScrollingElement();
+  MOZ_CAN_RUN_SCRIPT Element* GetScrollingElement();
+  // Like GetScrollingElement, but does not flush pending layout. Callers get
+  // an answer based on the current (possibly stale) frame state; if accuracy
+  // matters, callers should just call GetScrollingElement.
+  Element* GetScrollingElementNoFlush();
   // A way to check whether a given element is what would get returned from
   // GetScrollingElement.  It can be faster than comparing to the return value
   // of GetScrollingElement() due to being able to avoid flushes in various
@@ -4065,19 +4120,10 @@ class Document : public nsINode,
            GetDocGroup() == GetInProcessParentDocument()->GetDocGroup();
   }
 
-  void AddIntersectionObserver(DOMIntersectionObserver& aObserver) {
-    MOZ_ASSERT(!mIntersectionObservers.Contains(&aObserver),
-               "Intersection observer already in the list");
-    mIntersectionObservers.AppendElement(&aObserver);
-  }
-  void RemoveIntersectionObserver(DOMIntersectionObserver& aObserver) {
-    // TODO(emilio): This can fail during unlink because Document unlink clears
-    // the IntersectionObserver array, but it seems it wouldn't need to?
-    // MOZ_ASSERT(mIntersectionObservers.Contains(&aObserver));
-    mIntersectionObservers.RemoveElement(&aObserver);
-  }
+  void AddIntersectionObserver(DOMIntersectionObserver& aObserver);
+  void RemoveIntersectionObserver(DOMIntersectionObserver& aObserver);
   bool HasIntersectionObservers() const {
-    return !mIntersectionObservers.IsEmpty();
+    return !mIntersectionObservers.isEmpty();
   }
 
   // Update intersection observers in this document and all
@@ -4098,7 +4144,7 @@ class Document : public nsINode,
   void UpdateLastRememberedSizes();
 
   // Dispatch a runnable related to the document.
-  nsresult Dispatch(already_AddRefed<nsIRunnable>&& aRunnable) const;
+  nsresult Dispatch(already_AddRefed<nsIRunnable> aRunnable) const;
 
   // The URLs passed to this function should match what
   // JS::DescribeScriptedCaller() returns, since this API is used to
@@ -4122,15 +4168,9 @@ class Document : public nsINode,
   }
 
   // ResizeObserver usage.
-  void AddResizeObserver(ResizeObserver& aObserver) {
-    MOZ_ASSERT(!mResizeObservers.Contains(&aObserver));
-    mResizeObservers.AppendElement(&aObserver);
-  }
-  void RemoveResizeObserver(ResizeObserver& aObserver) {
-    MOZ_ASSERT(mResizeObservers.Contains(&aObserver));
-    mResizeObservers.RemoveElement(&aObserver);
-  }
-  bool HasResizeObservers() const { return !mResizeObservers.IsEmpty(); }
+  void AddResizeObserver(ResizeObserver& aObserver);
+  void RemoveResizeObserver(ResizeObserver& aObserver);
+  bool HasResizeObservers() const { return !mResizeObservers.isEmpty(); }
 
   void ScheduleResizeObserversNotification();
   /**
@@ -4174,7 +4214,9 @@ class Document : public nsINode,
   void MaybeSkipTransitionAfterVisibilityChange();
 
   void ScheduleViewTransitionUpdateCallback(ViewTransition* aVt);
-  MOZ_CAN_RUN_SCRIPT void FlushViewTransitionUpdateCallbackQueue();
+
+  // Returns whether any callback ran.
+  MOZ_CAN_RUN_SCRIPT bool FlushViewTransitionUpdateCallbackQueue();
 
   // Returns some ViewTransition::TypeList or Nothing if skip transition.
   // https://drafts.csswg.org/css-view-transitions-2/#resolve-view-transition-rule
@@ -4310,6 +4352,10 @@ class Document : public nsINode,
   virtual bool UseWidthDeviceWidthFallbackViewport() const;
 
  private:
+  void FlattenElementCreationOptions(
+      const ElementCreationOptionsOrString& aOptions, const nsString*& aIs,
+      Maybe<RefPtr<CustomElementRegistry>>& aDocumentRegistry, ErrorResult& rv);
+
   bool IsErrorPage() const;
 
   // Notifies the pres context that an image we track may have started or
@@ -4543,6 +4589,9 @@ class Document : public nsINode,
   static void GetAllInProcessDocuments(
       nsTArray<RefPtr<Document>>& aAllDocuments);
 
+  // Returns true if the document's principals's scheme is "about".
+  bool IsAboutPage() const;
+
  protected:
   // Returns the WindowContext for the document that we will contribute
   // page use counters to.
@@ -4556,9 +4605,6 @@ class Document : public nsINode,
   void EnsureOnloadBlocker();
 
   void SendToConsole(nsCOMArray<nsISecurityConsoleMessage>& aMessages);
-
-  // Returns true if the scheme for the url for this document is "about".
-  bool IsAboutPage() const;
 
   bool ContainsEMEContent();
   bool ContainsMSEContent();
@@ -4819,6 +4865,9 @@ class Document : public nsINode,
   // Lazy-initialization to have mDocGroup initialized in prior to the
   UniquePtr<ServoStyleSet> mStyleSet;
 
+  // Lazy: created on first speculation rule encountered (Chunk 6 wires this).
+  UniquePtr<SpeculationRulesManager> mSpeculationRulesManager;
+
  protected:
   // Never ever call this. Only call GetWindow!
   nsPIDOMWindowOuter* GetWindowInternal() const;
@@ -4835,6 +4884,12 @@ class Document : public nsINode,
 
   // Helper for GetScrollingElement/IsScrollingElement.
   bool IsPotentiallyScrollable(HTMLBodyElement* aBody);
+
+  // Whether GetScrollingElementImpl / IsPotentiallyScrollableImpl should flush
+  // pending style and frame construction before answering.
+  enum class Flush : bool { No, Yes };
+  Element* GetScrollingElementImpl(Flush);
+  bool IsPotentiallyScrollableImpl(HTMLBodyElement* aBody, Flush);
 
   void MaybeAllowStorageForOpenerAfterUserInteraction();
 
@@ -4967,11 +5022,11 @@ class Document : public nsINode,
   // container for per-context fonts (downloadable, SVG, etc.)
   RefPtr<FontFaceSet> mFontFaceSet;
 
-  // Points to the focus navigation starting point if the focused element is
-  // removed or becomes non-focusable, so that focus navigation isn't reset when
-  // that happens.
-  // https://html.spec.whatwg.org/#sequential-focus-navigation-starting-point
-  RefPtr<nsIContent> mFocusNavigationStartingPoint;
+  // Points to the previously-focused element when it becomes non-focusable,
+  // or if the focused element is removed, it points to its previous sibling
+  // (or parent's previous sibling if it has none, etc.) in the flat tree.
+  // Used for determining sequential focus navigation starting point.
+  RefPtr<nsIContent> mPreviouslyFocusedContent;
 
   // Last time this document or a one of its sub-documents was focused.  If
   // focus has never occurred then mLastFocusTime.IsNull() will be true.
@@ -4984,7 +5039,8 @@ class Document : public nsINode,
 
   RefPtr<Promise> mReadyForIdle;
 
-  RefPtr<mozilla::dom::FeaturePolicy> mFeaturePolicy;
+  // Lazily created in FeaturePolicy().
+  mutable RefPtr<mozilla::dom::FeaturePolicy> mFeaturePolicy;
 
   // Permission Delegate Handler, lazily-initialized in
   // GetPermissionDelegateHandler
@@ -5101,6 +5157,10 @@ class Document : public nsINode,
   // True if an nsIAnimationObserver is perhaps attached to a node in the
   // document.
   bool mMayHaveAnimationObservers : 1;
+
+  // True if a `containertiming`/`containertimingignore` attribute has ever
+  // been used in this document. Monotonic: never cleared.
+  bool mMayHaveContainerTimingAttributes : 1;
 
   // True if the document has a CSP delivered throuh a header
   bool mHasCSPDeliveredThroughHeader : 1;
@@ -5315,10 +5375,19 @@ class Document : public nsINode,
   // Cached value of dom.image.sizes_auto.enabled
   const bool mAutoSizesEnabled : 1;
 
-  // If false, mFocusNavigationStartingPoint is the previously-focused element.
-  // If true, mFocusNavigationStartingPoint is the previously-focused element's
-  // previous sibling in the flat tree.
+  // If false, mPreviouslyFocusedContent is the previously-focused element.
+  // If true, mPreviouslyFocusedContent is the previously-focused element's
+  // previous sibling in the flat tree (or its parent's previous sibling
+  // if it has none, etc.).
   bool mWasFocusedElementRemoved : 1;
+
+  // True if this document is the key of a scoped custom element registry. Lets
+  // HasScopedRegistry() answer cheaply without a hash lookup.
+  bool mHasScopedCustomElementRegistry : 1;
+
+  // Whether the selection was set more recently than the last focused
+  // element was focused. Used for determining focus navigation starting point.
+  bool mSelectionMoreRecentThanFocus : 1;
 
   // The fingerprinting protections overrides for this document. The value will
   // override the default enabled fingerprinting protections for this document.
@@ -5513,6 +5582,9 @@ class Document : public nsINode,
   // mAnonymousContents roots. It's a NAC root, child of the root element.
   RefPtr<Element> mCustomContentContainer;
 
+  // Picture-in-Picture API: tracks the current PiP element
+  RefPtr<Element> mPictureInPictureElement;
+
   uint32_t mBlockDOMContentLoaded;
 
   // Our live MediaQueryLists
@@ -5623,10 +5695,11 @@ class Document : public nsINode,
   // is a weak reference to avoid leaks due to circular references.
   nsWeakPtr mScopeObject;
 
-  // Array of intersection observers with active observations.
-  nsTArray<DOMIntersectionObserver*> mIntersectionObservers;
-  // Array of resize observers with active observations.
-  nsTArray<ResizeObserver*> mResizeObservers;
+  // Intersection observers registered with this document, in registration
+  // order as required by the spec.
+  LinkedList<DOMIntersectionObserver> mIntersectionObservers;
+  // Resize observers registered with this document, same order.
+  LinkedList<ResizeObserver> mResizeObservers;
 
   RefPtr<DOMIntersectionObserver> mLazyLoadObserver;
 
@@ -5636,6 +5709,15 @@ class Document : public nsINode,
 
   // Stack of top layer elements.
   nsTArray<nsWeakPtr> mTopLayer;
+
+  // https://html.spec.whatwg.org/#hint-stack-parent
+  RefPtr<Element> mPopoverHintStackParent;
+
+  // https://html.spec.whatwg.org/#showing-popover
+  bool mShowingPopover = false;
+
+  // https://html.spec.whatwg.org/#hiding-popover-nesting-count
+  uint32_t mHidingPopoverNestingCount = 0;
 
   // Stack of open dialogs
   // https://html.spec.whatwg.org/#open-dialogs-list
@@ -5667,10 +5749,6 @@ class Document : public nsINode,
   AnimationTimelinesController mTimelinesController;
 
   RefPtr<dom::ScriptLoader> mScriptLoader;
-
-  // Tracker for scroll-driven animations that are waiting to start.
-  // nullptr until GetOrCreateScrollTimelineAnimationTracker is called.
-  RefPtr<ScrollTimelineAnimationTracker> mScrollTimelineAnimationTracker;
 
   // A document "without a browsing context" that owns the content of
   // HTMLTemplateElement.
@@ -5839,8 +5917,8 @@ class Document : public nsINode,
   // Collection of data used by the pageload event.
   PageloadEventData mPageloadEventData;
 
-  // Record page load telemetry
-  void RecordPageLoadEventTelemetry();
+  // Submit the page load event at the end of the document's lifetime.
+  void ReportPageLoadEvent();
 
   // Accumulate JS telemetry collected
   void AccumulateJSTelemetry();
@@ -5870,6 +5948,9 @@ class Document : public nsINode,
 
   nsCOMPtr<nsIURI> mTLSCertificateBindingURI;
 
+  // https://html.spec.whatwg.org/#document-sr-sets
+  RefPtr<class SpeculationRules> mSpeculationRules;
+
  public:
   // Needs to be public because the bindings code pokes at it.
   JS::ExpandoAndGeneration mExpandoAndGeneration;
@@ -5892,6 +5973,9 @@ class Document : public nsINode,
                                               const nsAString& aHTML,
                                               const SetHTMLOptions& aOptions,
                                               ErrorResult& aError);
+
+  class SpeculationRules& SpeculationRules();
+  class SpeculationRules* GetSpeculationRules();
 
   nsIURI* GetTlsCertificateBindingURI() const {
     return mTLSCertificateBindingURI;

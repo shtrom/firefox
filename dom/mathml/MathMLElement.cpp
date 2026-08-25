@@ -55,8 +55,7 @@ MathMLElement::MathMLElement(
     already_AddRefed<mozilla::dom::NodeInfo>& aNodeInfo)
     : MathMLElementBase(std::move(aNodeInfo)), Link(this) {}
 
-MathMLElement::MathMLElement(
-    already_AddRefed<mozilla::dom::NodeInfo>&& aNodeInfo)
+MathMLElement::MathMLElement(already_AddRefed<mozilla::dom::NodeInfo> aNodeInfo)
     : MathMLElementBase(std::move(aNodeInfo)), Link(this) {}
 
 nsresult MathMLElement::BindToTree(BindContext& aContext, nsINode& aParent) {
@@ -122,7 +121,7 @@ bool MathMLElement::ParseAttribute(int32_t aNamespaceID, nsAtom* aAttribute,
         aAttribute == nsGkAtoms::href && !mNodeInfo->Equals(nsGkAtoms::a)) {
       AutoTArray<nsString, 1> params;
       params.AppendElement(mNodeInfo->NodeName());
-      OwnerDoc()->WarnOnceAbout(
+      OwnerDoc()->WarnOnceAndReportAbout(
           dom::DeprecatedOperations::
               eMathML_DeprecatedHrefLinkOnNonAnchorElement,
           /* asError */ false, params);
@@ -211,7 +210,7 @@ bool MathMLElement::ParseNamedSpaceValue(const nsString& aString,
   if (0 != i) {
     AutoTArray<nsString, 1> params;
     params.AppendElement(aString);
-    aDocument.WarnOnceAbout(
+    aDocument.WarnOnceAndReportAbout(
         dom::DeprecatedOperations::eMathML_DeprecatedMathSpaceValue2, false,
         params);
     aCSSValue.SetFloatValue(float(i) / float(18), eCSSUnit_EM);
@@ -576,7 +575,7 @@ void MathMLElement::MapGlobalMathMLAttributesInto(
             // triggered a warning.
             AutoTArray<nsString, 1> params;
             params.AppendElement(str);
-            aBuilder.Document().WarnOnceAbout(
+            aBuilder.Document().WarnOnceAndReportAbout(
                 dom::DeprecatedOperations::eMathML_DeprecatedMathVariant, false,
                 params);
           }
@@ -688,37 +687,8 @@ int32_t MathMLElement::TabIndexDefault() {
   return mNodeInfo->Equals(nsGkAtoms::a) ? 0 : -1;
 }
 
-// XXX Bug 1586011: Share logic with other element classes.
-Focusable MathMLElement::IsFocusableWithoutStyle(IsFocusableFlags) {
-  if (!IsInComposedDoc() || IsInDesignMode()) {
-    // In designMode documents we only allow focusing the document.
-    return {};
-  }
-
-  int32_t tabIndex = TabIndex();
-  if (!IsLink()) {
-    // If a tabindex is specified at all we're focusable
-    if (GetTabIndexAttrValue().isSome()) {
-      return {true, tabIndex};
-    }
-    return {};
-  }
-
-  if (!OwnerDoc()->LinkHandlingEnabled()) {
-    return {};
-  }
-
-  // Links that are in an editable region should never be focusable, even if
-  // they are in a contenteditable="false" region.
-  if (nsContentUtils::IsNodeInEditableRegion(this)) {
-    return {};
-  }
-
-  if (!FocusModel::IsTabFocusable(TabFocusableType::Links)) {
-    tabIndex = -1;
-  }
-
-  return {true, tabIndex};
+Focusable MathMLElement::IsFocusableWithoutStyle(IsFocusableFlags aFlags) {
+  return Link::IsLinkFocusableWithoutStyle(aFlags);
 }
 
 already_AddRefed<nsIURI> MathMLElement::GetHrefURI() const {

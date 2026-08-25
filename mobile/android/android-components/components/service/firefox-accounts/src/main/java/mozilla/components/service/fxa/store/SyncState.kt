@@ -22,18 +22,15 @@ import mozilla.components.service.fxa.sync.WorkManagerSyncManager
 data class SyncState(
     val status: SyncStatus = SyncStatus.NotInitialized,
     val account: Account? = null,
-    val accountState: AccountState = AccountState.NotAuthenticated,
+    val accountState: AccountState = AccountState.Unknown,
     val constellationState: ConstellationState? = null,
 ) : State
 
 /**
  * Various statuses described the [SyncState].
  *
- * Starts as [NotInitialized].
- * Becomes [Started] during the length of a Sync.
- * Becomes [Idle] when a Sync is completed.
- * Becomes [Error] when a Sync encounters an error.
- * Becomes [LoggedOut] when Sync is logged out.
+ * Starts as [NotInitialized]. Becomes [Started] during the length of a Sync. Becomes [Idle] when a Sync is completed.
+ * Becomes [Error] when a Sync encounters an error. Becomes [LoggedOut] when Sync is logged out.
  *
  * See [WorkManagerSyncManager] for implementation details.
  */

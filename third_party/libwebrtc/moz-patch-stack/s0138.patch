@@ -1,33 +1,22 @@
-From: Michael Froman <mfroman@mozilla.com>
-Date: Wed, 8 Apr 2026 10:58:00 -0500
-Subject: Bug 2030139 - (fix-bb3693c382) fix linux builds for constexpr
- containing std::string
+From: Byron Campen <docfaraday@gmail.com>
+Date: Wed, 27 May 2026 11:38:00 -0500
+Subject: Bug 2040478 - (fix-2d195343e6) Add missing include of <optional>
+ r?mjf
 
-Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/cab51cf0d4e9e67e9f5b053128d05e859d47b7c2
+Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/c2a275c690c1e6ebd529752c0648c23cf3db3742
 ---
- modules/portal/pipewire_utils.cc | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ modules/desktop_capture/desktop_capture_options.h | 1 +
+ 1 file changed, 1 insertion(+)
 
-diff --git a/modules/portal/pipewire_utils.cc b/modules/portal/pipewire_utils.cc
-index 850726cc58..7008696b7d 100644
---- a/modules/portal/pipewire_utils.cc
-+++ b/modules/portal/pipewire_utils.cc
-@@ -28,9 +28,18 @@
+diff --git a/modules/desktop_capture/desktop_capture_options.h b/modules/desktop_capture/desktop_capture_options.h
+index aa3dd331fe..4ef972f184 100644
+--- a/modules/desktop_capture/desktop_capture_options.h
++++ b/modules/desktop_capture/desktop_capture_options.h
+@@ -11,6 +11,7 @@
+ #define MODULES_DESKTOP_CAPTURE_DESKTOP_CAPTURE_OPTIONS_H_
  
- namespace webrtc {
+ #include <cstdint>
++#include <optional>
  
-+#if defined(__GNUC__) && defined(WEBRTC_MOZILLA_BUILD)
-+// Mozilla linux builds are using -std=gnu++20, which doesn't approve
-+// of using std::string in a constexpr.  PipewireVersion now contains
-+// std::string as of libwebrtc commit d167fe9296.
-+static const PipeWireVersion kReentrantDeinitMinVersion = {.major = 0,
-+                                                           .minor = 3,
-+                                                           .micro = 49};
-+#else
- constexpr PipeWireVersion kReentrantDeinitMinVersion = {.major = 0,
-                                                         .minor = 3,
-                                                         .micro = 49};
-+#endif
- 
- PipeWireVersion PipeWireVersion::Parse(const std::string_view& version) {
-   std::vector<std::string_view> parsed_version = split(version, '.');
+ #include "api/environment/environment.h"
+ #include "api/scoped_refptr.h"

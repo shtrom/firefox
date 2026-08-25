@@ -9,16 +9,16 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include <dlfcn.h>
+#include <queue>
+#include "ViewRegion.h"
+#include "mozView.h"
 #include "mozilla/RefPtr.h"
 #include "mozilla/layers/NativeLayerRootRemoteMacChild.h"
 #include "mozilla/layers/NativeLayerRootRemoteMacParent.h"
-#include "nsIWidget.h"
 #include "nsCocoaUtils.h"
+#include "nsIWidget.h"
 #include "nsTouchBar.h"
-#include "ViewRegion.h"
-#include "mozView.h"
-#include <dlfcn.h>
-#include <queue>
 
 class nsCocoaWindow;
 class nsChildView;
@@ -54,7 +54,6 @@ class TextInputHandler;
 
   NSRect mDirtyRect;
 
-  BOOL mBeingShown;
   BOOL mIsAnimationSuppressed;
 
   nsTouchBar* mTouchBar;
@@ -84,8 +83,7 @@ class TextInputHandler;
 - (void)createTrackingArea;
 - (void)removeTrackingArea;
 
-- (void)setIsBeingShown:(BOOL)aValue;
-- (BOOL)isBeingShown;
+@property(nonatomic) BOOL isBeingShown;
 - (BOOL)isVisibleOrBeingShown;
 
 - (void)setIsAnimationSuppressed:(BOOL)aValue;
@@ -261,13 +259,13 @@ class nsCocoaWindow final : public nsIWidget {
 
   nsresult SynthesizeNativeKeyEvent(
       int32_t aNativeKeyboardLayout, int32_t aNativeKeyCode,
-      uint32_t aModifierFlags, const nsAString& aCharacters,
+      nsIWidget::NativeModifiers aModifierFlags, const nsAString& aCharacters,
       const nsAString& aUnmodifiedCharacters,
       nsISynthesizedEventCallback* aCallback) override;
 
   nsresult SynthesizeNativeMouseEvent(
       LayoutDeviceIntPoint aPoint, NativeMouseMessage aNativeMessage,
-      mozilla::MouseButton aButton, nsIWidget::Modifiers aModifierFlags,
+      mozilla::MouseButton aButton, nsIWidget::NativeModifiers aModifierFlags,
       nsISynthesizedEventCallback* aCallback) override;
 
   nsresult SynthesizeNativeMouseMove(
@@ -275,7 +273,7 @@ class nsCocoaWindow final : public nsIWidget {
       nsISynthesizedEventCallback* aCallback) override;
   nsresult SynthesizeNativeMouseScrollEvent(
       LayoutDeviceIntPoint aPoint, uint32_t aNativeMessage, double aDeltaX,
-      double aDeltaY, double aDeltaZ, uint32_t aModifierFlags,
+      double aDeltaY, double aDeltaZ, nsIWidget::NativeModifiers aModifierFlags,
       uint32_t aAdditionalFlags,
       nsISynthesizedEventCallback* aCallback) override;
   nsresult SynthesizeNativeTouchPoint(
@@ -457,7 +455,6 @@ class nsCocoaWindow final : public nsIWidget {
   void SetWindowTransform(const mozilla::gfx::Matrix& aTransform) override;
   void SetInputRegion(const InputRegion&) override;
   void SetColorScheme(const mozilla::Maybe<mozilla::ColorScheme>&) override;
-  void SetShowsToolbarButton(bool aShow) override;
   bool GetSupportsNativeFullscreen();
   void SetSupportsNativeFullscreen(bool aShow) override;
   void SetWindowAnimationType(WindowAnimationType aType) override;
@@ -543,7 +540,12 @@ class nsCocoaWindow final : public nsIWidget {
   CGFloat ComputeBackingScaleFactor() const;
 
   void DoResize(double aX, double aY, double aWidth, double aHeight,
-                bool aRepaint, bool aConstrainToCurrentScreen);
+                bool aRepaint);
+
+  // If the window's NSWindow frame doesn't intersect any currently-attached
+  // NSScreen, relocate the window onto the main screen so the user can reach
+  // it.
+  void EnsureFrameIsOnScreen();
 
   void UpdateFullscreenState(bool aFullScreen, bool aNativeMode);
   nsresult DoMakeFullScreen(bool aFullScreen, bool aUseSystemTransition);
@@ -668,6 +670,9 @@ class nsCocoaWindow final : public nsIWidget {
   bool mAlwaysOnTop = false;
   bool mAspectRatioLocked = false;
   bool mIsAlert = false;  // True if this is an non-native alert window.
+  // True if this window should not auto-enter native fullscreen on its initial
+  // show (e.g. a window created by detaching a tab from a fullscreen window).
+  bool mIsInitialFullscreenSuppressed = false;
   bool mWasShown = false;
 
   int32_t mNumModalDescendants = 0;
@@ -706,6 +711,7 @@ class nsCocoaWindow final : public nsIWidget {
   // This is class state for tracking native pointer lock state.
   static mozilla::Maybe<NativePointerLockMode> sNativePointerLockMode;
   static LayoutDeviceIntPoint sNativeLockedPoint;
+  static nsCocoaWindow* sNativeLockedWindow;
 };
 
 #endif  // nsCocoaWindow_h_

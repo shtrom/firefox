@@ -510,7 +510,7 @@ describe("<Weather> (Widgets/Weather)", () => {
       ).toBeInTheDocument();
     });
 
-    it("hides temp unit items when opt-in is enabled (shortened menu)", () => {
+    it("hides temp unit items while the opt-in card is showing (shortened menu)", () => {
       const { container } = renderWeather("small", optInMockState);
       expect(
         container.querySelector(
@@ -522,6 +522,15 @@ describe("<Weather> (Widgets/Weather)", () => {
           "panel-item[data-l10n-id='newtab-weather-menu-change-temperature-units-fahrenheit']"
         )
       ).not.toBeInTheDocument();
+    });
+
+    it("shows temp unit items in an opt-in region once the user has accepted", () => {
+      const { container } = renderWeather("medium", optInAcceptedState);
+      expect(
+        container.querySelector(
+          "panel-item[data-l10n-id='newtab-weather-menu-change-temperature-units-celsius']"
+        )
+      ).toBeInTheDocument();
     });
   });
 
@@ -641,6 +650,40 @@ describe("<Weather> (Widgets/Weather)", () => {
       });
     });
 
+    it("attaches size submenu listener after Weather initializes", () => {
+      // Regression: useEffect deps must include weatherData.initialized.
+      const dispatch = jest.fn();
+      const store = createStore(combineReducers(reducers), {
+        ...mockState,
+        Weather: { ...mockState.Weather, initialized: false },
+      });
+      const { container } = render(
+        <Provider store={store}>
+          <Weather dispatch={dispatch} size="small" />
+        </Provider>
+      );
+      act(() => {
+        store.dispatch({
+          type: at.WEATHER_UPDATE,
+          data: { ...mockState.Weather, lastUpdated: Date.now() },
+        });
+      });
+      const mockItem = document.createElement("div");
+      mockItem.dataset.size = "medium";
+      const event = new MouseEvent("click", { bubbles: true });
+      Object.defineProperty(event, "composedPath", { value: () => [mockItem] });
+      container
+        .querySelector("panel-list[id='weather-size-submenu']")
+        .dispatchEvent(event);
+
+      expect(dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: at.SET_PREF,
+          data: { name: "widgets.weather.size", value: "medium" },
+        })
+      );
+    });
+
     it("dispatches SET_PREF(widgets.weather.enabled, false) and WIDGETS_ENABLED on hide click", () => {
       const { container, dispatch } = renderWeather();
       const item = container.querySelector(
@@ -675,6 +718,7 @@ describe("<Weather> (Widgets/Weather)", () => {
         type: at.OPEN_LINK,
         data: {
           url: "https://support.mozilla.org/kb/firefox-new-tab-widgets",
+          where: "tab",
         },
       });
       expect(dispatch.mock.calls[1][0]).toMatchObject({
@@ -797,6 +841,21 @@ describe("<Weather> (Widgets/Weather)", () => {
         container.querySelector(".weather-anchor")
       ).not.toBeInTheDocument();
     });
+
+    it("suppresses weather-error when opt-in is showing", () => {
+      const state = {
+        ...optInMockState,
+        Weather: { ...optInMockState.Weather, suggestions: [{}] },
+      };
+      const { container } = renderWeather("small", state);
+      expect(container.querySelector(".weather-error")).not.toBeInTheDocument();
+      expect(
+        container.querySelector(".weather-widget.weather-error-state")
+      ).not.toBeInTheDocument();
+      expect(
+        container.querySelector(".weather-opt-in-container")
+      ).toBeInTheDocument();
+    });
   });
 
   describe("provider link / anchor", () => {
@@ -824,14 +883,14 @@ describe("<Weather> (Widgets/Weather)", () => {
     });
 
     it("renders a.full-forecast with hourly forecast URL", () => {
-      const { container } = renderWeather("medium");
+      const { container } = renderWeather("large");
       const link = container.querySelector("a.full-forecast");
       expect(link).toBeInTheDocument();
       expect(link.getAttribute("href")).toBe(hourlyForecasts[0].url);
     });
 
     it("dispatches WIDGETS_USER_EVENT when full-forecast is clicked", () => {
-      const { container, dispatch } = renderWeather("medium");
+      const { container, dispatch } = renderWeather("large");
       fireEvent.click(container.querySelector("a.full-forecast"));
 
       expect(dispatch).toHaveBeenCalledTimes(1);
@@ -868,7 +927,10 @@ describe("<Weather> (Widgets/Weather)", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("renders weather-container when opt-in is rejected", () => {
+    // Bug 2046143: opt-in enabled and not accepted must show the opt-in prompt,
+    // not real location weather, even when weather.optInDisplayed is false (the
+    // state a user reaches via a legacy reject before being migrated to Nova).
+    it("renders weather-opt-in-container when opt-in not accepted and optInDisplayed is false", () => {
       const state = {
         ...optInMockState,
         Prefs: {
@@ -881,9 +943,11 @@ describe("<Weather> (Widgets/Weather)", () => {
         },
       };
       const { container } = renderWeather("medium", state);
-      expect(container.querySelector(".weather-container")).toBeInTheDocument();
       expect(
         container.querySelector(".weather-opt-in-container")
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector(".weather-container")
       ).not.toBeInTheDocument();
     });
 
@@ -953,6 +1017,10 @@ describe("<Weather> (Widgets/Weather)", () => {
           "panel-item[data-l10n-id='newtab-weather-menu-change-temperature-units-celsius']"
         )
       ).not.toBeInTheDocument();
+      // With the top items hidden during opt-in, the footer divider is
+      // suppressed so the menu doesn't start with a stray separator.
+      const menu = container.querySelector("#weather-widget-context-menu");
+      expect(menu.firstElementChild.tagName.toLowerCase()).not.toBe("hr");
     });
 
     it("dispatches opt-in accepted actions when use-location is clicked", () => {
@@ -1083,6 +1151,13 @@ describe("<Weather> (Widgets/Weather)", () => {
       expect(container.querySelector(".forecast-footer")).toBeInTheDocument();
       expect(container.querySelector(".full-forecast")).not.toBeInTheDocument();
     });
+
+    it("does not render the forecast footer for size=medium", () => {
+      const { container } = renderWeather("medium");
+      expect(
+        container.querySelector(".forecast-footer")
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("search UI", () => {
@@ -1139,6 +1214,56 @@ describe("<Weather> (Widgets/Weather)", () => {
       const { container } = renderWeather("medium", state);
       expect(
         container.querySelector(".weather-context-menu-wrapper")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Sponsored text rendering", () => {
+    it("renders localized sponsored text in the conditions view for size=medium", () => {
+      const { container } = renderWeather("medium");
+      expect(
+        container.querySelector(
+          ".weather-conditions-view .sponsored-text[data-l10n-id='newtab-weather-sponsored']"
+        )
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector(".forecast-footer .sponsored-text")
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders localized sponsored text in the footer for size=large", () => {
+      const { container } = renderWeather("large");
+      expect(
+        container.querySelector(
+          ".forecast-footer .sponsored-text[data-l10n-id='newtab-weather-sponsored']"
+        )
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector(".weather-conditions-view .sponsored-text")
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders provider name as plain text in the footer for size=small", () => {
+      const { container } = renderWeather("small");
+      const sponsored = container.querySelector(
+        ".forecast-footer .sponsored-text"
+      );
+      expect(sponsored).toBeInTheDocument();
+      expect(sponsored.hasAttribute("data-l10n-id")).toBe(false);
+      expect(sponsored.textContent).toBe("AccuWeather®");
+      expect(
+        container.querySelector(".weather-conditions-view .sponsored-text")
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not render sponsored text on error", () => {
+      const state = {
+        ...mockState,
+        Weather: { ...mockState.Weather, suggestions: [{}] },
+      };
+      const { container } = renderWeather("medium", state);
+      expect(
+        container.querySelector(".sponsored-text")
       ).not.toBeInTheDocument();
     });
   });

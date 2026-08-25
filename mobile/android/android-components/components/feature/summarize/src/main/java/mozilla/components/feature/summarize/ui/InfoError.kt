@@ -30,13 +30,12 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import mozilla.components.compose.base.button.OutlinedButton
 import mozilla.components.compose.base.theme.AcornTheme
-import mozilla.components.concept.llm.ErrorCode
 import mozilla.components.feature.summarize.R
 
 @Composable
 internal fun InfoError(
     modifier: Modifier = Modifier,
-    errorCode: ErrorCode,
+    errorCode: Int,
     onDismiss: () -> Unit = {},
 ) {
     var showErrorCode by remember { mutableStateOf(false) }
@@ -45,9 +44,7 @@ internal fun InfoError(
         Icon(
             painter = painterResource(mozilla.components.ui.icons.R.drawable.mozac_ic_warning_24),
             contentDescription = null,
-            modifier = Modifier
-                .padding(end = 8.dp).size(32.dp)
-                .onLongPress { showErrorCode = true },
+            modifier = Modifier.padding(end = 8.dp).size(32.dp).onLongPress { showErrorCode = true },
             tint = MaterialTheme.colorScheme.error,
         )
 
@@ -71,7 +68,7 @@ internal fun InfoError(
 
         if (showErrorCode) {
             Text(
-                text = stringResource(R.string.mozac_summarize_info_error_code, errorCode.value),
+                text = stringResource(R.string.mozac_summarize_info_error_code, errorCode),
                 style = AcornTheme.typography.body2,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -101,6 +98,6 @@ private fun Modifier.onLongPress(onLongPress: () -> Unit): Modifier {
 @Composable
 private fun PreviewInfoError() = AcornTheme {
     Surface {
-        InfoError(errorCode = ErrorCode(1000))
+        InfoError(errorCode = 1000)
     }
 }

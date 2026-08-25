@@ -6,9 +6,12 @@ package org.mozilla.fenix.ui.efficiency.helpers
 
 import android.util.Log
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
-import androidx.test.espresso.IdlingResourceTimeoutException
-import androidx.test.espresso.NoMatchingViewException
-import androidx.test.uiautomator.UiObjectNotFoundException
+import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
+import androidx.test.espresso.Espresso
+import androidx.test.espresso.base.DefaultFailureHandler
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import leakcanary.NoLeakAssertionFailedError
 import org.junit.After
 import org.junit.Before
@@ -16,6 +19,8 @@ import org.junit.Rule
 import org.junit.rules.TestRule
 import org.junit.runners.model.Statement
 import org.mozilla.fenix.ext.components
+import org.mozilla.fenix.helpers.AppAndSystemHelper.deleteBookmarksStorage
+import org.mozilla.fenix.helpers.AppAndSystemHelper.deletePinnedSitesStorage
 import org.mozilla.fenix.helpers.FenixTestRule
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.IdlingResourceHelper.unregisterAllIdlingResources
@@ -23,79 +28,125 @@ import org.mozilla.fenix.helpers.TestHelper.appContext
 import org.mozilla.fenix.helpers.TestHelper.exitMenu
 import org.mozilla.fenix.ui.efficiency.logging.LoggingBridge
 import org.mozilla.fenix.ui.efficiency.logging.TestLogging
+import org.mozilla.fenix.ui.efficiency.navigation.LaunchConfig
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
-import org.mozilla.fenix.ui.efficiency.navigation.planning.PageCatalog
-import androidx.compose.ui.test.junit4.v2.AndroidComposeTestRule as AndroidComposeTestRuleV2
+import org.mozilla.fenix.ui.efficiency.navigation.PageCatalog
 
 /**
  * BaseTest
  *
  * Why BaseTest wires up the structured logger:
  * - Tests should only describe "what is being tested".
- * - The harness (BaseTest/BasePage/helpers) owns "how it runs": navigation, retries, selectors,
- *   and therefore it owns observability for those behaviors.
+ * - The harness (BaseTest/BasePage/helpers) owns "how it runs": navigation, retries, selectors, and therefore it owns
+ *   observability for those behaviors.
  *
  * Why we print to stdout:
  * - Instrumentation captures System.out into logcat, which can be filtered into a clean stream.
- * - This gives us a single location for human debugging locally and in CI artifacts without
- *   requiring additional infrastructure during early iteration.
+ * - This gives us a single location for human debugging locally and in CI artifacts without requiring additional
+ *   infrastructure during early iteration.
  *
  * Long-term intent:
- * - This structured log stream becomes a source-of-truth execution trace that remains useful
- *   even when tests are dynamically generated (factories, reflection, CI-driven permutations).
- * - Later we can route the same events into richer sinks (files/JSON/XML) and unify with the
- *   existing Feature.spec / factory logging pipeline.
+ * - This structured log stream becomes a source-of-truth execution trace that remains useful even when tests are
+ *   dynamically generated (factories, reflection, CI-driven permutations).
+ * - Later we can route the same events into richer sinks (files/JSON/XML) and unify with the existing Feature.spec /
+ *   factory logging pipeline.
  */
 abstract class BaseTest(
     private val skipOnboarding: Boolean = true,
-    private val isMenuRedesignCFREnabled: Boolean = false,
     private val isPageLoadTranslationsPromptEnabled: Boolean = false,
     private val isPocketEnabled: Boolean = true,
     private val isRecentlyVisitedFeatureEnabled: Boolean = true,
+    private val shouldUseExpandedToolbar: Boolean = false,
+    private val isTabStripEnabled: Boolean = false,
+    private val shakeToSummarizeFeatureFlagEnabled: Boolean = true,
 ) {
 
-    @get:Rule(order = 0)
-    val fenixTestRule: FenixTestRule = FenixTestRule()
+    // Default launch built from the constructor args (back-compat for every existing subclass).
+    private val defaultLaunchConfig =
+        LaunchConfig(
+            skipOnboarding = skipOnboarding,
+            isPageLoadTranslationsPromptEnabled = isPageLoadTranslationsPromptEnabled,
+            isPocketEnabled = isPocketEnabled,
+            isRecentlyVisitedFeatureEnabled = isRecentlyVisitedFeatureEnabled,
+            shouldUseExpandedToolbar = shouldUseExpandedToolbar,
+            isTabStripEnabled = isTabStripEnabled,
+            shakeToSummarizeFeatureFlagEnabled = shakeToSummarizeFeatureFlagEnabled,
+        )
 
-    // Backing property so composeRule can be re-created fresh on each retry attempt.
-    // AndroidComposeTestRule holds a TestScope that can only be entered once — re-creating
-    // the rule per attempt ensures a clean TestScope every time.
+    /** Override to vary the launch per run/case (e.g. the reachability shard uses the case's config). */
+    protected open fun launchConfig(): LaunchConfig = defaultLaunchConfig
+
+    @get:Rule(order = 0) val fenixTestRule: FenixTestRule = FenixTestRule()
+
+    // Backing property so composeRule can be built once launchConfig() has been read.
+    // AndroidComposeTestRule holds a TestScope that can only be entered once, so it is built per test.
     private var _composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *>? = null
-    val composeRule get() = _composeRule!!
+    val composeRule
+        get() = _composeRule!!
 
-    // Combines retry and compose rule creation into a single rule. We cannot reuse
-    // RetryTestRule here because the retry logic must own the creation of composeRule —
-    // a separate RetryTestRule has no way to replace an already-constructed @get:Rule.
-    // Re-creates composeRule on each attempt so its internal TestScope is never re-entered,
-    // which would otherwise throw:
-    // "Only a single call to `runTest` can be performed during one test."
+    // Builds composeRule per test rather than declaring it as a plain @get:Rule, because the activity flags come from
+    // launchConfig(), which subclasses override — so the config has to be read before the rule is constructed.
+    //
+    // There is deliberately no retry here. Every test already runs in its own process with package data cleared
+    // (ANDROIDX_TEST_ORCHESTRATOR + clearPackageData in app/build.gradle), and Firebase re-runs a failing test once
+    // (num-flaky-test-attempts in the TAE flank configs). An in-process retry would be the one thing that escapes that
+    // isolation: the second attempt inherits whatever the first left behind, so it can pass for the wrong reason or
+    // fail differently. See bug 2065120.
     @get:Rule(order = 1)
-    val retryWithCompose: TestRule = TestRule { base, description ->
+    val composeRuleWithCleanup: TestRule = TestRule { base, description ->
         object : Statement() {
             override fun evaluate() {
-                repeat(1 + MAX_RETRIES) { attempt ->
-                    _composeRule = AndroidComposeTestRuleV2(
+                val cfg = launchConfig()
+                _composeRule =
+                    AndroidComposeTestRuleV2(
                         HomeActivityIntentTestRule(
-                            skipOnboarding = skipOnboarding,
-                            isMenuRedesignCFREnabled = isMenuRedesignCFREnabled,
-                            isPageLoadTranslationsPromptEnabled = isPageLoadTranslationsPromptEnabled,
-                            isPocketEnabled = isPocketEnabled,
-                            isRecentlyVisitedFeatureEnabled = isRecentlyVisitedFeatureEnabled,
-                        ),
-                    ) { it.activity }
-                    try {
-                        Log.i("BaseTest", "RetryTestRule: Started try #${attempt + 1}.")
-                        _composeRule!!.apply(base, description).evaluate()
-                        return // success, exit early
-                    } catch (t: NoLeakAssertionFailedError) {
-                        Log.i("BaseTest", "RetryTestRule: NoLeakAssertionFailedError caught, not retrying.")
-                        cleanup(removeTabs = true)
-                        throw t
-                    } catch (t: Throwable) {
-                        if (!t.isRetryable() || attempt >= MAX_RETRIES) throw t
-                        Log.i("BaseTest", "RetryTestRule: ${t::class.simpleName} caught, retrying.")
-                        cleanup()
+                            skipOnboarding = cfg.skipOnboarding,
+                            isPageLoadTranslationsPromptEnabled = cfg.isPageLoadTranslationsPromptEnabled,
+                            isPocketEnabled = cfg.isPocketEnabled,
+                            isRecentlyVisitedFeatureEnabled = cfg.isRecentlyVisitedFeatureEnabled,
+                            shouldUseExpandedToolbar = cfg.shouldUseExpandedToolbar,
+                            isTabStripEnabled = cfg.isTabStripEnabled,
+                            shakeToSummarizeFeatureFlagEnabled = cfg.shakeToSummarizeFeatureFlagEnabled,
+                        )
+                    ) {
+                        it.activity
                     }
+                try {
+                    runBlocking {
+                        deleteBookmarksStorage()
+                        deletePinnedSitesStorage()
+                        withContext(Dispatchers.IO) {
+                            appContext.components.core.sessionStorage.clear()
+                            // Clear saved autofill addresses so every test starts from a clean screen. A leftover
+                            // address changes the Autofill settings layout and can push "Add address" off-screen.
+                            // Best-effort: a storage error must not fail the test on its own, but it is logged — a
+                            // silent failure here looks identical to a state leak.
+                            runCatching {
+                                val autofill = appContext.components.core.autofillStorage
+                                autofill.getAllAddresses().forEach { autofill.deleteAddress(it.guid) }
+                                // Same for cards: a leftover card replaces "Add card" with "Manage cards" on the
+                                // Autofill screen, so a card test would start on a different screen than it expects.
+                                autofill.getAllCreditCards().forEach { autofill.deleteCreditCard(it.guid) }
+                            }
+                                .onFailure {
+                                    Log.i("BaseTest", "BaseTest: autofill clear failed: ${it.message}")
+                                }
+                            // Clear saved logins for the same reason: inherited logins mean a re-submit of the same
+                            // credentials shows no save prompt, which reads as a spurious failure.
+                            runCatching {
+                                appContext.components.core.passwordsStorage.wipeLocal()
+                            }
+                                .onFailure {
+                                    Log.i("BaseTest", "BaseTest: logins clear failed: ${it.message}")
+                                }
+                        }
+                    }
+                    appContext.components.useCases.tabsUseCases.removeAllTabs()
+                    _composeRule!!.apply(base, description).evaluate()
+                } catch (t: NoLeakAssertionFailedError) {
+                    Log.i("BaseTest", "BaseTest: NoLeakAssertionFailedError caught.")
+                    cleanup(removeTabs = true)
+                    throw t
                 }
             }
         }
@@ -103,7 +154,8 @@ abstract class BaseTest(
 
     // get() ensures this always delegates to the current composeRule instance,
     // not a stale one captured at class construction time.
-    protected val on: PageContext get() = PageContext(composeRule)
+    protected val on: PageContext
+        get() = PageContext(composeRule)
 
     /**
      * Reporter lifecycle:
@@ -116,6 +168,19 @@ abstract class BaseTest(
      */
     @Before
     fun setUp() {
+        // Disable Espresso's screenshot-on-failure locally.
+        //
+        // Why: Espresso's DefaultFailureHandler captures a screenshot when an interaction fails.
+        // On a debug build on a REAL device, that bitmap capture (DeviceCapture ->
+        // takeScreenshotOnNextFrame) trips Fenix's StrictMode penaltyDeath and KILLS the process
+        // before the real assertion error is reported — so the genuine failure is swallowed and the
+        // test looks like an opaque crash. It does not reproduce on Firebase (no penaltyDeath /
+        // different capture path), which is why these only fail locally. Installing the default
+        // handler with captureScreenshotOnFailure = false keeps failure messages intact without the
+        // fatal screenshot. We still get the real error (and our own ScreenDump) for debugging.
+        // Second arg is captureScreenshotOnFailure = false.
+        Espresso.setFailureHandler(DefaultFailureHandler(appContext, false))
+
         if (TestLogging.reporter == null) {
             TestLogging.reporter = LoggingBridge.createReporter()
         }
@@ -126,7 +191,7 @@ abstract class BaseTest(
         if (java.lang.Boolean.getBoolean("logPageCatalog")) {
             val pages = PageCatalog.discoverPages()
 
-            Log.i("PageCatalog", "📚 Discovered ${pages.size} pages from PageContext")
+            Log.i("PageCatalog", "Discovered ${pages.size} pages from PageContext")
 
             pages.forEachIndexed { index, pageRef ->
                 val page = pageRef.getter(on)
@@ -141,7 +206,6 @@ abstract class BaseTest(
         // State tracker is a lightweight breadcrumb used by navigation helpers.
         // Source-of-truth remains selector-based verification (mozIsOnPageNow / mozWaitForPageToLoad).
         PageStateTracker.currentPageName = "AppEntry"
-        Log.i("BaseTest", "🚀 Starting test with page: AppEntry")
     }
 
     /**
@@ -156,19 +220,17 @@ abstract class BaseTest(
      * - STEP/CMD/LOC totals sum only the instrumented scopes.
      */
     @After
+    fun tearDown() {
+        appContext.components.useCases.tabsUseCases.removeAllTabs()
+    }
+
+    @After
     fun tearDownLogging() {
         try {
             TestLogging.reporter?.printSummary()
         } catch (_: Throwable) {
             // Logging must never fail a test.
         }
-    }
-
-    private companion object {
-        /**
-         * Number of retry attempts to do, if the test fails.
-         */
-        const val MAX_RETRIES = 1
     }
 }
 
@@ -178,16 +240,4 @@ private fun cleanup(removeTabs: Boolean = false) {
         appContext.components.useCases.tabsUseCases.removeAllTabs()
     }
     exitMenu()
-}
-
-private fun Throwable.isRetryable(): Boolean = when (this) {
-    is AssertionError,
-    is junit.framework.AssertionFailedError,
-    is UiObjectNotFoundException,
-    is NoMatchingViewException,
-    is IdlingResourceTimeoutException,
-    is RuntimeException,
-    is NullPointerException,
-    -> true
-    else -> false
 }

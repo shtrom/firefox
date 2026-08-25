@@ -977,6 +977,9 @@ export class ApplicationListItem {
     );
     this.actionsMenu.slot = "actions";
     this.actionsMenu.classList.add("actionsMenu");
+    this.actionsMenu.disabled = Services.prefs.prefIsLocked(
+      "pref.downloads.disable_button.edit_actions"
+    );
 
     this.node.appendChild(this.actionsMenu);
 
@@ -1070,7 +1073,6 @@ export class ApplicationListItem {
         defaultMenuItem,
         "applications-use-os-default"
       );
-      defaultMenuItem.setAttribute("iconsrc", ICON_URL_APP);
     } else {
       document.l10n.setAttributes(
         defaultMenuItem,
@@ -1079,10 +1081,10 @@ export class ApplicationListItem {
           "app-name": handlerInfo.defaultDescription,
         }
       );
-      let image = handlerInfo.iconURLForSystemDefault;
-      if (image) {
-        defaultMenuItem.setAttribute("iconsrc", image);
-      }
+    }
+    let image = handlerInfo.iconURLForSystemDefault;
+    if (image) {
+      defaultMenuItem.setAttribute("iconsrc", image);
     }
     return defaultMenuItem;
   }
@@ -1859,6 +1861,9 @@ SettingGroupManager.registerGroups({
       {
         id: "applicationsHandlersView",
         control: "moz-box-group",
+        controlAttrs: {
+          type: "list",
+        },
       },
       {
         id: "handleNewFileTypes",

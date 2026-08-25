@@ -27,6 +27,7 @@
 
 #include "NamespaceImports.h"
 
+#include "builtin/ModuleObject.h"  // js::ImportPhase
 #include "jit/AtomicOp.h"
 #include "jit/FixedList.h"
 #include "jit/InlineList.h"
@@ -367,9 +368,9 @@ class AliasSet {
     DynamicSlot = 1 << 3,       // A Value member of obj->slots.
     FixedSlot = 1 << 4,         // A Value member of obj->fixedSlots().
     DOMProperty = 1 << 5,       // A DOM property
-    WasmInstanceData = 1 << 6,  // An asm.js/wasm private global var
-    WasmHeap = 1 << 7,          // An asm.js/wasm heap load
-    WasmHeapMeta = 1 << 8,      // The asm.js/wasm heap base pointer and
+    WasmInstanceData = 1 << 6,  // A wasm private global var
+    WasmHeap = 1 << 7,          // A wasm heap load
+    WasmHeapMeta = 1 << 8,      // The wasm heap base pointer and
                                 // bounds check limit, in Instance.
     ArrayBufferViewLengthOrOffset =
         1 << 9,                  // An array buffer view's length or byteOffset
@@ -429,10 +430,13 @@ class AliasSet {
     // The SharedArrayRawBuffer::length field.
     SharedArrayRawBufferLength = 1 << 28,
 
-    Last = SharedArrayRawBufferLength,
+    // The frame descriptor's IsResumingGenerator bit.
+    GeneratorResumeState = 1 << 29,
+
+    Last = GeneratorResumeState,
 
     Any = Last | (Last - 1),
-    NumCategories = 29,
+    NumCategories = 30,
 
     // Indicates load or store.
     Store_ = 1 << 31
@@ -895,12 +899,12 @@ class MDefinition : public MNode {
   }
   template <typename MIRType>
   MIRType* to() {
-    MOZ_ASSERT(this->is<MIRType>());
+    MOZ_RELEASE_ASSERT(this->is<MIRType>());
     return static_cast<MIRType*>(this);
   }
   template <typename MIRType>
   const MIRType* to() const {
-    MOZ_ASSERT(this->is<MIRType>());
+    MOZ_RELEASE_ASSERT(this->is<MIRType>());
     return static_cast<const MIRType*>(this);
   }
 #define OPCODE_CASTS(opcode)                                \
@@ -1064,6 +1068,9 @@ class MInstruction : public MDefinition, public InlineListNode<MInstruction> {
 
   void setResumePoint(MResumePoint* resumePoint);
   void stealResumePoint(MInstruction* other);
+  // Copy resume point from the previous instruction.
+  [[nodiscard]] bool copyResumePointFrom(TempAllocator& alloc,
+                                         MInstruction* previous);
 
   void moveResumePointAsEntry();
   void clearResumePoint();
@@ -1133,8 +1140,10 @@ class MInstruction : public MDefinition, public InlineListNode<MInstruction> {
 //     NAMED_OPERANDS((0, lhs), (1, rhs))
 //
 // The above example defines 2 accessors, one named "lhs" accessing the first
-// operand, and a one named "rhs" accessing the second operand.
-#define NAMED_OPERAND_ACCESSOR(Index, Name) \
+// operand, and a one named "rhs" accessing the second operand. It also defines
+// the operand indices as |lhsOperand| and |rhsOperand|.
+#define NAMED_OPERAND_ACCESSOR(Index, Name)      \
+  static constexpr size_t Name##Operand = Index; \
   MDefinition* Name() const { return getOperand(Index); }
 #define NAMED_OPERAND_ACCESSOR_APPLY(Args) NAMED_OPERAND_ACCESSOR Args
 #define NAMED_OPERANDS(...) \
@@ -6007,9 +6016,6 @@ class MPhi final : public MDefinition,
   // the phi operand along the loop backedge.
   MDefinition* getLoopBackedgeOperand() const;
 
-  // Whether this phi's type already includes information for def.
-  bool typeIncludes(MDefinition* def);
-
   // Mark all phis in |iterators|, and the phis they flow into, as having
   // implicit uses.
   [[nodiscard]] static bool markIteratorPhis(const PhiVector& iterators);
@@ -6253,6 +6259,8 @@ class MBinaryCache : public MBinaryInstruction,
  public:
   INSTRUCTION_HEADER(BinaryCache)
   TRIVIAL_NEW_WRAPPERS
+
+  JSOp jsop() const;
 };
 
 // Checks if a value is JS_UNINITIALIZED_LEXICAL, bailout out if so, leaving
@@ -8880,6 +8888,9 @@ class MResumePoint final : public MNode
  public:
   static MResumePoint* New(TempAllocator& alloc, MBasicBlock* block,
                            jsbytecode* pc, ResumeMode mode);
+  // NOTE: instruction_ is left null; call setResumePoint to associate the
+  // clone with an instruction.
+  [[nodiscard]] MResumePoint* clone(TempAllocator& alloc);
 
   MBasicBlock* block() const { return resumePointBlock(); }
 
@@ -8929,6 +8940,7 @@ class MResumePoint final : public MNode
     instruction_ = nullptr;
   }
   ResumeMode mode() const { return mode_; }
+  void setMode(ResumeMode mode) { mode_ = mode; }
 
   void releaseUses() {
     for (size_t i = 0, e = numOperands(); i < e; i++) {
@@ -8980,6 +8992,7 @@ class MHasClass : public MUnaryInstruction, public SingleObjectPolicy::Data {
 
   MDefinition* foldsTo(TempAllocator& alloc) override;
   AliasSet getAliasSet() const override {
+    // ProxyObject::swap can change the JSClass of certain proxy objects.
     return AliasSet::Load(AliasSet::ObjectFields);
   }
   bool congruentTo(const MDefinition* ins) const override {
@@ -9022,6 +9035,7 @@ class MGuardToClass : public MUnaryInstruction,
 
   MDefinition* foldsTo(TempAllocator& alloc) override;
   AliasSet getAliasSet() const override {
+    // ProxyObject::swap can change the JSClass of certain proxy objects.
     return AliasSet::Load(AliasSet::ObjectFields);
   }
   bool congruentTo(const MDefinition* ins) const override {
@@ -9360,12 +9374,6 @@ class MObjectToIterator : public MUnaryInstruction,
   TRIVIAL_NEW_WRAPPERS
   NAMED_OPERANDS((0, object))
 
-  AliasSet getAliasSet() const override {
-    return skipRegistration_
-               ? AliasSet::Load(AliasSet::ObjectFields | AliasSet::Element)
-               : AliasSet::Store(AliasSet::Any);
-  }
-
   bool wantsIndices() const { return wantsIndices_; }
   void setWantsIndices(bool value) { wantsIndices_ = value; }
 
@@ -9409,6 +9417,11 @@ class MCanonicalizeNaN : public MUnaryInstruction, public NoTypePolicy::Data {
   }
 
   bool canProduceFloat32() const override { return type() == MIRType::Float32; }
+
+  [[nodiscard]] bool writeRecoverData(
+      CompactBufferWriter& writer) const override;
+
+  bool canRecoverOnBailout() const override { return true; }
 
   ALLOW_CLONE(MCanonicalizeNaN)
 };

@@ -17,22 +17,18 @@ import androidx.fragment.compose.content
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import com.google.android.material.R as materialR
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.launch
-import org.mozilla.fenix.HomeActivity
 import org.mozilla.fenix.ext.openToBrowser
 import org.mozilla.fenix.ext.requireComponents
-import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.messaging.MicrosurveyMessageController
 import org.mozilla.fenix.microsurvey.ui.ext.MicrosurveyUIData
 import org.mozilla.fenix.microsurvey.ui.ext.toMicrosurveyUIData
 import org.mozilla.fenix.theme.FirefoxTheme
-import com.google.android.material.R as materialR
 
-/**
- * A bottom sheet fragment for displaying a microsurvey.
- */
+/** A bottom sheet fragment for displaying a microsurvey. */
 class MicrosurveyBottomSheetFragment : BottomSheetDialogFragment() {
 
     private val args by navArgs<MicrosurveyBottomSheetFragmentArgs>()
@@ -72,8 +68,7 @@ class MicrosurveyBottomSheetFragment : BottomSheetDialogFragment() {
                 bottomSheet?.let {
                     it.setBackgroundResource(android.R.color.transparent)
                     val behavior = BottomSheetBehavior.from(it)
-                    behavior.setPeekHeightToHalfScreenHeight()
-                    behavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                    behavior.state = BottomSheetBehavior.STATE_EXPANDED
                 }
             }
         }
@@ -84,8 +79,6 @@ class MicrosurveyBottomSheetFragment : BottomSheetDialogFragment() {
         savedInstanceState: Bundle?,
     ) = content {
         FirefoxTheme {
-            val activity = requireActivity() as HomeActivity
-
             microsurveyUIData?.let {
                 LaunchedEffect(it.id) {
                     microsurveyMessageController.onMicrosurveyShown(it.id)
@@ -94,6 +87,7 @@ class MicrosurveyBottomSheetFragment : BottomSheetDialogFragment() {
                     question = it.question,
                     icon = it.icon,
                     answers = it.answers,
+                    maxLabelLines = it.maxNumberLines,
                     onPrivacyPolicyLinkClick = {
                         closeBottomSheet()
                         microsurveyMessageController.onPrivacyPolicyLinkClicked(
@@ -103,21 +97,15 @@ class MicrosurveyBottomSheetFragment : BottomSheetDialogFragment() {
                     },
                     onCloseButtonClicked = {
                         microsurveyMessageController.onMicrosurveyDismissed(it.id)
-                        requireContext().settings().shouldShowMicrosurveyPrompt = false
-                        activity.isMicrosurveyPromptDismissed.value = true
+                        requireComponents.settings.shouldShowMicrosurveyPrompt = false
                         closeBottomSheet()
                     },
                     onSubmitButtonClicked = { answer ->
-                        requireContext().settings().shouldShowMicrosurveyPrompt = false
-                        activity.isMicrosurveyPromptDismissed.value = true
+                        requireComponents.settings.shouldShowMicrosurveyPrompt = false
                         microsurveyMessageController.onSurveyCompleted(it.id, answer)
                     },
                 )
             }
         }
-    }
-
-    private fun BottomSheetBehavior<View>.setPeekHeightToHalfScreenHeight() {
-        peekHeight = resources.displayMetrics.heightPixels / 2
     }
 }

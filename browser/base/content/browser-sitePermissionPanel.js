@@ -4,7 +4,16 @@
 
 ChromeUtils.defineESModuleGetters(this, {
   PermissionUI: "resource:///modules/PermissionUI.sys.mjs",
+  SerialDeviceSharingHelper:
+    "moz-src:///browser/modules/SerialDeviceSharingHelper.sys.mjs",
 });
+
+XPCOMUtils.defineLazyServiceGetter(
+  this,
+  "SiteCategory",
+  "@mozilla.org/site-category;1",
+  Ci.nsISiteCategory
+);
 
 /**
  * Utility object to handle manipulations of the identity permission indicators
@@ -374,9 +383,12 @@ var gPermissionPanel = {
     // being focused (and therefore, interacted with) by the user. However, we
     // want to allow opening the identity popup from the device control menu,
     // which calls click() on the identity button, so we don't return early.
+    // Persisted search terms also produce pageproxystate=invalid, but a real
+    // page is loaded underneath, so the permission popup is still meaningful.
     if (
       !this._sharingState &&
-      gURLBar.getAttribute("pageproxystate") != "valid"
+      gURLBar.getAttribute("pageproxystate") != "valid" &&
+      !gURLBar.hasAttribute("persistsearchterms")
     ) {
       return;
     }
@@ -745,6 +757,13 @@ var gPermissionPanel = {
       menulist.setAttribute("sizetopopup", "none");
       menulist.setAttribute("id", "permission-popup-menulist");
 
+      if (
+        idNoSuffix == "popup" &&
+        Services.prefs.prefIsLocked("dom.disable_open_during_load")
+      ) {
+        menulist.setAttribute("disabled", "true");
+      }
+
       for (let state of SitePermissions.getAvailableStates(idNoSuffix)) {
         let menuitem = document.createXULElement("menuitem");
         // We need to correctly display the default/unknown state, which has its
@@ -953,9 +972,7 @@ var gPermissionPanel = {
       // Record telemetry for notification permission revocation via toolbar
       if (idNoSuffix === "desktop-notification") {
         Glean.webNotificationPermission.permissionRevokedToolbar.record({
-          site_category: PermissionUI.getSiteCategory(
-            gBrowser.contentPrincipal
-          ),
+          site_category: SiteCategory.getCategory(gBrowser.contentPrincipal),
         });
       }
 
@@ -966,7 +983,7 @@ var gPermissionPanel = {
       } else if (idNoSuffix === "xr") {
         gBrowser.updateBrowserSharing(browser, { xr: false });
       } else if (idNoSuffix === "serial") {
-        gSerialDeviceObserver.resetBrowserCount(browser);
+        SerialDeviceSharingHelper.resetBrowserCount(browser);
         gBrowser.updateBrowserSharing(browser, { serial: false });
         Services.obs.notifyObservers(
           browser.browsingContext,

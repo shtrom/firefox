@@ -16,7 +16,12 @@ const DIALOG_SIZE = "width=600,height=400";
 
 add_setup(async function () {
   await SpecialPowers.pushPrefEnv({
-    set: [["test.wait300msAfterTabSwitch", true]],
+    set: [
+      ["test.wait300msAfterTabSwitch", true],
+      // Disabled so focusing a filled field reliably re-identifies it instead
+      // of being suppressed during the dynamic-form-change threshold window.
+      ["extensions.formautofill.heuristics.fillOnDynamicFormChanges", false],
+    ],
   });
 });
 
@@ -63,6 +68,8 @@ add_task(async function test_saveCreditCard() {
     EventUtils.synthesizeKey("VK_TAB", {}, win);
     EventUtils.synthesizeKey(TEST_CREDIT_CARD_1["cc-number"], {}, win);
     EventUtils.synthesizeKey("VK_TAB", {}, win);
+    EventUtils.synthesizeKey(TEST_CREDIT_CARD_1["cc-name"], {}, win);
+    EventUtils.synthesizeKey("VK_TAB", {}, win);
     EventUtils.synthesizeKey(
       "0" + TEST_CREDIT_CARD_1["cc-exp-month"].toString(),
       {},
@@ -74,12 +81,8 @@ add_task(async function test_saveCreditCard() {
       {},
       win
     );
-    EventUtils.synthesizeKey("VK_TAB", {}, win);
-    EventUtils.synthesizeKey(TEST_CREDIT_CARD_1["cc-name"], {}, win);
-    EventUtils.synthesizeKey("VK_TAB", {}, win);
-    EventUtils.synthesizeKey("VK_TAB", {}, win);
     info("saving credit card");
-    EventUtils.synthesizeKey("VK_RETURN", {}, win);
+    win.document.querySelector("#save").click();
   });
 
   Assert.equal(1, Glean.creditcard.addManage.testGetValue().length);

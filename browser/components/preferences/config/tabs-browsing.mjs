@@ -12,7 +12,7 @@ const XPCOMUtils = ChromeUtils.importESModule(
 const lazy = XPCOMUtils.declareLazy({
   AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
   ContextualIdentityService:
-    "resource://gre/modules/ContextualIdentityService.sys.mjs",
+    "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   LinkPreview: "moz-src:///browser/components/genai/LinkPreview.sys.mjs",
   ShortcutUtils: "resource://gre/modules/ShortcutUtils.sys.mjs",
   TransientPrefs: "resource:///modules/TransientPrefs.sys.mjs",
@@ -98,6 +98,10 @@ Preferences.addAll([
     id: "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features",
     type: "bool",
   },
+
+  // Browser layout
+  { id: "sidebar.verticalTabs", type: "bool" },
+  { id: "sidebar.revamp", type: "bool" },
 ]);
 
 if (lazy.AppConstants.platform === "win") {
@@ -273,6 +277,8 @@ Preferences.addSetting({
 Preferences.addSetting({
   id: "tabGroupDragToCreate",
   pref: "browser.tabs.dragDrop.createGroup.enabled",
+  deps: ["tabGroups"],
+  visible: ({ tabGroups }) => !!tabGroups.value,
 });
 if (lazy.AppConstants.platform === "win") {
   /**
@@ -376,18 +382,6 @@ Preferences.addSetting({
   onUserClick: () => {
     window.gotoPref("containers");
   },
-  getControlConfig: config => {
-    let searchKeywords = [
-      "user-context-personal",
-      "user-context-work",
-      "user-context-banking",
-      "user-context-shopping",
-    ]
-      .map(lazy.ContextualIdentityService.formatContextLabel)
-      .join(" ");
-    config.controlAttrs.searchkeywords = searchKeywords;
-    return config;
-  },
   disabled: ({ browserContainersCheckbox }) => !browserContainersCheckbox.value,
 });
 
@@ -465,6 +459,11 @@ Preferences.addSetting({
 Preferences.addSetting({
   id: "linkPreviewLongPress",
   pref: "browser.ml.linkPreview.longPress",
+});
+
+// Keyboard shortcuts settings
+Preferences.addSetting({
+  id: "keyboardCustomkeysLinkTabs",
 });
 
 // Media settings
@@ -554,7 +553,65 @@ Preferences.addSetting({
   pref: "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features",
 });
 
+// Browser layout settings
+Preferences.addSetting({
+  id: "browserLayoutRadioGroup",
+  pref: "sidebar.verticalTabs",
+  get: prefValue => (prefValue ? "true" : "false"),
+  set: value => value === "true",
+});
+
+Preferences.addSetting({
+  id: "browserLayoutShowSidebar",
+  pref: "sidebar.revamp",
+  onUserChange(checked) {
+    if (checked) {
+      window.browsingContext.topChromeWindow.SidebarController?.enabledViaSettings(
+        true
+      );
+    }
+  },
+});
+
 SettingGroupManager.registerGroups({
+  browserLayout: {
+    subcategory: "layout",
+    l10nId: "browser-layout-header2",
+    iconSrc: "chrome://browser/skin/sidebar-expanded.svg",
+    headingLevel: 2,
+    items: [
+      {
+        id: "browserLayoutRadioGroup",
+        control: "moz-visual-picker",
+        options: [
+          {
+            id: "browserLayoutHorizontalTabs",
+            value: "false",
+            l10nId: "browser-layout-horizontal-tabs2",
+            controlAttrs: {
+              class: "setting-chooser-item",
+              imagesrc:
+                "chrome://browser/content/preferences/browser-layout-horizontal.svg",
+            },
+          },
+          {
+            id: "browserLayoutVerticalTabs",
+            value: "true",
+            l10nId: "browser-layout-vertical-tabs2",
+            controlAttrs: {
+              class: "setting-chooser-item",
+              imagesrc:
+                "chrome://browser/content/preferences/browser-layout-vertical.svg",
+            },
+          },
+        ],
+      },
+      {
+        id: "browserLayoutShowSidebar",
+        l10nId: "browser-layout-show-sidebar2",
+      },
+    ],
+  },
   tabs: {
     l10nId: "tabs-group-header2",
     headingLevel: 2,
@@ -625,12 +682,9 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "browserContainersSettings",
+            loadPane: "containers",
             l10nId: "browser-containers-settings-2",
             control: "moz-box-button",
-            controlAttrs: {
-              "search-l10n-ids":
-                "containers-add-button.label, containers-settings-button.label, containers-remove-button.label, containers-new-tab-check.label",
-            },
           },
         ],
       },
@@ -676,6 +730,21 @@ SettingGroupManager.registerGroups({
       },
     ],
   },
+  keyboardShortcuts: {
+    l10nId: "settings-keyboard-shortcuts-group",
+    headingLevel: 2,
+    iconSrc: "chrome://browser/skin/preferences/category-accessibility.svg",
+    items: [
+      {
+        id: "keyboardCustomkeysLinkTabs",
+        l10nId: "settings-keyboard-shortcuts-customkeys-link",
+        control: "moz-box-link",
+        controlAttrs: {
+          href: "about:keyboard",
+        },
+      },
+    ],
+  },
   media: {
     l10nId: "settings-media-group",
     headingLevel: 2,
@@ -694,6 +763,7 @@ SettingGroupManager.registerGroups({
       },
       {
         id: "playDRMContent",
+        subcategory: "drm",
         l10nId: "play-drm-content",
         supportPage: "drm-content",
       },
@@ -718,7 +788,7 @@ SettingGroupManager.registerGroups({
   recommendations: {
     l10nId: "recommendations-group",
     headingLevel: 2,
-    iconSrc: "chrome://browser/skin/trending.svg",
+    iconSrc: "chrome://browser/skin/lightning-bolt.svg",
     items: [
       {
         id: "cfrRecommendations",

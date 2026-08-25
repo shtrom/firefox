@@ -25,7 +25,7 @@ const DUMMY_PAGE =
 let testActionCalled = 0;
 
 const assertAction = async name => {
-  await BrowserTestUtils.waitForCondition(() =>
+  await TestUtils.waitForCondition(() =>
     window.document.querySelector(`.urlbarView-action-btn[data-action=${name}]`)
   );
   Assert.ok(true, `We found action "${name}`);
@@ -47,6 +47,26 @@ const hasQuickActions = win =>
 
 const onboardingLabelShown = win =>
   !!win.document.querySelector(".urlbarView-press-tab-label");
+
+async function enterActionsMode() {
+  await UrlbarTestUtils.promiseAutocompleteResultPopup({
+    window,
+    value: "@act",
+  });
+  EventUtils.synthesizeKey("KEY_Tab");
+  await UrlbarTestUtils.assertSearchMode(window, {
+    source: UrlbarShared.RESULT_SOURCE.ACTIONS,
+    entry: "keywordoffer",
+    restrictType: "keyword",
+  });
+}
+
+async function exitActionsMode() {
+  await UrlbarTestUtils.promisePopupClose(window, () => {
+    window.gURLBar.searchMode = null;
+    EventUtils.synthesizeKey("KEY_Escape");
+  });
+}
 
 add_setup(async function setup() {
   await SpecialPowers.pushPrefEnv({
@@ -95,9 +115,11 @@ add_task(async function basic() {
   await assertAction("testaction");
 
   info("The callback of the action is fired when selected");
+  let engaged = UrlbarTestUtils.promiseProviderEngagement(window);
   EventUtils.synthesizeKey("KEY_Tab", {}, window);
   assertAccessibilityWhenSelected("testaction");
   EventUtils.synthesizeKey("KEY_Enter", {}, window);
+  await engaged;
   Assert.equal(testActionCalled, 1, "Test action was called");
 });
 
@@ -182,9 +204,11 @@ add_task(async function testAfterTabSwitch() {
 
   await BrowserTestUtils.switchTab(gBrowser, tab1);
   info("Testing if quick action in tab 1 still works.");
+  let engaged = UrlbarTestUtils.promiseProviderEngagement(window);
   EventUtils.synthesizeKey("KEY_Tab", {}, window);
   assertAccessibilityWhenSelected("testaction");
   EventUtils.synthesizeKey("KEY_Enter", {}, window);
+  await engaged;
   Assert.equal(testActionCalled, 2, "Test action was called");
 
   BrowserTestUtils.removeTab(tab2);
@@ -262,6 +286,10 @@ add_task(async function test_update() {
 
   const sandbox = sinon.createSandbox();
   try {
+    // Updates are disabled for testing, so pretend this build can update.
+    sandbox
+      .stub(UpdateService.prototype, "canUsuallyCheckForUpdates")
+      .get(() => true);
     sandbox
       .stub(UpdateService.prototype, "currentState")
       .get(() => Ci.nsIApplicationUpdateService.STATE_IDLE);
@@ -278,6 +306,57 @@ add_task(async function test_update() {
     );
   } finally {
     sandbox.restore();
+  }
+});
+
+add_task(async function test_update_in_actions_mode() {
+  if (!AppConstants.MOZ_UPDATER) {
+    return;
+  }
+
+  const sandbox = sinon.createSandbox();
+  let currentState = Ci.nsIApplicationUpdateService.STATE_IDLE;
+  sandbox.stub(UpdateService.prototype, "currentState").get(() => currentState);
+  // Updates are disabled for testing, so pretend this build can update.
+  sandbox
+    .stub(UpdateService.prototype, "canUsuallyCheckForUpdates")
+    .get(() => true);
+
+  try {
+    await enterActionsMode();
+    await UrlbarTestUtils.promiseAutocompleteResultPopup({
+      window,
+      value: "update",
+    });
+    let updateButton = await TestUtils.waitForCondition(() =>
+      window.document.querySelector(
+        `.urlbarView-action-btn[data-action=update]`
+      )
+    );
+    Assert.ok(
+      updateButton.hasAttribute("aria-disabled"),
+      "Update action is shown as disabled in actions mode when no update is pending"
+    );
+    await exitActionsMode();
+
+    currentState = Ci.nsIApplicationUpdateService.STATE_PENDING;
+    await enterActionsMode();
+    await UrlbarTestUtils.promiseAutocompleteResultPopup({
+      window,
+      value: "update",
+    });
+    updateButton = await TestUtils.waitForCondition(() =>
+      window.document.querySelector(
+        `.urlbarView-action-btn[data-action=update]`
+      )
+    );
+    Assert.ok(
+      !updateButton.hasAttribute("aria-disabled"),
+      "Update action is shown as enabled in actions mode when update is pending"
+    );
+  } finally {
+    sandbox.restore();
+    await exitActionsMode();
   }
 });
 
@@ -331,7 +410,7 @@ async function clickQuickActionOneoffButton() {
 
   EventUtils.synthesizeMouseAtCenter(oneOffButton, {}, window);
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.ACTIONS,
+    source: UrlbarShared.RESULT_SOURCE.ACTIONS,
     entry: "oneoff",
   });
 }
@@ -351,7 +430,7 @@ add_task(async function test_searchMode() {
   EventUtils.synthesizeKey("KEY_Tab");
 
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.ACTIONS,
+    source: UrlbarShared.RESULT_SOURCE.ACTIONS,
     entry: "keywordoffer",
     restrictType: "keyword",
   });
@@ -375,6 +454,159 @@ add_task(async function test_searchMode() {
 
   BrowserTestUtils.removeTab(tab);
   BrowserTestUtils.removeTab(viewSourceTab);
+});
+
+add_task(async function test_searchMode_unsupported_action() {
+  ActionsProviderQuickActions.addAction("unsupportedsearchaction", {
+    commands: ["unsupportedsearch"],
+    label: "quickactions-downloads2",
+    isUnsupported: () => true,
+    onPick: () => {},
+  });
+  ActionsProviderQuickActions.addAction("supportedsearchaction", {
+    commands: ["unsupportedsearchsupported"],
+    label: "quickactions-downloads2",
+    onPick: () => {},
+  });
+
+  await enterActionsMode();
+
+  await UrlbarTestUtils.promiseAutocompleteResultPopup({
+    window,
+    value: "unsupportedsearch",
+  });
+
+  await assertAction("supportedsearchaction");
+  Assert.ok(
+    !window.document.querySelector(
+      `.urlbarView-action-btn[data-action=unsupportedsearchaction]`
+    ),
+    "Unsupported action is not shown in the actions search mode list"
+  );
+
+  await exitActionsMode();
+
+  ActionsProviderQuickActions.removeAction("unsupportedsearchaction");
+  ActionsProviderQuickActions.removeAction("supportedsearchaction");
+});
+
+add_task(async function test_searchMode_inactive_action() {
+  ActionsProviderQuickActions.addAction("inactivesearchaction", {
+    commands: ["inactivesearch"],
+    label: "quickactions-downloads2",
+    isInactive: () => true,
+    onPick: () => {},
+  });
+
+  await enterActionsMode();
+
+  await UrlbarTestUtils.promiseAutocompleteResultPopup({
+    window,
+    value: "inactivesearch",
+  });
+
+  await assertAction("inactivesearchaction");
+  let btn = window.document.querySelector(
+    `.urlbarView-action-btn[data-action=inactivesearchaction]`
+  );
+  Assert.ok(
+    btn.hasAttribute("aria-disabled"),
+    "Inactive action is shown but disabled in the actions search mode list"
+  );
+
+  await exitActionsMode();
+
+  ActionsProviderQuickActions.removeAction("inactivesearchaction");
+});
+
+add_task(async function test_disabled_actions() {
+  let picked = [];
+  let actions = [
+    ["action-one", false],
+    ["action-two", true],
+    ["action-three", false],
+    ["action-four", true],
+  ];
+  for (let [key, inactive] of actions) {
+    ActionsProviderQuickActions.addAction(key, {
+      commands: [key],
+      label: "quickactions-downloads2",
+      isInactive: () => inactive,
+      onPick: () => picked.push(key),
+    });
+  }
+
+  await enterActionsMode();
+
+  await UrlbarTestUtils.promiseAutocompleteResultPopup({
+    window,
+    value: "action-",
+  });
+
+  await assertAction("action-four");
+
+  Assert.deepEqual(
+    Array.from(
+      window.document.querySelectorAll(".urlbarView-action-btn"),
+      button => button.dataset.action
+    ),
+    actions.map(([key]) => key),
+    "Both the active and the inactive actions are shown"
+  );
+
+  let selectedAction = () =>
+    UrlbarTestUtils.getSelectedElement(window)?.dataset.action ?? null;
+
+  Assert.equal(selectedAction(), null, "Nothing is selected initially");
+
+  let steps = [
+    ["KEY_ArrowDown", "action-one", "Selected first action"],
+    ["KEY_ArrowDown", "action-three", "Skip disabled action"],
+    ["KEY_ArrowDown", null, "Cycle selection to urlbar"],
+    ["KEY_ArrowUp", "action-three", "Select last non disabled action"],
+    ["KEY_ArrowUp", "action-one", "Skip disabled action"],
+    ["KEY_ArrowUp", null, "Back to urlbar"],
+  ];
+  for (let [key, expected, message] of steps) {
+    EventUtils.synthesizeKey(key);
+    Assert.equal(selectedAction(), expected, message);
+  }
+
+  let inactiveButton = window.document.querySelector(
+    `.urlbarView-action-btn[data-action=action-two]`
+  );
+  // Deliberately testing clicking on disabled button.
+  AccessibilityUtils.setEnv({ mustBeEnabled: false });
+  EventUtils.synthesizeMouseAtCenter(inactiveButton, {}, window);
+  AccessibilityUtils.resetEnv();
+
+  Assert.ok(
+    UrlbarTestUtils.isPopupOpen(window),
+    "Clicking an inactive action leaves the view open"
+  );
+  Assert.equal(selectedAction(), null, "Inactive action was not selected");
+  Assert.deepEqual(picked, [], "No action was picked");
+
+  EventUtils.synthesizeKey("KEY_ArrowDown");
+  EventUtils.synthesizeKey("KEY_ArrowDown");
+  Assert.equal(
+    selectedAction(),
+    "action-three",
+    "The active action after the inactive one is still selectable"
+  );
+
+  let engagement = UrlbarTestUtils.promiseProviderEngagement(window);
+  await UrlbarTestUtils.promisePopupClose(window, () => {
+    EventUtils.synthesizeKey("KEY_Enter");
+  });
+  await engagement;
+  Assert.deepEqual(picked, ["action-three"], "The active action was picked");
+
+  await exitActionsMode();
+
+  for (let [key] of actions) {
+    ActionsProviderQuickActions.removeAction(key);
+  }
 });
 
 let showAction = async testFun => {

@@ -20,8 +20,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/ipprotection/IPProtectionPanel.sys.mjs",
   IPProtectionService:
     "moz-src:///toolkit/components/ipprotection/IPProtectionService.sys.mjs",
-  IPPFxaAuthProvider:
-    "moz-src:///toolkit/components/ipprotection/fxa/IPPFxaAuthProvider.sys.mjs",
+  IPPDummyAuthProvider:
+    "resource://testing-common/ipprotection/IPPDummyAuthProvider.sys.mjs",
   IPPNimbusHelper:
     "moz-src:///toolkit/components/ipprotection/IPPNimbusHelper.sys.mjs",
 });
@@ -42,8 +42,15 @@ const PANELSTATES = {
 };
 
 async function setAuthenticated(content, isReady, sandbox) {
-  sandbox.stub(lazy.IPPFxaAuthProvider, "isReady").get(() => isReady);
-  sandbox.stub(lazy.IPPNimbusHelper, "isEligible").get(() => true);
+  if (isReady) {
+    lazy.IPPDummyAuthProvider.simulateSignIn(true);
+    lazy.IPPDummyAuthProvider.setEntitlement(createTestEntitlement(), {
+      silent: true,
+    });
+  } else {
+    lazy.IPPDummyAuthProvider.simulateSignIn(false);
+  }
+  sandbox.stub(lazy.IPPNimbusHelper, "hidesFeature").returns(false);
   lazy.IPProtectionService.updateState();
   content.requestUpdate();
   await content.updateComplete;
@@ -246,6 +253,10 @@ add_task(async function test_enrolling_skeleton() {
     2,
     "Two skeleton line thick elements should be present"
   );
+  Assert.ok(
+    container.querySelector(".skeleton-image"),
+    "Skeleton image element should be present"
+  );
 
   Assert.ok(
     !content.statusCardEl,
@@ -298,7 +309,6 @@ add_task(async function test_enrolling_transitions_to_ready() {
       pass: makePass(),
     },
   });
-  await IPPFxaAuthProvider.checkForUpgrade();
 
   let content = await openPanel({
     unauthenticated: false,

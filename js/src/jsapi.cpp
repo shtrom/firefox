@@ -547,11 +547,11 @@ JS_PUBLIC_API void* JS_GetCompartmentPrivate(JS::Compartment* compartment) {
 }
 
 JS_PUBLIC_API void JS_MarkCrossZoneId(JSContext* cx, jsid id) {
-  cx->markId(id);
+  cx->recordRefToId(id);
 }
 
 JS_PUBLIC_API void JS_MarkCrossZoneIdValue(JSContext* cx, const Value& value) {
-  cx->markAtomValue(value);
+  cx->recordRefToValue(value);
 }
 
 JS_PUBLIC_API void JS_SetZoneUserData(JS::Zone* zone, void* data) {
@@ -650,7 +650,7 @@ static void CheckTransplantObject(JSObject* obj) {
 JS_PUBLIC_API JSObject* JS_TransplantObject(JSContext* cx, HandleObject origobj,
                                             HandleObject target) {
   AssertHeapIsIdle();
-  MOZ_ASSERT(origobj != target);
+  MOZ_RELEASE_ASSERT(origobj != target);
   CheckTransplantObject(origobj);
   CheckTransplantObject(target);
   ReleaseAssertObjectHasNoWrappers(cx, target);
@@ -672,7 +672,8 @@ JS_PUBLIC_API JSObject* JS_TransplantObject(JSContext* cx, HandleObject origobj,
     // destination's cross compartment map and that the same
     // object will continue to work.
     AutoRealm ar(cx, origobj);
-    JSObject::swap(cx, origobj, target, oomUnsafe);
+    ProxyObject::swap(cx, origobj.as<ProxyObject>(), target.as<ProxyObject>(),
+                      oomUnsafe);
     newIdentity = origobj;
   } else if (ObjectWrapperMap::Ptr p = destination->lookupWrapper(origobj)) {
     // There might already be a wrapper for the original object in
@@ -686,7 +687,8 @@ JS_PUBLIC_API JSObject* JS_TransplantObject(JSContext* cx, HandleObject origobj,
     NukeCrossCompartmentWrapper(cx, newIdentity);
 
     AutoRealm ar(cx, newIdentity);
-    JSObject::swap(cx, newIdentity, target, oomUnsafe);
+    ProxyObject::swap(cx, newIdentity.as<ProxyObject>(),
+                      target.as<ProxyObject>(), oomUnsafe);
   } else {
     // Otherwise, we use |target| for the new identity object.
     newIdentity = target;
@@ -705,8 +707,9 @@ JS_PUBLIC_API JSObject* JS_TransplantObject(JSContext* cx, HandleObject origobj,
   if (origobj->compartment() != destination) {
     // If origobj is a weak ref or finalization registry target, relocate the
     // map entries to newIdentity before the swap turns origobj into a CCW.
-    if (!gc::GCRuntime::relocateFinalizationObserverTarget(
-            ObjectValue(*origobj), ObjectValue(*newIdentity))) {
+    gc::GCRuntime* gc = &cx->runtime()->gc;
+    if (!gc->relocateFinalizationObserverTarget(ObjectValue(*origobj),
+                                                ObjectValue(*newIdentity))) {
       oomUnsafe.crash("JS_TransplantObject finalization observer relocation");
     }
 
@@ -717,8 +720,11 @@ JS_PUBLIC_API JSObject* JS_TransplantObject(JSContext* cx, HandleObject origobj,
                          cx->isThrowingOverRecursed());
       oomUnsafe.crash("JS_TransplantObject");
     }
-    MOZ_ASSERT(Wrapper::wrappedObject(newIdentityWrapper) == newIdentity);
-    JSObject::swap(cx, origobj, newIdentityWrapper, oomUnsafe);
+    MOZ_RELEASE_ASSERT(newIdentityWrapper->is<WrapperObject>());
+    MOZ_RELEASE_ASSERT(Wrapper::wrappedObject(newIdentityWrapper) ==
+                       newIdentity);
+    ProxyObject::swap(cx, origobj.as<ProxyObject>(),
+                      newIdentityWrapper.as<ProxyObject>(), oomUnsafe);
     if (origobj->compartment()->lookupWrapper(newIdentity)) {
       MOZ_ASSERT(origobj->is<CrossCompartmentWrapperObject>());
       if (!origobj->compartment()->putWrapper(cx, newIdentity, origobj)) {
@@ -756,8 +762,8 @@ JS_PUBLIC_API void js::RemapRemoteWindowProxies(
     oomUnsafe.crash("js::RemapRemoteWindowProxies");
   }
 
-  RootedTuple<JSObject*, JSObject*, JSObject*> roots(cx);
-  RootedField<JSObject*, 0> targetCompartmentProxy(roots);
+  RootedTuple<ProxyObject*, JSObject*, JSObject*> roots(cx);
+  RootedField<ProxyObject*> targetCompartmentProxy(roots);
   JS::RootedVector<JSObject*> otherProxies(cx);
 
   // Use the callback to find remote proxies in all compartments that match
@@ -780,7 +786,7 @@ JS_PUBLIC_API void js::RemapRemoteWindowProxies(
     js::NukeNonCCWProxy(cx, remoteProxy);
 
     if (remoteProxy->compartment() == target->compartment()) {
-      targetCompartmentProxy = remoteProxy;
+      targetCompartmentProxy = &remoteProxy->as<ProxyObject>();
     } else if (!otherProxies.append(remoteProxy)) {
       oomUnsafe.crash("js::RemapRemoteWindowProxies");
     }
@@ -792,13 +798,21 @@ JS_PUBLIC_API void js::RemapRemoteWindowProxies(
   // correctly before we start wrapping it into other compartments.
   if (targetCompartmentProxy) {
     AutoRealm ar(cx, targetCompartmentProxy);
-    JSObject::swap(cx, targetCompartmentProxy, target, oomUnsafe);
+    Rooted<ProxyObject*> targetProxy(cx, &target->as<ProxyObject>());
+    ProxyObject::swap(cx, targetCompartmentProxy, targetProxy, oomUnsafe);
     target.set(targetCompartmentProxy);
   }
 
+  gc::GCRuntime* gc = &cx->runtime()->gc;
   RootedField<JSObject*, 2> deadWrapper(roots);
   for (JSObject*& obj : otherProxies) {
     deadWrapper = obj;
+
+    if (!gc->relocateFinalizationObserverTarget(ObjectValue(*deadWrapper),
+                                                ObjectValue(*target))) {
+      oomUnsafe.crash("js::RemapRemoteWindowProxies");
+    }
+
     js::RemapDeadWrapper(cx, deadWrapper, target);
   }
 }
@@ -1400,7 +1414,11 @@ JS_PUBLIC_API void JS_RemoveWeakPointerCompartmentCallback(
 
 JS_PUBLIC_API bool JS_UpdateWeakPointerAfterGC(JSTracer* trc,
                                                JS::Heap<JSObject*>* objp) {
-  return TraceWeakEdge(trc, objp);
+  bool result = TraceWeakEdge(trc, objp);
+  if (!result) {
+    objp->unbarrieredSet(nullptr);
+  }
+  return result;
 }
 
 JS_PUBLIC_API bool JS_UpdateWeakPointerAfterGCUnbarriered(JSTracer* trc,
@@ -1963,8 +1981,8 @@ JS_PUBLIC_API JSObject* JS_NewObjectWithGivenProtoAndUseAllocSite(
   MOZ_ASSERT(clasp != &ArrayObject::class_);
   MOZ_ASSERT(!(clasp->flags & JSCLASS_IS_GLOBAL));
 
-  return NewObjectWithGivenProtoAndAllocSite(cx, clasp, proto,
-                                             cx->realm()->localAllocSite);
+  return NewObjectWithGivenProto(cx, clasp, proto,
+                                 {.site = cx->realm()->localAllocSite});
 }
 
 JS_PUBLIC_API JSObject* JS_NewPlainObject(JSContext* cx) {
@@ -2614,15 +2632,6 @@ bool JS::OwningCompileOptions::copy(JS::FrontendContext* fc,
 JS::CompileOptions::CompileOptions(JSContext* cx) {
   prefableOptions_ = cx->options().compileOptions();
 
-  if (cx->options().asmJSOption() == AsmJSOption::Enabled) {
-    if (!js::IsAsmJSCompilationAvailable(cx)) {
-      prefableOptions_.setAsmJSOption(AsmJSOption::DisabledByNoWasmCompiler);
-    } else if (cx->realm() && (cx->realm()->debuggerObservesWasm() ||
-                               cx->realm()->debuggerObservesAsmJS())) {
-      prefableOptions_.setAsmJSOption(AsmJSOption::DisabledByDebugger);
-    }
-  }
-
   // Certain modes of operation disallow syntax parsing in general.
   if (coverage::IsLCovEnabled()) {
     eagerDelazificationStrategy_ = DelazificationOption::ParseEverythingEagerly;
@@ -2759,12 +2768,16 @@ JS_PUBLIC_API JSString* JS_DecompileScript(JSContext* cx, HandleScript script) {
   if (fun) {
     return JS_DecompileFunction(cx, fun);
   }
-  bool haveSource;
-  if (!ScriptSource::loadSource(cx, script->scriptSource(), &haveSource)) {
+
+  bool loaded;
+  Maybe<ScriptSource::DataReader> reader;
+  if (!script->scriptSource()->tryLoadSource(cx, reader, &loaded)) {
     return nullptr;
   }
-  return haveSource ? JSScript::sourceData(cx, script)
-                    : NewStringCopyZ<CanGC>(cx, "[no source]");
+  MOZ_ASSERT_IF(loaded, (*reader).hasSourceText());
+  return loaded ? (*reader)->substring(cx, script->sourceStart(),
+                                       script->sourceEnd())
+                : NewStringCopyZ<CanGC>(cx, "[no source]");
 }
 
 JS_PUBLIC_API JSString* JS_DecompileFunction(JSContext* cx,
@@ -3049,6 +3062,36 @@ JS_PUBLIC_API bool JS::RejectPromise(JSContext* cx, JS::HandleObject promiseObj,
                                      JS::HandleValue rejectionValue) {
   return ResolveOrRejectPromise(cx, promiseObj, rejectionValue, true);
 }
+
+#ifdef NIGHTLY_BUILD
+JS_PUBLIC_API bool JS::SafeResolve(JSContext* cx, JS::HandleObject promiseObj,
+                                   JS::HandleValue resolutionValue) {
+  AssertHeapIsIdle();
+  CHECK_THREAD(cx);
+  cx->check(promiseObj, resolutionValue);
+
+  // This is basically ResolveOrRejectPromise and could be extracted
+  // in the future.
+  mozilla::Maybe<AutoRealm> ar;
+  Rooted<PromiseObject*> promise(cx);
+  RootedValue resolution(cx, resolutionValue);
+  if (IsWrapper(promiseObj)) {
+    promise = promiseObj->maybeUnwrapAs<PromiseObject>();
+    if (!promise) {
+      ReportAccessDenied(cx);
+      return false;
+    }
+    ar.emplace(cx, promise);
+    if (!cx->compartment()->wrap(cx, &resolution)) {
+      return false;
+    }
+  } else {
+    promise = promiseObj.as<PromiseObject>();
+  }
+
+  return js::SafeResolvePromise(cx, promise, resolution);
+}
+#endif  // NIGHTLY_BUILD
 
 JS_PUBLIC_API JSObject* JS::CallOriginalPromiseThen(
     JSContext* cx, JS::HandleObject promiseObj, JS::HandleObject onFulfilled,
@@ -4179,10 +4222,6 @@ void JSErrorBase::freeMessage() {
   message_ = JS::ConstUTF8CharsZ();
 }
 
-JSErrorNotes::JSErrorNotes() = default;
-
-JSErrorNotes::~JSErrorNotes() = default;
-
 static UniquePtr<JSErrorNotes::Note> CreateErrorNoteVA(
     FrontendContext* fc, const char* filename, unsigned sourceId,
     uint32_t lineno, JS::ColumnNumberOneOrigin column,
@@ -4562,6 +4601,11 @@ JS_PUBLIC_API void JS_SetGlobalJitCompilerOption(JSContext* cx,
     case JSJITCOMPILER_WASM_JIT_OPTIMIZING:
       JS::ContextOptionsRef(cx).setWasmIon(!!value);
       break;
+#ifdef NIGHTLY_BUILD
+    case JSJITCOMPILER_REGEXP_BUFFER_BOUNDARIES:
+      jit::JitOptions.js_regexp_buffer_boundaries = !!value;
+      break;
+#endif
 #ifdef DEBUG
     case JSJITCOMPILER_FULL_DEBUG_CHECKS:
       jit::JitOptions.fullDebugChecks = !!value;

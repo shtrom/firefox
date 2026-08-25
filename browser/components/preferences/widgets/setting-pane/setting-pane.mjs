@@ -5,10 +5,33 @@
 import { html } from "chrome://global/content/vendor/lit.all.mjs";
 import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 import { SettingPaneManager } from "chrome://browser/content/preferences/config/SettingPaneManager.mjs";
+import { SettingGroupManager } from "chrome://browser/content/preferences/config/SettingGroupManager.mjs";
 
 /**
  * @import { MozPageHeader } from "chrome://global/content/elements/moz-page-header.mjs"
  */
+
+/**
+ * Whether the sub-pane back arrow should call `history.back()` (and let
+ * the browser restore the previous entry's saved scroll position and
+ * search state) instead of doing a fresh navigation. True when the
+ * previous history entry is the sub-pane's parent, or when it's the
+ * search-results view the user drilled in from. False when the sub-pane
+ * was loaded directly (e.g. via the URL bar).
+ *
+ * @param {Window} win
+ * @param {string} parentCategory The friendly id of this sub-pane's parent.
+ * @returns {boolean}
+ */
+function shouldGoBackToParent(win, parentCategory) {
+  let prev = win.history.state?.previousCategory;
+  if (prev !== parentCategory && prev !== "searchResults") {
+    return false;
+  }
+  // Defense in depth: confirm with the Navigation API where available. If
+  // the API is missing, trust the recorded previous category.
+  return win.navigation?.canGoBack ?? true;
+}
 
 /**
  * @typedef {object} SettingPaneConfig
@@ -21,7 +44,6 @@ import { SettingPaneManager } from "chrome://browser/content/preferences/config/
  * @property {"beta" | "new"} [badge] Badge type to display in the page header.
  * @property {() => boolean} [visible] If this pane is visible.
  * @property {string} [replaces] ID of legacy pane getting replaced by new pane.
- * @property {boolean} [showRedesignPromo] Whether the settings redesign promo should show.
  *
  * @typedef {string} SettingPaneId
  * @typedef {SettingPaneConfig & { id: SettingPaneId }} SettingPaneFullConfig
@@ -32,8 +54,8 @@ export class SettingPane extends MozLitElement {
     name: { type: String },
     isSubPane: { type: Boolean },
     config: { type: Object },
-    showRedesignPromo: { type: Boolean, attribute: false },
     onSearchPane: { type: Boolean, reflect: true },
+    initialized: { type: Boolean, state: true },
   };
 
   /** @returns {MozPageHeader} */
@@ -53,14 +75,14 @@ export class SettingPane extends MozLitElement {
     this.isSubPane = false;
     /** @type {SettingPaneFullConfig} */
     this.config = undefined;
-    /** @type {boolean} */
-    this.showRedesignPromo = false;
     /**
      * True while this pane is rendered as part of a search result. When set,
      * the pane's heading is rendered one level deeper so the "Search results"
      * h2 stays above it in the heading hierarchy.
      */
     this.onSearchPane = false;
+    /** @type {boolean} */
+    this.initialized = false;
   }
 
   createRenderRoot() {
@@ -74,6 +96,10 @@ export class SettingPane extends MozLitElement {
   }
 
   goBack() {
+    if (shouldGoBackToParent(window, this.config.parent)) {
+      window.history.back();
+      return;
+    }
     window.gotoPref(this.config.parent);
   }
 
@@ -96,24 +122,12 @@ export class SettingPane extends MozLitElement {
     }
   }
 
-  /**
-   * When any of the setting redesign promos (across all setting panes) is dismissed.
-   */
-  #onAnySettingsRedesignPromoDismissClick = () => {
-    this.showRedesignPromo = false;
-  };
-
   connectedCallback() {
     super.connectedCallback();
 
     this.handleVisibility();
 
     document.addEventListener("paneshown", this.handlePaneShown);
-
-    document.addEventListener(
-      "settings-redesign-promo-dismiss",
-      this.#onAnySettingsRedesignPromoDismissClick
-    );
 
     this.setAttribute("data-category", this.name);
     this.hidden = true;
@@ -127,28 +141,36 @@ export class SettingPane extends MozLitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener("paneshown", this.handlePaneShown);
-    document.removeEventListener(
-      "settings-redesign-promo-dismiss",
-      this.#onAnySettingsRedesignPromoDismissClick
-    );
   }
 
   /**
    * @param {CustomEvent} e
    */
   handlePaneShown = e => {
-    if (this.isSubPane && e.detail.category === this.name) {
-      this.pageHeaderEl.backButtonEl.focus();
+    if (
+      this.isSubPane &&
+      e.detail.category === this.name &&
+      !this.contains(document.activeElement)
+    ) {
+      /**
+       * Default focus for a freshly entered sub-pane lands on the back
+       * arrow. Skipped when FocusHistory has already restored focus to a
+       * control inside this pane (e.g. after navigating back into a
+       * sub-pane from a sub-sub-pane). preventScroll keeps the saved
+       * scroll position intact.
+       */
+      this.pageHeaderEl.backButtonEl.focus({ preventScroll: true });
     }
   };
 
   init() {
-    if (!this.hasUpdated) {
+    if (!this.initialized) {
+      this.initialized = true;
       this.performUpdate();
     }
-    if (this.config.module) {
-      ChromeUtils.importESModule(this.config.module, { global: "current" });
-    }
+
+    // Import the modules necessary to load this pane.
+    SettingPaneManager.importPane(this.paneId);
 
     // Notify observers that the module is loaded. This needs to be done prior
     // to the initSettingGroup calls since the home pane relies on this event
@@ -158,9 +180,12 @@ export class SettingPane extends MozLitElement {
       `${this.config.id}-pane-loaded`
     );
 
-    SettingPaneManager.importPane(this.paneId);
+    // Skip groups not yet registered, like the Home groups. A setting-group
+    // initializes itself only when its config is registered (bug 2051119).
     for (let groupId of this.config.groupIds) {
-      window.initSettingGroup(groupId);
+      if (SettingGroupManager.has(groupId)) {
+        window.initSettingGroup(groupId);
+      }
     }
   }
 
@@ -196,40 +221,11 @@ export class SettingPane extends MozLitElement {
     </moz-breadcrumb-group>`;
   }
 
-  onDismiss() {
-    const event = new CustomEvent("settings-redesign-promo-dismiss", {
-      bubbles: true,
-      composed: true,
-    });
-    this.dispatchEvent(event);
-  }
-
-  /**
-   * Shows the settings redesign promo if user hasn't dismissed it.
-   * Suppressed while the pane is displayed as a search result so the
-   * promo doesn't repeat above every matching pane.
-   */
-  settingsRedesignPromoTemplate() {
-    if (!this.showRedesignPromo || this.onSearchPane) {
+  render() {
+    if (!this.initialized) {
       return "";
     }
-
-    return html`<moz-promo
-      data-l10n-id="settings-redesign-promo"
-      class="settings-redesign-promo"
-    >
-      <moz-button
-        slot="actions"
-        data-l10n-id="settings-redesign-promo-dismiss-button"
-        type="primary"
-        @click=${this.onDismiss}
-      ></moz-button>
-    </moz-promo>`;
-  }
-
-  render() {
     return html`
-      ${this.settingsRedesignPromoTemplate()}
       <section>
         <moz-page-header
           data-l10n-id=${this.config.l10nId}

@@ -2,71 +2,65 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include <stdlib.h>
-
 #include "Dictionary.h"
 
+#include <stdlib.h>
+
 #include "CacheFileUtils.h"
+#include "LoadContextInfo.h"
+#include "ReferrerInfo.h"
+#include "SerializedLoadContext.h"
+#include "mozilla/ClearOnShutdown.h"
+#include "mozilla/Components.h"
+#include "mozilla/FlowMarkers.h"
+#include "mozilla/Logging.h"
+#include "mozilla/OriginAttributes.h"
+#include "mozilla/Preferences.h"
+#include "mozilla/SchedulerGroup.h"
+#include "mozilla/Services.h"
+#include "mozilla/StaticPrefs_network.h"
+#include "mozilla/dom/ContentParent.h"
+#include "mozilla/dom/Document.h"
+#include "mozilla/dom/InternalRequest.h"
+#include "mozilla/glean/GleanPings.h"
+#include "mozilla/glean/NetwerkMetrics.h"
+#include "mozilla/ipc/URIUtils.h"
+#include "mozilla/net/NeckoChild.h"
+#include "mozilla/net/NeckoCommon.h"
+#include "mozilla/net/NeckoParent.h"
+#include "mozilla/net/URLPatternGlue.h"
+#include "mozilla/net/urlpattern_glue.h"
+#include "nsAppDirectoryServiceDefs.h"
 #include "nsAttrValue.h"
 #include "nsContentPolicyUtils.h"
-#include "nsString.h"
-#include "nsAppDirectoryServiceDefs.h"
+#include "nsContentUtils.h"
 #include "nsHTTPCompressConv.h"
 #include "nsIAsyncInputStream.h"
-#include "nsICacheStorageService.h"
-#include "nsICacheStorage.h"
 #include "nsICacheEntry.h"
+#include "nsICacheStorage.h"
+#include "nsICacheStorageService.h"
 #include "nsICachingChannel.h"
 #include "nsICancelable.h"
 #include "nsIChannel.h"
-#include "nsContentUtils.h"
+#include "nsIEffectiveTLDService.h"
 #include "nsIFile.h"
 #include "nsIInputStream.h"
 #include "nsILoadContext.h"
 #include "nsILoadContextInfo.h"
 #include "nsILoadGroup.h"
+#include "nsIOService.h"
 #include "nsIObserverService.h"
 #include "nsIURI.h"
-#include "mozilla/Services.h"
 #include "nsIURIMutator.h"
-#include "nsIEffectiveTLDService.h"
 #include "nsInputStreamPump.h"
-#include "nsIOService.h"
-#include "nsNetUtil.h"
 #include "nsNetCID.h"
+#include "nsNetUtil.h"
 #include "nsServiceManagerUtils.h"
 #include "nsSimpleURI.h"
 #include "nsStandardURL.h"
 #include "nsStreamUtils.h"
 #include "nsString.h"
 #include "nsThreadUtils.h"
-#include "mozilla/Logging.h"
-
-#include "mozilla/Components.h"
-#include "mozilla/dom/Document.h"
-#include "mozilla/FlowMarkers.h"
-#include "mozilla/OriginAttributes.h"
-#include "mozilla/Preferences.h"
-#include "mozilla/SchedulerGroup.h"
-#include "mozilla/StaticPrefs_network.h"
-#include "mozilla/glean/NetwerkMetrics.h"
-#include "mozilla/glean/GleanPings.h"
-
-#include "mozilla/net/NeckoCommon.h"
-#include "mozilla/net/NeckoParent.h"
-#include "mozilla/net/NeckoChild.h"
-#include "mozilla/net/URLPatternGlue.h"
-#include "mozilla/net/urlpattern_glue.h"
-
-#include "LoadContextInfo.h"
-#include "mozilla/ipc/URIUtils.h"
-#include "SerializedLoadContext.h"
-
-#include "mozilla/dom/ContentParent.h"
-#include "mozilla/dom/InternalRequest.h"
-#include "mozilla/ClearOnShutdown.h"
-
-#include "ReferrerInfo.h"
 
 using namespace mozilla;
 
@@ -108,7 +102,14 @@ DictionaryCacheEntry::~DictionaryCacheEntry() {
       ("Destroyed DictionaryCacheEntry %p, uri=%s, pattern=%s, id=%s", this,
        mURI.get(), mPattern.get(), mId.get()));
   if (mCachedPattern.isSome()) {
-    urlpattern_pattern_free(mCachedPattern.ref());
+    if (NS_IsMainThread()) {
+      urlpattern_pattern_free(mCachedPattern.ref());
+    } else {
+      UrlPatternGlue pattern = mCachedPattern.ref();
+      NS_DispatchToMainThread(NS_NewRunnableFunction(
+          "DictionaryCacheEntry::FreeCachedPattern",
+          [pattern]() { urlpattern_pattern_free(pattern); }));
+    }
   }
 }
 
@@ -734,7 +735,7 @@ DictionaryCacheEntry::OnStopRequest(nsIRequest* request, nsresult result) {
   // Dispatch to main thread to compare hash and install validated data
   nsCOMPtr<nsIRunnable> runnable = NS_NewRunnableFunction(
       "DictionaryCacheEntry::OnStopRequest",
-      [self = RefPtr{this}, result, computedHash,
+      [self = RefPtr{this}, result, computedHash = std::move(computedHash),
        pendingData = std::move(pendingData)]() mutable {
         nsresult finalResult = result;
         bool shouldRemoveDictionary = false;
@@ -909,30 +910,31 @@ DictionaryCacheEntry::OnCacheEntryAvailable(nsICacheEntry* entry, bool isNew,
       return NS_OK;
     }
 
+    // nsInputStreamPump supports off-main-thread use: when constructed
+    // off-thread it sets mOffMainThread and targets the calling thread's
+    // serial event target, so callbacks fire on whatever thread calls
+    // AsyncRead.
     RefPtr<nsInputStreamPump> pump;
     nsresult rv = nsInputStreamPump::Create(getter_AddRefs(pump), stream);
     if (NS_FAILED(rv)) {
       DICTIONARY_LOG(("nsInputStreamPump::Create failed for %s", mURI.get()));
-      nsCOMPtr<nsIRunnable> runnable = NS_NewRunnableFunction(
+      NS_DispatchToMainThread(NS_NewRunnableFunction(
           "DictionaryCacheEntry::OnCacheEntryAvailable",
           [self = RefPtr{this}]() {
             self->CleanupOnCacheData(NS_ERROR_FAILURE);
             DictionaryCache::RemoveDictionary(self->mURI);
-          });
-      NS_DispatchToMainThread(runnable);
+          }));
       return NS_OK;
     }
-
     rv = pump->AsyncRead(this);
     if (NS_FAILED(rv)) {
       DICTIONARY_LOG(("AsyncRead failed for %s", mURI.get()));
-      nsCOMPtr<nsIRunnable> runnable = NS_NewRunnableFunction(
+      NS_DispatchToMainThread(NS_NewRunnableFunction(
           "DictionaryCacheEntry::OnCacheEntryAvailable",
           [self = RefPtr{this}]() {
             self->CleanupOnCacheData(NS_ERROR_FAILURE);
             DictionaryCache::RemoveDictionary(self->mURI);
-          });
-      NS_DispatchToMainThread(runnable);
+          }));
       return NS_OK;
     }
     DICTIONARY_LOG(("Waiting for data"));
@@ -1601,10 +1603,15 @@ void DictionaryOrigin::SetCacheEntry(nsICacheEntry* aEntry) {
   mEntry = aEntry;
   mEntry->SetContentType(nsICacheEntry::CONTENT_TYPE_DICTIONARY);
   if (mDeferredWrites) {
+    // RemoveEntry() mutates mEntries, so defer removals.
+    DictCacheList remove;
     for (auto& entry : mEntries) {
       if (NS_FAILED(Write(entry))) {
-        RemoveEntry(entry);
+        remove.AppendElement(entry);
       }
+    }
+    for (auto& entry : remove) {
+      RemoveEntry(entry);
     }
   }
   mDeferredWrites = false;

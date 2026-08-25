@@ -102,8 +102,6 @@
   <string name="preference_follow_device_theme">ଡିଭାଇସ୍ ର ଥିମକୁ ଅନୁସରଣ କରନ୍ତୁ</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">ଇତିହାସ</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">ନୂଆ ଟ୍ୟାବ୍</string>
   <!-- Settings Page Title -->
   <string name="settings_title">ସେଟିଂସମୂହ</string>
   <!-- Option for auto closing tabs that will auto close tabs after one month -->
@@ -134,12 +132,6 @@
   <string name="sync_add_new_device_title">ଡିଭାଇସକୁ ପଠାନ୍ତୁ</string>
   <!-- Text shown for settings option for sign with email -->
   <string name="sign_in_with_email">ଏହା ପରିବର୍ତ୍ତେ ଇମେଲ୍ ବ୍ୟବହାର କରନ୍ତୁ</string>
-  <!--
-    Enhanced Tracking Protection
-
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
-  -->
-  <string name="etp_settings">ସୁରକ୍ଷା ସେଟିଂସ୍</string>
   <!-- Preference for enhanced tracking protection for the standard protection settings -->
   <string name="preference_enhanced_tracking_protection_standard_default_1">ମାନକ (ଡିଫଲ୍ଟ)</string>
   <!-- Preference for enhanced tracking protection for the strict protection settings -->

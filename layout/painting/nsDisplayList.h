@@ -16,9 +16,7 @@
 
 #include "DisplayItemClipChain.h"
 #include "DisplayListClipState.h"
-#include "FrameMetrics.h"
 #include "HitTestInfo.h"
-#include "ImgDrawResult.h"
 #include "RetainedDisplayListHelpers.h"
 #include "Units.h"
 #include "gfxContext.h"
@@ -182,14 +180,12 @@ LazyLogModule& GetLoggerByProcess();
  *    is on the stack.
  */
 struct ActiveScrolledRoot {
-  // TODO: Just have one function with an extra ASRKind parameter
+  enum class ASRKind { Scroll, Sticky };
+
   static already_AddRefed<ActiveScrolledRoot> GetOrCreateASRForFrame(
-      const ActiveScrolledRoot* aParent,
-      ScrollContainerFrame* aScrollContainerFrame,
-      nsTArray<RefPtr<ActiveScrolledRoot>>& aActiveScrolledRoots);
-  static already_AddRefed<ActiveScrolledRoot> GetOrCreateASRForStickyFrame(
-      const ActiveScrolledRoot* aParent, nsIFrame* aStickyFrame,
-      nsTArray<RefPtr<ActiveScrolledRoot>>& aActiveScrolledRoots);
+      const ActiveScrolledRoot* aParent, nsIFrame* aFrame,
+      nsTArray<RefPtr<ActiveScrolledRoot>>& aActiveScrolledRoots,
+      ASRKind asrKind = ASRKind::Scroll);
 
   static const ActiveScrolledRoot* PickAncestor(
       const ActiveScrolledRoot* aOne, const ActiveScrolledRoot* aTwo) {
@@ -248,8 +244,6 @@ struct ActiveScrolledRoot {
   // continuation.
   static const ActiveScrolledRoot* GetStickyASRFromFrame(
       nsIFrame* aStickyFrame);
-
-  enum class ASRKind { Scroll, Sticky };
 
   RefPtr<const ActiveScrolledRoot> mParent;
   nsIFrame* mFrame = nullptr;
@@ -984,10 +978,9 @@ class nsDisplayListBuilder {
    * cleaned up automatically when the arena goes away.
    */
   ActiveScrolledRoot* GetOrCreateActiveScrolledRoot(
-      const ActiveScrolledRoot* aParent,
-      ScrollContainerFrame* aScrollContainerFrame);
-  ActiveScrolledRoot* GetOrCreateActiveScrolledRootForSticky(
-      const ActiveScrolledRoot* aParent, nsIFrame* aStickyFrame);
+      const ActiveScrolledRoot* aParent, nsIFrame* aFrame,
+      ActiveScrolledRoot::ASRKind asrKind =
+          ActiveScrolledRoot::ASRKind::Scroll);
 
   /**
    * Allocate a new DisplayItemClipChain object in the arena. Will be cleaned
@@ -1236,13 +1229,7 @@ class nsDisplayListBuilder {
     void SetCurrentActiveScrolledRoot(
         const ActiveScrolledRoot* aActiveScrolledRoot);
 
-    void EnterScrollFrame(ScrollContainerFrame* aScrollContainerFrame) {
-      MOZ_ASSERT(!mUsed);
-      ActiveScrolledRoot* asr = mBuilder->GetOrCreateActiveScrolledRoot(
-          mBuilder->mCurrentActiveScrolledRoot, aScrollContainerFrame);
-      mBuilder->mCurrentActiveScrolledRoot = asr;
-      mUsed = true;
-    }
+    void EnterScrollFrame(ScrollContainerFrame* aScrollContainerFrame);
 
     void InsertScrollFrame(ScrollContainerFrame* aScrollContainerFrame);
 
@@ -2027,7 +2014,7 @@ class nsDisplayListBuilder {
 
 template <typename T>
 MOZ_ALWAYS_INLINE T* MakeClone(nsDisplayListBuilder* aBuilder, const T* aItem) {
-  static_assert(std::is_base_of<nsDisplayWrapList, T>::value,
+  static_assert(std::is_base_of_v<nsDisplayWrapList, T>,
                 "Display item type should be derived from nsDisplayWrapList");
   T* item = new (aBuilder) T(aBuilder, *aItem);
   item->SetType(T::ItemType());
@@ -2055,9 +2042,9 @@ template <typename T, typename F, typename... Args>
 MOZ_ALWAYS_INLINE T* MakeDisplayItemWithIndex(nsDisplayListBuilder* aBuilder,
                                               F* aFrame, const uint16_t aIndex,
                                               Args&&... aArgs) {
-  static_assert(std::is_base_of<nsDisplayItem, T>::value,
+  static_assert(std::is_base_of_v<nsDisplayItem, T>,
                 "Display item type should be derived from nsDisplayItem");
-  static_assert(std::is_base_of<nsIFrame, F>::value,
+  static_assert(std::is_base_of_v<nsIFrame, F>,
                 "Frame type should be derived from nsIFrame");
 
   const DisplayItemType type = T::ItemType();
@@ -3040,7 +3027,6 @@ struct LinkedListIterator {
   }
 
   bool operator==(const LinkedListIterator<T>&) const = default;
-  bool operator!=(const LinkedListIterator<T>&) const = default;
 
   const T operator*() const {
     MOZ_ASSERT(mNode);
@@ -4480,7 +4466,7 @@ class nsDisplayBackgroundColor : public nsPaintedDisplayItem {
 
   bool HasBackgroundClipText() const {
     MOZ_ASSERT(mHasStyle);
-    return mBottomLayerClip == StyleGeometryBox::Text;
+    return mBottomLayerClip == StyleBackgroundClip::Text;
   }
 
   void Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) override;
@@ -4508,6 +4494,10 @@ class nsDisplayBackgroundColor : public nsPaintedDisplayItem {
 
   bool CanPaintWithClip(const DisplayItemClip& aClip) override {
     if (HasBackgroundClipText()) {
+      return false;
+    }
+
+    if (mBottomLayerClip == StyleBackgroundClip::BorderArea) {
       return false;
     }
 
@@ -4564,7 +4554,7 @@ class nsDisplayBackgroundColor : public nsPaintedDisplayItem {
  protected:
   const nsRect mBackgroundRect;
   const bool mHasStyle;
-  StyleGeometryBox mBottomLayerClip;
+  StyleBackgroundClip mBottomLayerClip = StyleBackgroundClip::BorderBox;
   nsIFrame* mDependentFrame;
   gfx::sRGBColor mColor;
 };
@@ -5920,8 +5910,7 @@ class nsDisplayAsyncZoom final : public nsDisplayOwnLayer {
   nsDisplayAsyncZoom(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame,
                      nsDisplayList* aList,
                      const ActiveScrolledRoot* aActiveScrolledRoot,
-                     ContainerASRType aContainerASRType,
-                     layers::FrameMetrics::ViewID aViewID);
+                     ContainerASRType aContainerASRType, ViewID aViewID);
   nsDisplayAsyncZoom(nsDisplayListBuilder* aBuilder,
                      const nsDisplayAsyncZoom& aOther)
       : nsDisplayOwnLayer(aBuilder, aOther), mViewID(aOther.mViewID) {
@@ -5938,7 +5927,7 @@ class nsDisplayAsyncZoom final : public nsDisplayOwnLayer {
                         layers::WebRenderLayerScrollData* aLayerData) override;
 
  protected:
-  layers::FrameMetrics::ViewID mViewID;
+  ViewID mViewID;
 };
 
 /**
@@ -6336,7 +6325,8 @@ class nsDisplayTransform final : public nsPaintedDisplayItem {
 
   bool ShouldSkipTransform(nsDisplayListBuilder* aBuilder) const;
   Matrix4x4 GetTransformForRendering(
-      LayoutDevicePoint* aOutOrigin = nullptr) const;
+      LayoutDevicePoint* aOutOrigin = nullptr,
+      const nsDisplayListBuilder* aBuilder = nullptr) const;
 
   /**
    * Return the transform that is aggregation of all transform on the
@@ -6854,9 +6844,9 @@ class nsDisplayDestination final : public nsPaintedDisplayItem {
 class nsDisplayAccessibleId final : public nsPaintedDisplayItem {
  public:
   nsDisplayAccessibleId(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame,
-                        uint64_t aBrowsingContextId, uint64_t aAccId)
+                        uint64_t aInnerWindowId, uint64_t aAccId)
       : nsPaintedDisplayItem(aBuilder, aFrame),
-        mBrowsingContextId(aBrowsingContextId),
+        mInnerWindowId(aInnerWindowId),
         mAccId(aAccId) {}
 
   NS_DISPLAY_DECL_NAME("AccessibleId", TYPE_ACCESSIBLE_ID)
@@ -6864,7 +6854,7 @@ class nsDisplayAccessibleId final : public nsPaintedDisplayItem {
   void Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) override;
 
  private:
-  uint64_t mBrowsingContextId;
+  uint64_t mInnerWindowId;
   uint64_t mAccId;
 };
 

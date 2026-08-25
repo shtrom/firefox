@@ -85,7 +85,7 @@ struct PLDHashEntryHdr {
 //
 class Checker {
  public:
-  constexpr Checker() : mState(kIdle), mIsWritable(true) {}
+  constexpr Checker() = default;
 
   Checker& operator=(Checker&& aOther) {
     // Atomic<> doesn't have an |operator=(Atomic<>&&)|.
@@ -190,8 +190,8 @@ class Checker {
   static const uint32_t kReadMax = 9999;
   static const uint32_t kWrite = 10000;
 
-  mozilla::Atomic<uint32_t, mozilla::SequentiallyConsistent> mState;
-  mozilla::Atomic<bool, mozilla::SequentiallyConsistent> mIsWritable;
+  mozilla::Atomic<uint32_t, mozilla::SequentiallyConsistent> mState{kIdle};
+  mozilla::Atomic<bool, mozilla::SequentiallyConsistent> mIsWritable{true};
 };
 #endif
 
@@ -448,6 +448,7 @@ class PLDHashTable {
 
   uint32_t EntrySize() const { return mEntrySize; }
   uint32_t EntryCount() const { return mEntryCount; }
+  bool IsEmpty() const { return mEntryCount == 0; }
   uint32_t Generation() const { return mGeneration; }
 
   // To search for a |key| in |table|, call:
@@ -501,6 +502,13 @@ class PLDHashTable {
   // This function is equivalent to
   // ClearAndPrepareForLength(kDefaultInitialLength).
   void Clear();
+
+  // Removes all entries from the table but keeps the entry storage allocated,
+  // so the table retains its current capacity. Use this instead of Clear()
+  // when the table is about to be re-populated and the repeated free/realloc
+  // of the entry store would be wasteful (e.g. a cache that is invalidated and
+  // rebuilt frequently). Unlike Clear(), the capacity is never reduced.
+  void ClearAndRetainStorage();
 
   // This function clears the table's contents and frees its entry storage,
   // leaving it in a empty state ready to be used again. Afterwards, when the

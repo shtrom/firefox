@@ -546,19 +546,19 @@ void SavedFrame::initParent(SavedFrame* maybeParent) {
 }
 
 void SavedFrame::initFromLookup(JSContext* cx, Handle<Lookup> lookup) {
-  // Make sure any atoms used in the lookup are marked in the current zone.
-  // Normally we would try to keep these mark bits up to date around the
-  // points where the context moves between compartments, but Lookups live on
-  // the stack (where the atoms are kept alive regardless) and this is a
-  // more convenient pinchpoint.
+  // Make sure any atoms used in the lookup are recorded in the current zone.
+  // Normally we would try to keep these references up to date around the points
+  // where the context moves between compartments, but Lookups live on the stack
+  // (where the atoms are kept alive regardless) and this is a more convenient
+  // pinchpoint.
   if (lookup.source()) {
-    cx->markAtom(lookup.source());
+    cx->recordRef(lookup.source());
   }
   if (lookup.functionDisplayName()) {
-    cx->markAtom(lookup.functionDisplayName());
+    cx->recordRef(lookup.functionDisplayName());
   }
   if (lookup.asyncCause()) {
-    cx->markAtom(lookup.asyncCause());
+    cx->recordRef(lookup.asyncCause());
   }
 
   initSource(lookup.source());
@@ -588,7 +588,8 @@ SavedFrame* SavedFrame::create(JSContext* cx) {
   }
   cx->check(proto);
 
-  return NewTenuredObjectWithGivenProto<SavedFrame>(cx, proto);
+  return NewObjectWithGivenProto<SavedFrame>(cx, proto,
+                                             {.newKind = TenuredObject});
 }
 
 bool SavedFrame::isSelfHosted(JSContext* cx) {
@@ -787,7 +788,7 @@ JS_PUBLIC_API SavedFrameResult GetSavedFrameSource(
     sourcep.set(frame->getSource());
   }
   if (sourcep->isAtom()) {
-    cx->markAtom(&sourcep->asAtom());
+    cx->recordRef(&sourcep->asAtom());
   }
   return SavedFrameResult::Ok;
 }
@@ -871,7 +872,7 @@ JS_PUBLIC_API SavedFrameResult GetSavedFrameFunctionDisplayName(
     namep.set(frame->getFunctionDisplayName());
   }
   if (namep && namep->isAtom()) {
-    cx->markAtom(&namep->asAtom());
+    cx->recordRef(&namep->asAtom());
   }
   return SavedFrameResult::Ok;
 }
@@ -904,7 +905,7 @@ JS_PUBLIC_API SavedFrameResult GetSavedFrameAsyncCause(
     }
   }
   if (asyncCausep && asyncCausep->isAtom()) {
-    cx->markAtom(&asyncCausep->asAtom());
+    cx->recordRef(&asyncCausep->asAtom());
   }
   return SavedFrameResult::Ok;
 }
@@ -1569,7 +1570,8 @@ bool SavedStacks::insertFrames(JSContext* cx, MutableHandle<SavedFrame*> frame,
       }
     }
 
-    if (captureIsSatisfied(cx, principals, location.source(), capture)) {
+    if (framePushed &&
+        captureIsSatisfied(cx, principals, location.source(), capture)) {
       break;
     }
 
@@ -1892,13 +1894,9 @@ bool SavedStacks::getLocation(JSContext* cx, const FrameIter& iter,
   // that doesn't employ memoization, and update |locationp|'s slots directly.
 
   if (iter.isWasm()) {
-    // Only asm.js has a displayURL.
-    if (const char16_t* displayURL = iter.displayURL()) {
-      locationp.setSource(AtomizeChars(cx, displayURL, js_strlen(displayURL)));
-    } else {
-      const char* filename = iter.filename() ? iter.filename() : "";
-      locationp.setSource(AtomizeUTF8Chars(cx, filename, strlen(filename)));
-    }
+    MOZ_ASSERT(!iter.displayURL(), "wasm script source has no displayURL.");
+    const char* filename = iter.filename() ? iter.filename() : "";
+    locationp.setSource(AtomizeUTF8Chars(cx, filename, strlen(filename)));
     if (!locationp.source()) {
       return false;
     }

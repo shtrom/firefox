@@ -71,7 +71,6 @@
 #  if defined(MOZ_SANDBOX)
 #    include "WinUtils.h"
 #    include "mozilla/Preferences.h"
-#    include "mozilla/sandboxing/sandboxLogging.h"
 #  endif
 
 #  include "mozilla/NativeNt.h"
@@ -127,6 +126,8 @@ extern char** environ;
 namespace mozilla {
 namespace ipc {
 
+LazyLogModule gChildProcessLifecycleLog("ChildProcessLifecycle");
+
 struct LaunchResults {
   base::ProcessHandle mHandle = 0;
 #ifdef XP_MACOSX
@@ -177,9 +178,7 @@ class BaseProcessLauncher {
     SprintfLiteral(mChildIDString, "%d", aHost->mChildID);
 
     // Compute the serial event target we'll use for launching.
-    nsCOMPtr<nsIEventTarget> threadOrPool = GetIPCLauncher();
-    mLaunchThread =
-        TaskQueue::Create(threadOrPool.forget(), "BaseProcessLauncher");
+    mLaunchThread = GetIPCLauncher();
 
     if (ShouldHaveDirectoryService()) {
       // "Current process directory" means the app dir, not the current
@@ -443,6 +442,12 @@ GeckoChildProcessHost::~GeckoChildProcessHost() {
 #endif
 
     if (mChildProcessHandle != 0) {
+      MOZ_LOG(
+          gChildProcessLifecycleLog, LogLevel::Info,
+          ("--PROCESS [pid = %" PRIPID "] [childID = %" PRIi32 "] [type = %s]",
+           base::GetProcId(mChildProcessHandle), mChildID,
+           XRE_GeckoProcessTypeToString(mProcessType)));
+
       ProcessWatcher::EnsureProcessTerminated(mChildProcessHandle);
       mChildProcessHandle = 0;
     }
@@ -741,7 +746,7 @@ bool GeckoChildProcessHost::AsyncLaunch(
 #endif
 
   RefPtr<BaseProcessLauncher> launcher =
-      new ProcessLauncher(this, std::move(aExtraOpts));
+      MakeRefPtr<ProcessLauncher>(this, std::move(aExtraOpts));
   TimeStamp startTimeStamp = TimeStamp::Now();
 #ifdef ALLOW_GECKO_CHILD_PROCESS_ARCH
   launcher->SetLaunchArchitecture(mLaunchArch);
@@ -804,6 +809,12 @@ bool GeckoChildProcessHost::AsyncLaunch(
 #if defined(XP_WIN) && defined(MOZ_SANDBOX)
                   this->mSandboxBroker = std::move(aResults.mSandboxBroker);
 #endif
+
+                  MOZ_LOG(gChildProcessLifecycleLog, LogLevel::Info,
+                          ("++PROCESS [pid = %" PRIPID "] [childID = %" PRIi32
+                           "] [type = %s]",
+                           GetChildProcessId(), mChildID,
+                           XRE_GeckoProcessTypeToString(mProcessType)));
 
                   glean::process::child_launch.AccumulateRawDuration(
                       TimeStamp::Now() - startTimeStamp);
@@ -937,6 +948,14 @@ void GeckoChildProcessHost::SetAlreadyDead() {
   mozilla::AutoWriteLock handleLock(mHandleLock);
   if (mChildProcessHandle &&
       mChildProcessHandle != base::kInvalidProcessHandle) {
+    // The destructor logs this too, but only one of the two runs, as both are
+    // guarded on still holding the handle.
+    MOZ_LOG(
+        gChildProcessLifecycleLog, LogLevel::Info,
+        ("--PROCESS [pid = %" PRIPID "] [childID = %" PRIi32 "] [type = %s]",
+         base::GetProcId(mChildProcessHandle), mChildID,
+         XRE_GeckoProcessTypeToString(mProcessType)));
+
     base::CloseProcessHandle(mChildProcessHandle);
   }
 
@@ -1086,8 +1105,13 @@ RefPtr<ProcessLaunchPromise> BaseProcessLauncher::PerformAsyncLaunch() {
   if (aError.isErr()) {
     return ProcessLaunchPromise::CreateAndReject(aError.unwrapErr(), __func__);
   }
+
+  // NOTE: We run this task on the IO event target as it should be cheap &
+  // non-blocking, and the next step in our caller will be ->Then-ed onto this
+  // event target, meaning this avoids unnecessary thread hops back to the
+  // launch target on platforms like macOS.
   return DoLaunch()->Then(
-      mLaunchThread, __func__,
+      XRE_GetAsyncIOEventTarget(), __func__,
       [self =
            RefPtr{this}](ProcessLaunchPromise::ResolveOrRejectValue&& aResult) {
         // Explicitly destroy any outstanding references to HANDLEs which may be

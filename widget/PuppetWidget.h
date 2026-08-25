@@ -12,16 +12,16 @@
 #ifndef mozilla_widget_PuppetWidget_h_
 #define mozilla_widget_PuppetWidget_h_
 
-#include "mozilla/gfx/2D.h"
-#include "mozilla/RefPtr.h"
-#include "nsIWidget.h"
-#include "nsCOMArray.h"
-#include "nsThreadUtils.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/ContentCache.h"
 #include "mozilla/EventForwards.h"
+#include "mozilla/RefPtr.h"
 #include "mozilla/TextEventDispatcherListener.h"
+#include "mozilla/gfx/2D.h"
 #include "mozilla/layers/MemoryPressureObserver.h"
+#include "nsCOMArray.h"
+#include "nsIWidget.h"
+#include "nsThreadUtils.h"
 
 class nsRefreshDriver;
 
@@ -176,6 +176,14 @@ class PuppetWidget final : public nsIWidget,
                        const InputContextAction& aAction) override;
   InputContext GetInputContext() override;
   NativeIMEContext GetNativeIMEContext() override;
+  /**
+   * If this widget has a external event dispatcher listener, it means that
+   * we're dispatching native text input events starting from this process.
+   * I.e., the events do not come from the parent process.
+   */
+  [[nodiscard]] bool HasExternalNativeTextEventDispatcherListener() const {
+    return mNativeTextEventDispatcherListener;
+  }
   TextEventDispatcherListener* GetNativeTextEventDispatcherListener() override {
     return mNativeTextEventDispatcherListener
                ? mNativeTextEventDispatcherListener.get()
@@ -230,19 +238,19 @@ class PuppetWidget final : public nsIWidget,
 
   nsresult SynthesizeNativeKeyEvent(
       int32_t aNativeKeyboardLayout, int32_t aNativeKeyCode,
-      uint32_t aModifierFlags, const nsAString& aCharacters,
+      nsIWidget::NativeModifiers aModifierFlags, const nsAString& aCharacters,
       const nsAString& aUnmodifiedCharacters,
       nsISynthesizedEventCallback* aCallback) override;
   nsresult SynthesizeNativeMouseEvent(
       LayoutDeviceIntPoint aPoint, NativeMouseMessage aNativeMessage,
-      MouseButton aButton, nsIWidget::Modifiers aModifierFlags,
+      MouseButton aButton, nsIWidget::NativeModifiers aModifierFlags,
       nsISynthesizedEventCallback* aCallback) override;
   nsresult SynthesizeNativeMouseMove(
       LayoutDeviceIntPoint aPoint,
       nsISynthesizedEventCallback* aCallback) override;
   nsresult SynthesizeNativeMouseScrollEvent(
       LayoutDeviceIntPoint aPoint, uint32_t aNativeMessage, double aDeltaX,
-      double aDeltaY, double aDeltaZ, uint32_t aModifierFlags,
+      double aDeltaY, double aDeltaZ, nsIWidget::NativeModifiers aModifierFlags,
       uint32_t aAdditionalFlags,
       nsISynthesizedEventCallback* aCallback) override;
   nsresult SynthesizeNativeTouchPoint(

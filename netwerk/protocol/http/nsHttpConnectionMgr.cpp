@@ -23,8 +23,8 @@
 #include "mozilla/ProfilerMarkers.h"
 #include "mozilla/SpinEventLoopUntil.h"
 #include "mozilla/StaticPrefs_network.h"
-#include "mozilla/glean/NetwerkProtocolHttpMetrics.h"
 #include "mozilla/glean/NetwerkMetrics.h"
+#include "mozilla/glean/NetwerkProtocolHttpMetrics.h"
 #include "mozilla/net/DNS.h"
 #include "mozilla/net/DashboardTypes.h"
 #include "nsCOMPtr.h"
@@ -1101,6 +1101,17 @@ bool nsHttpConnectionMgr::DispatchPendingQ(
              "TryDispatchTransaction returning hard error %" PRIx32 "\n",
              static_cast<uint32_t>(rv)));
         if (rv == NS_ERROR_HTTP2_FALLBACK_TO_HTTP1) {
+          // The transaction is about to restart under a re-keyed entry. Abandon
+          // the in-flight attempt it still owns here, or that attempt completes
+          // later and re-queues the restarted transaction (bug 2051415).
+          nsWeakPtr weak =
+              pendingTransInfo->ForgetConnectionAttemptAndActiveConn();
+          if (RefPtr<ConnectionAttempt> attempt = do_QueryReferent(weak)) {
+            // Detach first so the abandoned attempt's teardown won't touch the
+            // transaction we Close()/Restart() below.
+            attempt->ForgetRealTransaction();
+            ent->RemoveConnectionAttempt(attempt, /* abandon = */ true);
+          }
           pendingTransInfo->Transaction()->Close(
               NS_ERROR_HTTP2_FALLBACK_TO_HTTP1);
         }
@@ -1233,6 +1244,11 @@ bool nsHttpConnectionMgr::ProcessPendingQForEntry(ConnectionEntry* ent,
   if (ent->PendingQueueIsEmpty() && ent->UrgentStartQueueIsEmpty()) {
     return false;
   }
+
+  // Move any HTTP/3 connection that is still in active list but can no longer
+  // serve new transactions.
+  ent->MoveUnusableH3ConnsToPending();
+
   ProcessSpdyPendingQ(ent);
 
   bool dispatchedSuccessfully = false;
@@ -3673,12 +3689,13 @@ void nsHttpConnectionMgr::DoSpeculativeConnectionInternal(
     return;
   }
 
-  ProxyDNSStrategy strategy = GetProxyDNSStrategyHelper(
+  nsIHttpChannelInternal::ProxyDNSStrategy strategy = GetProxyDNSStrategyHelper(
       aEnt->mConnInfo->ProxyType(), aEnt->mConnInfo->ProxyFlag());
   // Speculative connections can be triggered by non-Necko consumers,
   // so add an extra check to ensure HTTPS RR isn't fetched when a proxy is
   // used.
-  if (aFetchHTTPSRR && strategy == ProxyDNSStrategy::ORIGIN &&
+  if (aFetchHTTPSRR &&
+      strategy == nsIHttpChannelInternal::PROXY_DNS_STRATEGY_ORIGIN &&
       NS_SUCCEEDED(aTrans->FetchHTTPSRR())) {
     // nsHttpConnectionMgr::DoSpeculativeConnection will be called again
     // when HTTPS RR is available.
@@ -3693,11 +3710,18 @@ void nsHttpConnectionMgr::DoSpeculativeConnectionInternal(
   bool allow1918 = aTrans->Allow1918() ? *aTrans->Allow1918() : false;
 
   bool keepAlive = aTrans->Caps() & NS_HTTP_ALLOW_KEEPALIVE;
+  // An h3 connection can't reuse the entry's h2 connection, so an active h2
+  // (which makes RestrictConnections() true) must not block the first h3
+  // connection -- e.g. eager Alt-Svc validation. Allow it explicitly instead of
+  // relying on the transaction omitting NS_HTTP_ALLOW_KEEPALIVE;
+  // AtActiveConnectionLimit() below still enforces one h3 per entry.
+  bool wantsFirstH3Connection =
+      aTrans->ConnectionInfo()->IsHttp3() && !aEnt->HasActiveH3Connection();
   if (mNumDnsAndConnectSockets < parallelSpeculativeConnectLimit &&
       ((ignoreIdle &&
         (aEnt->IdleConnectionsLength() < parallelSpeculativeConnectLimit)) ||
        !aEnt->IdleConnectionsLength()) &&
-      !(keepAlive && aEnt->RestrictConnections()) &&
+      (wantsFirstH3Connection || !(keepAlive && aEnt->RestrictConnections())) &&
       !AtActiveConnectionLimit(aEnt, aTrans->Caps())) {
     nsresult rv = aEnt->CreateDnsAndConnectSocket(aTrans, aTrans->Caps(), true,
                                                   false, allow1918, nullptr);
@@ -3796,9 +3820,6 @@ void nsHttpConnectionMgr::RegisterOriginCoalescingKey(HttpConnectionBase* conn,
 
 bool nsHttpConnectionMgr::GetConnectionData(nsTArray<HttpRetParams>* aArg) {
   for (const RefPtr<ConnectionEntry>& ent : mCT.Values()) {
-    if (ent->mConnInfo->GetPrivate()) {
-      continue;
-    }
     aArg->AppendElement(ent->GetConnectionData());
   }
 
@@ -4041,7 +4062,6 @@ nsHttpConnectionMgr::GetServerCertHashes(nsHttpConnectionInfo* aConnInfo) {
 }
 
 void nsHttpConnectionMgr::CheckTransInPendingQueue(nsHttpTransaction* aTrans) {
-#ifdef MOZ_DIAGNOSTIC_ASSERT_ENABLED
   // We only do this check on socket thread. When this function is called on
   // main thread, the transaction is newly created, so we can skip this check.
   if (!OnSocketThread()) {
@@ -4055,8 +4075,10 @@ void nsHttpConnectionMgr::CheckTransInPendingQueue(nsHttpTransaction* aTrans) {
   }
 
   bool foundInPendingQ = RemoveTransFromConnEntry(aTrans, hashKey);
-  MOZ_DIAGNOSTIC_ASSERT(!foundInPendingQ);
-#endif
+  if (foundInPendingQ) {
+    glean::networking::trans_found_in_pending_queue.Add(1);
+  }
+  MOZ_ASSERT(!foundInPendingQ);
 }
 
 bool nsHttpConnectionMgr::AllowToRetryDifferentIPFamilyForHttp3(

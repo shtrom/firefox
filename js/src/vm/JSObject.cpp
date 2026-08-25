@@ -6,8 +6,6 @@
  * JS object implementation.
  */
 
-#include "vm/JSObject-inl.h"
-
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/Try.h"
 
@@ -66,12 +64,14 @@
 #include "vm/TypedArrayObject.h"
 #include "vm/Watchtower.h"
 #include "vm/WrapperObject.h"
+
 #include "gc/StableCellHasher-inl.h"
 #include "vm/BooleanObject-inl.h"
 #include "vm/EnvironmentObject-inl.h"
 #include "vm/Interpreter-inl.h"
 #include "vm/JSAtomUtils-inl.h"  // AtomToId, PrimitiveValueToId, IndexToId
 #include "vm/JSContext-inl.h"
+#include "vm/JSObject-inl.h"
 #include "vm/NativeObject-inl.h"
 #include "vm/NumberObject-inl.h"
 #include "vm/ObjectFlags-inl.h"
@@ -731,8 +731,7 @@ bool js::TestIntegrityLevel(JSContext* cx, HandleObject obj,
 
 static MOZ_ALWAYS_INLINE NativeObject* NewObject(
     JSContext* cx, const JSClass* clasp, Handle<TaggedProto> proto,
-    gc::AllocKind kind, NewObjectKind newKind, ObjectFlags objFlags,
-    gc::AllocSite* allocSite = nullptr) {
+    const NewObjectOptions& options) {
   MOZ_ASSERT(clasp->isNativeObject());
 
   // Some classes have specialized allocation functions and shouldn't end up
@@ -741,7 +740,13 @@ static MOZ_ALWAYS_INLINE NativeObject* NewObject(
   MOZ_ASSERT(clasp != &PlainObject::class_);
   MOZ_ASSERT(!clasp->isJSFunction());
 
+  gc::AllocSite* allocSite = options.site;
   MOZ_ASSERT_IF(allocSite, allocSite->zone() == cx->zone());
+
+  gc::AllocKind kind = options.allocKind;
+  if (kind == gc::AllocKind::INVALID) {
+    kind = gc::GetGCObjectKind(clasp);
+  }
 
   // Computing nfixed based on the AllocKind isn't right for objects which can
   // store fixed data inline (TypedArrays and ArrayBuffers) so for simplicity
@@ -753,12 +758,12 @@ static MOZ_ALWAYS_INLINE NativeObject* NewObject(
 
   Rooted<SharedShape*> shape(
       cx, SharedShape::getInitialShape(cx, clasp, cx->realm(), proto, nfixed,
-                                       objFlags));
+                                       options.flags));
   if (!shape) {
     return nullptr;
   }
 
-  gc::Heap heap = GetInitialHeap(newKind, clasp, allocSite);
+  gc::Heap heap = GetInitialHeap(options.newKind, clasp, allocSite);
   NativeObject* obj = NativeObject::create(cx, kind, heap, shape, allocSite);
   if (!obj) {
     return nullptr;
@@ -770,25 +775,16 @@ static MOZ_ALWAYS_INLINE NativeObject* NewObject(
 
 NativeObject* js::NewObjectWithGivenTaggedProto(
     JSContext* cx, const JSClass* clasp, Handle<TaggedProto> proto,
-    gc::AllocKind allocKind, NewObjectKind newKind, ObjectFlags objFlags) {
-  return NewObject(cx, clasp, proto, allocKind, newKind, objFlags);
-}
-
-NativeObject* js::NewObjectWithGivenTaggedProtoAndAllocSite(
-    JSContext* cx, const JSClass* clasp, Handle<TaggedProto> proto,
-    gc::AllocKind allocKind, NewObjectKind newKind, ObjectFlags objFlags,
-    gc::AllocSite* site) {
-  return NewObject(cx, clasp, proto, allocKind, newKind, objFlags, site);
+    const NewObjectOptions& options) {
+  return NewObject(cx, clasp, proto, options);
 }
 
 NativeObject* js::NewObjectWithClassProto(JSContext* cx, const JSClass* clasp,
                                           HandleObject protoArg,
-                                          gc::AllocKind allocKind,
-                                          NewObjectKind newKind,
-                                          ObjectFlags objFlags) {
+                                          const NewObjectOptions& options) {
   if (protoArg) {
     return NewObjectWithGivenTaggedProto(cx, clasp, AsTaggedProto(protoArg),
-                                         allocKind, newKind, objFlags);
+                                         options);
   }
 
   // Find the appropriate proto for clasp. Built-in classes have a cached
@@ -804,7 +800,7 @@ NativeObject* js::NewObjectWithClassProto(JSContext* cx, const JSClass* clasp,
   }
 
   Rooted<TaggedProto> taggedProto(cx, TaggedProto(proto));
-  return NewObject(cx, clasp, taggedProto, allocKind, newKind, objFlags);
+  return NewObject(cx, clasp, taggedProto, options);
 }
 
 bool js::GetPrototypeFromConstructor(JSContext* cx, HandleObject newTarget,
@@ -938,116 +934,12 @@ bool js::ObjectMayBeSwapped(const JSObject* obj) {
   // Only proxies may be swapped: WindowProxy, Wrapper, DeadProxyObject,
   // RemoteObjectProxy. We don't want to support a native object becoming a
   // proxy object or vice versa.
-  return obj->is<ProxyObject>();
-}
-
-/* Use this method with extreme caution. It trades the guts of two objects. */
-void JSObject::swap(JSContext* cx, HandleObject a, HandleObject b,
-                    AutoEnterOOMUnsafeRegion& oomUnsafe) {
-  // Only proxies with SwappableProxyReservedSlots and the same AllocKind may be
-  // swapped.
-  MOZ_RELEASE_ASSERT(JSCLASS_RESERVED_SLOTS(a->getClass()) ==
-                     js::SwappableProxyReservedSlots);
-  MOZ_RELEASE_ASSERT(JSCLASS_RESERVED_SLOTS(b->getClass()) ==
-                     js::SwappableProxyReservedSlots);
-  MOZ_RELEASE_ASSERT(a->allocKind() == b->allocKind());
-
-  MOZ_RELEASE_ASSERT(a->compartment() == b->compartment());
-
-  // You must have entered the objects' compartment before calling this.
-  MOZ_RELEASE_ASSERT(cx->compartment() == a->compartment());
-
-  // Only certain types of objects are allowed to be swapped. This allows the
-  // JITs to better optimize objects that can never swap and rules out most
-  // builtin objects that have special behaviour.
-  MOZ_RELEASE_ASSERT(js::ObjectMayBeSwapped(a));
-  MOZ_RELEASE_ASSERT(js::ObjectMayBeSwapped(b));
-
-  // Don't allow a GC which may observe intermediate state or run before we
-  // execute all necessary barriers.
-  gc::AutoSuppressGC nogc(cx);
-
-  // Ensure we update any embedded nursery pointers in either object.
-  gc::StoreBuffer& storeBuffer = cx->runtime()->gc.storeBuffer();
-  if (a->isTenured()) {
-    storeBuffer.putWholeCell(a);
+  if (!obj->is<ProxyObject>()) {
+    return false;
   }
-  if (b->isTenured()) {
-    storeBuffer.putWholeCell(b);
-  }
-  if (a->isTenured() || b->isTenured()) {
-    if (a->zone()->wasGCStarted()) {
-      storeBuffer.setMayHavePointersToDeadCells();
-    }
-  }
-
-  unsigned r = NotifyGCPreSwap(a, b);
-
-  bool aIsUsedAsPrototype = a->isUsedAsPrototype();
-  bool bIsUsedAsPrototype = b->isUsedAsPrototype();
-
-  // Verify that swapping does not result in an object becoming its own proto.
-  if (aIsUsedAsPrototype && b->hasStaticPrototype()) {
-    MOZ_RELEASE_ASSERT(b->staticPrototype() != a);
-  }
-  if (bIsUsedAsPrototype && a->hasStaticPrototype()) {
-    MOZ_RELEASE_ASSERT(a->staticPrototype() != b);
-  }
-
-  Zone* zone = a->zone();
-
-#ifdef DEBUG
-  // Record any associated unique IDs.
-  //
-  // Note that unique IDs are NOT swapped but remain associated with the
-  // original address.
-  uint64_t aid = 0;
-  uint64_t bid = 0;
-  (void)gc::MaybeGetUniqueId(a, &aid);
-  (void)gc::MaybeGetUniqueId(b, &bid);
-#endif
-
-  // The objects have matching alloc kinds, so they're the same size and we
-  // can just memcpy their contents.
-  size_t size = gc::Arena::thingSize(a->allocKind());
-  char tmp[sizeof(JSObject_Slots16)];
-  MOZ_ASSERT(size <= sizeof(tmp));
-
-  js_memcpy(tmp, a, size);
-  js_memcpy(a, b, size);
-  js_memcpy(b, tmp, size);
-
-  MOZ_ASSERT_IF(aid, gc::GetUniqueIdInfallible(a) == aid);
-  MOZ_ASSERT_IF(bid, gc::GetUniqueIdInfallible(b) == bid);
-
-  // Preserve the IsUsedAsPrototype flag on the objects.
-  if (aIsUsedAsPrototype) {
-    if (!JSObject::setIsUsedAsPrototype(cx, a)) {
-      oomUnsafe.crash("setIsUsedAsPrototype");
-    }
-  }
-  if (bIsUsedAsPrototype) {
-    if (!JSObject::setIsUsedAsPrototype(cx, b)) {
-      oomUnsafe.crash("setIsUsedAsPrototype");
-    }
-  }
-
-  /*
-   * We need a write barrier here. If |a| was marked and |b| was not, then
-   * after the swap, |b|'s guts would never be marked. The write barrier
-   * solves this.
-   *
-   * Normally write barriers happen before the write. However, that's not
-   * necessary here because nothing is being destroyed. We're just swapping.
-   */
-  PreWriteBarrier(zone, a.get(), [](JSTracer* trc, JSObject* obj) {
-    obj->traceChildren(trc);
-  });
-  PreWriteBarrier(zone, b.get(), [](JSTracer* trc, JSObject* obj) {
-    obj->traceChildren(trc);
-  });
-
-  NotifyGCPostSwap(a, b, r);
+  const auto* handler = obj->as<ProxyObject>().handler();
+  MOZ_ASSERT_IF(handler->isScripted(), !handler->mayBeSwapped());
+  return handler->mayBeSwapped();
 }
 
 static NativeObject* DefineConstructorAndPrototype(
@@ -1886,52 +1778,17 @@ JS_PUBLIC_API bool js::ShouldIgnorePropertyDefinition(JSContext* cx,
          id == NameToId(cx->names().zipKeyed))) {
       return true;
     }
-  }
-
-#ifdef JS_HAS_INTL_API
-  if (key == JSProto_Date && !JS::Prefs::experimental_temporal() &&
-      id == NameToId(cx->names().toTemporalInstant)) {
-    return true;
-  }
-#endif
-
-#ifdef NIGHTLY_BUILD
-  // It's gently surprising that this is JSProto_Function, but the trick
-  // to realize is that this is a -constructor function-, not a function
-  // on the prototype; and the proto of the constructor is JSProto_Function.
-  if (key == JSProto_Function) {
-    if (!JS::Prefs::experimental_iterator_range() &&
-        (id == NameToId(cx->names().range))) {
-      return true;
-    }
     if (!JS::Prefs::experimental_promise_allkeyed() &&
         (id == NameToId(cx->names().allKeyed) ||
          id == NameToId(cx->names().allSettledKeyed))) {
       return true;
     }
   }
-  if (key == JSProto_ArrayBuffer &&
-      !JS::Prefs::experimental_arraybuffer_immutable()) {
-    if (id == NameToId(cx->names().immutable) ||
-        id == NameToId(cx->names().sliceToImmutable) ||
-        id == NameToId(cx->names().transferToImmutable)) {
-      return true;
-    }
-  }
-  if (key == JSProto_Iterator) {
-    if (!JS::Prefs::experimental_iterator_chunking() &&
-        (id == NameToId(cx->names().chunks) ||
-         id == NameToId(cx->names().windows))) {
-      return true;
-    }
-    if (!JS::Prefs::experimental_iterator_join() &&
-        id == NameToId(cx->names().join)) {
-      return true;
-    }
-    if (!JS::Prefs::experimental_iterator_includes() &&
-        id == NameToId(cx->names().includes)) {
-      return true;
-    }
+
+#ifdef JS_HAS_INTL_API
+  if (key == JSProto_Date && !JS::Prefs::experimental_temporal() &&
+      id == NameToId(cx->names().toTemporalInstant)) {
+    return true;
   }
   if (key == JSProto_Locale && !JS::Prefs::experimental_intl_locale_info()) {
     if (id == NameToId(cx->names().firstDayOfWeek) ||
@@ -1947,18 +1804,52 @@ JS_PUBLIC_API bool js::ShouldIgnorePropertyDefinition(JSContext* cx,
   }
 #endif
 
+#ifdef NIGHTLY_BUILD
+  // It's gently surprising that this is JSProto_Function, but the trick
+  // to realize is that this is a -constructor function-, not a function
+  // on the prototype; and the proto of the constructor is JSProto_Function.
+  if (key == JSProto_Function) {
+    if (!JS::Prefs::experimental_iterator_range() &&
+        (id == NameToId(cx->names().range))) {
+      return true;
+    }
+  }
+  if (key == JSProto_ArrayBuffer &&
+      !JS::Prefs::experimental_arraybuffer_immutable()) {
+    if (id == NameToId(cx->names().immutable) ||
+        id == NameToId(cx->names().sliceToImmutable) ||
+        id == NameToId(cx->names().transferToImmutable)) {
+      return true;
+    }
+  }
+#endif
+
+  if (key == JSProto_Iterator) {
+    if (!JS::Prefs::experimental_iterator_chunking() &&
+        (id == NameToId(cx->names().chunks) ||
+         id == NameToId(cx->names().windows))) {
+      return true;
+    }
+    if (!JS::Prefs::experimental_iterator_includes() &&
+        id == NameToId(cx->names().includes)) {
+      return true;
+    }
+    if (!JS::Prefs::experimental_iterator_join() &&
+        id == NameToId(cx->names().join)) {
+      return true;
+    }
+  }
+
   if (key == JSProto_Function &&
       !JS::Prefs::experimental_error_capture_stack_trace() &&
       id == NameToId(cx->names().captureStackTrace)) {
     return true;
   }
-#ifdef NIGHTLY_BUILD
   if (key == JSProto_Function &&
       !JS::Prefs::experimental_error_stack_trace_limit() &&
       id == NameToId(cx->names().stackTraceLimit)) {
     return true;
   }
-#endif
   if (key == JSProto_Atomics && !JS::Prefs::experimental_atomics_pause() &&
       id == NameToId(cx->names().pause)) {
     return true;
@@ -3025,7 +2916,7 @@ void JSObject::traceChildren(JSTracer* trc) {
     if (nobj->hasDynamicSlots()) {
       ObjectSlots* slots = nobj->getSlotsHeader();
       MOZ_ASSERT(nobj->slots_ == slots->slots());
-      TraceBufferEdge(trc, nobj, &slots, "objectDynamicSlots buffer");
+      TraceBufferEdge(trc, &slots, "objectDynamicSlots buffer");
       if (slots != nobj->getSlotsHeader()) {
         nobj->slots_ = slots->slots();
       }
@@ -3034,7 +2925,7 @@ void JSObject::traceChildren(JSTracer* trc) {
     if (nobj->hasDynamicElements()) {
       void* buffer = nobj->getUnshiftedElementsHeader();
       uint32_t numShifted = nobj->getElementsHeader()->numShiftedElements();
-      TraceBufferEdge(trc, nobj, &buffer, "objectDynamicElements buffer");
+      TraceBufferEdge(trc, &buffer, "objectDynamicElements buffer");
       if (buffer != nobj->getUnshiftedElementsHeader()) {
         nobj->elements_ =
             reinterpret_cast<ObjectElements*>(buffer)->elements() + numShifted;
@@ -3055,7 +2946,8 @@ void JSObject::traceChildren(JSTracer* trc) {
       MOZ_ASSERT(nobj->hasDynamicSlots());
       GetObjectSlotNameFunctor func(nobj, SlotsKind::Dynamic);
       JS::AutoTracingDetails ctx(trc, func);
-      TraceRange(trc, nslots - nfixed, nobj->slots_, "objectDynamicSlots");
+      TraceRange(trc, nslots - nfixed, nobj->slots_.get(),
+                 "objectDynamicSlots");
 
 #if defined(JS_GC_CONCURRENT_MARKING) && defined(DEBUG)
       // Any unused dynamic slots that should be undefined.

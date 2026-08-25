@@ -5,8 +5,9 @@
 // @nova-cleanup(move-directory): Move to components/CustomizeMenu/WidgetsManagementPanel/ after Nova ships
 
 import React, { useEffect, useRef } from "react";
-import { batch, useDispatch } from "react-redux";
+import { batch, useDispatch, useSelector } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
+import { WIDGET_REGISTRY, resolveWidgetSize } from "common/WidgetsRegistry.mjs";
 // eslint-disable-next-line no-shadow
 import { CSSTransition } from "react-transition-group";
 
@@ -21,10 +22,14 @@ function WidgetsManagementPanel({
   mayHaveListsWidget,
   mayHaveSportsWidget,
   mayHaveClocksWidget,
-  mayHaveWeatherForecast,
-  weatherDisplay,
+  mayHavePrivacyWidget,
+  mayHaveCrosswordWidget,
+  mayHaveStocksWidget,
+  mayHavePictureOfTheDayWidget,
+  mayHaveRecentSearchesWidget,
   setPref,
 }) {
+  const prefs = useSelector(state => state.Prefs.values);
   const arrowButtonRef = useRef(null);
   const panelRef = useRef(null);
   const dispatch = useDispatch();
@@ -65,28 +70,33 @@ function WidgetsManagementPanel({
           widgetName = "focus_timer";
           break;
         case "WIDGET_SPORTS":
-          widgetName = "sports_widget";
+          widgetName = "sports";
           break;
         case "WIDGET_CLOCKS":
           widgetName = "clocks";
           break;
+        case "WIDGET_PRIVACY":
+          widgetName = "privacy";
+          break;
+        case "WIDGET_CROSSWORD":
+          widgetName = "crossword";
+          break;
+        case "WIDGET_STOCKS":
+          widgetName = "stocks";
+          break;
+        case "WIDGET_PICTURE_OF_THE_DAY":
+          widgetName = "picture_of_the_day";
+          break;
+        case "WIDGET_RECENT_SEARCHES":
+          widgetName = "recent_searches";
+          break;
       }
 
       if (widgetName) {
-        const { widgetsMaximized, widgetsMayBeMaximized } = enabledWidgets;
-
-        let widgetSize;
-        if (widgetName === "weather") {
-          if (mayHaveWeatherForecast && weatherDisplay === "detailed") {
-            widgetSize =
-              widgetsMayBeMaximized && !widgetsMaximized ? "small" : "medium";
-          } else {
-            widgetSize = "mini";
-          }
-        } else {
-          widgetSize =
-            widgetsMayBeMaximized && !widgetsMaximized ? "small" : "medium";
-        }
+        const widget = WIDGET_REGISTRY.find(
+          w => w.telemetryName === widgetName
+        );
+        const widgetSize = resolveWidgetSize(widget, prefs);
 
         dispatch(
           ac.OnlyToMain({
@@ -106,12 +116,19 @@ function WidgetsManagementPanel({
   };
 
   const { weatherEnabled } = enabledSections;
-  const { timerEnabled, listsEnabled, sportsWidgetEnabled, clocksEnabled } =
-    enabledWidgets;
+  const {
+    timerEnabled,
+    listsEnabled,
+    sportsWidgetEnabled,
+    clocksEnabled,
+    privacyEnabled,
+    crosswordEnabled,
+    stocksEnabled,
+    pictureOfTheDayEnabled,
+    recentSearchesEnabled,
+  } = enabledWidgets;
   const isRTL = typeof document !== "undefined" && document.dir === "rtl";
-  // @backward-compat { version 151 } Switch to chrome://global/skin/icons/shaft-arrow-${dir}.svg
-  // once Firefox 151 reaches Release (icons not available in toolkit until then).
-  const arrowIconSrc = `chrome://newtab/content/data/content/assets/shaft-arrow-${isRTL ? "right" : "left"}.svg`;
+  const arrowIconSrc = `chrome://global/skin/icons/shaft-arrow-${isRTL ? "right" : "left"}.svg`;
 
   return (
     <div id="widgets-management-panel" className="widgets-mgmt-panel-container">
@@ -145,7 +162,7 @@ function WidgetsManagementPanel({
                   <moz-toggle
                     id="weather-toggle"
                     pressed={weatherEnabled || null}
-                    onToggle={onToggleWidget}
+                    ontoggle={onToggleWidget}
                     data-preference="widgets.weather.enabled"
                     data-event-source="WEATHER"
                     data-l10n-id="newtab-custom-widget-weather-toggle"
@@ -157,7 +174,7 @@ function WidgetsManagementPanel({
                   <moz-toggle
                     id="timer-toggle"
                     pressed={timerEnabled || null}
-                    onToggle={onToggleWidget}
+                    ontoggle={onToggleWidget}
                     data-preference="widgets.focusTimer.enabled"
                     data-event-source="WIDGET_TIMER"
                     data-l10n-id="newtab-custom-widget-timer-toggle"
@@ -169,7 +186,7 @@ function WidgetsManagementPanel({
                   <moz-toggle
                     id="lists-toggle"
                     pressed={listsEnabled || null}
-                    onToggle={onToggleWidget}
+                    ontoggle={onToggleWidget}
                     data-preference="widgets.lists.enabled"
                     data-event-source="WIDGET_LISTS"
                     data-l10n-id="newtab-custom-widget-lists-toggle"
@@ -178,30 +195,85 @@ function WidgetsManagementPanel({
               )}
               {mayHaveSportsWidget && (
                 <div id="sports-widget-section" className="section">
-                  {/** @backward-compat { version 150 } React 16 (cached page) uses ontoggle; React 19 uses onToggle. Remove onToggle once Firefox 150 reaches Release. */}
                   <moz-toggle
                     id="sports-widget-toggle"
                     pressed={sportsWidgetEnabled || null}
                     ontoggle={onToggleWidget}
-                    onToggle={onToggleWidget}
                     data-preference="widgets.sportsWidget.enabled"
                     data-event-source="WIDGET_SPORTS"
-                    //  TODO: add in widget title fluent string when product gets back to us*
-                    label="Sports"
+                    data-l10n-id="newtab-custom-widget-sports-toggle2"
                   />
                 </div>
               )}
               {mayHaveClocksWidget && (
                 <div id="clocks-widget-section" className="section">
-                  {/** @backward-compat { version 150 } React 16 (cached page) uses ontoggle; React 19 uses onToggle. Remove onToggle once Firefox 150 reaches Release. */}
                   <moz-toggle
                     id="clocks-toggle"
                     pressed={clocksEnabled || null}
                     ontoggle={onToggleWidget}
-                    onToggle={onToggleWidget}
                     data-preference="widgets.clocks.enabled"
                     data-event-source="WIDGET_CLOCKS"
                     data-l10n-id="newtab-custom-widget-clock-toggle"
+                  />
+                </div>
+              )}
+              {mayHavePrivacyWidget && (
+                <div id="privacy-widget-section" className="section">
+                  <moz-toggle
+                    id="privacy-toggle"
+                    pressed={privacyEnabled || null}
+                    ontoggle={onToggleWidget}
+                    data-preference="widgets.privacy.enabled"
+                    data-event-source="WIDGET_PRIVACY"
+                    data-l10n-id="newtab-custom-widget-privacy-toggle"
+                  />
+                </div>
+              )}
+              {mayHaveCrosswordWidget && (
+                <div id="crossword-widget-section" className="section">
+                  <moz-toggle
+                    id="crossword-toggle"
+                    pressed={crosswordEnabled || null}
+                    ontoggle={onToggleWidget}
+                    data-preference="widgets.crossword.enabled"
+                    data-event-source="WIDGET_CROSSWORD"
+                    label="Crossword"
+                  ></moz-toggle>
+                </div>
+              )}
+              {mayHaveStocksWidget && (
+                <div id="stocks-widget-section" className="section">
+                  <moz-toggle
+                    id="stocks-toggle"
+                    pressed={stocksEnabled || null}
+                    ontoggle={onToggleWidget}
+                    data-preference="widgets.stocks.enabled"
+                    data-event-source="WIDGET_STOCKS"
+                    data-l10n-id="newtab-custom-widget-stocks-toggle"
+                  />
+                </div>
+              )}
+              {mayHavePictureOfTheDayWidget && (
+                <div id="picture-widget-section" className="section">
+                  <moz-toggle
+                    id="picture-toggle"
+                    pressed={pictureOfTheDayEnabled || null}
+                    ontoggle={onToggleWidget}
+                    data-preference="widgets.pictureOfTheDay.enabled"
+                    data-event-source="WIDGET_PICTURE_OF_THE_DAY"
+                    data-l10n-id="newtab-custom-widget-picture-toggle"
+                  />
+                </div>
+              )}
+              {mayHaveRecentSearchesWidget && (
+                <div id="recent-searches-widget-section" className="section">
+                  <moz-toggle
+                    id="recent-searches-toggle"
+                    pressed={recentSearchesEnabled || null}
+                    ontoggle={onToggleWidget}
+                    data-preference="widgets.recentSearches.enabled"
+                    data-event-source="WIDGET_RECENT_SEARCHES"
+                    data-l10n-id="newtab-custom-widget-recent-searches-toggle"
                   />
                 </div>
               )}

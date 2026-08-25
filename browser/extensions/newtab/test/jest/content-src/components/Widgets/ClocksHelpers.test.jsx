@@ -5,14 +5,20 @@
 import {
   backfillClockLabelColors,
   buildClocksRowAriaLabel,
+  buildLocalizedTimeZoneMap,
   buildNextClockZones,
+  buildClockSearchIndex,
   decorateDefaultZones,
+  filterCustomZoneResults,
+  formatCustomZoneLabel,
   formatDateTimeAttr,
   formatTime,
   getCityAbbreviation,
   getCityFromTimeZone,
+  getClockCityDisplay,
   getClockFormDerivedState,
   getDefaultTimeZones,
+  getLocalizedTimeZoneName,
   getTimeZoneAbbreviation,
   isValidTimeZone,
   isValidPaletteName,
@@ -191,9 +197,28 @@ describe("getClockFormDerivedState", () => {
     "America/New_York",
   ];
 
+  // The form builds the shared index once; these cases build a small one.
+  const withIndex = ({
+    supportedTimeZones: zones = [],
+    localizedTimeZoneMap = null,
+    curatedCities = [],
+    curatedNames = null,
+    ...rest
+  }) =>
+    getClockFormDerivedState({
+      ...rest,
+      searchIndex: buildClockSearchIndex({
+        supportedTimeZones: zones,
+        localizedTimeZoneMap,
+        curatedCities,
+        curatedNames,
+        locale: "en-US",
+      }),
+    });
+
   it("resolves a selected time zone and enables save when a slot is open", () => {
     expect(
-      getClockFormDerivedState({
+      withIndex({
         canAddClock: true,
         clockSearchQuery: "Ber",
         clockSelectedTimeZone: "Europe/Berlin",
@@ -209,7 +234,7 @@ describe("getClockFormDerivedState", () => {
 
   it("resolves exact city queries without requiring a selected result", () => {
     expect(
-      getClockFormDerivedState({
+      withIndex({
         canAddClock: true,
         clockSearchQuery: "new york",
         clockSelectedTimeZone: "",
@@ -219,13 +244,14 @@ describe("getClockFormDerivedState", () => {
     ).toMatchObject({
       canAddSelectedClock: true,
       resolvedClockTimeZone: "America/New_York",
+      hasExactMatch: true,
       showLocationDropdown: true,
     });
   });
 
   it("shows filtered results for unresolved partial queries", () => {
     expect(
-      getClockFormDerivedState({
+      withIndex({
         canAddClock: true,
         clockSearchQuery: "syd",
         clockSelectedTimeZone: "",
@@ -234,15 +260,16 @@ describe("getClockFormDerivedState", () => {
       })
     ).toMatchObject({
       canAddSelectedClock: false,
-      filteredTimeZones: ["Australia/Sydney"],
+      filteredResults: [{ timeZone: "Australia/Sydney", city: "Sydney" }],
       resolvedClockTimeZone: "",
+      hasExactMatch: false,
       showLocationDropdown: true,
     });
   });
 
   it("keeps the dropdown open with no filtered results for an unmatched query", () => {
     expect(
-      getClockFormDerivedState({
+      withIndex({
         canAddClock: true,
         clockSearchQuery: "zzz",
         clockSelectedTimeZone: "",
@@ -251,15 +278,16 @@ describe("getClockFormDerivedState", () => {
       })
     ).toMatchObject({
       canAddSelectedClock: false,
-      filteredTimeZones: [],
+      filteredResults: [],
       resolvedClockTimeZone: "",
+      hasExactMatch: false,
       showLocationDropdown: true,
     });
   });
 
   it("allows edits even when no add slots are open", () => {
     expect(
-      getClockFormDerivedState({
+      withIndex({
         canAddClock: false,
         clockSearchQuery: "Berlin",
         clockSelectedTimeZone: "",
@@ -267,6 +295,382 @@ describe("getClockFormDerivedState", () => {
         supportedTimeZones,
       }).canAddSelectedClock
     ).toBe(true);
+  });
+
+  it("filters by the localized zone name when a map is provided", () => {
+    const localizedTimeZoneMap = new Map([
+      ["Europe/Berlin", "Central European Time"],
+      ["Australia/Sydney", "Eastern Australia Time"],
+      ["America/New_York", "Eastern Time"],
+    ]);
+    expect(
+      withIndex({
+        canAddClock: true,
+        clockSearchQuery: "central european",
+        clockSelectedTimeZone: "",
+        isEditingClock: false,
+        localizedTimeZoneMap,
+        supportedTimeZones,
+      }).filteredResults
+    ).toEqual([
+      {
+        timeZone: "Europe/Berlin",
+        city: "Berlin",
+        zoneName: "Central European Time",
+      },
+    ]);
+  });
+
+  it("treats an exact localized zone name as an exact match (suppresses add-custom)", () => {
+    const localizedTimeZoneMap = new Map([
+      ["America/New_York", "Eastern Time"],
+    ]);
+    expect(
+      withIndex({
+        canAddClock: true,
+        clockSearchQuery: "Eastern Time",
+        clockSelectedTimeZone: "",
+        isEditingClock: false,
+        localizedTimeZoneMap,
+        supportedTimeZones,
+      }).hasExactMatch
+    ).toBe(true);
+  });
+
+  it("resolves an exact-match localized name when only one zone produces it", () => {
+    const localizedTimeZoneMap = new Map([
+      ["America/New_York", "Eastern Time"],
+    ]);
+    expect(
+      withIndex({
+        canAddClock: true,
+        clockSearchQuery: "Eastern Time",
+        clockSelectedTimeZone: "",
+        isEditingClock: false,
+        localizedTimeZoneMap,
+        supportedTimeZones,
+      })
+    ).toMatchObject({
+      resolvedClockTimeZone: "America/New_York",
+      canAddSelectedClock: true,
+    });
+  });
+
+  it("does not auto-resolve an ambiguous localized name; dropdown stays open", () => {
+    const supportedWithDuplicates = [
+      "America/Detroit",
+      "America/New_York",
+      "America/Toronto",
+    ];
+    const localizedTimeZoneMap = new Map([
+      ["America/Detroit", "Eastern Time"],
+      ["America/New_York", "Eastern Time"],
+      ["America/Toronto", "Eastern Time"],
+    ]);
+    expect(
+      withIndex({
+        canAddClock: true,
+        clockSearchQuery: "Eastern Time",
+        clockSelectedTimeZone: "",
+        isEditingClock: false,
+        localizedTimeZoneMap,
+        supportedTimeZones: supportedWithDuplicates,
+      })
+    ).toMatchObject({
+      resolvedClockTimeZone: "",
+      showLocationDropdown: true,
+      canAddSelectedClock: false,
+    });
+  });
+
+  it("still resolves the exact IANA id or city even if the localized name is ambiguous", () => {
+    const supportedWithDuplicates = [
+      "America/Detroit",
+      "America/New_York",
+      "America/Toronto",
+    ];
+    const localizedTimeZoneMap = new Map([
+      ["America/Detroit", "Eastern Time"],
+      ["America/New_York", "Eastern Time"],
+      ["America/Toronto", "Eastern Time"],
+    ]);
+    expect(
+      withIndex({
+        canAddClock: true,
+        clockSearchQuery: "new york",
+        clockSelectedTimeZone: "",
+        isEditingClock: false,
+        localizedTimeZoneMap,
+        supportedTimeZones: supportedWithDuplicates,
+      }).resolvedClockTimeZone
+    ).toBe("America/New_York");
+  });
+
+  it("adds curated overlay cities that share an existing zone", () => {
+    const state = withIndex({
+      canAddClock: true,
+      clockSearchQuery: "seattle",
+      clockSelectedTimeZone: "",
+      isEditingClock: false,
+      supportedTimeZones,
+      curatedCities: [
+        {
+          id: "us-seattle",
+          fallbackName: "Seattle",
+          timeZone: "America/Los_Angeles",
+        },
+      ],
+    });
+    expect(state.filteredResults).toEqual([
+      {
+        timeZone: "America/Los_Angeles",
+        city: "Seattle",
+        cityId: "us-seattle",
+        zoneName: expect.any(String),
+      },
+    ]);
+    expect(state.resolvedClockTimeZone).toBe("America/Los_Angeles");
+    expect(state.resolvedClockCity).toBe("Seattle");
+    expect(state.resolvedClockCityId).toBe("us-seattle");
+  });
+
+  it("matches curated aliases such as former city names", () => {
+    const state = withIndex({
+      canAddClock: true,
+      clockSearchQuery: "bengaluru",
+      clockSelectedTimeZone: "",
+      isEditingClock: false,
+      supportedTimeZones,
+      curatedCities: [
+        {
+          id: "in-bangalore",
+          fallbackName: "Bangalore",
+          timeZone: "Asia/Kolkata",
+          aliases: ["bengaluru"],
+        },
+      ],
+    });
+    expect(state.filteredResults[0]).toMatchObject({
+      city: "Bangalore",
+      timeZone: "Asia/Kolkata",
+      cityId: "in-bangalore",
+    });
+  });
+
+  it("replaces the base zone row with the localized curated name for an anchor", () => {
+    const state = withIndex({
+      canAddClock: true,
+      clockSearchQuery: "berlin",
+      clockSelectedTimeZone: "",
+      isEditingClock: false,
+      supportedTimeZones,
+      curatedCities: [
+        { id: "de-berlin", fallbackName: "Berlin", timeZone: "Europe/Berlin" },
+      ],
+      curatedNames: { "de-berlin": "Berlín" },
+    });
+    expect(state.filteredResults).toEqual([
+      {
+        timeZone: "Europe/Berlin",
+        city: "Berlín",
+        cityId: "de-berlin",
+        zoneName: expect.any(String),
+      },
+    ]);
+  });
+
+  const searchFor = (clockSearchQuery, extra = {}) =>
+    withIndex({
+      canAddClock: true,
+      clockSearchQuery,
+      clockSelectedTimeZone: "",
+      isEditingClock: false,
+      supportedTimeZones,
+      ...extra,
+    }).filteredResults;
+
+  it("resolves an IANA id however its separators are typed", () => {
+    for (const q of [
+      "America/New_York",
+      "america/new_york",
+      "america new york",
+    ]) {
+      expect(
+        withIndex({
+          canAddClock: true,
+          clockSearchQuery: q,
+          clockSelectedTimeZone: "",
+          isEditingClock: false,
+          supportedTimeZones,
+        })
+      ).toMatchObject({
+        resolvedClockTimeZone: "America/New_York",
+        canAddSelectedClock: true,
+      });
+    }
+  });
+
+  it("ignores punctuation differences in the query and the name", () => {
+    const curatedCities = [
+      {
+        id: "us-washington-dc",
+        fallbackName: "Washington, D.C.",
+        timeZone: "America/New_York",
+      },
+    ];
+    for (const q of ["washington dc", "Washington, D.C.", "washington d.c"]) {
+      expect(searchFor(q, { curatedCities })[0]).toMatchObject({
+        cityId: "us-washington-dc",
+      });
+    }
+  });
+
+  it("expands abbreviated name prefixes in both directions", () => {
+    const curatedCities = [
+      {
+        id: "ru-saint-petersburg",
+        fallbackName: "Saint Petersburg",
+        timeZone: "Europe/Moscow",
+      },
+    ];
+    for (const q of ["st petersburg", "St. Petersburg", "saint petersburg"]) {
+      expect(searchFor(q, { curatedCities })[0]).toMatchObject({
+        cityId: "ru-saint-petersburg",
+      });
+    }
+  });
+
+  it("tolerates a typo only when nothing matches exactly", () => {
+    expect(searchFor("berln")[0]).toMatchObject({ timeZone: "Europe/Berlin" });
+    expect(searchFor("sydeny")[0]).toMatchObject({
+      timeZone: "Australia/Sydney",
+    });
+    // An exact hit must not be crowded out by fuzzy near-misses.
+    expect(searchFor("berlin").map(r => r.timeZone)).toEqual(["Europe/Berlin"]);
+  });
+
+  it("does not fuzzy-match very short queries", () => {
+    expect(searchFor("xyz")).toEqual([]);
+  });
+
+  it("requires three characters before matching mid-word", () => {
+    // "or" appears inside "New York" but must not match at two characters.
+    expect(searchFor("or")).toEqual([]);
+    expect(searchFor("ork")[0]).toMatchObject({
+      timeZone: "America/New_York",
+    });
+  });
+
+  it("finds curated cities by country name", () => {
+    const curatedCities = [
+      { id: "de-berlin", fallbackName: "Berlin", timeZone: "Europe/Berlin" },
+      { id: "de-munich", fallbackName: "Munich", timeZone: "Europe/Berlin" },
+      { id: "jp-tokyo", fallbackName: "Tokyo", timeZone: "Asia/Tokyo" },
+    ];
+    expect(
+      searchFor("germany", { curatedCities })
+        .map(r => r.cityId)
+        .sort()
+    ).toEqual(["de-berlin", "de-munich"]);
+  });
+
+  it("matches a UTC offset from the main search, not just the custom picker", () => {
+    const results = searchFor("utc+9", {
+      supportedTimeZones: ["Asia/Tokyo", "Europe/Berlin"],
+    });
+    expect(results.map(r => r.timeZone)).toContain("Asia/Tokyo");
+  });
+
+  it("collapses a curated city and its zone spelled a different way", () => {
+    // Asia/Kolkata and Asia/Calcutta are one place; only one row may show.
+    const results = searchFor("calcutta", {
+      supportedTimeZones: ["Asia/Calcutta"],
+      curatedCities: [
+        {
+          id: "in-kolkata",
+          fallbackName: "Kolkata",
+          timeZone: "Asia/Kolkata",
+          aliases: ["calcutta"],
+        },
+      ],
+    });
+    expect(results).toEqual([
+      {
+        timeZone: "Asia/Kolkata",
+        city: "Kolkata",
+        cityId: "in-kolkata",
+        zoneName: expect.any(String),
+      },
+    ]);
+  });
+});
+
+describe("getLocalizedTimeZoneName", () => {
+  // Single-result Intl.DateTimeFormat mock for unit tests that only
+  // need one call per assertion; takes the parts[] array directly.
+  const withMockedIntl = (parts, fn) => {
+    const Original = Intl.DateTimeFormat;
+    Intl.DateTimeFormat = function () {
+      return { formatToParts: () => parts };
+    };
+    try {
+      fn();
+    } finally {
+      Intl.DateTimeFormat = Original;
+    }
+  };
+
+  it("returns the timeZoneName part from Intl.DateTimeFormat.formatToParts", () => {
+    withMockedIntl(
+      [
+        { type: "literal", value: "12:34 " },
+        { type: "timeZoneName", value: "Eastern Time" },
+      ],
+      () => {
+        expect(getLocalizedTimeZoneName("America/New_York", "en-US")).toBe(
+          "Eastern Time"
+        );
+      }
+    );
+  });
+
+  it("falls back to the IANA id when no timeZoneName part is present", () => {
+    withMockedIntl([{ type: "literal", value: "noise" }], () => {
+      expect(getLocalizedTimeZoneName("Europe/Berlin", "en-US")).toBe(
+        "Europe/Berlin"
+      );
+    });
+  });
+
+  it("falls back to the IANA id when Intl.DateTimeFormat throws", () => {
+    const Original = Intl.DateTimeFormat;
+    Intl.DateTimeFormat = function () {
+      throw new Error("unsupported option");
+    };
+    try {
+      expect(getLocalizedTimeZoneName("America/New_York", "en-US")).toBe(
+        "America/New_York"
+      );
+    } finally {
+      Intl.DateTimeFormat = Original;
+    }
+  });
+});
+
+describe("buildLocalizedTimeZoneMap", () => {
+  it("returns a Map keyed by the input zones", () => {
+    const map = buildLocalizedTimeZoneMap(
+      ["Europe/Berlin", "America/New_York"],
+      "en-US"
+    );
+    expect(map).toBeInstanceOf(Map);
+    expect(map.size).toBe(2);
+    expect(map.has("Europe/Berlin")).toBe(true);
+    expect(map.has("America/New_York")).toBe(true);
+  });
+
+  it("returns an empty map for an empty list", () => {
+    expect(buildLocalizedTimeZoneMap([], "en-US").size).toBe(0);
   });
 });
 
@@ -371,6 +775,29 @@ describe("parseClockZonesPref", () => {
       },
       {
         timeZone: "Asia/Tokyo",
+        label: null,
+        labelColor: null,
+      },
+    ]);
+  });
+
+  it("keeps a curated cityId and drops one that is not in the registry", () => {
+    const prefValue = JSON.stringify([
+      { timeZone: "Europe/Berlin", city: "Munich", cityId: "de-munich" },
+      { timeZone: "Europe/Berlin", city: "Munich", cityId: "de-retired" },
+    ]);
+
+    expect(parseClockZonesPref(prefValue)).toEqual([
+      {
+        timeZone: "Europe/Berlin",
+        cityId: "de-munich",
+        city: "Munich",
+        label: null,
+        labelColor: null,
+      },
+      {
+        timeZone: "Europe/Berlin",
+        city: "Munich",
         label: null,
         labelColor: null,
       },
@@ -506,6 +933,55 @@ describe("getCityAbbreviation", () => {
     expect(getCityAbbreviation("")).toBe("");
     expect(getCityAbbreviation(null)).toBe("");
   });
+
+  it("prefers the registry cityId over a localized display name", () => {
+    // A localized name (e.g. München) must still map to the curated code via
+    // cityId rather than the first three localized characters (MÜN).
+    expect(getCityAbbreviation("München", "de-munich")).toBe("MUC");
+    expect(getCityAbbreviation("Munich", "de-munich")).toBe("MUC");
+  });
+});
+
+describe("getClockCityDisplay", () => {
+  it("prefers the localized curated name resolved from cityId", () => {
+    expect(
+      getClockCityDisplay(
+        { timeZone: "Europe/Berlin", city: "Munich", cityId: "de-munich" },
+        { "de-munich": "München" }
+      )
+    ).toBe("München");
+  });
+
+  it("falls back to the stored city, then the registry fallbackName", () => {
+    expect(
+      getClockCityDisplay({
+        timeZone: "Europe/Berlin",
+        city: "Munich",
+        cityId: "de-munich",
+      })
+    ).toBe("Munich");
+    expect(
+      getClockCityDisplay({ timeZone: "Europe/Berlin", cityId: "de-munich" })
+    ).toBe("Munich");
+  });
+
+  it("uses the stored city for custom clocks with no cityId", () => {
+    expect(
+      getClockCityDisplay({ timeZone: "America/Los_Angeles", city: "Tacoma" })
+    ).toBe("Tacoma");
+    expect(getClockCityDisplay({ timeZone: "America/Los_Angeles" })).toBe(
+      "Los Angeles"
+    );
+  });
+});
+
+describe("formatCustomZoneLabel", () => {
+  it("formats a zone as 'City · UTC-offset'", () => {
+    // India has no DST, so its offset is stable across dates.
+    expect(
+      formatCustomZoneLabel("Asia/Kolkata", new Date("2026-01-15T12:00:00Z"))
+    ).toBe("Kolkata · UTC+5:30");
+  });
 });
 
 describe("isValidPaletteName", () => {
@@ -607,5 +1083,65 @@ describe("buildClocksRowAriaLabel", () => {
     expect(buildClocksRowAriaLabel("Berlin", "CET", "14:44", "Home")).toBe(
       "Home, Berlin, CET, 14:44"
     );
+  });
+});
+
+describe("buildClockSearchIndex / filterCustomZoneResults", () => {
+  const zones = ["Asia/Kolkata", "America/Los_Angeles", "Europe/Berlin"];
+  // India has no DST, so its offset is stable across dates.
+  const index = buildClockSearchIndex({
+    supportedTimeZones: zones,
+    locale: "en-US",
+    date: new Date("2026-01-15T12:00:00Z"),
+  });
+
+  it("matches a canonical IANA id", () => {
+    expect(filterCustomZoneResults(index, "asia/kolkata")[0].timeZone).toBe(
+      "Asia/Kolkata"
+    );
+  });
+
+  it("matches the representative city", () => {
+    expect(filterCustomZoneResults(index, "kolkata")[0].timeZone).toBe(
+      "Asia/Kolkata"
+    );
+  });
+
+  it("matches a curated alias for a city sharing the zone", () => {
+    // Mumbai/Bombay share Asia/Kolkata via the registry aliases.
+    for (const q of ["mumbai", "bombay"]) {
+      expect(
+        filterCustomZoneResults(index, q).some(
+          r => r.timeZone === "Asia/Kolkata"
+        )
+      ).toBe(true);
+    }
+  });
+
+  it("matches a UTC offset in several forms", () => {
+    for (const q of ["utc+5:30", "+5:30", "5:30"]) {
+      expect(
+        filterCustomZoneResults(index, q).some(
+          r => r.timeZone === "Asia/Kolkata"
+        )
+      ).toBe(true);
+    }
+  });
+
+  it("returns display metadata (city + zoneName + offsetLabel)", () => {
+    const [result] = filterCustomZoneResults(index, "asia/kolkata");
+    expect(result.city).toBe("Kolkata");
+    expect(result.offsetLabel).toBe("UTC+5:30");
+    expect(typeof result.zoneName).toBe("string");
+  });
+
+  it("returns only zones, never curated city rows", () => {
+    const results = filterCustomZoneResults(index, "berlin");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every(r => !r.cityId)).toBe(true);
+  });
+
+  it("returns nothing for an empty query", () => {
+    expect(filterCustomZoneResults(index, "")).toEqual([]);
   });
 });

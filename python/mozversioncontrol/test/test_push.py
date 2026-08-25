@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import subprocess
+import unittest.mock
 
 import mozunit
 import pytest
@@ -215,6 +216,55 @@ def test_push_dest_branch(repo, with_dest):
             check=True,
         )
         assert "second commit" in result.stdout
+
+
+def test_jj_push_change_id_with_dest_branch(repo):
+    """Simulate push_to_try: a change ID as ref is resolved to a commit SHA
+    when dest_branch is set, allowing git to push it to a named remote branch.
+    """
+    if repo.vcs != "jj":
+        pytest.skip("Only relevant for jj repos")
+
+    vcs = get_repository_object(repo.dir)
+    repo.execute_next_step()
+
+    change_id = vcs._resolve_to_change(vcs.HEAD_REVSET)
+    vcs.push(remote="upstream", ref=change_id, dest_branch="test-bookmark")
+
+    subprocess.run(
+        ["jj", "git", "fetch", "--remote", "upstream"],
+        cwd=str(repo.dir),
+        check=True,
+    )
+    result = subprocess.run(
+        ["jj", "bookmark", "list", "--remote", "upstream", "test-bookmark"],
+        cwd=str(repo.dir),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "second commit" in result.stdout
+
+
+def test_push_env_passthrough(repo):
+    if repo.vcs in ("hg", "src"):
+        pytest.skip("env passthrough not supported for this VCS")
+
+    vcs = get_repository_object(repo.dir)
+    repo.execute_next_step()
+
+    if repo.vcs == "git":
+        remote, ref = "upstream", "master"
+    elif repo.vcs == "jj":
+        remote, ref = "upstream", "test-bookmark"
+
+    with unittest.mock.patch("mozversioncontrol.repo.base.subprocess.run") as mock_run:
+        mock_run.return_value.stdout = ""
+        vcs.push(remote=remote, ref=ref, env={"MVC_TEST_VAR": "sentinel"})
+
+    mock_run.assert_called_once()
+    passed_env = mock_run.call_args[1]["env"]
+    assert passed_env.get("MVC_TEST_VAR") == "sentinel"
 
 
 if __name__ == "__main__":

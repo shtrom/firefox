@@ -17,19 +17,19 @@
 
 #include "ASpdySession.h"
 #include "ConnectionHandle.h"
+#include "Http3Session.h"
+#include "HttpConnectionUDP.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/glean/NetwerkMetrics.h"
-#include "HttpConnectionUDP.h"
+#include "nsComponentManagerUtils.h"
 #include "nsHttpConnectionMgr.h"
 #include "nsHttpHandler.h"
 #include "nsHttpTransaction.h"
-#include "Http3Session.h"
-#include "nsComponentManagerUtils.h"
 #include "nsIDNSRecord.h"
 #include "nsIHttpChannelInternal.h"
+#include "nsINetAddr.h"
 #include "nsISocketProvider.h"
 #include "nsNetAddr.h"
-#include "nsINetAddr.h"
 #include "nsStringStream.h"
 #include "nsThreadUtils.h"
 
@@ -109,7 +109,7 @@ class ConnectUDPTransaction : public nsAHttpTransaction {
   void SetProxyConnectFailed() override {
     mTransaction->SetProxyConnectFailed();
   }
-  nsHttpRequestHead* RequestHead() override {
+  const nsHttpRequestHead* RequestHead() override {
     return mTransaction->RequestHead();
   }
   uint32_t Http1xTransactionCount() override { return 0; }
@@ -168,6 +168,7 @@ class Http3ConnectTransaction : public ConnectUDPTransaction {
   }
 
   void Close(nsresult reason) override { mConnection = nullptr; }
+  const nsHttpRequestHead* RequestHead() override { return nullptr; }
 
  private:
   virtual ~Http3ConnectTransaction() {
@@ -322,6 +323,7 @@ nsresult HttpConnectionUDP::InitCommon(nsIUDPSocket* aSocket,
   if (caps & NS_HTTP_LOAD_ANONYMOUS) {
     providerFlags |= nsISocketProvider::ANONYMOUS_CONNECT;
   }
+  mSocket->SetOriginAttributes(mConnInfo->GetOriginAttributes());
   if (mConnInfo->GetPrivate()) {
     providerFlags |= nsISocketProvider::NO_PERMANENT_STORAGE;
   }
@@ -716,6 +718,11 @@ bool HttpConnectionUDP::JoinConnection(const nsACString& hostname,
 }
 
 bool HttpConnectionUDP::CanReuse() {
+#ifdef DEBUG
+  if (StaticPrefs::network_http_http3_force_cannot_reuse_for_testing()) {
+    return false;
+  }
+#endif
   if (NS_FAILED(mErrorBeforeConnect)) {
     return false;
   }
@@ -727,6 +734,15 @@ bool HttpConnectionUDP::CanReuse() {
     return mHttp3Session->CanReuse();
   }
   return false;
+}
+
+bool HttpConnectionUDP::IsConnectedAndUnusable() {
+  // mExperienced is set only after the QUIC/TLS handshake completes and a real
+  // transaction is served, so it excludes still-handshaking connections (which
+  // report !CanReuse() transiently). Combined with !CanReuse() this identifies
+  // a connection that was usable and can no longer serve new transactions
+  // (either DontReuse'd or its Http3Session went away, e.g. GOAWAY).
+  return mExperienced && !CanReuse();
 }
 
 bool HttpConnectionUDP::CanDirectlyActivate() {
@@ -764,7 +780,7 @@ nsresult HttpConnectionUDP::OnHeadersAvailable(nsAHttpTransaction* trans,
   uint16_t responseStatus = responseHead->Status();
   nsHttpTransaction* hTrans = trans->QueryHttpTransaction();
   if (mState == HttpConnectionState::SETTING_UP_TUNNEL) {
-    HandleTunnelResponse(hTrans, responseStatus, reset);
+    HandleTunnelResponse(hTrans, *responseHead, reset);
     return NS_OK;
   }
 
@@ -787,18 +803,21 @@ nsresult HttpConnectionUDP::OnHeadersAvailable(nsAHttpTransaction* trans,
 }
 
 void HttpConnectionUDP::HandleTunnelResponse(
-    nsHttpTransaction* aHttpTransaction, uint16_t responseStatus, bool* reset) {
+    nsHttpTransaction* aHttpTransaction, const nsHttpResponseHead& responseHead,
+    bool* reset) {
   LOG(("HttpConnectionUDP::HandleTunnelResponse mIsInTunnel=%d", mIsInTunnel));
   MOZ_ASSERT(TunnelSetupInProgress());
   MOZ_ASSERT(mIsInTunnel);
 
-  if (responseStatus == 200) {
+  mProxyConnectResponseHead =
+      MakeRefPtr<ProxyConnectResponseHead>(responseHead);
+  if (responseHead.Status() == 200) {
     ChangeState(HttpConnectionState::REQUEST);
   }
 
   bool onlyConnect = mTransactionCaps & NS_HTTP_CONNECT_ONLY;
-  aHttpTransaction->OnProxyConnectComplete(responseStatus);
-  if (responseStatus == 200) {
+  aHttpTransaction->OnProxyConnectComplete(mProxyConnectResponseHead);
+  if (responseHead.Status() == 200) {
     LOG(("proxy CONNECT succeeded! onlyconnect=%d mIsInTunnel=%d\n",
          onlyConnect, mIsInTunnel));
     // If we're only connecting, we don't need to reset the transaction
@@ -1032,6 +1051,12 @@ void HttpConnectionUDP::CloseTransaction(nsAHttpTransaction* trans,
   MOZ_ASSERT(OnSocketThread(), "not on socket thread");
 
   if (NS_SUCCEEDED(reason) || (reason == NS_BASE_STREAM_CLOSED)) {
+    if (aIsShutdown && mHttp3Session) {
+      // The underlying socket has been closed. Cancel the Http3Session timer
+      // to prevent it from firing on the now-closed socket.
+      mHttp3Session->SetCleanShutdown(true);
+      mHttp3Session->Close(reason);
+    }
     return;
   }
 

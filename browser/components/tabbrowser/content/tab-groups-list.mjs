@@ -7,8 +7,11 @@ import {
   nothing,
   repeat,
   styleMap,
+  classMap,
 } from "chrome://global/content/vendor/lit.all.mjs";
 import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
+// eslint-disable-next-line import/no-unassigned-import
+import "chrome://global/content/elements/moz-button.mjs";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -85,9 +88,9 @@ class TabGroupsList extends MozLitElement {
   #groupRow(group, isOpen) {
     const groupName = group.name || this._defaultGroupName;
     const style = styleMap({
-      "--tab-group-color": `var(--tab-group-color-${group.color})`,
-      "--tab-group-color-invert": `var(--tab-group-color-${group.color}-invert)`,
-      "--tab-group-color-pale": `var(--tab-group-color-${group.color}-pale)`,
+      "--tab-group-color": `var(--tab-group-${group.color})`,
+      "--tab-group-color-invert": `var(--tab-group-${group.color}-invert)`,
+      "--tab-group-color-pale": `var(--tab-group-${group.color}-pale)`,
       "--tab-group-background-color": `var(--tab-group-${group.color})`,
     });
     return html`
@@ -104,10 +107,15 @@ class TabGroupsList extends MozLitElement {
         @contextmenu=${e => this.#handleContextMenu(e, isOpen)}
       >
         <img
-          class="tab-group-row-icon${isOpen ? "" : " tab-group-icon-closed"}"
+          class=${classMap({
+            "tab-group-row-icon": true,
+            "tab-group-icon-closed": !isOpen,
+          })}
           src="chrome://browser/skin/tabbrowser/tab-group-chicklet.svg"
           width="16"
           height="16"
+          alt=""
+          role="presentation"
         />
         <span class="tab-group-row-label">${groupName}</span>
       </button>
@@ -115,7 +123,41 @@ class TabGroupsList extends MozLitElement {
   }
 
   #emptyState() {
-    return html`<div class="tab-groups-list-empty-state"></div>`;
+    return html`
+      <div class="tab-groups-list-empty-state">
+        <img
+          class="tab-groups-list-empty-state-image"
+          src="chrome://browser/skin/illustrations/tab-groups.svg"
+          role="presentation"
+          alt=""
+          loading="lazy"
+        />
+        <p
+          class="tab-groups-list-empty-state-header"
+          data-l10n-id="tab-groups-list-empty-header"
+        ></p>
+        <p
+          class="tab-groups-list-empty-state-description"
+          data-l10n-id="tab-groups-list-empty-description"
+        ></p>
+        <moz-button
+          type="primary"
+          data-l10n-id="tab-groups-list-empty-button"
+          @click=${this.#handleCreateTabGroup}
+        ></moz-button>
+      </div>
+    `;
+  }
+
+  #handleCreateTabGroup() {
+    this.closest("panel")?.hidePopup();
+    const win = this.#win;
+    const newTab = win.gBrowser.addTrustedTab(win.BROWSER_NEW_TAB_URL);
+    win.gBrowser.addTabGroup([newTab], {
+      metricsContext: win.gBrowser.TabMetrics.userTriggeredContext(
+        win.gBrowser.TabMetrics.METRIC_SOURCE.TAB_OVERFLOW_MENU
+      ),
+    });
   }
 
   render() {
@@ -123,6 +165,13 @@ class TabGroupsList extends MozLitElement {
       return this.#emptyState();
     }
     return html`
+      <button
+        id="tab-groups-list-create-group"
+        class="subviewbutton"
+        data-l10n-id="tab-groups-list-create-group-button"
+        @click=${this.#handleCreateTabGroup}
+      ></button>
+      <hr />
       ${repeat(
         this._openGroups,
         group => group.id,

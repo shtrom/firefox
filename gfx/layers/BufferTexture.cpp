@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "gfxPlatform.h"
 #include "libyuv.h"
 #include "mozilla/fallible.h"
 #include "mozilla/gfx/2D.h"
@@ -14,8 +15,6 @@
 #include "mozilla/layers/ISurfaceAllocator.h"
 #include "mozilla/layers/ImageDataSerializer.h"
 #include "mozilla/layers/TextureForwarder.h"
-
-#include "gfxPlatform.h"
 
 #ifdef MOZ_WIDGET_GTK
 #  include "gfxPlatformGtk.h"
@@ -176,8 +175,8 @@ BufferTextureData* BufferTextureData::CreateInternal(
 
     bool isClear = aDesc.type() == BufferDescriptor::TRGBDescriptor &&
                    !IsOpaque(aDesc.get_RGBDescriptor().format());
-    RefPtr<ShmemTextureData::ShmemHolder> shmemHolder =
-        new ShmemTextureData::ShmemHolder(aAllocator, shm);
+    RefPtr shmemHolder =
+        MakeRefPtr<ShmemTextureData::ShmemHolder>(aAllocator, shm);
     return new ShmemTextureData(aDesc, aMoz2DBackend, shmemHolder, isClear);
   }
 }
@@ -613,8 +612,8 @@ ShmemTextureData* ShmemTextureData::Create(
   BufferDescriptor descriptor =
       RGBDescriptor(aSize, aFormat, aColorSpace, aTransferFunction);
   bool isClear = (aAllocFlags & ALLOC_CLEAR_BUFFER) || !IsOpaque(aFormat);
-  RefPtr<ShmemTextureData::ShmemHolder> shmemHolder =
-      new ShmemTextureData::ShmemHolder(aAllocator, shm);
+  RefPtr shmemHolder =
+      MakeRefPtr<ShmemTextureData::ShmemHolder>(aAllocator, shm);
   return new ShmemTextureData(descriptor, aMoz2DBackend, shmemHolder, isClear);
 }
 

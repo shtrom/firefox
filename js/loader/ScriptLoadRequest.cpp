@@ -3,21 +3,22 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "ScriptLoadRequest.h"
-#include "GeckoProfiler.h"
 
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/ScriptLoadContext.h"
-#include "mozilla/dom/WorkerLoadContext.h"
 #include "mozilla/dom/ScriptSettings.h"
+#include "mozilla/dom/WorkerLoadContext.h"
+#include "mozilla/FlowMarkers.h"
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/Utf8.h"  // mozilla::Utf8Unit
 
-#include "js/SourceText.h"
-
+#include "GeckoProfiler.h"
 #include "ModuleLoadRequest.h"
 #include "nsContentUtils.h"
 #include "nsIClassOfService.h"
 #include "nsISupportsPriority.h"
+
+#include "js/SourceText.h"
 
 using JS::SourceText;
 
@@ -103,7 +104,10 @@ ScriptLoadRequest::ScriptLoadRequest(ScriptKind aKind,
   }
 }
 
-ScriptLoadRequest::~ScriptLoadRequest() = default;
+ScriptLoadRequest::~ScriptLoadRequest() {
+  PROFILER_MARKER("~ScriptLoadRequest", JS, {}, TerminatingFlowMarker,
+                  Flow::FromPointer(this));
+}
 
 void ScriptLoadRequest::SetReady() {
   MOZ_ASSERT(!IsFinished());
@@ -114,6 +118,7 @@ void ScriptLoadRequest::Cancel() {
   mState = State::Canceled;
   if (HasScriptLoadContext()) {
     GetScriptLoadContext()->MaybeCancelOffThreadScript();
+    GetScriptLoadContext()->MaybeUnblockOnload();
   }
 }
 
@@ -195,11 +200,17 @@ void ScriptLoadRequest::SetCacheEntry(LoadedScript* aLoadedScript,
 
       mLoadedScript = aLoadedScript;
 
-      // Classic scripts can be set ready once the script itself is ready.
-      mState = State::Ready;
+      mState = State::DelayingReady;
       break;
     case ScriptKind::eImportMap:
       MOZ_ASSERT(aLoadedScript->IsImportMapScript());
+
+      mLoadedScript = aLoadedScript;
+
+      mState = State::DelayingReady;
+      break;
+    case ScriptKind::eSpeculationRules:
+      MOZ_ASSERT(aLoadedScript->IsSpeculationRulesScript());
 
       mLoadedScript = aLoadedScript;
 

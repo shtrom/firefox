@@ -13,6 +13,8 @@ with Files("content/tabgroup-menu.js"):
 with Files("content/tab-groups-list.mjs"):
     BUG_COMPONENT = ("Firefox", "Tabbed Browser: Tab Groups")
 
+SPHINX_TREES["docs"] = "docs"
+
 JAR_MANIFESTS += ["jar.mn"]
 
 MOZ_SRC_FILES += [
@@ -21,6 +23,7 @@ MOZ_SRC_FILES += [
     "NewTabPagePreloading.sys.mjs",
     "OpenInTabsUtils.sys.mjs",
     "SmartTabGrouping.sys.mjs",
+    "Tabbrowser.sys.mjs",
     "TabMetrics.sys.mjs",
     "TabsList.sys.mjs",
     "TabUnloader.sys.mjs",

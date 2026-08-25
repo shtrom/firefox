@@ -4,6 +4,8 @@
 
 #include "SkConvolver.h"
 
+#include <algorithm>
+
 #ifdef USE_SSE2
 #  include "mozilla/SSE.h"
 #endif
@@ -220,6 +222,9 @@ void ConvolveVerticallyA8(
 void convolve_vertically_avx2(const int16_t* filter, int filterLen,
                               uint8_t* const* srcRows, int width, uint8_t* out,
                               bool hasAlpha);
+void convolve_horizontally_avx2(const unsigned char* srcData,
+                                const SkConvolutionFilter1D& filter,
+                                unsigned char* outRow, bool hasAlpha);
 void convolve_horizontally_sse2(const unsigned char* srcData,
                                 const SkConvolutionFilter1D& filter,
                                 unsigned char* outRow, bool hasAlpha);
@@ -245,6 +250,10 @@ void convolve_horizontally(const unsigned char* srcData,
 
   bool hasAlpha = !IsOpaque(format);
 #ifdef USE_SSE2
+  if (mozilla::supports_avx2()) {
+    convolve_horizontally_avx2(srcData, filter, outRow, hasAlpha);
+    return;
+  }
   if (mozilla::supports_sse2()) {
     convolve_horizontally_sse2(srcData, filter, outRow, hasAlpha);
     return;
@@ -393,8 +402,6 @@ class CircularRowBuffer {
 
 SkConvolutionFilter1D::SkConvolutionFilter1D() : fMaxFilter(0) {}
 
-SkConvolutionFilter1D::~SkConvolutionFilter1D() = default;
-
 bool SkConvolutionFilter1D::AddFilter(int filterOffset,
                                       const ConvolutionFixed* filterValues,
                                       int filterLength) {
@@ -490,8 +497,13 @@ bool SkConvolutionFilter1D::ComputeFilterValues(
     float srcPixel = (static_cast<float>(destI) + 0.5f) * invScale;
 
     // Compute the (inclusive) range of source pixels the filter covers.
-    float srcBegin = std::max(0.0f, floorf(srcPixel - srcSupport));
-    float srcEnd = std::min(float(aSrcSize - 1), ceilf(srcPixel + srcSupport));
+    // Clamp in the integer domain to avoid float rounding imprecision with
+    // values near int32 extremes.
+    int32_t srcBegin =
+        int32_t(std::clamp(int64_t(floorf(srcPixel - srcSupport)), int64_t(0),
+                           int64_t(aSrcSize) - 1));
+    int32_t srcEnd = int32_t(std::clamp(int64_t(ceilf(srcPixel + srcSupport)),
+                                        int64_t(0), int64_t(aSrcSize) - 1));
 
     // Compute the unnormalized filter value at each location of the source
     // it covers.
@@ -503,13 +515,14 @@ bool SkConvolutionFilter1D::ComputeFilterValues(
     // example used above the distance from the center of the filter to
     // the pixel with coordinates (2, 2) should be 0, because its center
     // is at (2.5, 2.5).
-    int32_t filterCount = int32_t(srcEnd - srcBegin) + 1;
+    int32_t filterCount = srcEnd - srcBegin + 1;
     if (filterCount <= 0 || !filterValues.resize(filterCount) ||
         !fixedFilterValues.resize(filterCount)) {
       return false;
     }
 
-    float destFilterDist = (srcBegin + 0.5f - srcPixel) * clampedScale;
+    float destFilterDist =
+        (static_cast<float>(srcBegin) + 0.5f - srcPixel) * clampedScale;
     float filterSum = 0.0f;
     for (int32_t index = 0; index < filterCount; index++) {
       float filterValue = aBitmapFilter.evaluate(destFilterDist);
@@ -536,7 +549,7 @@ bool SkConvolutionFilter1D::ComputeFilterValues(
     ConvolutionFixed leftovers = ToFixed(1) - fixedSum;
     fixedFilterValues[filterCount / 2] += leftovers;
 
-    if (!AddFilter(int32_t(srcBegin), fixedFilterValues.begin(), filterCount)) {
+    if (!AddFilter(srcBegin, fixedFilterValues.begin(), filterCount)) {
       fFilters.shrinkTo(oldFiltersLength);
       fFilterValues.shrinkTo(oldFilterValuesLength);
       fMaxFilter = oldMaxFilter;

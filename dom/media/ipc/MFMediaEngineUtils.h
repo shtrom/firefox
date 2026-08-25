@@ -29,11 +29,12 @@ using MFMediaEngineEvent = MF_MEDIA_ENGINE_EVENT;
 // https://docs.microsoft.com/en-us/windows/win32/api/mfmediaengine/ne-mfmediaengine-mf_media_engine_err
 using MFMediaEngineError = MF_MEDIA_ENGINE_ERR;
 
-#define LOG_AND_WARNING(msg, ...)                                \
-  do {                                                           \
-    NS_WARNING(nsPrintfCString(msg, rv).get());                  \
-    MOZ_LOG(gMFMediaEngineLog, LogLevel::Debug,                  \
-            ("%s:%d, " msg, __FILE__, __LINE__, ##__VA_ARGS__)); \
+#define LOG_AND_WARNING(msg, ...)                                          \
+  do {                                                                     \
+    nsPrintfCString _logStr(msg, ##__VA_ARGS__);                           \
+    NS_WARNING(_logStr.get());                                             \
+    MOZ_LOG_FMT(gMFMediaEngineLog, LogLevel::Debug, "{}:{}, {}", __FILE__, \
+                __LINE__, _logStr.get());                                  \
   } while (false)
 
 #ifndef LOG_IF_FAILED
@@ -89,8 +90,8 @@ using MFMediaEngineError = MF_MEDIA_ENGINE_ERR;
         if (FAILED(rv)) {                                                    \
           LOG_AND_WARNING(#class " failed to shutdown, rv=%lx", rv);         \
         } else {                                                             \
-          MOZ_LOG(gMFMediaEngineLog, LogLevel::Verbose,                      \
-                  ((#class " shutdowned successfully")));                    \
+          MOZ_LOG_FMT(gMFMediaEngineLog, LogLevel::Verbose,                  \
+                      #class " shutdowned successfully");                    \
         }                                                                    \
         pShutdown->Release();                                                \
       } else {                                                               \
@@ -131,6 +132,23 @@ inline constexpr HRESULT MSPR_E_NO_DECRYPTOR_AVAILABLE =
 #  ifndef MF_E_HARDWARE_DRM_UNSUPPORTED
 inline constexpr HRESULT MF_E_HARDWARE_DRM_UNSUPPORTED =
     static_cast<HRESULT>(0xC00D3706);
+#  endif
+
+// Media Foundation could not build the protected playback topology. One of the
+// two protected-activation errors Media Foundation surfaces with no advance
+// signal (the other is MF_E_INCOMPATIBLE_SAMPLE_PROTECTION). mferror.h defines
+// these as macros where the SDK ships them; guard against redefinition.
+#  ifndef MF_E_TOPO_UNSUPPORTED
+inline constexpr HRESULT MF_E_TOPO_UNSUPPORTED =
+    static_cast<HRESULT>(0xC00D5214);
+#  endif
+
+// Media Foundation could not establish compatible sample protection for the
+// protected topology. The second of the two protected-activation errors given
+// with no advance signal.
+#  ifndef MF_E_INCOMPATIBLE_SAMPLE_PROTECTION
+inline constexpr HRESULT MF_E_INCOMPATIBLE_SAMPLE_PROTECTION =
+    static_cast<HRESULT>(0xC00D7176);
 #  endif
 #endif
 

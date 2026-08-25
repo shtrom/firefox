@@ -297,23 +297,49 @@ projects:
     publish: true
     upstream_dependencies:
     - components:browser-errorpages
+    - components:browser-icons
+    - components:browser-menu
+    - components:browser-menu2
+    - components:browser-session-storage
     - components:browser-state
+    - components:browser-storage-sync
+    - components:browser-tabstray
+    - components:browser-thumbnails
+    - components:browser-toolbar
     - components:compose-base
     - components:concept-awesomebar
     - components:concept-base
     - components:concept-engine
     - components:concept-fetch
+    - components:concept-menu
     - components:concept-storage
     - components:concept-storage-bookmarks
+    - components:concept-sync
+    - components:concept-tabstray
+    - components:concept-toolbar
+    - components:feature-awesomebar
+    - components:feature-search
+    - components:feature-session
+    - components:feature-tabs
+    - components:feature-top-sites
     - components:lib-publicsuffixlist
     - components:lib-state
+    - components:service-location
+    - components:service-merino-manifest
+    - components:support-appservices
     - components:support-base
+    - components:support-images
     - components:support-ktx
+    - components:support-locale
+    - components:support-remotesettings
     - components:support-test
     - components:support-utils
     - components:tooling-lint
+    - components:ui-autocomplete
     - components:ui-colors
     - components:ui-icons
+    - components:ui-tabcounter
+    - components:ui-widgets
   components:compose-base:
     description: A component containing base Composable components based on Acorn
       Design System.
@@ -531,6 +557,27 @@ projects:
     - components:support-base
     - components:support-ktx
     - components:support-test
+    - components:support-utils
+    - components:tooling-lint
+  components:concept-passwords-file:
+    description: An abstract definition of a component for importing passwords from
+      a file.
+    path: components/concept/passwords-file
+    publish: true
+    upstream_dependencies:
+    - components:tooling-lint
+  components:concept-passwords-parser:
+    description: An abstract definition of a passwords-file-parser component.
+    path: components/concept/passwords-parser
+    publish: true
+    upstream_dependencies:
+    - components:concept-base
+    - components:concept-fetch
+    - components:concept-storage
+    - components:concept-storage-bookmarks
+    - components:lib-publicsuffixlist
+    - components:support-base
+    - components:support-ktx
     - components:support-utils
     - components:tooling-lint
   components:concept-push:
@@ -983,27 +1030,50 @@ projects:
     publish: true
     upstream_dependencies:
     - components:browser-errorpages
+    - components:browser-icons
+    - components:browser-menu
+    - components:browser-menu2
+    - components:browser-session-storage
     - components:browser-state
+    - components:browser-storage-sync
+    - components:browser-tabstray
+    - components:browser-thumbnails
+    - components:browser-toolbar
+    - components:compose-base
     - components:concept-awesomebar
     - components:concept-base
     - components:concept-engine
     - components:concept-fetch
+    - components:concept-menu
     - components:concept-storage
     - components:concept-storage-bookmarks
+    - components:concept-sync
+    - components:concept-tabstray
     - components:concept-toolbar
+    - components:feature-awesomebar
+    - components:feature-search
     - components:feature-session
+    - components:feature-tabs
+    - components:feature-top-sites
     - components:lib-publicsuffixlist
     - components:lib-state
+    - components:service-location
+    - components:service-merino-manifest
     - components:service-nimbus
     - components:support-appservices
     - components:support-base
+    - components:support-images
     - components:support-ktx
     - components:support-locale
     - components:support-remotesettings
     - components:support-test
     - components:support-utils
     - components:tooling-lint
+    - components:ui-autocomplete
+    - components:ui-colors
     - components:ui-icons
+    - components:ui-tabcounter
+    - components:ui-widgets
   components:feature-importer:
     description: A feature that handles importing bookmarks and passwords.
     path: components/feature/importer
@@ -1083,6 +1153,7 @@ projects:
     - components:concept-base
     - components:concept-engine
     - components:concept-fetch
+    - components:concept-integrity
     - components:concept-menu
     - components:concept-storage
     - components:concept-storage-bookmarks
@@ -1092,6 +1163,7 @@ projects:
     - components:feature-session
     - components:feature-tabs
     - components:lib-dataprotect
+    - components:lib-integrity-googleplay
     - components:lib-publicsuffixlist
     - components:lib-state
     - components:service-firefox-accounts
@@ -1099,6 +1171,7 @@ projects:
     - components:support-images
     - components:support-ktx
     - components:support-test
+    - components:support-test-libstate
     - components:support-utils
     - components:tooling-lint
     - components:ui-autocomplete
@@ -1162,12 +1235,31 @@ projects:
     - components:concept-storage-bookmarks
     - components:lib-publicsuffixlist
     - components:lib-state
+    - components:service-nimbus
     - components:support-base
     - components:support-ktx
+    - components:support-locale
     - components:support-test
     - components:support-test-libstate
     - components:support-utils
     - components:tooling-lint
+    - components:ui-icons
+  components:feature-password-importer:
+    description: A feature that handles importing passwords.
+    path: components/feature/password-importer
+    publish: true
+    upstream_dependencies:
+    - components:compose-base
+    - components:concept-base
+    - components:concept-fetch
+    - components:concept-passwords-file
+    - components:lib-publicsuffixlist
+    - components:lib-state
+    - components:support-base
+    - components:support-ktx
+    - components:support-utils
+    - components:tooling-lint
+    - components:ui-colors
     - components:ui-icons
   components:feature-privatemode:
     description: Features used to enhance private browsing mode.
@@ -1568,6 +1660,7 @@ projects:
     upstream_dependencies:
     - components:browser-errorpages
     - components:compose-base
+    - components:concept-accelerometer
     - components:concept-ai-controls
     - components:concept-base
     - components:concept-engine
@@ -1576,6 +1669,7 @@ projects:
     - components:concept-storage
     - components:concept-storage-bookmarks
     - components:lib-publicsuffixlist
+    - components:lib-shake
     - components:lib-state
     - components:support-base
     - components:support-ktx
@@ -2033,6 +2127,40 @@ projects:
     - components:support-utils
     - components:tooling-lint
     - components:ui-icons
+  components:lib-password-parser-csv:
+    description: A CSV implementation of concept-passwords-parser
+    path: components/lib/password-parser-csv
+    publish: true
+    upstream_dependencies:
+    - components:concept-base
+    - components:concept-fetch
+    - components:concept-passwords-parser
+    - components:concept-storage
+    - components:concept-storage-bookmarks
+    - components:lib-publicsuffixlist
+    - components:support-base
+    - components:support-ktx
+    - components:support-utils
+    - components:tooling-lint
+  components:lib-passwords-file:
+    description: A concrete implementation of concept-passwords-file that imports
+      passwords from CSV files.
+    path: components/lib/passwords-file
+    publish: true
+    upstream_dependencies:
+    - components:concept-base
+    - components:concept-fetch
+    - components:concept-passwords-file
+    - components:concept-passwords-parser
+    - components:concept-storage
+    - components:concept-storage-bookmarks
+    - components:lib-password-parser-csv
+    - components:lib-publicsuffixlist
+    - components:support-base
+    - components:support-ktx
+    - components:support-test
+    - components:support-utils
+    - components:tooling-lint
   components:lib-publicsuffixlist:
     description: A library for reading and using the public suffix list.
     path: components/lib/publicsuffixlist
@@ -2236,8 +2364,13 @@ projects:
     path: samples/crash
     publish: false
     upstream_dependencies:
+    - components:browser-errorpages
     - components:concept-base
+    - components:concept-engine
     - components:concept-fetch
+    - components:concept-storage
+    - components:concept-storage-bookmarks
+    - components:concept-toolbar
     - components:lib-crash
     - components:lib-fetch-httpurlconnection
     - components:lib-publicsuffixlist
@@ -2246,6 +2379,9 @@ projects:
     - components:support-ktx
     - components:support-utils
     - components:tooling-lint
+    - components:ui-colors
+    - components:ui-icons
+    - components:ui-widgets
   components:samples-dataprotect:
     description: An app demoing how to use the Dataprotect component to load and store
       encrypted data in SharedPreferences.
@@ -2265,11 +2401,14 @@ projects:
     path: samples/firefox-accounts
     publish: false
     upstream_dependencies:
+    - components:browser-errorpages
     - components:concept-base
+    - components:concept-engine
     - components:concept-fetch
     - components:concept-storage
     - components:concept-storage-bookmarks
     - components:concept-sync
+    - components:concept-toolbar
     - components:feature-qr
     - components:lib-dataprotect
     - components:lib-fetch-httpurlconnection
@@ -2281,18 +2420,23 @@ projects:
     - components:support-ktx
     - components:support-utils
     - components:tooling-lint
+    - components:ui-colors
     - components:ui-icons
+    - components:ui-widgets
   components:samples-firefox-relay:
     description: A simple app demoing Firefox Relay integration.
     path: samples/firefox-relay
     publish: false
     upstream_dependencies:
+    - components:browser-errorpages
     - components:compose-base
     - components:concept-base
+    - components:concept-engine
     - components:concept-fetch
     - components:concept-storage
     - components:concept-storage-bookmarks
     - components:concept-sync
+    - components:concept-toolbar
     - components:lib-dataprotect
     - components:lib-fetch-httpurlconnection
     - components:lib-publicsuffixlist
@@ -2306,6 +2450,7 @@ projects:
     - components:tooling-lint
     - components:ui-colors
     - components:ui-icons
+    - components:ui-widgets
   components:samples-glean:
     description: An app demoing how to use the Glean library to collect and send telemetry
       data.
@@ -2320,6 +2465,7 @@ projects:
     - components:concept-fetch
     - components:concept-storage
     - components:concept-storage-bookmarks
+    - components:concept-toolbar
     - components:lib-fetch-httpurlconnection
     - components:lib-publicsuffixlist
     - components:lib-state
@@ -2332,7 +2478,9 @@ projects:
     - components:support-locale
     - components:support-utils
     - components:tooling-lint
+    - components:ui-colors
     - components:ui-icons
+    - components:ui-widgets
   components:samples-glean-library:
     description: A third-party library used by samples-glean to demonstrate multi-library
       support for Glean.
@@ -2345,8 +2493,10 @@ projects:
     path: samples/sync
     publish: false
     upstream_dependencies:
+    - components:browser-errorpages
     - components:browser-storage-sync
     - components:concept-base
+    - components:concept-engine
     - components:concept-fetch
     - components:concept-storage
     - components:concept-storage-bookmarks
@@ -2364,16 +2514,22 @@ projects:
     - components:support-ktx
     - components:support-utils
     - components:tooling-lint
+    - components:ui-colors
+    - components:ui-icons
+    - components:ui-widgets
   components:samples-sync-logins:
     description: A simple app demoing Firefox Sync (Logins) integration.
     path: samples/sync-logins
     publish: false
     upstream_dependencies:
+    - components:browser-errorpages
     - components:concept-base
+    - components:concept-engine
     - components:concept-fetch
     - components:concept-storage
     - components:concept-storage-bookmarks
     - components:concept-sync
+    - components:concept-toolbar
     - components:lib-dataprotect
     - components:lib-fetch-httpurlconnection
     - components:lib-publicsuffixlist
@@ -2385,6 +2541,9 @@ projects:
     - components:support-ktx
     - components:support-utils
     - components:tooling-lint
+    - components:ui-colors
+    - components:ui-icons
+    - components:ui-widgets
   components:samples-toolbar:
     description: An app demoing multiple customized toolbars using the browser-toolbar
       component.
@@ -2539,6 +2698,16 @@ projects:
     - components:support-test
     - components:support-utils
     - components:tooling-lint
+  components:service-merino-weather:
+    description: A library for fetching weather forecasts from the Merino service.
+    path: components/service/merino-weather
+    publish: true
+    upstream_dependencies:
+    - components:concept-base
+    - components:concept-fetch
+    - components:support-base
+    - components:support-test
+    - components:tooling-lint
   components:service-nimbus:
     description: A client-side experiment SDK
     path: components/service/nimbus
@@ -2575,6 +2744,15 @@ projects:
     - components:support-ktx
     - components:support-test
     - components:support-utils
+    - components:tooling-lint
+  components:service-sync:
+    description: A library for integrating with the Firefox Sync service
+    path: components/service/sync
+    publish: true
+    upstream_dependencies:
+    - components:concept-base
+    - components:concept-fetch
+    - components:support-base
     - components:tooling-lint
   components:service-sync-autofill:
     description: A library for autofilling addresses and credit cards.
@@ -2823,6 +3001,12 @@ projects:
     path: components/tooling/lint
     publish: false
     upstream_dependencies: []
+  components:ui-animation:
+    description: A library for providing animations.
+    path: components/ui/animation
+    publish: true
+    upstream_dependencies:
+    - components:tooling-lint
   components:ui-autocomplete:
     description: A set of components to provide autocomplete functionality.
     path: components/ui/autocomplete

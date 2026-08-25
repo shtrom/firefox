@@ -127,9 +127,9 @@ class StaticAnalysisMonitor:
             filename = line.split(" ")[-1]
             if os.path.isfile(filename):
                 self._current = build_repo_relative_path(filename, self._srcdir)
+                self._processed = self._processed + 1
             else:
                 self._current = None
-            self._processed = self._processed + 1
             return (warning, False)
         if warning is not None:
 
@@ -860,6 +860,11 @@ def autotest(
                         f"\tChecker {checker_name} did not find any issues in its test file, "
                         f"clang-tidy output for the run is:\n{info1}"
                     )
+                elif checker_error == TOOLS_CHECKER_FAILED_FILE:
+                    message_to_log = (
+                        f"\tChecker {checker_name} failed to run on its test file, "
+                        f"clang-tidy output for the run is:\n{info1}"
+                    )
                 elif checker_error == TOOLS_CHECKER_RESULT_FILE_NOT_FOUND:
                     message_to_log = f"\tChecker {checker_name} does not have a result file - {checker_name}.json"
                 elif checker_error == TOOLS_CHECKER_DIFF_FAILED:
@@ -922,8 +927,10 @@ def _run_analysis(
             "utf-8"
         )
     except subprocess.CalledProcessError as e:
-        print(e.output)
-        return None
+        # Callers unpack the result, so this must stay a two-element tuple.
+        clang_output = e.output.decode("utf-8", errors="replace")
+        print(clang_output)
+        return None, clang_output
     return _parse_issues(command_context, clang_output), clang_output
 
 
@@ -943,12 +950,15 @@ def _run_analysis_batch(command_context, clang_paths, compilation_commands_path,
         )
         return TOOLS_CHECKER_LIST_EMPTY
 
+    # Some checks need header interaction
+    test_file_path_h = "|".join(checker + ".h" for checker in items)
+
     issues, clang_output = _run_analysis(
         command_context,
         clang_paths,
         compilation_commands_path,
         checks="-*," + ",".join(items),
-        header_filter="",
+        header_filter=test_file_path_h,
         sources={
             mozpath.join(clang_paths._clang_tidy_base_path, "test", checker)
             + ".cpp": None
@@ -1015,7 +1025,7 @@ def _create_temp_compilation_db(command_context):
             file = item + ".cpp"
             element = {}
             element["directory"] = director
-            element["command"] = "cpp -std=c++17 " + file
+            element["command"] = "cpp -std=c++20 " + file
             element["file"] = mozpath.join(director, file)
             compile_commands.append(element)
 
@@ -1172,15 +1182,21 @@ def _verify_checker(
         checkers_results.append(checker_error)
         return TOOLS_CHECKER_NO_TEST_FILE
 
+    # Some checks need header interaction
+    test_file_path_h = os.path.splitext(os.path.basename(test_file_path_cpp))[0] + ".h"
+
     issues, clang_output = _run_analysis(
         command_context,
         clang_paths,
         compilation_commands_path,
         checks="-*," + check,
-        header_filter="",
+        header_filter=test_file_path_h,
         sources={test_file_path_cpp: None},
     )
     if issues is None:
+        checker_error["checker-error"] = TOOLS_CHECKER_FAILED_FILE
+        checker_error["info1"] = clang_output
+        checkers_results.append(checker_error)
         return TOOLS_CHECKER_FAILED_FILE
 
     # Verify to see if we got any issues, if not raise exception

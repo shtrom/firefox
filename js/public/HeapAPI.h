@@ -407,6 +407,8 @@ const size_t MaxArenaCellIndex = ArenaSize / CellAlignBytes;
 
 const size_t ChunkStoreBufferOffset = offsetof(ChunkBase, storeBuffer);
 const size_t ChunkMarkBitmapOffset = offsetof(ArenaChunkBase, markBits);
+const size_t ChunkZoneOffset =
+    offsetof(ArenaChunkBase, info) + offsetof(ArenaChunkInfo, zone);
 
 // Hardcoded offsets into Arena class.
 const size_t ArenaHeaderSize = 2 * sizeof(uint32_t) + 1 * sizeof(uintptr_t) +
@@ -541,8 +543,8 @@ class JS_PUBLIC_API GCCellPtr {
     return asCell();
   }
 
-  bool operator==(const GCCellPtr other) const { return ptr == other.ptr; }
-  bool operator!=(const GCCellPtr other) const { return ptr != other.ptr; }
+  bool operator==(const GCCellPtr& other) const = default;
+  bool operator!=(const GCCellPtr& other) const = default;
 
   // Simplify checks to the kind.
   template <typename T, typename = std::enable_if_t<JS::IsBaseTraceType_v<T>>>
@@ -589,7 +591,17 @@ class JS_PUBLIC_API GCCellPtr {
     return JS::shadow::Symbol::isWellKnownSymbol(asCell());
   }
 
+  GCCellPtr atomicGet() const {
+    return GCCellPtr(__atomic_load_n(&ptr, __ATOMIC_RELAXED));
+  }
+
+  void atomicSet(const GCCellPtr& value) {
+    __atomic_store_n(&ptr, value.ptr, __ATOMIC_RELAXED);
+  }
+
  private:
+  explicit GCCellPtr(uintptr_t ptr) : ptr(ptr) {}
+
   static uintptr_t checkedCast(void* p, JS::TraceKind traceKind) {
     auto* cell = static_cast<js::gc::Cell*>(p);
     MOZ_ASSERT((uintptr_t(p) & OutOfLineTraceKindMask) == 0);
@@ -759,6 +771,15 @@ MOZ_ALWAYS_INLINE bool InCollectedNurseryRegion(const JSObject* obj) {
   return InCollectedNurseryRegion(reinterpret_cast<const Cell*>(obj));
 }
 
+// Helper function to convert GC cell types to the base Cell pointer as
+// consumers can't see the inheritance relationship externally.
+#define EXPAND_TO_CELL(_1, type, _2, _3)        \
+  MOZ_ALWAYS_INLINE Cell* ToCell(type* thing) { \
+    return reinterpret_cast<Cell*>(thing);      \
+  }
+JS_FOR_EACH_TRACEKIND(EXPAND_TO_CELL)
+#undef EXPAND_TO_CELL
+
 MOZ_ALWAYS_INLINE bool IsCellPointerValid(const void* ptr) {
   auto addr = uintptr_t(ptr);
   if (addr < ChunkSize || addr % CellAlignBytes != 0) {
@@ -819,10 +840,9 @@ static MOZ_ALWAYS_INLINE bool GCThingIsMarkedGray(GCCellPtr thing) {
   return js::gc::detail::CellIsMarkedGrayIfKnown(tenuredCell);
 }
 
-// Specialised gray marking check for use by the cycle collector. This is not
+// Specialised gray marking checks for use by the cycle collector. These are not
 // called during incremental GC or when the gray bits are invalid.
-static MOZ_ALWAYS_INLINE bool GCThingIsMarkedGrayInCC(GCCellPtr thing) {
-  js::gc::Cell* cell = thing.asCell();
+static MOZ_ALWAYS_INLINE bool GCThingIsMarkedGrayInCC(js::gc::Cell* cell) {
   if (IsInsideNursery(cell)) {
     return false;
   }
@@ -830,6 +850,9 @@ static MOZ_ALWAYS_INLINE bool GCThingIsMarkedGrayInCC(GCCellPtr thing) {
   auto* tenuredCell = reinterpret_cast<js::gc::TenuredCell*>(cell);
   MOZ_ASSERT(js::gc::detail::CanCheckGrayBits(tenuredCell));
   return js::gc::detail::TenuredCellIsMarkedGray(tenuredCell);
+}
+static MOZ_ALWAYS_INLINE bool GCThingIsMarkedGrayInCC(GCCellPtr thing) {
+  return GCThingIsMarkedGrayInCC(thing.asCell());
 }
 
 extern JS_PUBLIC_API JS::TraceKind GCThingTraceKind(void* thing);

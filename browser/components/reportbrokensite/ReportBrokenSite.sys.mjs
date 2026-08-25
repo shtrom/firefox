@@ -2,13 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
+
 const DEFAULT_NEW_REPORT_ENDPOINT = "https://webcompat.com/issues/new";
 const MINIMUM_DESCRIPTION_LENGTH = 10;
 
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
-  ClientEnvironment: "resource://normandy/lib/ClientEnvironment.sys.mjs",
   SafeBrowsing: "resource://gre/modules/SafeBrowsing.sys.mjs",
 });
 
@@ -18,7 +19,6 @@ export class ViewState {
   #detailsView;
   #previewView;
   #reportSentView;
-  #reasonOptions;
 
   #reportURL;
   currentTabURL;
@@ -43,10 +43,6 @@ export class ViewState {
       "report-broken-site-popup-reportSentView"
     );
     ViewState.#cache.set(doc, this);
-
-    this.#reasonOptions = Array.from(
-      this.#mainView.querySelectorAll(".reason-button")
-    );
   }
 
   static #cache = new WeakMap();
@@ -207,6 +203,12 @@ export class ViewState {
     const panelview = this.#doc.documentGlobal.PanelView.forNode(view);
     panelview.selectedElement = input;
     panelview.focusSelectedElement(true);
+    // Ignore the next mouse-move to prevent the focus from accidentally being
+    // cleared immediately when the user clicks on "Something else" (see bz2040437).
+    panelview.ignoreMouseMove = true;
+    input.addEventListener("blur", () => (panelview.ignoreMouseMove = false), {
+      once: true,
+    });
   }
 
   lastBlurredURLInputSelection;
@@ -287,46 +289,6 @@ export class ViewState {
     return this.#detailsView.querySelector(
       "#report-broken-site-details-description-error"
     );
-  }
-
-  randomizeReasonsOrdering() {
-    // As with QuickActionsLoaderDefault, we use the Normandy
-    // randomizationId as our PRNG seed to ensure that the same
-    // user should always get the same sequence.
-    const seed = [...lazy.ClientEnvironment.randomizationId]
-      .map(x => x.charCodeAt(0))
-      .reduce((sum, a) => sum + a, 0);
-
-    const items = [...this.#reasonOptions];
-    this.#shuffleArray(items, seed);
-    items[0].parentNode.append(...items);
-  }
-
-  #shuffleArray(array, seed) {
-    // We use SplitMix as it is reputed to have a strong distribution of values.
-    const prng = this.#getSplitMix32PRNG(seed);
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(prng() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-  }
-
-  // SplitMix32 is a splittable pseudorandom number generator (PRNG).
-  // License: MIT (https://github.com/attilabuti/SimplexNoise)
-  #getSplitMix32PRNG(a) {
-    return () => {
-      a |= 0;
-      a = (a + 0x9e3779b9) | 0;
-      var t = a ^ (a >>> 16);
-      t = Math.imul(t, 0x21f0aaad);
-      t = t ^ (t >>> 15);
-      t = Math.imul(t, 0x735a2d97);
-      return ((t = t ^ (t >>> 15)) >>> 0) / 4294967296;
-    };
-  }
-
-  restoreReasonsOrdering() {
-    this.#reasonOptions[0].parentNode.append(...this.#reasonOptions);
   }
 
   reset() {
@@ -445,9 +407,8 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
 
   static SCREENSHOTS_ENABLED_PREF =
     "ui.new-webcompat-reporter.screenshots.enabled";
-  static REASON_RANDOMIZED_PREF =
-    "ui.new-webcompat-reporter.reason-dropdown.randomized";
-  static SEND_MORE_INFO_PREF = "ui.new-webcompat-reporter.send-more-info-link";
+  static SHOW_SEND_MORE_INFO_PREF =
+    "ui.new-webcompat-reporter.show-send-more-info-link";
   static NEW_REPORT_ENDPOINT_PREF =
     "ui.new-webcompat-reporter.new-report-endpoint";
 
@@ -490,10 +451,9 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
   }
 
   #OBSERVED_PREFS = {
-    [ReportBrokenSite.REASON_RANDOMIZED_PREF]:
-      "onReasonRandomizationPrefChanged",
     [ReportBrokenSite.SCREENSHOTS_ENABLED_PREF]: "onScreenshotsPrefChanged",
-    [ReportBrokenSite.SEND_MORE_INFO_PREF]: "onSendMoreInfoPrefChanged",
+    [ReportBrokenSite.SHOW_SEND_MORE_INFO_PREF]:
+      "onShowSendMoreInfoPrefChanged",
   };
 
   constructor() {
@@ -532,20 +492,27 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     }
   }
 
-  onReasonRandomizationPrefChanged(prefValue, state) {
-    if (prefValue) {
-      state.randomizeReasonsOrdering();
-    } else {
-      state.restoreReasonsOrdering();
-    }
-  }
-
   onScreenshotsPrefChanged(prefValue, state) {
     state.screenshotsDisabled = !prefValue;
   }
 
-  onSendMoreInfoPrefChanged(prefValue, state) {
-    state.sendMoreInfoButton.toggleAttribute("hidden", !prefValue);
+  onShowSendMoreInfoPrefChanged(_, state) {
+    // This pref is unset by default. In that default state, we condition our
+    // behavior here based on release channel (technically update channel)
+    // to exempt release and ESR from seeing this UI.
+    let hidden;
+    if (
+      Services.prefs.prefHasUserValue(ReportBrokenSite.SHOW_SEND_MORE_INFO_PREF)
+    ) {
+      hidden = !Services.prefs.getBoolPref(
+        ReportBrokenSite.SHOW_SEND_MORE_INFO_PREF,
+        false
+      );
+    } else {
+      // enable the send-more-info link on pre-release builds.
+      hidden = ["release", "esr"].includes(AppConstants.MOZ_UPDATE_CHANNEL);
+    }
+    state.sendMoreInfoButton.hidden = hidden;
   }
 
   uninit(win) {
@@ -574,11 +541,12 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
       ReportBrokenSite.REGISTER_CUSTOM_ELEMENTS_SCRIPT,
       {
         target: window,
-        async: true,
       }
     );
     ReportBrokenSite.#hasCustomElements.add(window);
   }
+
+  #descriptionErrorTextPromise;
 
   init(win) {
     // Called in browser-init.js via the category manager registration
@@ -595,6 +563,18 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
       state.detailsViewDescriptionError,
       "report-broken-site-panel-invalid-description-label",
       { minLength: MINIMUM_DESCRIPTION_LENGTH }
+    );
+
+    // use Promise.resolve to avoid leaking document until shutdown
+    this.#descriptionErrorTextPromise ??= Promise.resolve(
+      document.l10n
+        .formatMessages([
+          {
+            id: "report-broken-site-panel-invalid-description-label",
+            args: { minLength: MINIMUM_DESCRIPTION_LENGTH },
+          },
+        ])
+        .then(result => result[0].value)
     );
 
     for (const id of ["menu_HelpPopup", "appMenu-popup"]) {
@@ -652,7 +632,7 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     });
 
     for (const input of state.urlInputs) {
-      input.addEventListener("input", e => this.#maybeDisableProgression(e));
+      input.addEventListener("input", e => this.#onURLEdited(e));
       input.addEventListener("reset", e => this.#onURLInputReset(e));
       input.addEventListener("change", e => this.#onURLInputChanged(e));
       input.addEventListener("blur", e => this.#saveURLInputSelectionRange(e));
@@ -706,21 +686,15 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     const cmd = document.getElementById("cmd_reportBrokenSite");
     const allowedByPolicy = Services.policies.isAllowed("feedbackCommands");
     cmd.toggleAttribute("hidden", !allowedByPolicy);
-    const app = document.documentGlobal.PanelMultiView.getViewNode(
-      document,
-      "appMenu-report-broken-site-button"
-    );
     // Note that this element does not exist until the protections popup is actually opened.
     const prot = document.getElementById(
       "protections-popup-report-broken-site-button"
     );
     if (canReportUrl) {
       cmd.removeAttribute("disabled");
-      app.removeAttribute("disabled");
       prot?.removeAttribute("disabled");
     } else {
       cmd.setAttribute("disabled", "true");
-      app.setAttribute("disabled", "true");
       prot?.setAttribute("disabled", "true");
     }
 
@@ -738,7 +712,9 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     const { target } = event;
     const state = ViewState.get(target.documentGlobal.document);
     const { descriptionTextArea, isDescriptionValid } = state;
-    descriptionTextArea.setCustomValidity(isDescriptionValid ? "" : "invalid");
+    this.#descriptionErrorTextPromise.then(errorText =>
+      descriptionTextArea.setCustomValidity(isDescriptionValid ? "" : errorText)
+    );
     state.updateProgressDisabledState();
     return isDescriptionValid;
   }
@@ -771,6 +747,13 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     }
   }
 
+  handleParentMenuButtonCommand(button) {
+    this.#onReportBrokenSiteHandler({
+      target: button,
+      sourceEvent: { target: button },
+    });
+  }
+
   #onURLInputReset(event) {
     event.preventDefault();
     const { document } = event.target.documentGlobal;
@@ -778,9 +761,9 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     state.url = state.currentTabURL;
   }
 
-  #maybeDisableProgression({ target }) {
+  #onURLEdited({ target }) {
     const state = ViewState.get(target.documentGlobal.document);
-    state.updateProgressDisabledState();
+    state.url = target.input.value;
   }
 
   #onURLInputChanged({ target, detail }) {
@@ -869,7 +852,11 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     this.#recordGleanEvent("send", {
       sent_with_blocked_trackers: state.shouldSendBlockedTrackers,
     });
-    await this.#sendReportAsGleanPing(state);
+
+    const { documentGlobal } = target;
+    const { gBrowser } = documentGlobal;
+    await this.#sendReportAsGleanPing(gBrowser.selectedBrowser, state);
+
     multiview.showSubView("report-broken-site-popup-reportSentView");
     state.reset();
   }
@@ -883,13 +870,11 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
 
   async #sendMoreInfoButtonHandler(event) {
     const { target } = event;
-    const state = ViewState.get(target.documentGlobal.document);
     event.preventDefault();
     const tabbrowser = target.documentGlobal.gBrowser;
     this.#recordGleanEvent("sendMoreInfo");
     event.target.documentGlobal.CustomizableUI.hidePanelForNode(target);
     await this.#openWebCompatTab(tabbrowser);
-    state.reset();
   }
 
   #previewButtonHandler(event) {
@@ -1029,7 +1014,7 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
       for (const [category, values] of Object.entries(brokenSiteReportData)) {
         previewData[category] = Object.fromEntries(
           Object.entries(values)
-            .filter(([_, { do_not_preview }]) => !do_not_preview)
+            .filter(([_, { doNotPreview }]) => !doNotPreview)
             .map(([name, value]) => [name, value])
         );
       }
@@ -1060,7 +1045,8 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
       details.appendChild(summary);
 
       const info = state.createElement("div");
-      info.className = "data";
+      // text-link so it gets focus, but without the weird behavior of data-captures-focus.
+      info.className = "data text-link";
       for (const [k, v] of Object.entries(values)) {
         if (k == "isTabSpecific") {
           details.classList.add("tab-specific-data");
@@ -1131,9 +1117,19 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
 
   async #openWebCompatTab(tabbrowser) {
     const { document } = tabbrowser.selectedBrowser.documentGlobal;
-    const { description, reason, url, currentTabWebcompatDetailsPromise } =
-      ViewState.get(document);
+    const {
+      description,
+      reason,
+      screenshotToggle,
+      url,
+      currentTabWebcompatDetailsPromise,
+      shouldSendBlockedTrackers,
+      wrongTabInfo,
+    } = ViewState.get(document);
     const webcompatInfo = await currentTabWebcompatDetailsPromise;
+    if (!screenshotToggle.pressed) {
+      webcompatInfo.tabInfo.screenshot.value = undefined;
+    }
 
     const endpointUrl =
       Services.prefs.getStringPref(
@@ -1154,6 +1150,8 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
           endpointUrl,
           reportUrl: url,
           reporterConfig: ReportBrokenSite.WEBCOMPAT_REPORTER_CONFIG,
+          sendTabSpecificInfo: !wrongTabInfo,
+          sendBlockedUrls: shouldSendBlockedTrackers,
           webcompatInfo,
         },
         tab.linkedBrowser
@@ -1166,56 +1164,29 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
       });
   }
 
-  async #sendReportAsGleanPing({
-    currentTabWebcompatDetailsPromise,
-    description,
-    reason,
-    shouldSendBlockedTrackers,
-    url,
-  }) {
-    const gBase = Glean.brokenSiteReport;
-
-    if (reason) {
-      gBase.breakageCategory.set(reason);
+  #sendReportAsGleanPing(
+    browser,
+    {
+      currentTabWebcompatDetailsPromise,
+      description,
+      reason,
+      shouldSendBlockedTrackers,
+      url,
+      wrongTabInfo,
     }
-
-    gBase.description.set(description);
-    gBase.url.set(url);
-
-    const details = await currentTabWebcompatDetailsPromise;
-
-    if (!details) {
-      GleanPings.brokenSiteReport.submit();
-      return;
-    }
-
-    if (!shouldSendBlockedTrackers) {
-      delete details.antitracking.blockedOrigins;
-    }
-
-    for (const categoryItems of Object.values(details)) {
-      for (let [name, { glean, json, value }] of Object.entries(
-        categoryItems
-      )) {
-        if (!glean) {
-          continue;
-        }
-        // Transform glean=xx.yy.zz to brokenSiteReportXxYyZz.
-        glean =
-          "brokenSiteReport" +
-          glean
-            .split(".")
-            .map(v => `${v[0].toUpperCase()}${v.substr(1)}`)
-            .join("");
-        if (json) {
-          name = `${name}Json`;
-          value = JSON.stringify(value);
-        }
-        Glean[glean][name].set(value);
-      }
-    }
-
-    GleanPings.brokenSiteReport.submit();
+  ) {
+    return currentTabWebcompatDetailsPromise
+      .catch(() => undefined)
+      .then(details => {
+        return this.#getActor(browser).sendBrokenSiteReport({
+          details,
+          description,
+          reason,
+          sendTabSpecificInfo: !wrongTabInfo,
+          sendBlockedUrls: shouldSendBlockedTrackers,
+          url,
+        });
+      });
   }
 
   open(event) {
@@ -1225,17 +1196,21 @@ export var ReportBrokenSite = new (class ReportBrokenSite {
     const { document } = documentGlobal;
 
     switch (target.id) {
-      case "appMenu-report-broken-site-button":
-        documentGlobal.PanelUI.showSubView(
-          ReportBrokenSite.MAIN_PANELVIEW_ID,
-          target
-        );
-        break;
       case "protections-popup-report-broken-site-button":
         document
           .getElementById("protections-popup-multiView")
           .showSubView(ReportBrokenSite.MAIN_PANELVIEW_ID);
         break;
+      // Open the "Report Broken Site" menu from the "Help and Report" subview.
+      case "appMenu_help_reportBrokenSite":
+        documentGlobal.PanelUI.showSubView(
+          ReportBrokenSite.MAIN_PANELVIEW_ID,
+          target
+        );
+        break;
+      // Open the "Report Broken Site" menu from the top menu bar (Help > Report
+      // Broken Site). This has to be directly anchored to the app menu button
+      // since it is not a subview of any other menu.
       case "help_reportBrokenSite": {
         // hide the hamburger menu first, as we overlap with it.
         const appMenuPopup = document.getElementById("appMenu-popup");

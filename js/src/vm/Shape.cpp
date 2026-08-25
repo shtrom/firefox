@@ -2,8 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "vm/Shape-inl.h"
-
+#include "gc/GC.h"
 #include "gc/HashUtil.h"
 #include "js/friend/WindowProxy.h"  // js::IsWindow
 #include "js/HashTable.h"
@@ -19,6 +18,7 @@
 #include "vm/JSContext-inl.h"
 #include "vm/JSObject-inl.h"
 #include "vm/NativeObject-inl.h"
+#include "vm/Shape-inl.h"
 
 using namespace js;
 
@@ -127,10 +127,16 @@ bool js::NativeObject::toDictionaryMode(JSContext* cx,
     return false;
   }
 
-  obj->setShape(shape);
-
-  MOZ_ASSERT(obj->inDictionaryMode());
   obj->setDictionaryModeSlotSpan(span);
+
+  // Ensure concurrent marking can't see the new shape without the dictionary
+  // mode slot span.
+  gc::MemoryReleaseFence(obj->zone());
+
+  gc::MaybeSleepForConcurrentMarkingDelays(cx);
+
+  obj->setShape(shape);
+  MOZ_ASSERT(obj->inDictionaryMode());
 
   return true;
 }

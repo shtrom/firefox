@@ -174,6 +174,9 @@ class CharacterRange {
   static void Intersect(const ZoneList<CharacterRange>* lhs,
                         const ZoneList<CharacterRange>* rhs,
                         ZoneList<CharacterRange>* dst, Zone* zone);
+  // Whether two character ranges in canonical form intersect.
+  static bool Intersects(const ZoneList<CharacterRange>* lhs,
+                         const ZoneList<CharacterRange>* rhs);
   // Subtract the contents of |to_remove| from the contents of |src|.
   static void Subtract(const ZoneList<CharacterRange>* src,
                        const ZoneList<CharacterRange>* to_remove,
@@ -298,8 +301,9 @@ class Assertion final : public Tree {
     START_OF_INPUT = 1,
     END_OF_LINE = 2,
     END_OF_INPUT = 3,
-    BOUNDARY = 4,
-    NON_BOUNDARY = 5,
+    END_OF_BUFFER = 4,
+    BOUNDARY = 5,
+    NON_BOUNDARY = 6,
     LAST_ASSERTION_TYPE = NON_BOUNDARY,
   };
   explicit Assertion(Type type) : assertion_type_(type) {}

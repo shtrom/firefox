@@ -96,8 +96,8 @@ void nsLineBox::StealHashTableFrom(nsLineBox* aFromLine,
   MOZ_ASSERT(!mFlags.mHasHashedFrames);
   MOZ_ASSERT(GetChildCount() >= int32_t(aFromLineNewCount));
   mFrames = aFromLine->mFrames;
-  mFlags.mHasHashedFrames = 1;
-  aFromLine->mFlags.mHasHashedFrames = 0;
+  mFlags.mHasHashedFrames = true;
+  aFromLine->mFlags.mHasHashedFrames = false;
   aFromLine->mChildCount = aFromLineNewCount;
   // remove aFromLine's frames that aren't on this line
   nsIFrame* f = aFromLine->mFirstChild;
@@ -121,7 +121,7 @@ void nsLineBox::NoteFramesMovedFrom(nsLineBox* aFromLine) {
       StealHashTableFrom(aFromLine, fromNewCount);
     } else {
       delete aFromLine->mFrames;
-      aFromLine->mFlags.mHasHashedFrames = 0;
+      aFromLine->mFlags.mHasHashedFrames = false;
       aFromLine->mChildCount = fromNewCount;
     }
   } else {
@@ -213,13 +213,15 @@ void nsLineBox::List(FILE* out, const char* aPrefix,
   str += "line";
   nsIFrame::ListPtr(str, aFlags, this, "@");
   str += nsPrintfCString(
-      " count=%d state=%s,%s,%s,%s,%s,%s,clear-before:%s,clear-after:%s ",
+      " count=%d state=%s,%s,%s,%s,%s,%s,%s,%s,clear-before:%s,clear-after:%s ",
       GetChildCount(), IsBlock() ? "block" : "inline",
       IsDirty() ? "dirty" : "clean",
       IsPreviousMarginDirty() ? "prevmargindirty" : "prevmarginclean",
       IsImpactedByFloat() ? "impacted" : "not-impacted",
       IsLineWrapped() ? "wrapped" : "not-wrapped",
       HasForcedLineBreakAfter() ? "forced-break-after" : "no-break",
+      TextBoxTrimStartApplied() ? "trim-start" : "no-trim-start",
+      TextBoxTrimEndApplied() ? "trim-end" : "no-trim-end",
       UsedClearToString(FloatClearTypeBefore()),
       UsedClearToString(FloatClearTypeAfter()));
 

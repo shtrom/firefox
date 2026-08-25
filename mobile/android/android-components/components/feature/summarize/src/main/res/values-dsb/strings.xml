@@ -75,6 +75,16 @@
   <string name="mozac_summarize_settings_shake_to_summarize">Tśěsćo, aby zespominał</string>
   <!-- Description for the shake to summarize toggle in settings -->
   <string name="mozac_summarize_settings_shake_to_summarize_description">Tśěsćo swój rěd wót boka do boka, aby boku zespominał.</string>
+  <!-- Label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity">Cuśiwosć tśěsenja</string>
+  <!-- Description for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_description">Pśiměŕśo, kak mócnje musyśo tśěsć, aby zespominanje wuwabił.</string>
+  <!-- Low option label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_low">Niska</string>
+  <!-- Medium option label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_medium">Srjejźna</string>
+  <!-- High option label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_high">Wusoka</string>
   <!-- Message for summary by model, %1$s is the name of the model that is being displayed -->
   <string name="mozac_feature_summarize_summary_model">Zespominanje pó %1$s</string>
   <!-- Disclaimer message -->
@@ -85,4 +95,10 @@
   <string name="mozac_ai_controls_page_summary_description">Boki a zespominanja se nigda njeskładuju.</string>
   <!-- Button text for the Error dismiss button on Shake to Summarize -->
   <string name="mozac_summarize_error_dissmiss">Zachyśiś</string>
+  <!-- Title for the Mozilla account sign-in screen, shown when summarization results in a connection failure. -->
+  <string name="mozac_summarize_fxa_sign_in_title">Pśizjawśo se, aby zespominał</string>
+  <!-- Message on the sign-in screen, inviting the user to continue with an existing Mozilla account or create a new one -->
+  <string xmlns:ns0="http://schemas.android.com/tools" name="mozac_summarize_fxa_sign_in_message" ns0:ignore="BrandUsage">Wužywajśo swójo konto Mozilla, aby pókšacował abo załožćo druge, aby zachopił.</string>
+  <!-- Label for the button that starts the sign-in flow -->
+  <string name="mozac_summarize_fxa_sign_in_button_positive">Pśizjawiś</string>
 </resources>

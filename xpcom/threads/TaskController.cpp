@@ -3,27 +3,29 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "TaskController.h"
-#include "IdleTaskRunner.h"
-#include "nsIIdleRunnable.h"
-#include "nsIRunnable.h"
-#include "nsThreadUtils.h"
+
 #include <algorithm>
+
 #include "GeckoProfiler.h"
+#include "IdleTaskRunner.h"
 #include "mozilla/AppShutdown.h"
 #include "mozilla/BackgroundHangMonitor.h"
 #include "mozilla/EventQueue.h"
+#include "mozilla/FlowMarkers.h"
 #include "mozilla/Hal.h"
-#include "mozilla/InputTaskManager.h"
-#include "mozilla/VsyncTaskManager.h"
 #include "mozilla/IOInterposer.h"
+#include "mozilla/InputTaskManager.h"
 #include "mozilla/Perfetto.h"
-#include "mozilla/StaticPtr.h"
 #include "mozilla/SchedulerGroup.h"
 #include "mozilla/ScopeExit.h"
-#include "mozilla/FlowMarkers.h"
 #include "mozilla/StaticPrefs_memory.h"
+#include "mozilla/StaticPtr.h"
+#include "mozilla/VsyncTaskManager.h"
+#include "nsIIdleRunnable.h"
+#include "nsIRunnable.h"
 #include "nsIThreadInternal.h"
 #include "nsThread.h"
+#include "nsThreadUtils.h"
 #include "prenv.h"
 #include "prsystem.h"
 
@@ -494,7 +496,7 @@ void TaskController::RunPoolThread(PoolThread* aThread) {
   IOInterposer::UnregisterCurrentThread();
 }
 
-void TaskController::AddTask(already_AddRefed<Task>&& aTask) {
+void TaskController::AddTask(already_AddRefed<Task> aTask) {
   RefPtr<Task> task(aTask);
 
   if (task->GetKind() == Task::Kind::OffMainThreadOnly) {
@@ -711,7 +713,7 @@ void TaskController::ReprioritizeTask(Task* aTask, uint32_t aPriority) {
 // Task that wraps a runnable.
 class RunnableTask : public Task {
  public:
-  RunnableTask(already_AddRefed<nsIRunnable>&& aRunnable, int32_t aPriority,
+  RunnableTask(already_AddRefed<nsIRunnable> aRunnable, int32_t aPriority,
                Kind aKind)
       : Task(aKind, aPriority), mRunnable(aRunnable) {}
 
@@ -748,11 +750,11 @@ class RunnableTask : public Task {
   RefPtr<nsIRunnable> mRunnable;
 };
 
-void TaskController::DispatchRunnable(already_AddRefed<nsIRunnable>&& aRunnable,
+void TaskController::DispatchRunnable(already_AddRefed<nsIRunnable> aRunnable,
                                       uint32_t aPriority,
                                       TaskManager* aManager) {
-  RefPtr<RunnableTask> task = new RunnableTask(std::move(aRunnable), aPriority,
-                                               Task::Kind::MainThreadOnly);
+  RefPtr task = MakeRefPtr<RunnableTask>(std::move(aRunnable), aPriority,
+                                         Task::Kind::MainThreadOnly);
 
   task->SetManager(aManager);
   TaskController::Get()->AddTask(task.forget());
@@ -949,7 +951,7 @@ void ScheduleIdleMemoryCleanup(uint32_t aWantsLaterDelay) {
         return RunIdleMemoryCleanup(aDeadline, aWantsLaterDelay);
       },
       "TaskController::IdlePurgeRunner"_ns, TimeDuration(), maxPurgeDelay,
-      minPurgeBudget, true, nullptr, nullptr);
+      minPurgeBudget, true, [] { return AppShutdown::IsShutdownImpending(); });
 }
 }  // namespace mozilla
 

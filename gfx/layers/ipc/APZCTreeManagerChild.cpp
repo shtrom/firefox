@@ -4,12 +4,12 @@
 
 #include "mozilla/layers/APZCTreeManagerChild.h"
 
-#include "InputData.h"                              // for InputData
-#include "mozilla/dom/BrowserParent.h"              // for BrowserParent
-#include "mozilla/layers/APZCCallbackHelper.h"      // for APZCCallbackHelper
-#include "mozilla/layers/APZInputBridgeChild.h"     // for APZInputBridgeChild
+#include "InputData.h"                           // for InputData
+#include "mozilla/dom/BrowserParent.h"           // for BrowserParent
+#include "mozilla/layers/APZCCallbackHelper.h"   // for APZCCallbackHelper
+#include "mozilla/layers/APZInputBridgeChild.h"  // for APZInputBridgeChild
+#include "mozilla/layers/DoubleTapToZoom.h"      // for DoubleTapToZoomMetrics
 #include "mozilla/layers/GeckoContentController.h"  // for GeckoContentController
-#include "mozilla/layers/DoubleTapToZoom.h"  // for DoubleTapToZoomMetrics
 #include "mozilla/layers/RemoteCompositorSession.h"  // for RemoteCompositorSession
 #ifdef MOZ_WIDGET_ANDROID
 #  include "mozilla/jni/Utils.h"  // for DispatchToGeckoPriorityQueue
@@ -120,6 +120,14 @@ void APZCTreeManagerChild::StopAutoscroll(const ScrollableLayerGuid& aGuid) {
 void APZCTreeManagerChild::SetLongTapEnabled(bool aTapGestureEnabled) {
   MOZ_ASSERT(NS_IsMainThread());
   SendSetLongTapEnabled(aTapGestureEnabled);
+}
+
+void APZCTreeManagerChild::NotifyApzAwareListenerAdded(
+    const ScrollableLayerGuid& aGuid) {
+  MOZ_ASSERT(NS_IsMainThread());
+  if (CanSend()) {
+    SendNotifyApzAwareListenerAdded(aGuid);
+  }
 }
 
 APZInputBridge* APZCTreeManagerChild::InputBridge() {

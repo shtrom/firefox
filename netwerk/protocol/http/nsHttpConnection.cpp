@@ -15,9 +15,9 @@
 #include "NSSErrorsService.h"
 #include "TLSTransportLayer.h"
 #include "mozilla/ChaosMode.h"
+#include "mozilla/StaticPrefs_network.h"
 #include "mozilla/glean/NetwerkMetrics.h"
 #include "mozilla/glean/NetwerkProtocolHttpMetrics.h"
-#include "mozilla/StaticPrefs_network.h"
 #include "mozpkix/pkixnss.h"
 #include "nsCRT.h"
 #include "nsHttpConnection.h"
@@ -420,6 +420,18 @@ void nsHttpConnection::StartSpdy(nsITLSSocketControl* sslControl,
   }
 }
 
+void nsHttpConnection::OnClientAuthCertificateRequested() {
+  if (mTransaction) {
+    mTransaction->OnClientAuthCertificateRequested();
+  }
+}
+
+void nsHttpConnection::OnClientAuthCertificateSelected() {
+  if (mTransaction) {
+    mTransaction->OnClientAuthCertificateSelected();
+  }
+}
+
 void nsHttpConnection::PostProcessNPNSetup(bool handshakeSucceeded,
                                            bool hasSecurityInfo,
                                            bool earlyDataUsed) {
@@ -495,6 +507,17 @@ void nsHttpConnection::PostProcessNPNSetup(bool handshakeSucceeded,
               ("nsHttpConnection::PostProcessNPNSetup [this=%p] captured "
                "TLS handshake error rv=%" PRIx32 " (PRErrorCode=%d)",
                this, static_cast<uint32_t>(mHandshakeError), prErrorCode));
+          if (prErrorCode == SSL_ERROR_ECH_RETRY_WITH_ECH) {
+            if (NS_FAILED(tlsCtrl->GetRetryEchConfig(mRetryEchConfig))) {
+              mRetryEchConfig.Truncate();
+            }
+            LOG(
+                ("nsHttpConnection::PostProcessNPNSetup [this=%p] cached "
+                 "retry ECH config len=%zu",
+                 this, mRetryEchConfig.Length()));
+          } else if (prErrorCode == SSL_ERROR_ECH_RETRY_WITHOUT_ECH) {
+            mRetryEchConfig.Truncate();
+          }
         }
       }
     }
@@ -642,7 +665,12 @@ nsresult nsHttpConnection::Activate(nsAHttpTransaction* trans, uint32_t caps,
 
   // need to handle HTTP CONNECT tunnels if this is the first time if
   // we are tunneling through a proxy
-  nsresult rv = CheckTunnelIsNeeded(mTransaction);
+  nsresult rv = NS_OK;
+  // If this is an extended connection then we have already performed the proxy
+  // connect and don't need to do it a second time.
+  if (!mExtendedCONNECTHttp2Session) {
+    rv = CheckTunnelIsNeeded(mTransaction);
+  }
   if (NS_FAILED(rv)) goto failed_activation;
 
   // Clear the per activation counter
@@ -713,8 +741,9 @@ nsresult nsHttpConnection::AddTransaction(nsAHttpTransaction* httpTransaction,
 
   // Let the transaction know that the tunnel is already established and we
   // don't need to setup the tunnel again.
-  if (transCI->UsingConnect() && mEverUsedSpdy && mHasTLSTransportLayer) {
-    httpTransaction->OnProxyConnectComplete(200);
+  if (transCI->UsingConnect()) {
+    MOZ_ASSERT(mProxyConnectResponseHead);
+    httpTransaction->OnProxyConnectComplete(mProxyConnectResponseHead);
   }
 
   LOG(("nsHttpConnection::AddTransaction [this=%p] for %s%s", this,
@@ -960,6 +989,14 @@ bool nsHttpConnection::CanDirectlyActivate() {
          mSpdySession->RoomForMoreStreams();
 }
 
+const char* nsHttpConnection::CanDirectlyActivateReason() const {
+  if (mUsingSpdyVersion == SpdyVersion::NONE) return "not-h2";
+  if (mDontReuse) return "dont-reuse";
+  if (!mSpdySession) return "no-spdy-session";
+  if (!mSpdySession->RoomForMoreStreams()) return "streams-full";
+  return "ok";
+}
+
 PRIntervalTime nsHttpConnection::IdleTime() {
   return mSpdySession ? mSpdySession->IdleTime()
                       : (PR_IntervalNow() - mLastReadTime);
@@ -1110,17 +1147,7 @@ nsresult nsHttpConnection::OnHeadersAvailable(nsAHttpTransaction* trans,
 
   switch (mState) {
     case HttpConnectionState::SETTING_UP_TUNNEL: {
-      nsHttpTransaction* trans = mTransaction->QueryHttpTransaction();
-      // Distinguish SETTING_UP_TUNNEL for proxy or websocket via proxy
-      // See bug 1848013. Do not call HandleTunnelResponse for a tunnel
-      // connection created for WebSocket.
-      if (trans && trans->IsWebsocketUpgrade() &&
-          (trans->GetProxyConnectResponseCode() == 200 ||
-           (mForWebSocket && mInSpdyTunnel))) {
-        HandleWebSocketResponse(requestHead, responseHead, responseStatus);
-      } else {
-        HandleTunnelResponse(responseStatus, reset);
-      }
+      HandleTunnelResponse(*responseHead, reset);
       break;
     }
     default:
@@ -1137,8 +1164,8 @@ nsresult nsHttpConnection::OnHeadersAvailable(nsAHttpTransaction* trans,
   return NS_OK;
 }
 
-void nsHttpConnection::HandleTunnelResponse(uint16_t responseStatus,
-                                            bool* reset) {
+void nsHttpConnection::HandleTunnelResponse(
+    const nsHttpResponseHead& responseHead, bool* reset) {
   LOG(("nsHttpConnection::HandleTunnelResponse()"));
   MOZ_ASSERT(TunnelSetupInProgress());
   MOZ_ASSERT(mProxyConnectStream);
@@ -1149,7 +1176,9 @@ void nsHttpConnection::HandleTunnelResponse(uint16_t responseStatus,
   // the socket connection if using SSL. Finally, we have to wake up the
   // socket write request.
 
-  if (responseStatus == 200) {
+  mProxyConnectResponseHead =
+      MakeRefPtr<ProxyConnectResponseHead>(responseHead);
+  if (responseHead.Status() == 200) {
     ChangeState(HttpConnectionState::REQUEST);
   }
   mProxyConnectStream = nullptr;
@@ -1157,8 +1186,8 @@ void nsHttpConnection::HandleTunnelResponse(uint16_t responseStatus,
                               : mConnInfo->EndToEndSSL();
   bool onlyConnect = mTransactionCaps & NS_HTTP_CONNECT_ONLY;
 
-  mTransaction->OnProxyConnectComplete(responseStatus);
-  if (responseStatus == 200) {
+  mTransaction->OnProxyConnectComplete(mProxyConnectResponseHead);
+  if (responseHead.Status() == 200) {
     LOG(("proxy CONNECT succeeded! endtoendssl=%d onlyconnect=%d\n", isHttps,
          onlyConnect));
     // If we're only connecting, we don't need to reset the transaction
@@ -2027,7 +2056,7 @@ void nsHttpConnection::SetInTunnel() {
 // static
 nsresult nsHttpConnection::MakeConnectString(nsAHttpTransaction* trans,
                                              nsHttpRequestHead* request,
-                                             nsACString& result, bool h2ws,
+                                             nsACString& result,
                                              bool aShouldResistFingerprinting) {
   result.Truncate();
   if (!trans->ConnectionInfo()) {
@@ -2044,33 +2073,7 @@ nsresult nsHttpConnection::MakeConnectString(nsAHttpTransaction* trans,
   // CONNECT host:port HTTP/1.1
   request->SetMethod("CONNECT"_ns);
   request->SetVersion(gHttpHandler->HttpVersion());
-  if (h2ws) {
-    // HTTP/2 websocket CONNECT forms need the full request URI
-    nsAutoCString requestURI;
-    trans->RequestHead()->RequestURI(requestURI);
-    request->SetRequestURI(requestURI);
-
-    request->SetHTTPS(trans->RequestHead()->IsHTTPS());
-
-    nsAutoCString val;
-    if (NS_SUCCEEDED(trans->RequestHead()->GetHeader(
-            nsHttp::Sec_WebSocket_Extensions, val))) {
-      rv = request->SetHeader(nsHttp::Sec_WebSocket_Extensions, val);
-      MOZ_ASSERT(NS_SUCCEEDED(rv));
-    }
-    if (NS_SUCCEEDED(trans->RequestHead()->GetHeader(
-            nsHttp::Sec_WebSocket_Protocol, val))) {
-      rv = request->SetHeader(nsHttp::Sec_WebSocket_Protocol, val);
-      MOZ_ASSERT(NS_SUCCEEDED(rv));
-    }
-    if (NS_SUCCEEDED(trans->RequestHead()->GetHeader(
-            nsHttp::Sec_WebSocket_Version, val))) {
-      rv = request->SetHeader(nsHttp::Sec_WebSocket_Version, val);
-      MOZ_ASSERT(NS_SUCCEEDED(rv));
-    }
-  } else {
-    request->SetRequestURI(result);
-  }
+  request->SetRequestURI(result);
   rv = request->SetHeader(nsHttp::User_Agent,
                           gHttpHandler->UserAgent(aShouldResistFingerprinting));
   MOZ_ASSERT(NS_SUCCEEDED(rv));
@@ -2108,8 +2111,8 @@ nsresult nsHttpConnection::MakeConnectString(nsAHttpTransaction* trans,
   request->Flatten(result, false);
 
   if (LOG1_ENABLED()) {
-    LOG(("nsHttpConnection::MakeConnectString for transaction=%p h2ws=%d[",
-         trans->QueryHttpTransaction(), h2ws));
+    LOG(("nsHttpConnection::MakeConnectString for transaction=%p[",
+         trans->QueryHttpTransaction()));
     LogHeaders(PromiseFlatCString(result).get());
     LOG(("]"));
   }
@@ -2715,7 +2718,6 @@ nsresult nsHttpConnection::SetupProxyConnectStream() {
   nsAutoCString buf;
   nsHttpRequestHead request;
   nsresult rv = MakeConnectString(mTransaction, &request, buf,
-                                  mForWebSocket && mInSpdyTunnel,
                                   mTransactionCaps & NS_HTTP_USE_RFP);
   if (NS_FAILED(rv)) {
     return rv;

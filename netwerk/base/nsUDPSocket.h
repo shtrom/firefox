@@ -5,13 +5,14 @@
 #ifndef nsUDPSocket_h_
 #define nsUDPSocket_h_
 
-#include "nsIUDPSocket.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/Mutex.h"
 #include "mozilla/net/DNS.h"
-#include "nsIOutputStream.h"
 #include "nsASocketHandler.h"
 #include "nsCycleCollectionParticipant.h"
+#include "nsIOutputStream.h"
+#include "nsIUDPSocket.h"
+#include "nsSocketTransportService2.h"
 
 //-----------------------------------------------------------------------------
 
@@ -72,7 +73,6 @@ class nsUDPSocket final : public nsASocketHandler, public nsIUDPSocket {
   Mutex mLock{"nsUDPSocket.mLock"};
   PRFileDesc* mFD{nullptr};
   NetAddr mAddr;
-  OriginAttributes mOriginAttributes;
   nsCOMPtr<nsIUDPSocketListener> mListener MOZ_GUARDED_BY(mLock);
   nsCOMPtr<nsIUDPSocketSyncListener> mSyncListener;
   nsCOMPtr<nsIEventTarget> mListenerTarget MOZ_GUARDED_BY(mLock);

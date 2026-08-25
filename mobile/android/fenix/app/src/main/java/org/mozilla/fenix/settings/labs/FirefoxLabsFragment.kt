@@ -16,17 +16,17 @@ import androidx.navigation.fragment.findNavController
 import mozilla.components.lib.state.helpers.StoreProvider.Companion.fragmentStore
 import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
 import org.mozilla.fenix.ext.hideToolbar
-import org.mozilla.fenix.ext.settings
+import org.mozilla.fenix.ext.requireComponents
 import org.mozilla.fenix.settings.SupportUtils
 import org.mozilla.fenix.settings.labs.middleware.LabsMiddleware
+import org.mozilla.fenix.settings.labs.middleware.LabsTelemetryMiddleware
+import org.mozilla.fenix.settings.labs.store.LabsAction
 import org.mozilla.fenix.settings.labs.store.LabsState
 import org.mozilla.fenix.settings.labs.store.LabsStore
 import org.mozilla.fenix.settings.labs.ui.FirefoxLabsScreen
 import org.mozilla.fenix.theme.FirefoxTheme
 
-/**
- * Fragment for displaying the Firefox Labs screen.
- */
+/** Fragment for displaying the Firefox Labs screen. */
 class FirefoxLabsFragment : Fragment(), SystemInsetsPaddedFragment {
 
     override fun onResume() {
@@ -34,19 +34,24 @@ class FirefoxLabsFragment : Fragment(), SystemInsetsPaddedFragment {
         hideToolbar()
     }
 
-    private val labsStore by fragmentStore(
-        initialState = LabsState.INITIAL,
-    ) {
-        LabsStore(
-            initialState = it,
-            middleware = listOf(
-                LabsMiddleware(
-                    settings = requireContext().settings(),
-                    onRestart = ::restartFenix,
-                ),
-            ),
-        )
-    }
+    private val labsStore by
+        fragmentStore(initialState = LabsState.INITIAL) {
+            LabsStore(
+                initialState = it,
+                middleware =
+                    listOf(
+                        LabsMiddleware(
+                            context = requireContext().applicationContext,
+                            settings = requireComponents.settings,
+                            nimbusSdk = requireComponents.nimbus.sdk,
+                            onRestart = ::restartFenix,
+                            onOpenFeedback = ::openFeedbackLink,
+                            crashReporter = requireComponents.analytics.crashReporter,
+                        ),
+                        LabsTelemetryMiddleware(),
+                    ),
+            )
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,9 +64,23 @@ class FirefoxLabsFragment : Fragment(), SystemInsetsPaddedFragment {
                 onNavigationIconClick = {
                     findNavController().popBackStack()
                 },
-                onShareFeedbackClick = ::openFeedbackLink,
+                onShareFeedbackClick = { item ->
+                    labsStore.dispatch(LabsAction.ShareFeedbackClicked(item))
+                },
             )
         }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        // Observe Nimbus so the screen reflects enrollment changes Nimbus makes mid-session, such as
+        // an unenroll forced by a failed Gecko pref update.
+        viewLifecycleOwner.lifecycle.addObserver(
+            LabsRefreshFeature(
+                store = labsStore,
+                nimbusApi = requireComponents.nimbus.sdk,
+            )
+        )
     }
 
     private fun openFeedbackLink(url: String) {
@@ -75,8 +94,8 @@ class FirefoxLabsFragment : Fragment(), SystemInsetsPaddedFragment {
         val context = activity?.applicationContext
         context?.startActivity(
             Intent.makeRestartActivityTask(
-                context.packageManager.getLaunchIntentForPackage(context.packageName)?.component,
-            ),
+                context.packageManager.getLaunchIntentForPackage(context.packageName)?.component
+            )
         )
         // Kill the existing process to ensure we get a clean start of the application
         Process.killProcess(Process.myPid())

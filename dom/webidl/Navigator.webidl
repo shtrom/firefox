@@ -355,6 +355,13 @@ partial interface Navigator {
   readonly attribute MediaSession mediaSession;
 };
 
+// https://w3c.github.io/audio-session/
+[Exposed=Window]
+partial interface Navigator {
+  [Pref="dom.audio_session.enabled", SameObject]
+  readonly attribute AudioSession audioSession;
+};
+
 // https://w3c.github.io/web-locks/#navigator-mixins
 [SecureContext]
 interface mixin NavigatorLocks {
@@ -396,12 +403,6 @@ partial interface Navigator {
 partial interface Navigator {
   [SameObject, Pref="dom.screenwakelock.enabled"]
   readonly attribute WakeLock wakeLock;
-};
-
-[SecureContext]
-partial interface Navigator {
-  [SameObject, Trial="PrivateAttributionV2"]
-  readonly attribute PrivateAttribution privateAttribution;
 };
 
 // https://w3c-fedid.github.io/login-status/#login-status-javascript

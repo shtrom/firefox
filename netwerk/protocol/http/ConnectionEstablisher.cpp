@@ -3,17 +3,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // HttpLog.h should generally be included first
-#include "HttpLog.h"
-
 #include "ConnectionEstablisher.h"
+
 #include "HappyEyeballsConnectionAttempt.h"
+#include "HttpConnectionUDP.h"
+#include "HttpLog.h"
 #include "mozilla/Components.h"
-#include "nsSocketTransportService2.h"
 #include "nsHttpConnectionMgr.h"
 #include "nsHttpHandler.h"
-#include "nsIDNSRecord.h"
 #include "nsHttpTransaction.h"
-#include "HttpConnectionUDP.h"
+#include "nsIDNSRecord.h"
+#include "nsSocketTransportService2.h"
 
 // Log on level :5, instead of default :4.
 #undef LOG
@@ -152,6 +152,15 @@ SingleDNSAddrRecord::GetLastUpdate(mozilla::TimeStamp* aLastUpdate) {
 }
 
 NS_IMETHODIMP
+SingleDNSAddrRecord::GetFromStaleCache(bool* aResult) {
+  // Happy Eyeballs reads staleness directly off the resolved DNS record to feed
+  // the state machine; the per-address record it hands to the connection does
+  // not carry it, and nothing downstream reads it.
+  *aResult = false;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 SingleDNSAddrRecord::GetNextAddr(uint16_t aPort, NetAddr* aAddr) {
   if (mDone) {
     return NS_ERROR_NOT_AVAILABLE;
@@ -172,8 +181,19 @@ SingleDNSAddrRecord::GetNextAddr(uint16_t aPort, NetAddr* aAddr) {
 
 NS_IMETHODIMP
 SingleDNSAddrRecord::GetAddresses(nsTArray<NetAddr>& aAddressArray) {
-  MOZ_ASSERT_UNREACHABLE("unexpected to be called");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  // Match a regular DNS address record, which stores port-less addresses (the
+  // port is applied later via GetNextAddr). Connection coalescing compares the
+  // stored addresses against a connection's peer address with the port zeroed
+  // (see FindCoalescableConnection), so a non-zero port here would prevent the
+  // match.
+  NetAddr addr = mAddress;
+  if (addr.raw.family == AF_INET) {
+    addr.inet.port = 0;
+  } else if (addr.raw.family == AF_INET6) {
+    addr.inet6.port = 0;
+  }
+  aAddressArray.AppendElement(addr);
+  return NS_OK;
 }
 
 // -------------------- ConnectionEstablisher --------------------
@@ -183,8 +203,8 @@ NS_IMPL_ISUPPORTS(ConnectionEstablisher, nsITransportEventSink,
 
 ConnectionEstablisher::ConnectionEstablisher(nsHttpConnectionInfo* aConnInfo,
                                              const NetAddr& aAddr,
-                                             uint32_t aCaps)
-    : mConnInfo(aConnInfo), mAddr(aAddr), mCaps(aCaps) {
+                                             uint32_t aCaps, bool aAllow1918)
+    : mConnInfo(aConnInfo), mAddr(aAddr), mCaps(aCaps), mAllow1918(aAllow1918) {
   LOG(("ConnectionEstablisher ctor:%p", this));
 }
 
@@ -275,7 +295,6 @@ void ConnectionEstablisher::FinishInternal(nsresult aResult) {
   MaybeSetConnectingDone();
   mTransportStatusCallback = nullptr;
   mLnaCheckCallback = nullptr;
-  mAddrRecord = nullptr;
 
   if (mTransaction) {
     // Detach the connected-callback so later Close/cleanup on the
@@ -324,6 +343,13 @@ void ConnectionEstablisher::FinishInternal(nsresult aResult) {
       cb(Err(NS_FAILED(aResult) ? aResult : NS_ERROR_ABORT));
     }
   }
+
+  mAddrRecord = nullptr;
+}
+
+already_AddRefed<nsIDNSAddrRecord> ConnectionEstablisher::AddrRecord() const {
+  nsCOMPtr<nsIDNSAddrRecord> record = mAddrRecord;
+  return record.forget();
 }
 
 NS_IMETHODIMP
@@ -358,9 +384,8 @@ NS_IMPL_ISUPPORTS_INHERITED(TCPConnectionEstablisher, ConnectionEstablisher,
 TCPConnectionEstablisher::TCPConnectionEstablisher(
     nsHttpConnectionInfo* aConnInfo, NetAddr aAddr, uint32_t aCaps,
     bool aSpeculative, bool aAllow1918)
-    : ConnectionEstablisher(aConnInfo, aAddr, aCaps),
-      mSpeculative(aSpeculative),
-      mAllow1918(aAllow1918) {}
+    : ConnectionEstablisher(aConnInfo, aAddr, aCaps, aAllow1918),
+      mSpeculative(aSpeculative) {}
 
 TCPConnectionEstablisher::~TCPConnectionEstablisher() {
   // mSocketTransport / mStreamOut / mStreamIn must be released on the
@@ -375,8 +400,23 @@ TCPConnectionEstablisher::~TCPConnectionEstablisher() {
   }
 }
 
+bool ConnectionEstablisher::RefuseIfLocalAddress() {
+  if (mAllow1918 || !mAddr.IsIPAddrLocal()) {
+    return false;
+  }
+  LOG(
+      ("ConnectionEstablisher::RefuseIfLocalAddress %p refusing speculative "
+       "connection to local address [%s]",
+       this, mAddr.ToString().get()));
+  mRefusedForLocalAddress = true;
+  return true;
+}
+
 bool TCPConnectionEstablisher::Start(DoneCallback&& aCallback) {
   mCallback = std::move(aCallback);
+  if (RefuseIfLocalAddress()) {
+    return false;
+  }
   mAddrRecord = new SingleDNSAddrRecord(mAddr, mDnsMetadata);
 
   nsresult rv = CreateAndConfigureSocketTransport();
@@ -529,8 +569,6 @@ nsresult TCPConnectionEstablisher::CreateAndConfigureSocketTransport() {
     tmpFlags |= nsISocketTransport::NO_PERMANENT_STORAGE;
   }
 
-  (void)socketTransport->SetIsPrivate(mConnInfo->GetPrivate());
-
   if (mCaps & NS_HTTP_DISALLOW_ECH) {
     tmpFlags |= nsISocketTransport::DONT_TRY_ECH;
   }
@@ -663,8 +701,9 @@ TCPConnectionEstablisher::OnOutputStreamReady(nsIAsyncOutputStream* aOut) {
 // -------------------- UDPConnectionEstablisher --------------------
 
 UDPConnectionEstablisher::UDPConnectionEstablisher(
-    nsHttpConnectionInfo* aConnInfo, NetAddr aAddr, uint32_t aCaps)
-    : ConnectionEstablisher(aConnInfo, aAddr, aCaps) {
+    nsHttpConnectionInfo* aConnInfo, NetAddr aAddr, uint32_t aCaps,
+    bool /* aSpeculative */, bool aAllow1918)
+    : ConnectionEstablisher(aConnInfo, aAddr, aCaps, aAllow1918) {
   LOG(("UDPConnectionEstablisher ctor:%p", this));
 }
 
@@ -675,6 +714,9 @@ UDPConnectionEstablisher::~UDPConnectionEstablisher() {
 bool UDPConnectionEstablisher::Start(DoneCallback&& aCallback) {
   LOG(("UDPConnectionEstablisher::Start %p", this));
   mCallback = std::move(aCallback);
+  if (RefuseIfLocalAddress()) {
+    return false;
+  }
   mAddrRecord = new SingleDNSAddrRecord(mAddr, mDnsMetadata);
 
   nsresult rv = CreateAndConfigureUDPConn();

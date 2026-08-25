@@ -5,6 +5,7 @@
 
 #include "gc/LightLock.h"
 
+#include "mozilla/Atomics.h"
 #include "mozilla/TimeStamp.h"
 
 #include <thread>
@@ -17,17 +18,7 @@
 
 using namespace js;
 
-#ifdef DEBUG
-// Only one LightLock may be held by a thread at any time to prevent deadlock.
-MOZ_THREAD_LOCAL(bool) js::TlsLightLockHeld;
-#endif
-
-js::LightLockRuntime::LightLockRuntime() : mutex(mutexid::GCLightLock) {
-#ifdef DEBUG
-  TlsLightLockHeld.infallibleInit();
-  TlsLightLockHeld.set(false);
-#endif
-}
+js::LightLockRuntime::LightLockRuntime() : mutex(mutexid::GCLightLock) {}
 
 /* static */
 LightLockRuntime* js::LightLockRuntime::from(JSRuntime* runtime) {
@@ -124,23 +115,10 @@ bool js::LightLock::spin(uint32_t& counter) {
   counter++;
 
   if (counter <= 3) {
-    pause();
+    mozilla::cpu_pause();
   } else {
     std::this_thread::yield();
   }
 
   return true;
-}
-
-/* static */
-void js::LightLock::pause() {
-#if defined(_MSC_VER)
-  YieldProcessor();
-#elif defined(__x86_64__) || defined(__i386__)
-  __asm__ __volatile__("pause");
-#elif defined(__aarch64__) || defined(__arm__)
-  __asm__ __volatile__("yield");
-#else
-  __asm__ __volatile__("" ::: "memory");
-#endif
 }

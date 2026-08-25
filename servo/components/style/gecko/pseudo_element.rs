@@ -11,7 +11,7 @@
 use crate::gecko_bindings::structs::PseudoStyleType;
 use crate::properties::longhands::display::computed_value::T as Display;
 use crate::properties::{ComputedValues, PropertyFlags};
-use crate::selector_parser::{PseudoElementCascadeType, SelectorImpl};
+use crate::selector_parser::PseudoElementCascadeType;
 use crate::str::{starts_with_ignore_ascii_case, string_as_ascii_lowercase};
 use crate::string_cache::Atom;
 use crate::values::serialize_atom_identifier;
@@ -216,8 +216,6 @@ impl ToCss for PtNameAndClassSelector {
 }
 
 impl PseudoElementTrait for PseudoElement {
-    type Impl = SelectorImpl;
-
     // ::slotted() should support all tree-abiding pseudo-elements, see
     // https://drafts.csswg.org/css-scoping/#slotted-pseudo
     // https://drafts.csswg.org/css-pseudo-4/#treelike
@@ -458,23 +456,38 @@ impl PseudoElement {
             .intersects(PseudoStyleTypeFlags::SUPPORTS_USER_ACTION_STATE)
     }
 
-    /// Returns true if the given pseudo-element should be treated as disabled for
-    /// the document represented by `url_data`, based on its `disabled_domains_pref`
-    /// toml setting.
-    fn is_pseudo_disabled_for_url(&self, url_data: &crate::stylesheets::UrlExtraData) -> bool {
-        let Some(list) = self.disabled_domains() else {
-            return false;
+    /// Returns true if the given pseudo-element is enabled for the document
+    /// represented by `url_data`, according to its `enabled_domains_pref` toml
+    /// setting. A pseudo-element without such a pref is enabled everywhere, an
+    /// empty list is enabled nowhere, and `*` is enabled everywhere.
+    fn is_pseudo_enabled_for_url(&self, url_data: &crate::stylesheets::UrlExtraData) -> bool {
+        let Some(list) = self.enabled_domains() else {
+            return true;
         };
-        if list.is_empty() {
-            return false;
+        if list == "*" {
+            return true;
         }
         unsafe { crate::gecko_bindings::bindings::Gecko_IsURIInList(url_data.ptr(), &*list) }
     }
 
     /// Whether this pseudo-element is enabled for all content.
-    pub fn enabled_in_content(&self, url_data: &crate::stylesheets::UrlExtraData) -> bool {
-        Self::type_enabled_in_content(self.pseudo_type())
-            && !self.is_pseudo_disabled_for_url(url_data)
+    pub fn enabled_in_content(
+        &self,
+        url_data: &crate::stylesheets::UrlExtraData,
+        for_supports_rule: bool,
+    ) -> bool {
+        if !Self::type_enabled_in_content(self.pseudo_type()) {
+            return false;
+        }
+        if !self.is_pseudo_enabled_for_url(url_data) {
+            return false;
+        }
+        if for_supports_rule && matches!(*self, Self::WebkitScrollbar) {
+            // ::-webkit-scrollbar remains false in @supports even when we "support" it, like
+            // other unknown webkit pseudo-elements.
+            return false;
+        }
+        true
     }
 
     /// Whether this pseudo is enabled explicitly in UA sheets.
@@ -554,7 +567,7 @@ impl PseudoElement {
                 Token::Ident(name) if is_css2_pseudo_element(&name) => name,
                 _ => return Err(input.new_custom_error(StyleParseErrorKind::UnspecifiedError)),
             };
-            return PseudoElement::from_slice(&name, false).ok_or(location.new_custom_error(
+            return PseudoElement::from_slice(&name).ok_or(location.new_custom_error(
                 SelectorParseErrorKind::UnsupportedPseudoClassOrElement(name.clone()),
             ));
         }
@@ -563,7 +576,7 @@ impl PseudoElement {
         match input.next_including_whitespace()?.clone() {
             Token::Ident(name) => {
                 // We don't need to parse unknown ::-webkit-* pseudo-elements in this function.
-                PseudoElement::from_slice(&name, false).ok_or(input.new_custom_error(
+                PseudoElement::from_slice(&name).ok_or(input.new_custom_error(
                     SelectorParseErrorKind::UnsupportedPseudoClassOrElement(name),
                 ))
             },

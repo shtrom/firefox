@@ -15,6 +15,12 @@
 
 namespace mozilla::dom {
 
+// Canonical UUID for the Bluetooth Serial Port Profile, used as the default
+// bluetoothServiceClassId for Bluetooth serial ports when a more specific
+// service class ID is not available from the platform.
+inline constexpr char16_t kBluetoothSerialPortProfileUUID[] =
+    u"00001101-0000-1000-8000-00805f9b34fb";
+
 class Promise;
 class SerialManagerChild;
 class SerialPort;
@@ -49,7 +55,8 @@ class Serial final : public DOMEventTargetHelper, public SupportsWeakPtr {
 
   already_AddRefed<Promise> SimulateDeviceConnection(
       const nsAString& aDeviceId, const nsAString& aDevicePath,
-      uint16_t aVendorId, uint16_t aProductId, ErrorResult& aRv);
+      uint16_t aVendorId, uint16_t aProductId,
+      const nsAString& aBluetoothServiceClassId, ErrorResult& aRv);
 
   already_AddRefed<Promise> SimulateDeviceDisconnection(
       const nsAString& aDeviceId, ErrorResult& aRv);
@@ -72,8 +79,6 @@ class Serial final : public DOMEventTargetHelper, public SupportsWeakPtr {
   bool GetAutoselectPorts(ErrorResult& aRv) const;
   void SetAutoselectPorts(bool aAutoselect, ErrorResult& aRv);
 
-  bool AutoselectPorts() const { return mAutoselectPorts; }
-
   static bool IsValidBluetoothUUID(const nsAString& aString);
 
   // Returns whether the filter validated successfully. If this function
@@ -85,10 +90,6 @@ class Serial final : public DOMEventTargetHelper, public SupportsWeakPtr {
 
  private:
   ~Serial() override;
-
-  // Returns the manager child if the testing preference is enabled, otherwise
-  // sets a NotSupportedError on aRv and returns nullptr.
-  SerialManagerChild* GetManagerChildForTesting(ErrorResult& aRv);
 
   // The single list of granted SerialPort objects for this context.
   nsTArray<RefPtr<SerialPort>> mPorts;

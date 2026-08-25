@@ -13,10 +13,8 @@
 #include "frontend/IteratorKind.h"               // IteratorKind
 #include "frontend/SelfHostedIter.h"             // SelfHostedIter
 #include "frontend/TryEmitter.h"                 // TryEmitter
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
-#  include "frontend/UsingEmitter.h"  // ForOfDisposalEmitter
-#endif
-#include "vm/CompletionKind.h"  // CompletionKind
+#include "frontend/UsingEmitter.h"               // ForOfDisposalEmitter
+#include "vm/CompletionKind.h"                   // CompletionKind
 
 namespace js {
 namespace frontend {
@@ -61,27 +59,19 @@ class ForOfLoopControl : public LoopControl {
   //   }
   mozilla::Maybe<TryEmitter> tryCatch_;
 
-  // Used to track if any yields were emitted between calls to to
-  // emitBeginCodeNeedingIteratorClose and emitEndCodeNeedingIteratorClose.
-  uint32_t numYieldsAtBeginCodeNeedingIterClose_;
-
   SelfHostedIter selfHostedIter_;
 
   IteratorKind iterKind_;
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
   mozilla::Maybe<ForOfDisposalEmitter> forOfDisposalEmitter_;
-#endif
 
  public:
   ForOfLoopControl(BytecodeEmitter* bce, int32_t iterDepth,
                    SelfHostedIter selfHostedIter, IteratorKind iterKind);
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
   [[nodiscard]] bool prepareForForOfLoopIteration(
       BytecodeEmitter* bce, const EmitterScope* headLexicalEmitterScope,
       bool hasAwaitUsing);
-#endif
 
   [[nodiscard]] bool emitBeginCodeNeedingIteratorClose(BytecodeEmitter* bce);
   [[nodiscard]] bool emitEndCodeNeedingIteratorClose(BytecodeEmitter* bce);

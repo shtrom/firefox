@@ -30,6 +30,7 @@ internal fun Shortcuts(
     interactor: TopSiteInteractor,
     topSiteColors: TopSiteColors = TopSiteColors.colors(),
     showAddShortcut: Boolean = false,
+    onAddShortcutClicked: () -> Unit,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = TOP_SITES_ITEM_SIZE.dp),
@@ -41,14 +42,15 @@ internal fun Shortcuts(
             item {
                 TopSiteItem(
                     topSite = topSite,
-                    menuItems = getMenuItems(
-                        topSite = topSite,
-                        onOpenInPrivateTabClicked = interactor::onOpenInPrivateTabClicked,
-                        onEditTopSiteClicked = interactor::onEditTopSiteClicked,
-                        onRemoveTopSiteClicked = interactor::onRemoveTopSiteClicked,
-                        onSettingsClicked = interactor::onSettingsClicked,
-                        onSponsorPrivacyClicked = interactor::onSponsorPrivacyClicked,
-                    ),
+                    menuItems =
+                        getMenuItems(
+                            topSite = topSite,
+                            onOpenInPrivateTabClicked = interactor::onOpenInPrivateTabClicked,
+                            onEditTopSiteClicked = interactor::onEditTopSiteClicked,
+                            onRemoveTopSiteClicked = interactor::onRemoveTopSiteClicked,
+                            onSettingsClicked = interactor::onSettingsClicked,
+                            onSponsorPrivacyClicked = interactor::onSponsorPrivacyClicked,
+                        ),
                     position = position,
                     topSiteColors = topSiteColors,
                     onTopSiteClick = { topSite ->
@@ -68,7 +70,7 @@ internal fun Shortcuts(
             item {
                 AddShortcutItem(
                     topSiteColors = topSiteColors,
-                    onClick = {},
+                    onClick = onAddShortcutClicked,
                 )
             }
         }
@@ -77,15 +79,14 @@ internal fun Shortcuts(
 
 @Composable
 @FlexibleWindowLightDarkPreview
-private fun ShortcutsPreview(
-    @PreviewParameter(ShortcutsPreviewParameterProvider::class) showAddShortcut: Boolean,
-) {
+private fun ShortcutsPreview(@PreviewParameter(ShortcutsPreviewParameterProvider::class) showAddShortcut: Boolean) {
     FirefoxTheme {
         Surface {
             Shortcuts(
                 topSites = FakeHomepagePreview.topSites(),
                 interactor = FakeHomepagePreview.topSitesInteractor,
                 showAddShortcut = showAddShortcut,
+                onAddShortcutClicked = {},
             )
         }
     }

@@ -16,7 +16,6 @@ import androidx.test.espresso.intent.rule.IntentsTestRule
 import androidx.test.rule.ActivityTestRule
 import mozilla.components.feature.sitepermissions.SitePermissionsRules
 import mozilla.components.support.base.log.logger.Logger
-import org.junit.rules.TestRule
 import org.mozilla.fenix.HomeActivity
 import org.mozilla.fenix.components.initializeGlean
 import org.mozilla.fenix.ext.components
@@ -32,13 +31,14 @@ import org.mozilla.fenix.settings.PhoneFeature
  *
  * @param initialTouchMode See [ActivityTestRule]
  * @param launchActivity See [ActivityTestRule]
+ * @param skipOnboarding Whether onboarding is skipped before the activity launches.
  */
-
 class HomeActivityTestRule(
     initialTouchMode: Boolean = false,
     launchActivity: Boolean = true,
-    private val skipOnboarding: Boolean = false,
-) : ActivityTestRule<HomeActivity>(HomeActivity::class.java, initialTouchMode, launchActivity),
+    private val skipOnboarding: Boolean = true,
+) :
+    ActivityTestRule<HomeActivity>(HomeActivity::class.java, initialTouchMode, launchActivity),
     FeatureSettingsHelper by FeatureSettingsHelperDelegate() {
 
     // Using a secondary constructor allows us to easily delegate the settings to FeatureSettingsHelperDelegate.
@@ -47,55 +47,58 @@ class HomeActivityTestRule(
     constructor(
         initialTouchMode: Boolean = false,
         launchActivity: Boolean = true,
-        skipOnboarding: Boolean = false,
+        skipOnboarding: Boolean = true,
         isPocketEnabled: Boolean = settings.showPocketRecommendationsFeature,
         isRecentTabsFeatureEnabled: Boolean = settings.showRecentTabsFeature,
         isRecentlyVisitedFeatureEnabled: Boolean = settings.historyMetadataUIFeature,
-        isPWAsPromptEnabled: Boolean = !settings.userKnowsAboutPwas,
         isWallpaperOnboardingEnabled: Boolean = settings.showWallpaperOnboarding,
         isDeleteSitePermissionsEnabled: Boolean = settings.deleteSitePermissions,
         isOpenInAppBannerEnabled: Boolean = settings.shouldShowOpenInAppBanner,
-        isUnifiedTrustPanelEnabled: Boolean = false,
         etpPolicy: ETPPolicy = getETPPolicy(settings),
-        isLocationPermissionEnabled: SitePermissionsRules.Action = getFeaturePermission(PhoneFeature.LOCATION, settings),
-        isMenuRedesignCFREnabled: Boolean = false,
+        isLocationPermissionEnabled: SitePermissionsRules.Action =
+            getFeaturePermission(PhoneFeature.LOCATION, settings),
         isPageLoadTranslationsPromptEnabled: Boolean = false,
         isMicrosurveyEnabled: Boolean = settings.microsurveyFeatureEnabled,
         shouldUseBottomToolbar: Boolean = settings.shouldUseBottomToolbar,
-        isUseNewCrashReporterFlow: Boolean = false,
+        isIPProtectionEnabled: Boolean = false,
         isTabSwipeCFREnabled: Boolean = false,
         isTermsOfServiceAccepted: Boolean = true,
         openLinksInExternalApp: OpenLinksInApp = getOpenLinksInApp(settings),
         hasSeenShakeToSummarizeToolbarCfr: Boolean = true,
+        shakeToSummarizeFeatureFlagEnabled: Boolean = settings.shakeToSummarizeFeatureFlagEnabled,
         isPrivateModeAndStoriesEntryPointEnabled: Boolean = false,
         shouldUseExpandedToolbar: Boolean = false,
+        isTabStripEnabled: Boolean = false,
+        nativeShareSheetEnabled: Boolean = false,
+        showVoiceSearchInDisplayToolbar: Boolean = false,
+        isHomepageTrendingRecentSearchEnabled: Boolean = false,
     ) : this(initialTouchMode, launchActivity, skipOnboarding) {
         this.isPocketEnabled = isPocketEnabled
         this.isRecentTabsFeatureEnabled = isRecentTabsFeatureEnabled
         this.isRecentlyVisitedFeatureEnabled = isRecentlyVisitedFeatureEnabled
-        this.isPWAsPromptEnabled = isPWAsPromptEnabled
         this.isWallpaperOnboardingEnabled = isWallpaperOnboardingEnabled
         this.isDeleteSitePermissionsEnabled = isDeleteSitePermissionsEnabled
         this.isOpenInAppBannerEnabled = isOpenInAppBannerEnabled
-        this.isUnifiedTrustPanelEnabled = isUnifiedTrustPanelEnabled
         this.etpPolicy = etpPolicy
         this.isLocationPermissionEnabled = isLocationPermissionEnabled
-        this.isMenuRedesignCFREnabled = isMenuRedesignCFREnabled
         this.enableOrDisablePageLoadTranslationsPrompt(isPageLoadTranslationsPromptEnabled)
         this.isMicrosurveyEnabled = isMicrosurveyEnabled
         this.shouldUseBottomToolbar = shouldUseBottomToolbar
-        this.isUseNewCrashReporterFlow = isUseNewCrashReporterFlow
+        this.enableOrDisableIPProtection(isIPProtectionEnabled)
         this.isTabSwipeCFREnabled = isTabSwipeCFREnabled
         this.isTermsOfServiceAccepted = isTermsOfServiceAccepted
         this.openLinksInExternalApp = openLinksInExternalApp
         this.hasSeenShakeToSummarizeToolbarCfr = hasSeenShakeToSummarizeToolbarCfr
+        this.shakeToSummarizeFeatureFlagEnabled = shakeToSummarizeFeatureFlagEnabled
         this.isPrivateModeAndStoriesEntryPointEnabled = isPrivateModeAndStoriesEntryPointEnabled
         this.shouldUseExpandedToolbar = shouldUseExpandedToolbar
+        this.isTabStripEnabled = isTabStripEnabled
+        this.nativeShareSheetEnabled = nativeShareSheetEnabled
+        this.showVoiceSearchInDisplayToolbar = showVoiceSearchInDisplayToolbar
+        this.isHomepageTrendingRecentSearchEnabled = isHomepageTrendingRecentSearchEnabled
     }
 
-    /**
-     * Update settings after the activity was created.
-     */
+    /** Update settings after the activity was created. */
     fun applySettingsExceptions(settings: (FeatureSettingsHelper) -> Unit) {
         Log.i(TAG, "applySettingsExceptions: Trying to update the settings after the activity was created")
         FeatureSettingsHelperDelegate().also {
@@ -113,7 +116,9 @@ class HomeActivityTestRule(
         Log.i(TAG, "beforeActivityLaunched: Trying to apply the feature flags updates")
         applyFlagUpdates()
         Log.i(TAG, "beforeActivityLaunched: Successfully applied the feature flag updates")
-        if (skipOnboarding) { skipOnboardingBeforeLaunch() }
+        if (skipOnboarding) {
+            skipOnboardingBeforeLaunch()
+        }
     }
 
     override fun afterActivityFinished() {
@@ -126,52 +131,54 @@ class HomeActivityTestRule(
 
     companion object {
         /**
-         * Create a new instance of [HomeActivityTestRule] which by default will disable specific
-         * app features that would otherwise negatively impact most tests.
+         * Create a new instance of [HomeActivityTestRule] which by default will disable specific app features that
+         * would otherwise negatively impact most tests.
          *
          * The disabled features are:
-         *  - the PWA prompt dialog,
-         *  - the wallpaper onboarding.
+         * - the PWA prompt dialog,
+         * - the wallpaper onboarding.
          */
         fun withDefaultSettingsOverrides(
             initialTouchMode: Boolean = false,
             launchActivity: Boolean = true,
-            skipOnboarding: Boolean = false,
-            useNewCrashReporterFlow: Boolean = false,
-        ) = HomeActivityTestRule(
-            initialTouchMode = initialTouchMode,
-            launchActivity = launchActivity,
-            skipOnboarding = skipOnboarding,
-            isPWAsPromptEnabled = false,
-            isWallpaperOnboardingEnabled = false,
-            isOpenInAppBannerEnabled = false,
-            isMicrosurveyEnabled = false,
-            // workaround for toolbar at top position by default
-            // remove with https://bugzilla.mozilla.org/show_bug.cgi?id=1917640
-            shouldUseBottomToolbar = true,
-            isPageLoadTranslationsPromptEnabled = false,
-            isUseNewCrashReporterFlow = useNewCrashReporterFlow,
-            isTabSwipeCFREnabled = true,
-            hasSeenShakeToSummarizeToolbarCfr = true,
-            isTermsOfServiceAccepted = true,
-            isPrivateModeAndStoriesEntryPointEnabled = false,
-        )
+            skipOnboarding: Boolean = true,
+        ) =
+            HomeActivityTestRule(
+                initialTouchMode = initialTouchMode,
+                launchActivity = launchActivity,
+                skipOnboarding = skipOnboarding,
+                isWallpaperOnboardingEnabled = false,
+                isOpenInAppBannerEnabled = false,
+                isMicrosurveyEnabled = false,
+                // workaround for toolbar at top position by default
+                // remove with https://bugzilla.mozilla.org/show_bug.cgi?id=1917640
+                shouldUseBottomToolbar = true,
+                isPageLoadTranslationsPromptEnabled = false,
+                isIPProtectionEnabled = false,
+                isTabSwipeCFREnabled = true,
+                hasSeenShakeToSummarizeToolbarCfr = true,
+                isTermsOfServiceAccepted = true,
+                isPrivateModeAndStoriesEntryPointEnabled = false,
+                isTabStripEnabled = false,
+            )
     }
 }
 
 /**
- * A [org.junit.Rule] to handle shared test set up for tests on [HomeActivity]. This adds
- * functionality for using the Espresso-intents api, and extends from ActivityTestRule.
+ * A [org.junit.Rule] to handle shared test set up for tests on [HomeActivity]. This adds functionality for using the
+ * Espresso-intents api, and extends from ActivityTestRule.
  *
  * @param initialTouchMode See [IntentsTestRule]
  * @param launchActivity See [IntentsTestRule]
+ * @param skipOnboarding Whether onboarding is skipped before the activity launches.
  */
-
-class HomeActivityIntentTestRule internal constructor(
+class HomeActivityIntentTestRule
+internal constructor(
     initialTouchMode: Boolean = false,
     launchActivity: Boolean = true,
-    private val skipOnboarding: Boolean = false,
-) : IntentsTestRule<HomeActivity>(HomeActivity::class.java, initialTouchMode, launchActivity),
+    private val skipOnboarding: Boolean = true,
+) :
+    IntentsTestRule<HomeActivity>(HomeActivity::class.java, initialTouchMode, launchActivity),
     FeatureSettingsHelper by FeatureSettingsHelperDelegate() {
     // Using a secondary constructor allows us to easily delegate the settings to FeatureSettingsHelperDelegate.
     // Otherwise if wanting to use the same names we would have to override these settings in the primary
@@ -179,62 +186,66 @@ class HomeActivityIntentTestRule internal constructor(
     constructor(
         initialTouchMode: Boolean = false,
         launchActivity: Boolean = true,
-        skipOnboarding: Boolean = false,
-        isHomepageHeaderEnabled: Boolean = true,
+        skipOnboarding: Boolean = true,
         isPocketEnabled: Boolean = settings.showPocketRecommendationsFeature,
         isRecentTabsFeatureEnabled: Boolean = settings.showRecentTabsFeature,
         isRecentlyVisitedFeatureEnabled: Boolean = settings.historyMetadataUIFeature,
-        isPWAsPromptEnabled: Boolean = !settings.userKnowsAboutPwas,
         isWallpaperOnboardingEnabled: Boolean = settings.showWallpaperOnboarding,
         isDeleteSitePermissionsEnabled: Boolean = settings.deleteSitePermissions,
         isOpenInAppBannerEnabled: Boolean = settings.shouldShowOpenInAppBanner,
-        isUnifiedTrustPanelEnabled: Boolean = false,
         etpPolicy: ETPPolicy = getETPPolicy(settings),
-        isLocationPermissionEnabled: SitePermissionsRules.Action = getFeaturePermission(PhoneFeature.LOCATION, settings),
-        isMenuRedesignCFREnabled: Boolean = false,
+        isLocationPermissionEnabled: SitePermissionsRules.Action =
+            getFeaturePermission(PhoneFeature.LOCATION, settings),
         isPageLoadTranslationsPromptEnabled: Boolean = false,
         isMicrosurveyEnabled: Boolean = settings.microsurveyFeatureEnabled,
         shouldUseBottomToolbar: Boolean = settings.shouldUseBottomToolbar,
         onboardingFeatureEnabled: Boolean = true,
+        isIPProtectionEnabled: Boolean = false,
         isTabSwipeCFREnabled: Boolean = false,
         isTermsOfServiceAccepted: Boolean = true,
         openLinksInExternalApp: OpenLinksInApp = getOpenLinksInApp(settings),
         tabManagerOpeningAnimationEnabled: Boolean = false,
         hasSeenShakeToSummarizeToolbarCfr: Boolean = true,
+        shakeToSummarizeFeatureFlagEnabled: Boolean = settings.shakeToSummarizeFeatureFlagEnabled,
         isPrivateModeAndStoriesEntryPointEnabled: Boolean = false,
         shouldUseExpandedToolbar: Boolean = false,
+        isTabStripEnabled: Boolean = false,
+        nativeShareSheetEnabled: Boolean = false,
+        showVoiceSearchInDisplayToolbar: Boolean = false,
+        isHomepageTrendingRecentSearchEnabled: Boolean = false,
     ) : this(initialTouchMode, launchActivity, skipOnboarding) {
         this.isPocketEnabled = isPocketEnabled
         this.isRecentTabsFeatureEnabled = isRecentTabsFeatureEnabled
         this.isRecentlyVisitedFeatureEnabled = isRecentlyVisitedFeatureEnabled
-        this.isPWAsPromptEnabled = isPWAsPromptEnabled
         this.isWallpaperOnboardingEnabled = isWallpaperOnboardingEnabled
         this.isDeleteSitePermissionsEnabled = isDeleteSitePermissionsEnabled
         this.isOpenInAppBannerEnabled = isOpenInAppBannerEnabled
-        this.isUnifiedTrustPanelEnabled = isUnifiedTrustPanelEnabled
         this.etpPolicy = etpPolicy
         this.isLocationPermissionEnabled = isLocationPermissionEnabled
-        this.isMenuRedesignCFREnabled = isMenuRedesignCFREnabled
         this.enableOrDisablePageLoadTranslationsPrompt(isPageLoadTranslationsPromptEnabled)
         this.isMicrosurveyEnabled = isMicrosurveyEnabled
         this.shouldUseBottomToolbar = shouldUseBottomToolbar
         this.onboardingFeatureEnabled = onboardingFeatureEnabled
+        this.enableOrDisableIPProtection(isIPProtectionEnabled)
         this.isTabSwipeCFREnabled = isTabSwipeCFREnabled
         this.isTermsOfServiceAccepted = isTermsOfServiceAccepted
         this.openLinksInExternalApp = openLinksInExternalApp
         this.tabManagerOpeningAnimationEnabled = tabManagerOpeningAnimationEnabled
         this.hasSeenShakeToSummarizeToolbarCfr = hasSeenShakeToSummarizeToolbarCfr
+        this.shakeToSummarizeFeatureFlagEnabled = shakeToSummarizeFeatureFlagEnabled
         this.isPrivateModeAndStoriesEntryPointEnabled = isPrivateModeAndStoriesEntryPointEnabled
         this.shouldUseExpandedToolbar = shouldUseExpandedToolbar
+        this.isTabStripEnabled = isTabStripEnabled
+        this.nativeShareSheetEnabled = nativeShareSheetEnabled
+        this.showVoiceSearchInDisplayToolbar = showVoiceSearchInDisplayToolbar
+        this.isHomepageTrendingRecentSearchEnabled = isHomepageTrendingRecentSearchEnabled
     }
 
     private val longTapUserPreference = getLongPressTimeout()
 
     private lateinit var intent: Intent
 
-    /**
-     * Update settings after the activity was created.
-     */
+    /** Update settings after the activity was created. */
     fun applySettingsExceptions(settings: (FeatureSettingsHelper) -> Unit) {
         Log.i(TAG, "applySettingsExceptions: Trying to update the settings after the activity was created")
         FeatureSettingsHelperDelegate().apply {
@@ -263,7 +274,9 @@ class HomeActivityIntentTestRule internal constructor(
         Log.i(TAG, "beforeActivityLaunched: Trying to apply the feature flag updates")
         applyFlagUpdates()
         Log.i(TAG, "beforeActivityLaunched: Successfully applied the feature flag updates")
-        if (skipOnboarding) { skipOnboardingBeforeLaunch() }
+        if (skipOnboarding) {
+            skipOnboardingBeforeLaunch()
+        }
     }
 
     override fun afterActivityFinished() {
@@ -275,23 +288,19 @@ class HomeActivityIntentTestRule internal constructor(
     }
 
     /**
-     * Update the settings values from when this rule was first instantiated to account for any changes
-     * done while running the tests.
-     * Useful in the scenario about the activity being restarted which would otherwise set the initial
-     * settings and override any changes made in the meantime.
+     * Update the settings values from when this rule was first instantiated to account for any changes done while
+     * running the tests. Useful in the scenario about the activity being restarted which would otherwise set the
+     * initial settings and override any changes made in the meantime.
      */
     fun updateCachedSettings() {
         isPocketEnabled = settings.showPocketRecommendationsFeature
         isRecentTabsFeatureEnabled = settings.showRecentTabsFeature
         isRecentlyVisitedFeatureEnabled = settings.historyMetadataUIFeature
-        isPWAsPromptEnabled = !settings.userKnowsAboutPwas
         isWallpaperOnboardingEnabled = settings.showWallpaperOnboarding
         isDeleteSitePermissionsEnabled = settings.deleteSitePermissions
         isOpenInAppBannerEnabled = settings.shouldShowOpenInAppBanner
-        isUnifiedTrustPanelEnabled = settings.enableUnifiedTrustPanel
         etpPolicy = getETPPolicy(settings)
         isLocationPermissionEnabled = getFeaturePermission(PhoneFeature.LOCATION, settings)
-        isMenuRedesignCFREnabled = settings.shouldShowMenuCFR
         isMicrosurveyEnabled = settings.microsurveyFeatureEnabled
         shouldUseBottomToolbar = settings.shouldUseBottomToolbar
         isTabSwipeCFREnabled = !settings.hasShownTabSwipeCFR
@@ -300,39 +309,44 @@ class HomeActivityIntentTestRule internal constructor(
         tabManagerOpeningAnimationEnabled = settings.tabManagerOpeningAnimationEnabled
         hasSeenShakeToSummarizeToolbarCfr = settings.shakeToSummarizeToolbarCfrShown
         isPrivateModeAndStoriesEntryPointEnabled = settings.privateModeAndStoriesEntryPointEnabled
+        nativeShareSheetEnabled = settings.nativeShareSheetEnabled
+        isHomepageTrendingRecentSearchEnabled = settings.enableHomepageTrendingRecentSearch
+        isTabStripEnabled = settings.isTabStripEnabled
     }
 
     companion object {
         /**
-         * Create a new instance of [HomeActivityIntentTestRule] which by default will disable specific
-         * app features that would otherwise negatively impact most tests.
+         * Create a new instance of [HomeActivityIntentTestRule] which by default will disable specific app features
+         * that would otherwise negatively impact most tests.
          *
          * The disabled features are:
-         *  - the PWA prompt dialog,
-         *  - the wallpaper onboarding.
+         * - the PWA prompt dialog,
+         * - the wallpaper onboarding.
          */
         fun withDefaultSettingsOverrides(
             initialTouchMode: Boolean = false,
             launchActivity: Boolean = true,
-            skipOnboarding: Boolean = false,
-        ) = HomeActivityIntentTestRule(
-            initialTouchMode = initialTouchMode,
-            launchActivity = launchActivity,
-            skipOnboarding = skipOnboarding,
-            isPWAsPromptEnabled = false,
-            isWallpaperOnboardingEnabled = false,
-            isOpenInAppBannerEnabled = false,
-            isMicrosurveyEnabled = false,
-            // workaround for toolbar at top position by default
-            // remove with https://bugzilla.mozilla.org/show_bug.cgi?id=1917640
-            shouldUseBottomToolbar = true,
-            isPageLoadTranslationsPromptEnabled = false,
-            isTabSwipeCFREnabled = true,
-            hasSeenShakeToSummarizeToolbarCfr = true,
-            isTermsOfServiceAccepted = true,
-            tabManagerOpeningAnimationEnabled = false,
-            isPrivateModeAndStoriesEntryPointEnabled = false,
-        )
+            skipOnboarding: Boolean = true,
+        ) =
+            HomeActivityIntentTestRule(
+                initialTouchMode = initialTouchMode,
+                launchActivity = launchActivity,
+                skipOnboarding = skipOnboarding,
+                isWallpaperOnboardingEnabled = false,
+                isOpenInAppBannerEnabled = false,
+                isMicrosurveyEnabled = false,
+                // workaround for toolbar at top position by default
+                // remove with https://bugzilla.mozilla.org/show_bug.cgi?id=1917640
+                shouldUseBottomToolbar = true,
+                isPageLoadTranslationsPromptEnabled = false,
+                isIPProtectionEnabled = false,
+                isTabSwipeCFREnabled = true,
+                hasSeenShakeToSummarizeToolbarCfr = true,
+                isTermsOfServiceAccepted = true,
+                tabManagerOpeningAnimationEnabled = false,
+                isPrivateModeAndStoriesEntryPointEnabled = false,
+                isTabStripEnabled = false,
+            )
     }
 }
 
@@ -347,8 +361,7 @@ fun setLongTapTimeout(delay: Int) {
             Log.i(TAG, "setLongTapTimeout: Executed command \"settings put secure long_press_timeout $delay\"")
             break
         } catch (e: RuntimeException) {
-            Log.i(TAG, "setLongTapTimeout: RuntimeException caught, executing fallback methods")
-            e.printStackTrace()
+            Log.e(TAG, "setLongTapTimeout: RuntimeException caught, executing fallback methods", e)
         }
     }
 }

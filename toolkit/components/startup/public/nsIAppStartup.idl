@@ -168,7 +168,7 @@ interface nsIAppStartup : nsISupports
         SHUTDOWN_PHASE_APPSHUTDOWNTEARDOWN,
         SHUTDOWN_PHASE_APPSHUTDOWN,
         SHUTDOWN_PHASE_APPSHUTDOWNQM,
-        SHUTDOWN_PHASE_APPSHUTDOWNRELEMETRY,
+        SHUTDOWN_PHASE_APPSHUTDOWNTELEMETRY,
         SHUTDOWN_PHASE_XPCOMWILLSHUTDOWN,
         SHUTDOWN_PHASE_XPCOMSHUTDOWN
     };
@@ -185,6 +185,13 @@ interface nsIAppStartup : nsISupports
      *        it started.
      */
     void advanceShutdownPhase(in nsIAppStartup_IDLShutdownPhase aPhase);
+
+    /**
+     * Set the AppShutdown::IsShutdownImpending() flag without advancing the
+     * shutdown phase, mirroring the "quit-application-granted" window of a
+     * real Quit(). Test-only.
+     */
+    void setImpendingShutdown();
 
     /**
      * Check if we entered or passed a specific shutdown phase.

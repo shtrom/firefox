@@ -52,7 +52,7 @@
   <!-- Text for the menu button to remove a recently saved bookmark from the user's home screen -->
   <string name="home_bookmarks_menu_item_remove">o weka</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">kulupu Mozilla li pali e ilo %1$s.</string>
+  <string name="about_content" tools:ignore="BrandUsage">kulupu Mozilla li pali e ilo %1$s.</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">o kama sona pona e nasin len</string>
   <!--
@@ -67,12 +67,6 @@
   <string name="open_in_app_cfr_negative_button_text">o weka</string>
   <!-- Private browsing erase action "contextual feature recommendation" (CFR) -->
 
-  <!--
-    Address bar swipe "contextual feature recommendation" (CFR)
-
-    Text for the message displayed in the contextual feature recommendation popup promoting swipe of address bar.
-  -->
-  <string name="address_bar_swipe_cfr_message_2">sina wile lukin e poki ante poka la o tawa e ilo pi nasin poki kepeken nena.</string>
   <!-- Text for the positive action button to go to Android Settings to grant permissions. -->
   <string name="camera_permissions_needed_positive_button_text">o lukin e lipu wile</string>
   <!-- Text for the negative action button to dismiss the dialog. -->
@@ -251,21 +245,9 @@
   <!--
     Browser Toolbar
 
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">lipu open</string>
-  <!--
-    Browser Toolbar
-
     Content description for the translate page toolbar button that opens the translations dialog when no translation has occurred.
   -->
   <string name="browser_toolbar_translate">o ante e toki lipu</string>
-  <!--
-    Content description (not visible, for screen readers etc.) for the translate page toolbar button that opens the translations dialog when the page is translated successfully.
-    %1$s is the name of the language that is displayed in the original page. (For example: English)
-    %2$s is the name of the language which the page was translated to. (For example: French)
-  -->
-  <string name="browser_toolbar_translated_successfully">toki lipu la %1$s li kama %2$s</string>
   <!--
     Locale Settings Fragment
 
@@ -276,12 +258,6 @@
   <string name="default_locale_text">o toki sama ilo lawa</string>
   <!-- Placeholder text shown in the search bar before a user enters text -->
   <string name="locale_search_hint">o alasa e toki</string>
-  <!--
-    Search Fragment
-
-    Button in the search view that lets a user search by scanning a QR code
-  -->
-  <string name="search_scan_button_2">o lukin e sitelen QR</string>
   <!--
     Search Fragment
 
@@ -313,32 +289,6 @@
     Content description (not visible, for screen readers etc.): Close button for the home onboarding dialog
   -->
   <string name="onboarding_home_content_description_close_button">o pini</string>
-  <!--
-    Juno first user onboarding flow experiment, strings are marked unused as they are only referenced by Nimbus experiments.
-
-    Description for learning more about our privacy notice.
-  -->
-  <string name="juno_onboarding_privacy_notice_text" tools:ignore="BrandUsage">ilo Firefox la toki lawa pi len sona</string>
-  <!-- Title for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_title_nimbus_2">mi wile awen e sina</string>
-  <!-- Description for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_description_nimbus_3">kulupu mi li utala e ni: kulupu mani li wile alasa ike e sina lon ilo.</string>
-  <!-- Text for the button to set firefox as default browser on the device -->
-  <string name="juno_onboarding_default_browser_positive_button" tools:ignore="UnusedResources">o open e lipu ale kepeken ilo alasa ni</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_default_browser_negative_button" tools:ignore="UnusedResources">o ni lon tenpo ante</string>
-  <!-- Title for sign in to sync screen. -->
-  <string name="juno_onboarding_sign_in_title_2">o len e sona sina lon ilo mute</string>
-  <!-- Text for the button to sign in to sync on the device -->
-  <string name="juno_onboarding_sign_in_positive_button" tools:ignore="UnusedResources">o lon sijelo</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_sign_in_negative_button" tools:ignore="UnusedResources">o kama lon tenpo ante</string>
-  <!-- Text for the button to request notification permission on the device -->
-  <string name="juno_onboarding_enable_notifications_positive_button" tools:ignore="UnusedResources">o kute e mu lipu</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_enable_notifications_negative_button" tools:ignore="UnusedResources">o ni lon tenpo ante</string>
-  <!-- Text for the button to dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_add_search_widget_negative_button" tools:ignore="UnusedResources">o ni lon tenpo ante</string>
   <!-- Title for the privacy preferences dialog shown during onboarding. Note: The word "Firefox" should NOT be translated. -->
   <string name="onboarding_preferences_dialog_title" tools:ignore="BrandUsage">o pana e pona tawa ilo Firefox</string>
   <!-- Learn more link for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
@@ -355,22 +305,10 @@
   <string name="onboarding_term_of_service_line_two_2" tools:ignore="BrandUsage">ilo Firefox li wile awen e len sina. o lukin e %1$s</string>
   <!-- Used as text for the link in onboarding_term_of_service_line_two. -->
   <string name="onboarding_term_of_service_line_two_link_text">toki lawa pi len sona</string>
-  <!-- Marketing onboarding page title. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_title" tools:ignore="BrandUsage,UnusedResources">o pona e suli tawa ilo Firefox</string>
   <!-- ==== Project "Nova" onboarding strings ==== -->
 
   <!-- ==== End of Project "Nova" onboarding strings ==== -->
 
-  <!-- Onboarding toolbar selection card label for 'top' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_top_option">sewi</string>
-  <!-- Onboarding toolbar selection card label for 'bottom' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_bottom_option">anpa</string>
-  <!-- Onboarding theme selection card label for 'dark' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_dark_option">pimeja</string>
-  <!-- Onboarding theme selection card label for 'light' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_light_option">walo</string>
-  <!-- Onboarding theme selection card label for 'System auto' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_system_option">tan ilo</string>
   <!--
     Search Widget
 
@@ -445,7 +383,7 @@
   <!-- Preference for settings related to visual options -->
   <string name="preferences_customize">o nasin sina</string>
   <!-- Preference shown instead of account display name while account profile information isn't available yet. -->
-  <string name="preferences_account_default_name_2">sijelo pi kulupu Mozilla</string>
+  <string name="preferences_account_default_name_2" tools:ignore="BrandUsage">sijelo pi kulupu Mozilla</string>
   <!-- Preference for language -->
   <string name="preferences_language">toki ilo</string>
   <!-- Preference for translations -->
@@ -657,8 +595,6 @@
   <string name="library_desktop_bookmarks_unfiled">lipu awen ante</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">lukin pini</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">poki sin</string>
   <!-- Settings Page Title -->
   <string name="settings_title">nasin ilo</string>
   <!-- Content description (not visible, for screen readers etc.): "Close button for library settings" -->
@@ -793,8 +729,6 @@
   <string name="add_to_new_tab_group_title">kulupu poki sin</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">o weka e lukin pini ale</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">mi weka e lukin pini ale</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">mi weka e lipu %1$s</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -902,12 +836,8 @@
   <string name="webcompat_reporter_label_url">nimi nasin</string>
   <!-- The error message of the URL text field when an invalid URL has been entered. -->
   <string name="webcompat_reporter_url_error_invalid">o pana e nimi nasin pona</string>
-  <!-- The error message of the dropdown, prompting the user to select a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_error">o alasa e tan</string>
   <!-- The button text for the cancel button to leave the Web Compat Reporter feature. -->
   <string name="webcompat_reporter_cancel">ala</string>
-  <!-- The button text for the send button to submit the provided form data. -->
-  <string name="webcompat_reporter_send">o pana</string>
   <!-- Broken site reason text for site asked to turn off ad blocker -->
   <string name="webcompat_reporter_reason_turn_off_adblocker">lipu ni li wile e ni: sina weka ala e sitelen esun</string>
   <!-- Broken site reason text for something else -->
@@ -919,7 +849,7 @@
   -->
   <string name="tab_crash_title_2">pakala la ilo %1$s li ken ala pana e lipu ni.</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">o pana e sona pakala tawa kulupu Mozilla</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">o pana e sona pakala tawa kulupu Mozilla</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">o weka e poki</string>
   <!-- Unsubmitted crash dialog negative button to dismiss the dialog -->
@@ -966,10 +896,6 @@
   <string name="edit_bookmark_fragment_title">o ante e lipu awen</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">nimi nasin</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">kulupu sona</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">nimi</string>
   <!-- Label for a text input field for a bookmark or folder name -->
   <string name="bookmark_name_label_normal_case">nimi</string>
   <!-- Bookmark editing error missing or improper URL -->
@@ -1049,8 +975,6 @@
   <string name="collections_header">kulupu poki</string>
   <!-- Content description (not visible, for screen readers etc.): Opens the collection menu when pressed -->
   <string name="collection_menu_button_content_description">poki pi kulupu poki</string>
-  <!-- Label to describe what collections are to a new user without any collections -->
-  <string name="no_collections_description2">o poki e ijo pona sina.\no kulupu e ijo pi alasa sama. ni la sina ken lukin pona e ona lon tenpo kama.</string>
   <!-- Title for the "select collection" step of the collection creator -->
   <string name="create_collection_select_collection">o wile e kulupu poki</string>
   <!-- Title for the "name collection" step of the collection creator -->
@@ -1216,8 +1140,6 @@
     %s is the name of the app (for example "Firefox")
   -->
   <string name="open_source_licenses_title">ilo %s la ilo open pi sona nanpa</string>
-  <!-- Text displayed that links to website about enhanced tracking protection SmartBlock -->
-  <string name="preference_etp_smartblock_learn_more">o sona</string>
   <!-- Text displayed for "Default provider" under "DNS over HTTPS" providers -->
   <string name="preference_doh_provider_default">(ante ala)</string>
   <!-- Text displayed for "Custom" under "DNS over HTTPS" providers -->
@@ -1384,8 +1306,6 @@
   <string name="addresses_save_button">o awen</string>
   <!-- The text for the "Cancel" button for cancelling adding, updating or deleting an address -->
   <string name="addresses_cancel_button">ala</string>
-  <!-- The text for the "Delete address" button for deleting an address -->
-  <string name="addressess_delete_address_button">o weka e nimi ma</string>
   <!-- The title for the "Delete address" confirmation dialog -->
   <string name="addressess_confirm_dialog_message_2">sina wile ala wile weka e nimi ma?</string>
   <!-- The text for the positive button on "Delete address" dialog -->
@@ -1404,10 +1324,6 @@
   <string name="search_engine_edit_custom_search_engine_title">o ante e ilo alasa</string>
   <!-- First step for the allowing a permission -->
   <string name="phone_feature_blocked_step_settings">1. o lukin e nasin ilo lon ilo Android</string>
-  <!-- Label that indicates a site is using a secure connection -->
-  <string name="quick_settings_sheet_secure_connection_2">linja toki li len</string>
-  <!-- Label that indicates a site is using a insecure connection -->
-  <string name="quick_settings_sheet_insecure_connection_2">linja toki li len ala</string>
   <!-- Browser menu button that adds a shortcut to the home fragment -->
   <string name="browser_menu_add_to_shortcuts">o awen lon lipu open</string>
   <!-- Browser menu button that removes a shortcut from the home fragment -->
@@ -1440,8 +1356,6 @@
   <string name="inactive_tabs_delete_all">o pini e poki ale pi pali ala</string>
   <!-- Content description for expanding the inactive tabs section. -->
   <string name="inactive_tabs_expand_content_description">o lukin e poki pi pali ala</string>
-  <!-- Content description for close button in collection placeholder. -->
-  <string name="remove_home_collection_placeholder_content_description">o weka</string>
   <!-- Text indicating that the Pocket story that also displays this text is a sponsored story by other 3rd party entity. -->
   <string name="pocket_stories_sponsor_indication">jan li pana e mani tawa lipu ni</string>
   <!-- Snackbar button text to navigate to telemetry settings. -->

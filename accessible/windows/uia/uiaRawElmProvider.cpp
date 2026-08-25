@@ -7,29 +7,27 @@
 #include <comdef.h>
 #include <uiautomationcoreapi.h>
 
+#include "ARIAMap.h"
 #include "AccAttributes.h"
 #include "AccessibleWrap.h"
 #include "ApplicationAccessible.h"
-#include "ARIAMap.h"
-#include "ia2AccessibleHypertext.h"
-#include "ia2AccessibleTable.h"
-#include "ia2AccessibleTableCell.h"
 #include "LocalAccessible-inl.h"
-#include "mozilla/a11y/Compatibility.h"
-#include "mozilla/a11y/RemoteAccessible.h"
 #include "MsaaAccessible.h"
 #include "MsaaRootAccessible.h"
-#include "nsAccessibilityService.h"
-#include "nsAccUtils.h"
-#include "nsIAccessibleAnnouncementEvent.h"
-#include "nsIAccessiblePivot.h"
-#include "nsTextEquivUtils.h"
 #include "Pivot.h"
 #include "Relation.h"
 #include "RootAccessible.h"
 #include "TextLeafRange.h"
 #include "UiaText.h"
 #include "UiaTextRange.h"
+#include "mozilla/DynamicallyLinkedFunctionPtr.h"
+#include "mozilla/a11y/Compatibility.h"
+#include "mozilla/a11y/RemoteAccessible.h"
+#include "nsAccUtils.h"
+#include "nsAccessibilityService.h"
+#include "nsIAccessibleAnnouncementEvent.h"
+#include "nsIAccessiblePivot.h"
+#include "nsTextEquivUtils.h"
 
 using namespace mozilla;
 using namespace mozilla::a11y;
@@ -310,6 +308,15 @@ void uiaRawElmProvider::RaiseUiaNotificationEvent(
   if (!Compatibility::IsUiaEnabled() || !::UiaClientsAreListening()) {
     return;
   }
+  static const StaticDynamicallyLinkedFunctionPtr<
+      decltype(&::UiaRaiseNotificationEvent)>
+      sUiaRaiseNotificationEvent(L"UIAutomationCore.dll",
+                                 "UiaRaiseNotificationEvent");
+  if (!sUiaRaiseNotificationEvent) {
+    // UiaRaiseNotificationEvent is only available on Windows 10 version 1709
+    // and later.
+    return;
+  }
   // Find the nearest Accessible that is in the UIA control view.
   uiaRawElmProvider* uia = nullptr;
   for (Accessible* acc = aAcc; acc; acc = acc->Parent()) {
@@ -323,7 +330,7 @@ void uiaRawElmProvider::RaiseUiaNotificationEvent(
     }
   }
   if (uia) {
-    ::UiaRaiseNotificationEvent(
+    sUiaRaiseNotificationEvent(
         uia, NotificationKind_ActionCompleted,
         aPriority == nsIAccessibleAnnouncementEvent::ASSERTIVE
             ? NotificationProcessing_ImportantAll
@@ -464,14 +471,13 @@ uiaRawElmProvider::GetPatternProvider(
       return S_OK;
     case UIA_GridPatternId:
       if (acc->IsTable()) {
-        auto grid = GetPatternFromDerived<ia2AccessibleTable, IGridProvider>();
+        auto grid = GetPatternFromDerived<IGridProvider>();
         grid.forget(aPatternProvider);
       }
       return S_OK;
     case UIA_GridItemPatternId:
       if (acc->IsTableCell()) {
-        auto item =
-            GetPatternFromDerived<ia2AccessibleTableCell, IGridItemProvider>();
+        auto item = GetPatternFromDerived<IGridItemProvider>();
         item.forget(aPatternProvider);
       }
       return S_OK;
@@ -528,15 +534,13 @@ uiaRawElmProvider::GetPatternProvider(
       return S_OK;
     case UIA_TablePatternId:
       if (acc->IsTable()) {
-        auto table =
-            GetPatternFromDerived<ia2AccessibleTable, ITableProvider>();
+        auto table = GetPatternFromDerived<ITableProvider>();
         table.forget(aPatternProvider);
       }
       return S_OK;
     case UIA_TableItemPatternId:
       if (acc->IsTableCell()) {
-        auto item =
-            GetPatternFromDerived<ia2AccessibleTableCell, ITableItemProvider>();
+        auto item = GetPatternFromDerived<ITableItemProvider>();
         item.forget(aPatternProvider);
       }
       return S_OK;
@@ -1517,14 +1521,11 @@ bool uiaRawElmProvider::HasValuePattern() const {
   return roleMapEntry && roleMapEntry->Is(nsGkAtoms::textbox);
 }
 
-template <class Derived, class Interface>
+template <class Interface>
 RefPtr<Interface> uiaRawElmProvider::GetPatternFromDerived() {
-  // MsaaAccessible inherits from uiaRawElmProvider. Derived
-  // inherits from MsaaAccessible and Interface. The compiler won't let us
-  // directly static_cast to Interface, hence the intermediate casts.
-  auto* msaa = static_cast<MsaaAccessible*>(this);
-  auto* derived = static_cast<Derived*>(msaa);
-  return derived;
+  RefPtr<Interface> provider;
+  QueryInterface(__uuidof(Interface), getter_AddRefs(provider));
+  return provider;
 }
 
 bool uiaRawElmProvider::HasSelectionItemPattern() {

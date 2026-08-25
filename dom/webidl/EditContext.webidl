@@ -17,6 +17,7 @@ interface EditContext : EventTarget {
     [Throws, UseCounter]
     constructor(optional EditContextInit options = {});
 
+    [Throws]
     undefined updateText(unsigned long rangeStart, unsigned long rangeEnd,
         DOMString text);
     undefined updateSelection(unsigned long start, unsigned long end);
@@ -24,7 +25,6 @@ interface EditContext : EventTarget {
     undefined updateSelectionBounds(DOMRect selectionBounds);
     undefined updateCharacterBounds(unsigned long rangeStart, sequence<DOMRect> characterBounds);
 
-    [Pure]
     sequence<HTMLElement> attachedElements();
 
     [Pure]
@@ -35,7 +35,6 @@ interface EditContext : EventTarget {
     readonly attribute unsigned long selectionEnd;
     [Pure]
     readonly attribute unsigned long characterBoundsRangeStart;
-    [Pure]
     sequence<DOMRect> characterBounds();
 
     attribute EventHandler ontextupdate;

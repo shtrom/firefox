@@ -14,6 +14,11 @@ const SCRIPT_TEMPLATE_RESOURCE_PATH =
 let window = self;
 window.requestAnimationFrame = () => {};
 window.cancelAnimationFrame = () => {};
+window.matchMedia = () => ({
+  matches: false,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+});
 
 /* import-globals-from /toolkit/components/workerloader/require.js */
 importScripts("resource://gre/modules/workers/require.js");
@@ -30,8 +35,6 @@ importScripts("resource://gre/modules/workers/require.js");
   // eslint-disable-next-line no-implicit-globals, no-global-assign
   ChromeUtils = undefined;
 
-  /* import-globals-from ../data/content/vendor.bundle.js */
-  /* import-globals-from ../data/content/activity-stream.bundle.js */
   importScripts(
     "resource://newtab/data/content/vendor.bundle.js",
     "resource://newtab/data/content/activity-stream.bundle.js"
@@ -129,7 +132,8 @@ let Agent = {
    *   The most recent Activity Stream Redux state.
    * @param direction (String, optional)
    *   The document directionality ("ltr" or "rtl"). When provided, sets
-   *   self.document.dir so Nova render paths can read it.
+   *   self.document.dir so Nova render paths can read it. If not provided,
+   *   we assume "ltr".
    * @return Object
    *   An object with the following properties:
    *
@@ -148,6 +152,8 @@ let Agent = {
     // Nova render paths that read document.dir have something to work with.
     if (direction) {
       self.document = { dir: direction };
+    } else {
+      self.document = { dir: "ltr" };
     }
 
     // ReactDOMServer.renderToString expects a Redux store to pull

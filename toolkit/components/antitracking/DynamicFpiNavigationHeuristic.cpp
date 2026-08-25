@@ -4,6 +4,7 @@
 
 #include "DynamicFpiNavigationHeuristic.h"
 
+#include "StorageAccessAPIHelper.h"
 #include "mozIThirdPartyUtil.h"
 #include "mozilla/dom/CanonicalBrowsingContext.h"
 #include "mozilla/dom/WindowGlobalParent.h"
@@ -11,7 +12,7 @@
 #include "mozilla/BounceTrackingState.h"
 #include "mozilla/Components.h"
 #include "mozilla/glean/AntitrackingMetrics.h"
-#include "mozilla/net/UrlClassifierCommon.h"
+#include "mozilla/net/ChannelClassifierUtils.h"
 #include "nsIChannel.h"
 #include "nsIClassifiedChannel.h"
 #include "nsNetUtil.h"
@@ -35,7 +36,7 @@ bool IsFirstPartyTrackingChannel(nsIChannel* aChannel) {
   uint32_t firstPartyClassificationFlags =
       classifiedChannel->GetFirstPartyClassificationFlags();
 
-  if (net::UrlClassifierCommon::IsTrackingClassificationFlag(
+  if (net::ChannelClassifierUtils::IsTrackingClassificationFlag(
           firstPartyClassificationFlags, NS_UsePrivateBrowsing(aChannel))) {
     return true;
   }

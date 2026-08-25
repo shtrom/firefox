@@ -4,7 +4,7 @@
 "use strict";
 
 const { TabStateFlusher } = ChromeUtils.importESModule(
-  "resource:///modules/sessionstore/TabStateFlusher.sys.mjs"
+  "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
 );
 
 const { ChatStore } = ChromeUtils.importESModule(
@@ -233,9 +233,7 @@ add_task(async function test_smarttab_conversation_restored_after_drag() {
     fetchWithHistory.resolve(ChatStore.updateConversation(conversation));
     return fetchWithHistory.promise;
   });
-  sb.stub(openAIEngine, "build").resolves({
-    loadPrompt: () => Promise.resolve("Mock system prompt"),
-  });
+  sb.stub(openAIEngine, "build").resolves({});
   sb.stub(AIWindowAccountAuth, "ensureAIWindowAccess").resolves(true);
 
   smartWin = await openAIWindow();

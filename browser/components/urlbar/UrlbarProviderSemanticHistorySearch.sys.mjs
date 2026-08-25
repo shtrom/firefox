@@ -22,11 +22,12 @@ ChromeUtils.defineESModuleGetters(lazy, {
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarProviderOpenTabs:
     "moz-src:///browser/components/urlbar/UrlbarProviderOpenTabs.sys.mjs",
-  UrlbarResult: "moz-src:///browser/components/urlbar/UrlbarResult.sys.mjs",
+  UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "logger", function () {
-  return UrlbarUtils.getLogger({ prefix: "SemanticHistorySearch" });
+  return lazy.UrlbarShared.getLogger({ prefix: "SemanticHistorySearch" });
 });
 
 /**
@@ -79,10 +80,10 @@ export class UrlbarProviderSemanticHistorySearch extends UrlbarProvider {
   }
 
   /**
-   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
+   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
    */
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return lazy.UrlbarShared.PROVIDER_TYPE.PROFILE;
   }
 
   /**
@@ -98,8 +99,9 @@ export class UrlbarProviderSemanticHistorySearch extends UrlbarProvider {
     if (
       lazy.UrlbarPrefs.get("suggest.history") &&
       queryContext.searchString.length >= minSearchStringLength &&
-      (!queryContext.searchMode ||
-        queryContext.searchMode.source == UrlbarUtils.RESULT_SOURCE.HISTORY)
+      (!queryContext.restrictInSearchMode() ||
+        queryContext.searchMode?.source ==
+          lazy.UrlbarShared.RESULT_SOURCE.HISTORY)
     ) {
       // The smartbar (SW-only surface) is gated on the SW pref so it can light
       // up independently of the CW feature gate; all other surfaces (urlbar in
@@ -147,14 +149,14 @@ export class UrlbarProviderSemanticHistorySearch extends UrlbarProvider {
         )
       ) {
         const result = new lazy.UrlbarResult({
-          type: UrlbarUtils.RESULT_TYPE.URL,
-          source: UrlbarUtils.RESULT_SOURCE.HISTORY,
+          type: lazy.UrlbarShared.RESULT_TYPE.URL,
+          source: lazy.UrlbarShared.RESULT_SOURCE.HISTORY,
           payload: {
             title: res.title,
             url: res.url,
-            icon: UrlbarUtils.getIconForUrl(res.url),
+            icon: lazy.UrlbarShared.getIconForUrl(res.url),
             isBlockable: true,
-            blockL10n: { id: "urlbar-result-menu-remove-from-history" },
+            blockL10n: { id: "urlbar-result-menu-remove-from-history2" },
             helpUrl:
               Services.urlFormatter.formatURLPref("app.support.baseURL") +
               "awesome-bar-result-menu",
@@ -185,11 +187,10 @@ export class UrlbarProviderSemanticHistorySearch extends UrlbarProvider {
       return false;
     }
 
-    let userContextId =
-      lazy.UrlbarProviderOpenTabs.getUserContextIdForOpenPagesTable(
-        queryContext.userContextId,
-        queryContext.isPrivate
-      );
+    let userContextId = lazy.UrlbarShared.getUserContextIdForOpenPagesTable(
+      queryContext.userContextId,
+      queryContext.isPrivate
+    );
 
     let added = false;
     for (let [tabUserContextId, tabGroupId] of openTabs) {
@@ -202,13 +203,13 @@ export class UrlbarProviderSemanticHistorySearch extends UrlbarProvider {
         continue;
       }
       let result = new lazy.UrlbarResult({
-        type: UrlbarUtils.RESULT_TYPE.TAB_SWITCH,
-        source: UrlbarUtils.RESULT_SOURCE.TABS,
+        type: lazy.UrlbarShared.RESULT_TYPE.TAB_SWITCH,
+        source: lazy.UrlbarShared.RESULT_SOURCE.TABS,
         payload: {
           url: res.url,
           title: res.title,
-          icon: UrlbarUtils.getIconForUrl(res.url),
-          userContextId: tabUserContextId,
+          icon: lazy.UrlbarShared.getIconForUrl(res.url),
+          userContext: UrlbarUtils.getUserContextData(tabUserContextId),
           tabGroup: tabGroupId,
           lastVisit: res.lastVisit,
           action: lazy.UrlbarPrefs.get("secondaryActions.switchToTab")

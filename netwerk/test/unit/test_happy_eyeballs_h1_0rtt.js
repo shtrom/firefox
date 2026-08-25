@@ -37,6 +37,10 @@ let callbackServer;
 // separately so tests can assert which path delivered each fetch.
 let earlyCount = 0;
 let stdCount = 0;
+// Set to true in add_setup once ZeroRttAcceptServer starts successfully.
+// Tasks check this via skip_if so they are cleanly skipped (not timed out)
+// when the server cert directory is absent (e.g. comm-central packaging).
+let gServerStarted = false;
 
 function callbackHandler(metadata) {
   if (metadata.path === "/callback/request/early") {
@@ -65,11 +69,17 @@ add_setup(
       callbackServer.identity.primaryPort
     );
     Services.env.set("MOZ_TLS_SERVER_0RTT", "1");
-    await asyncStartTLSTestServer(
+    const started = await asyncStartTLSTestServer(
       "ZeroRttAcceptServer",
       "../../../security/manager/ssl/tests/unit/test_faulty_server"
     );
-    let nssComponent = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
+    if (!started) {
+      return; // cert dir absent (e.g. comm-central); tasks will be skipped
+    }
+    gServerStarted = true;
+    let nssComponent = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
+      Ci.nsISSLTokensCache
+    );
     await nssComponent.asyncClearSSLExternalAndInternalSessionCache();
 
     Services.prefs.setBoolPref("network.http.happy_eyeballs_enabled", true);
@@ -159,7 +169,7 @@ async function runHandshakeThenResume(host) {
 
 add_task(
   {
-    skip_if: () => AppConstants.MOZ_SYSTEM_NSS,
+    skip_if: () => AppConstants.MOZ_SYSTEM_NSS || !gServerStarted,
   },
   async function test_he_h1_0rtt_accepted_no_duplicate_on_the_wire() {
     // Server accepts 0-RTT. HE promotes the winning HT to forward to
@@ -175,7 +185,7 @@ add_task(
 
 add_task(
   {
-    skip_if: () => AppConstants.MOZ_SYSTEM_NSS,
+    skip_if: () => AppConstants.MOZ_SYSTEM_NSS || !gServerStarted,
   },
   async function test_he_h1_0rtt_rejected_restarts_cleanly() {
     // Server refuses 0-RTT on resumption (no anti-replay context), so
@@ -293,7 +303,9 @@ async function runHe0RttRace(host, ipv6DelayMs, ipv4DelayMs) {
   // host. Without clearing it, this task's "first" fetch would attempt
   // 0-RTT instead of a full handshake, and the race between the two
   // HE attempts over the proxy trips the server's anti-replay guard.
-  let nssComponent = Cc["@mozilla.org/psm;1"].getService(Ci.nsINSSComponent);
+  let nssComponent = Cc["@mozilla.org/network/ssl-tokens-cache;1"].getService(
+    Ci.nsISSLTokensCache
+  );
   await nssComponent.asyncClearSSLExternalAndInternalSessionCache();
 
   let proxyPort = await startFamilyDelayProxy(node, ipv6DelayMs, ipv4DelayMs);
@@ -335,6 +347,7 @@ add_task(
   {
     skip_if: () =>
       AppConstants.MOZ_SYSTEM_NSS ||
+      !gServerStarted ||
       mozinfo.os == "android" ||
       mozinfo.socketprocess_networking,
   },
@@ -362,6 +375,7 @@ add_task(
   {
     skip_if: () =>
       AppConstants.MOZ_SYSTEM_NSS ||
+      !gServerStarted ||
       mozinfo.os == "android" ||
       mozinfo.socketprocess_networking,
   },

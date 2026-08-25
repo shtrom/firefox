@@ -13,6 +13,10 @@ const { ASRouterScreenUtils } = ChromeUtils.importESModule(
 const { InternalTestingProfileMigrator } = ChromeUtils.importESModule(
   "resource:///modules/InternalTestingProfileMigrator.sys.mjs"
 );
+const { WIN_OS_PIN_PROMPT_ENABLED, SET_DEFAULT_OS_PROMPT_ENABLED } =
+  ChromeUtils.importESModule(
+    "resource:///modules/asrouter/MessagingTargetingConstants.sys.mjs"
+  );
 
 async function clickVisibleButton(browser, selector) {
   // eslint-disable-next-line no-shadow
@@ -94,7 +98,15 @@ add_task(async function test_aboutwelcome_easy_setup_screen_impression() {
     .stub(ASRouterScreenUtils, "evaluateScreenTargeting")
     .resolves(false)
     .withArgs(
-      "doesAppNeedPin && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser"
+      `doesAppNeedPin && !${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') || ((!doesAppNeedPin || ${WIN_OS_PIN_PROMPT_ENABLED}) && !${SET_DEFAULT_OS_PROMPT_ENABLED} && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser)`
+    )
+    .resolves(true)
+    .withArgs(
+      `doesAppNeedPin && !${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT')`
+    )
+    .resolves(true)
+    .withArgs(
+      `!${SET_DEFAULT_OS_PROMPT_ENABLED} && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser`
     )
     .resolves(true)
     .withArgs("isDeviceMigration")
@@ -118,8 +130,8 @@ add_task(async function test_aboutwelcome_easy_setup_screen_impression() {
     [
       `main.screen[pos="split"]`,
       "div.secondary-cta.top",
-      "button[value='secondary_button_top_0']", //sign in button
-      "button[value='secondary_button_top_1']", //backup restore button
+      "button[value='secondary_button_top_0']", //backup restore button
+      "button[value='secondary_button_top_1']", //sign in button
     ]
   );
 
@@ -140,7 +152,7 @@ add_task(async function test_aboutwelcome_easy_setup_screen_impression() {
 
   Assert.ok(
     impressionCall.args[0].message_id.startsWith(
-      "MR_WELCOME_DEFAULT_0_AW_EASY_SETUP_NEEDS_DEFAULT_AND_PIN"
+      "MR_WELCOME_DEFAULT_0_AW_EASY_SETUP"
     ),
     "Impression telemetry includes correct message id"
   );
@@ -977,7 +989,7 @@ add_task(async function test_aboutwelcome_no_backups() {
     .resolves(false)
     // Easy setup for secondary top button
     .withArgs(
-      "doesAppNeedPin && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser"
+      `doesAppNeedPin && !${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') || ((!doesAppNeedPin || ${WIN_OS_PIN_PROMPT_ENABLED}) && !${SET_DEFAULT_OS_PROMPT_ENABLED} && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser)`
     )
     .resolves(true)
     // Restore from backup pref gating
@@ -994,10 +1006,7 @@ add_task(async function test_aboutwelcome_no_backups() {
   await test_screen_content(
     browser,
     "Easy setup renders with restore secondary top button",
-    [
-      "main.AW_EASY_SETUP_NEEDS_DEFAULT_AND_PIN, main.AW_EASY_SETUP_NEEDS_DEFAULT, main.AW_EASY_SETUP_NEEDS_PIN, main.AW_EASY_SETUP_ONLY_IMPORT",
-      "div.secondary-cta.top",
-    ],
+    ["main.AW_EASY_SETUP", "div.secondary-cta.top"],
     //Unexpected selectors:
     ["main.AW_BACKUP_RESTORE_EMBEDDED_BACKUP_FOUND"]
   );
@@ -1029,7 +1038,7 @@ add_task(async function test_aboutwelcome_secondary_top_signin_only() {
     .resolves(false)
     // Mock Easy Setup for secondary button top testing
     .withArgs(
-      "doesAppNeedPin && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser"
+      `doesAppNeedPin && !${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') || ((!doesAppNeedPin || ${WIN_OS_PIN_PROMPT_ENABLED}) && !${SET_DEFAULT_OS_PROMPT_ENABLED} && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser)`
     )
     .resolves(true)
     // Sign in button targeting
@@ -1042,7 +1051,7 @@ add_task(async function test_aboutwelcome_secondary_top_signin_only() {
     browser,
     "Easy setup renders with secondary top button",
     [
-      "main.AW_EASY_SETUP_NEEDS_DEFAULT_AND_PIN",
+      "main.AW_EASY_SETUP",
       ".secondary-buttons-top-container, div.secondary-cta.top",
     ]
   );
@@ -1078,7 +1087,7 @@ add_task(async function test_aboutwelcome_secondary_top_backup_restore_only() {
     .resolves(false)
     // Mock Easy Setup for secondary button top testing
     .withArgs(
-      "doesAppNeedPin && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser"
+      `doesAppNeedPin && !${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') || ((!doesAppNeedPin || ${WIN_OS_PIN_PROMPT_ENABLED}) && !${SET_DEFAULT_OS_PROMPT_ENABLED} && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser)`
     )
     .resolves(true)
     // Show Restore Backup top button
@@ -1091,7 +1100,7 @@ add_task(async function test_aboutwelcome_secondary_top_backup_restore_only() {
     browser,
     "Easy setup renders with secondary top button",
     [
-      "main.AW_EASY_SETUP_NEEDS_DEFAULT_AND_PIN",
+      "main.AW_EASY_SETUP",
       ".secondary-buttons-top-container, div.secondary-cta.top",
     ]
   );
@@ -1119,6 +1128,34 @@ add_task(async function test_aboutwelcome_secondary_top_backup_restore_only() {
   sandbox.restore();
 });
 
+add_task(
+  async function test_aboutwelcome_import_embedded_backup_restore_button() {
+    const sandbox = sinon.createSandbox();
+
+    sandbox
+      .stub(ASRouterScreenUtils, "evaluateScreenTargeting")
+      .resolves(false)
+      .withArgs("useEmbeddedMigrationWizard")
+      .resolves(true)
+      .withArgs("backupRestoreEnabled && isDefaultBrowser && !doesAppNeedPin")
+      .resolves(true);
+
+    let { browser, cleanup } = await openMRAboutWelcome();
+
+    await test_screen_content(
+      browser,
+      "Import embedded screen renders with backup restore top button",
+      [
+        "main.AW_IMPORT_SETTINGS_EMBEDDED",
+        "button[data-l10n-id='restore-from-backup-secondary-top-button']",
+      ]
+    );
+
+    await cleanup();
+    sandbox.restore();
+  }
+);
+
 add_task(async function test_aboutwelcome_both_secondary_top_buttons() {
   const sandbox = sinon.createSandbox();
 
@@ -1126,7 +1163,7 @@ add_task(async function test_aboutwelcome_both_secondary_top_buttons() {
     .stub(ASRouterScreenUtils, "evaluateScreenTargeting")
     // Mock Easy Setup for secondary button top testing
     .withArgs(
-      "doesAppNeedPin && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser"
+      `doesAppNeedPin && !${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') || ((!doesAppNeedPin || ${WIN_OS_PIN_PROMPT_ENABLED}) && !${SET_DEFAULT_OS_PROMPT_ENABLED} && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_AND_DEFAULT') && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser)`
     )
     .resolves(true)
     // Show Sign-in top button
@@ -1142,7 +1179,7 @@ add_task(async function test_aboutwelcome_both_secondary_top_buttons() {
     browser,
     "Easy setup renders with secondary top button",
     [
-      "main.AW_EASY_SETUP_NEEDS_DEFAULT_AND_PIN",
+      "main.AW_EASY_SETUP",
       ".secondary-buttons-top-container, div.secondary-cta.top",
     ]
   );

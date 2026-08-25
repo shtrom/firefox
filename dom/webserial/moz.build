@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 with Files("**"):
-    BUG_COMPONENT = ("Core", "DOM: Device Interfaces")
+    BUG_COMPONENT = ("Core", "DOM: Web Serial")
 
 EXPORTS.mozilla.dom += [
     "Serial.h",
@@ -19,19 +19,32 @@ EXPORTS.mozilla.dom += [
 
 if CONFIG["OS_TARGET"] == "WINNT":
     SOURCES += [
+        "Win32SerialParityCheckStream.cpp",
         "Win32SerialPlatformService.cpp",
     ]
     OS_LIBS += [
         "cfgmgr32",
         "setupapi",
     ]
-elif CONFIG["OS_TARGET"] == "Darwin" or CONFIG["OS_TARGET"] == "Linux":
+elif (CONFIG["OS_TARGET"] == "Darwin" and CONFIG["TARGET_OS"] != "iOS") or CONFIG[
+    "OS_TARGET"
+] == "Linux":
     UNIFIED_SOURCES += [
         "PosixSerialPlatformService.cpp",
     ]
 
     if CONFIG["OS_TARGET"] == "Darwin":
+        SOURCES += [
+            "MacBluetoothServiceClassId.mm",
+        ]
+        # toolkit/xre is needed for MacAutoreleasePool.h, which is not in
+        # EXPORTS.mozilla.
+        LOCAL_INCLUDES += [
+            "/toolkit/xre",
+        ]
         OS_LIBS += [
+            "-framework Foundation",
+            "-framework IOBluetooth",
             "-framework IOKit",
             "-framework CoreFoundation",
         ]
@@ -39,6 +52,9 @@ elif CONFIG["OS_TARGET"] == "Darwin" or CONFIG["OS_TARGET"] == "Linux":
         CXXFLAGS += CONFIG["GLIB_CFLAGS"]
 
 UNIFIED_SOURCES += [
+    # Build this on all platforms so we can run the gtest
+    # everywhere. In product this is only used on POSIX.
+    "PosixSerialParityDecodeStream.cpp",
     "Serial.cpp",
     "SerialManagerChild.cpp",
     "SerialManagerParent.cpp",
@@ -50,6 +66,10 @@ UNIFIED_SOURCES += [
     "SerialPortPumps.cpp",
     "SerialPortStreamAlgorithms.cpp",
     "TestSerialPlatformService.cpp",
+]
+
+TEST_DIRS += [
+    "tests/gtest",
 ]
 
 IPDL_SOURCES += [

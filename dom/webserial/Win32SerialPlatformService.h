@@ -29,7 +29,8 @@ class Win32SerialPlatformService final : public SerialPlatformService {
   void Shutdown() override;
 
  private:
-  nsresult EnumeratePortsImpl(SerialPortList& aPorts) override;
+  nsresult EnumeratePortsImpl(SerialPortList& aPorts,
+                              bool* aLikelyAccessDenied) override;
   nsresult OpenImpl(const nsString& aPortId,
                     const IPCSerialOptions& aOptions) override;
   nsresult CloseImpl(const nsString& aPortId) override;
@@ -42,6 +43,7 @@ class Win32SerialPlatformService final : public SerialPlatformService {
   nsresult GetSignalsImpl(const nsString& aPortId,
                           IPCSerialInputSignals& aSignals) override;
   nsresult GetReadStreamImpl(const nsString& aPortId, uint32_t aBufferSize,
+                             bool aDetectParityErrors,
                              nsIAsyncInputStream** aStream) override;
   ~Win32SerialPlatformService() override;
 

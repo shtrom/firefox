@@ -256,7 +256,7 @@ add_task(async function testDisabledBrowserLanguages() {
   assertLocaleOrder(selected, "en-US,he", "en-US");
 
   // Wait for the children menu to be populated.
-  await BrowserTestUtils.waitForCondition(
+  await TestUtils.waitForCondition(
     () => !!available.children.length,
     "Children list populated"
   );
@@ -656,7 +656,7 @@ add_task(async function testInstallFromAMO() {
     "Polish is now installed"
   );
 
-  await BrowserTestUtils.waitForCondition(async () => {
+  await TestUtils.waitForCondition(async () => {
     let newDicts = await AddonManager.getAddonsByTypes(["dictionary"]);
     let done = !!newDicts.length;
 
@@ -832,10 +832,9 @@ add_task(async function testReorderMainPane() {
   is(available.selectedItem.value, "en-US", "English is selected");
 
   let hebrew = availableLocales.find(item => item.value == "he");
-  hebrew.click();
-  available.menupopup.hidePopup();
+  await BrowserTestUtils.selectMenulistItem(hebrew);
 
-  await BrowserTestUtils.waitForCondition(
+  await TestUtils.waitForCondition(
     () => !messageBar.hidden,
     "Wait for message bar to show"
   );
@@ -900,8 +899,7 @@ add_task(async function testLiveLanguageReloading() {
   // French and English are both LTR languages.
   let french = availableLocales.find(item => item.value == "fr");
 
-  french.click();
-  available.menupopup.hidePopup();
+  await BrowserTestUtils.selectMenulistItem(french);
 
   is(
     Services.locale.appLocaleAsBCP47,
@@ -971,10 +969,9 @@ add_task(async function testLiveLanguageReloadingBidiOff() {
   // English is LTR and Hebrew is RTL.
   let hebrew = availableLocales.find(item => item.value == "he");
 
-  hebrew.click();
-  available.menupopup.hidePopup();
+  await BrowserTestUtils.selectMenulistItem(hebrew);
 
-  await BrowserTestUtils.waitForCondition(
+  await TestUtils.waitForCondition(
     () => !messageBar.hidden,
     "Wait for message bar to show"
   );
@@ -1050,8 +1047,7 @@ add_task(async function testLiveLanguageReloadingBidiOn() {
   // English is LTR and Hebrew is RTL.
   let hebrew = availableLocales.find(item => item.value == "he");
 
-  hebrew.click();
-  available.menupopup.hidePopup();
+  await BrowserTestUtils.selectMenulistItem(hebrew);
 
   is(messageBar.hidden, true, "The message bar is still hidden");
 

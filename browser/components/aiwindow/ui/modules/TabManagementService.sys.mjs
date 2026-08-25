@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { SessionStore } from "resource:///modules/sessionstore/SessionStore.sys.mjs";
+import { SessionStore } from "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs";
 
 const lazy = {};
 
@@ -22,6 +22,21 @@ ChromeUtils.defineLazyGetter(lazy, "console", () =>
  * target a specific close operation when the user clicks "Undo".
  */
 export class TabManagementService {
+  /**
+   * Available colors for tab groups.
+   */
+  static TAB_GROUP_COLORS = [
+    "blue",
+    "purple",
+    "cyan",
+    "orange",
+    "yellow",
+    "pink",
+    "green",
+    "gray",
+    "red",
+  ];
+
   /**
    * Constructor allows dependency injection for testing.
    *
@@ -50,7 +65,8 @@ export class TabManagementService {
    *     // Operation metadata
    *     operationTimestamp: number    // When this close operation occurred
    *   }>,
-   *   timestamp: number               // When operation was stored
+   *   timestamp: number,              // When operation was stored
+   *   windowRef: WeakRef<Window>|null // WeakRef to the window tabs closed in
    * }>
    *
    * Note: This only stores lightweight metadata for matching tabs in SessionStore.
@@ -74,14 +90,9 @@ export class TabManagementService {
    *
    * @param {object} options
    * @param {string} options.operationId - ID returned from closeTabs()
-   * @param {Window} options.window - Browser window to restore tabs in
    * @returns {Promise<object>} Restore summary
    */
-  async restoreTabs({ operationId, window }) {
-    if (!window?.gBrowser) {
-      throw new Error("Invalid browser window provided");
-    }
-
+  async restoreTabs({ operationId }) {
     const operation = this.#recentCloseOperations.get(operationId);
 
     if (!operation) {
@@ -95,8 +106,28 @@ export class TabManagementService {
       };
     }
 
+    // Resolve the owning window from the record
+    const window = operation.windowRef?.get();
+    if (!window?.gBrowser) {
+      lazy.console.warn(
+        `The owning window is not available for tab-close operation: ${operationId}`
+      );
+      return {
+        restoredTabs: [],
+        restoredCount: 0,
+        requestedCount: operation.closedTabs.length,
+        failedTabs: operation.closedTabs.map(tab => ({
+          tab,
+          reason: "owning-window-closed",
+        })),
+      };
+    }
+
     const restoredTabs = [];
     const failedTabs = [];
+
+    // Remember the currently selected tab to switch back to it after restoration
+    const originalSelectedTab = window.gBrowser.selectedTab;
 
     for (const closedOperationTab of operation.closedTabs) {
       try {
@@ -115,7 +146,8 @@ export class TabManagementService {
 
         const restoredTab = this.#sessionStore.undoCloseTab(
           window,
-          closedTabIndex
+          closedTabIndex,
+          window
         );
 
         if (restoredTab) {
@@ -139,6 +171,14 @@ export class TabManagementService {
       }
     }
 
+    // Switch back to the originally selected tab to keep restorations in background
+    if (
+      originalSelectedTab &&
+      window.gBrowser.tabs.includes(originalSelectedTab)
+    ) {
+      window.gBrowser.selectedTab = originalSelectedTab;
+    }
+
     // Only delete the operation if all tabs were successfully restored
     if (!failedTabs.length) {
       this.#recentCloseOperations.delete(operationId);
@@ -160,9 +200,10 @@ export class TabManagementService {
    *
    * @param {object} options
    * @param {Array<object>} options.closedTabs
+   * @param {Window} [options.window] - Window the tabs were closed in
    * @returns {string|null}
    */
-  storeClosedTabsForUndo({ closedTabs }) {
+  storeClosedTabsForUndo({ closedTabs, window }) {
     if (!closedTabs?.length) {
       return null;
     }
@@ -178,6 +219,7 @@ export class TabManagementService {
     this.#recentCloseOperations.set(operationId, {
       closedTabs,
       timestamp: Date.now(),
+      windowRef: window ? Cu.getWeakReference(window) : null,
     });
 
     return operationId;
@@ -191,6 +233,416 @@ export class TabManagementService {
    */
   getStoredTabsForUndo(operationId) {
     return this.#recentCloseOperations.get(operationId) || null;
+  }
+
+  /**
+   * Creates a tab group from the provided tabs.
+   *
+   * @param {object} options
+   * @param {Array<Tab>} options.tabs - Array of tab objects to group
+   * @param {Window} options.window - Browser window containing the tabs
+   * @param {string} [options.label] - Label for the tab group
+   * @param {string} [options.color] - Color for the tab group
+   * @param {string} [options.id] - Optional ID for the tab group
+   * @returns {Promise<{
+   *   success: boolean,
+   *   group: {
+   *     id: string,
+   *     label: string,
+   *     color: string,
+   *     tabCount: number
+   *   } | null,
+   *   failedTabs: Array<{
+   *     tab: Tab,
+   *     reason: string
+   *   }>,
+   *   error?: string
+   * }>} Creation summary with group details, success status, and any failed tabs
+   */
+  async createTabGroup({
+    tabs,
+    window,
+    label = "Tab Group",
+    color = null,
+    id = null,
+  }) {
+    if (!tabs?.length) {
+      lazy.console.warn("No tabs to group");
+
+      return {
+        success: false,
+        group: null,
+        failedTabs: [],
+        error: "No tabs provided",
+      };
+    }
+
+    if (!window?.gBrowser) {
+      return {
+        success: false,
+        group: null,
+        failedTabs: [],
+        error: "Invalid browser window provided",
+      };
+    }
+
+    const { validTabs, failedTabs } = this.#validateTabsForGrouping(
+      tabs,
+      window
+    );
+
+    if (!validTabs.length) {
+      return {
+        success: false,
+        group: null,
+        failedTabs,
+        error: "No valid tabs to group",
+      };
+    }
+
+    const groupColor = color || this.#getNextUnusedColor(window);
+
+    try {
+      const group = window.gBrowser.addTabGroup(validTabs, {
+        id,
+        color: groupColor,
+        label,
+        telemetryUserCreateSource: "ai_window",
+      });
+
+      if (!group) {
+        return {
+          success: false,
+          group: null,
+          failedTabs,
+          error: "Failed to create tab group",
+        };
+      }
+
+      return {
+        success: true,
+        group: {
+          id: group.id,
+          label: group.label,
+          color: group.color,
+          tabCount: group.tabs.length,
+        },
+        failedTabs,
+      };
+    } catch (error) {
+      lazy.console.error("Failed to create tab group:", error);
+      return {
+        success: false,
+        group: null,
+        failedTabs,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Opens a list of URLs as new background tabs in the given window.
+   *
+   * Always opens a fresh tab per URL - does not check whether a matching
+   * tab is already open. See findOpenTab() for that.
+   *
+   * @param {object} options
+   * @param {Array<string>} options.urls - URLs to open as new tabs
+   * @param {Window} options.window - Browser window to open the tabs in
+   * @returns {{
+   *   openedTabs: Array<Tab>,
+   *   failedUrls: Array<{url: string, reason: string}>
+   * }} Result with the newly-opened tabs and any that failed to open
+   */
+  openTabs({ urls, window }) {
+    if (!urls?.length) {
+      lazy.console.warn("No URLs to open");
+      return { openedTabs: [], failedUrls: [] };
+    }
+
+    if (!window?.gBrowser) {
+      throw new Error("Invalid browser window provided");
+    }
+
+    const openedTabs = [];
+    const failedUrls = [];
+    const triggeringPrincipal =
+      Services.scriptSecurityManager.getSystemPrincipal();
+
+    for (const url of urls) {
+      try {
+        openedTabs.push(
+          window.gBrowser.addTab(url, {
+            inBackground: true,
+            triggeringPrincipal,
+          })
+        );
+      } catch (error) {
+        lazy.console.error(`Failed to open tab for ${url}:`, error);
+        failedUrls.push({ url, reason: error.message });
+      }
+    }
+
+    return { openedTabs, failedUrls };
+  }
+
+  /**
+   * Switches to an already-open tab.
+   *
+   * @param {object} options
+   * @param {Tab} options.tab - Tab to switch to
+   * @param {Window} options.window - Browser window containing the tab
+   */
+  switchToTab({ tab, window }) {
+    if (!tab || !window?.gBrowser) {
+      lazy.console.warn("Invalid tab or window provided to switchToTab");
+      return;
+    }
+    window.gBrowser.selectedTab = tab;
+  }
+
+  /**
+   * Finds a tab already open in the given window whose URL exactly matches.
+   *
+   * @param {object} options
+   * @param {string} options.url - URL to match
+   * @param {Window} options.window - Browser window to search
+   * @param {Set<Tab>} [options.excludeTabs] - Tabs to skip, e.g. ones
+   *   already claimed by an earlier match in the same batch
+   * @returns {Tab|null} The matching tab, or null if none found
+   */
+  findOpenTab({ url, window, excludeTabs = null }) {
+    if (!window?.gBrowser) {
+      return null;
+    }
+
+    let normalizedUrl;
+    try {
+      normalizedUrl = Services.io.newURI(url).spec;
+    } catch (e) {
+      return null;
+    }
+
+    return (
+      window.gBrowser.tabs.find(
+        tab =>
+          !tab.closing &&
+          !excludeTabs?.has(tab) &&
+          tab.linkedBrowser?.currentURI?.spec === normalizedUrl
+      ) ?? null
+    );
+  }
+
+  /**
+   * Resolves a list of tabs against tabs already open in the given window,
+   * opening a fresh tab via openTabs() only for the URLs that don't match
+   * one already open. Matching is exact-URL and scoped to this window only
+   * - it does not search other windows.
+   *
+   * @param {object} options
+   * @param {Array<{url: string}>} options.tabs - Tabs to resolve, by URL
+   * @param {Window} options.window - Browser window to search/open tabs in
+   * @returns {Promise<{
+   *   resolvedTabs: Array<Tab>,
+   *   mergedCount: number,
+   *   failedUrls: Array<{url: string, reason: string}>
+   * }>} Resolved tabs in the original order, how many were merged rather
+   *   than opened, and any URLs that failed to open
+   */
+  async resolveOrOpenTabs({ tabs, window }) {
+    if (!tabs?.length) {
+      lazy.console.warn("No tabs to resolve");
+      return { resolvedTabs: [], mergedCount: 0, failedUrls: [] };
+    }
+
+    if (!window?.gBrowser) {
+      throw new Error("Invalid browser window provided");
+    }
+
+    const claimedTabs = new Set();
+    const resolvedTabs = [];
+    const failedUrls = [];
+    let mergedCount = 0;
+
+    for (const { url } of tabs) {
+      const existingTab = this.findOpenTab({
+        url,
+        window,
+        excludeTabs: claimedTabs,
+      });
+
+      // Pinned/already-grouped tabs would be rejected later by
+      // createTabGroup's own validation, so a match here can't be treated
+      // as merged - open a fresh tab instead, same as no match at all.
+      if (existingTab && !existingTab.pinned && !existingTab.group) {
+        claimedTabs.add(existingTab);
+        resolvedTabs.push(existingTab);
+        mergedCount++;
+        continue;
+      }
+
+      // One URL per call, not batched - openTabs()'s result doesn't
+      // preserve positional correspondence to its input urls when some
+      // fail, so batching here would make matching results back to
+      // resolvedTabs ambiguous.
+      const { openedTabs, failedUrls: openFailures } = await this.openTabs({
+        urls: [url],
+        window,
+      });
+      resolvedTabs.push(...openedTabs);
+      failedUrls.push(...openFailures);
+    }
+
+    return { resolvedTabs, mergedCount, failedUrls };
+  }
+
+  /**
+   * Ungroups tabs from a tab group, moving them back to regular tabs.
+   *
+   * @param {object} options
+   * @param {string} options.groupId - ID of the tab group to ungroup
+   * @param {Window} options.window - Browser window containing the tab group
+   * @returns {Promise<{
+   *   success: boolean,
+   *   ungroupedTabs: Array<{
+   *     linkedPanel: string,
+   *     url: string,
+   *     title: string
+   *   }>,
+   *   error?: string
+   * }>} Result with ungrouped tabs and success status
+   */
+  async ungroupTabs({ groupId, window }) {
+    if (!groupId || !window?.gBrowser) {
+      return {
+        success: false,
+        ungroupedTabs: [],
+        error: "Invalid parameters for ungrouping tabs",
+      };
+    }
+
+    try {
+      // Find the tab group by ID
+      const group = window.gBrowser.tabGroups.find(g => g.id === groupId);
+
+      if (!group) {
+        return {
+          success: false,
+          ungroupedTabs: [],
+          error: `Tab group with ID ${groupId} not found`,
+        };
+      }
+
+      // Get all tabs in the group before ungrouping
+      const tabsInGroup = [...group.tabs];
+      const ungroupedTabs = tabsInGroup.map(tab => ({
+        linkedPanel: tab.linkedPanel,
+        url: tab.linkedBrowser?.currentURI?.spec || "",
+        title: tab.label || "",
+      }));
+
+      // Ungroup each tab individually (removes them from the group but doesn't close them)
+      for (const tab of tabsInGroup) {
+        window.gBrowser.ungroupTab(tab);
+      }
+
+      return {
+        success: true,
+        ungroupedTabs,
+      };
+    } catch (error) {
+      lazy.console.error("Failed to ungroup tabs:", error);
+      return {
+        success: false,
+        ungroupedTabs: [],
+        error: error.message || "Failed to ungroup tabs",
+      };
+    }
+  }
+
+  /**
+   * Gets the next unused color for a new tab group.
+   *
+   * @param {Window} window - Browser window
+   * @returns {string} Color code for the new group
+   * @private
+   */
+  #getNextUnusedColor(window) {
+    const usedColors = new Set(
+      window.gBrowser.getAllTabGroups().map(group => group.color)
+    );
+
+    // Find the first unused color
+    const color = TabManagementService.TAB_GROUP_COLORS.find(
+      colorCode => !usedColors.has(colorCode)
+    );
+
+    if (color) {
+      return color;
+    }
+
+    // If all colors are used, pick one randomly
+    const randomIndex = Math.floor(
+      Math.random() * TabManagementService.TAB_GROUP_COLORS.length
+    );
+    return TabManagementService.TAB_GROUP_COLORS[randomIndex] || "blue";
+  }
+
+  /**
+   * Validates tabs for grouping and filters out invalid ones.
+   *
+   * @param {Array<Tab>} tabs - Tabs to validate
+   * @param {Window} window - Browser window
+   * @returns {{validTabs: Array<Tab>, failedTabs: Array}} Valid tabs and failed tabs with reasons
+   * @private
+   */
+  #validateTabsForGrouping(tabs, window) {
+    const validTabs = [];
+    const failedTabs = [];
+
+    tabs.forEach(tab => {
+      // Check if tab belongs to the window
+      const tabInWindow = tab?.linkedBrowser && tab.documentGlobal === window;
+
+      if (!tabInWindow) {
+        failedTabs.push({
+          tab,
+          reason: "invalid-tab",
+        });
+        return;
+      }
+
+      // Pinned tabs cannot be grouped
+      if (tab.pinned) {
+        failedTabs.push({
+          tab,
+          reason: "pinned-tab",
+        });
+        return;
+      }
+
+      // Tab already in a group
+      if (tab.group) {
+        failedTabs.push({
+          tab,
+          reason: "already-grouped",
+        });
+        return;
+      }
+
+      // Tab is closing
+      if (tab.closing) {
+        failedTabs.push({
+          tab,
+          reason: "tab-closing",
+        });
+        return;
+      }
+
+      validTabs.push(tab);
+    });
+
+    return { validTabs, failedTabs };
   }
 
   /**
@@ -226,7 +678,7 @@ export class TabManagementService {
 
     let operationId = null;
     if (closedTabs.length) {
-      operationId = this.storeClosedTabsForUndo({ closedTabs });
+      operationId = this.storeClosedTabsForUndo({ closedTabs, window });
     }
 
     if (error) {
@@ -303,7 +755,10 @@ export class TabManagementService {
           operationTimestamp,
         });
 
-        window.gBrowser.removeTab(browserTab);
+        // Keep the window open when closing its last tab
+        window.gBrowser.removeTab(browserTab, {
+          closeWindowWithLastTab: false,
+        });
       }
     } catch (err) {
       error = err;

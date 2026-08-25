@@ -4,6 +4,7 @@
 
 #include "irregexp/imported/regexp-macro-assembler-arch.h"
 #include "irregexp/imported/regexp-stack.h"
+#include "irregexp/imported/regexp.h"
 #include "irregexp/imported/special-case.h"
 
 #ifdef V8_INTL_SUPPORT
@@ -17,8 +18,7 @@ namespace regexp {
 
 RegExpMacroAssembler::RegExpMacroAssembler(Isolate* isolate, Zone* zone,
                                            Mode mode)
-    : slow_safe_compiler_(false),
-      backtrack_limit_(JSRegExp::kNoBacktrackLimit),
+    : backtrack_limit_(JSRegExp::kNoBacktrackLimit),
       global_mode_(NOT_GLOBAL),
       isolate_(isolate),
       zone_(zone),
@@ -42,8 +42,7 @@ int RegExpMacroAssembler::stack_limit_slack_slot_count() const {
 }
 
 bool RegExpMacroAssembler::CanReadUnaligned() const {
-  return kUnalignedReadSupported && v8_flags.enable_regexp_unaligned_accesses &&
-         !slow_safe();
+  return kUnalignedReadSupported && v8_flags.enable_regexp_unaligned_accesses;
 }
 
 // static
@@ -192,13 +191,13 @@ Handle<ByteArray> NativeRegExpMacroAssembler::GetOrAddRangeArray(
     const ZoneList<CharacterRange>* ranges) {
   const uint32_t hash = Hash(ranges);
 
-  if (range_array_cache_.count(hash) != 0) {
-    Handle<FixedUInt16Array> range_array = range_array_cache_[hash];
+  if (auto it = range_array_cache_.find(hash); it != range_array_cache_.end()) {
+    Handle<FixedUInt16Array> range_array = it->second;
     if (Equals(ranges, range_array)) return range_array;
   }
 
   Handle<FixedUInt16Array> range_array = MakeRangeArray(isolate(), ranges);
-  range_array_cache_[hash] = range_array;
+  range_array_cache_.insert_or_assign(hash, range_array);
   return range_array;
 }
 
@@ -260,93 +259,155 @@ void RegExpMacroAssembler::CheckNotInSurrogatePair(int cp_offset,
   Bind(&ok);
 }
 
+void RegExpMacroAssembler::UnanchoredAdvance(bool unicode, Label* on_failure) {
+  if (unicode && mode() == UC16) {
+    // 2-byte Unicode mode: Step forward by 1 code point dynamically.
+    Label is_lead_surrogate, advance_1_char, advance_2_chars, done;
+    LoadCurrentCharacter(0, on_failure, true);
+    // Check if lead surrogate [0xD800, 0xDBFF]
+    CheckCharacterInRange(kLeadSurrogateStart, kLeadSurrogateEnd,
+                          &is_lead_surrogate);
+    // BMP character (non-lead-surrogate)
+    AdvanceCurrentPosition(1);
+    GoTo(&done);
+
+    Bind(&is_lead_surrogate);
+    LoadCurrentCharacter(1, &advance_1_char, true);
+    // Check if trail surrogate [0xDC00, 0xDFFF]
+    CheckCharacterInRange(kTrailSurrogateStart, kTrailSurrogateEnd,
+                          &advance_2_chars);
+
+    Bind(&advance_1_char);
+    AdvanceCurrentPosition(1);
+    GoTo(&done);
+
+    Bind(&advance_2_chars);
+    AdvanceCurrentPosition(2);
+
+    Bind(&done);
+  } else {
+    // Non-Unicode or 1-byte: Step forward by 1 code unit without loading
+    // character.
+    CheckPosition(0, on_failure);
+    AdvanceCurrentPosition(1);
+  }
+}
+
+int RegExpMacroAssembler::CalculateBoundsCheckOffset(int cp_offset,
+                                                     int characters) {
+  return cp_offset >= 0 ? cp_offset + characters - 1 : cp_offset;
+}
+
 void RegExpMacroAssembler::LoadCurrentCharacter(int cp_offset,
                                                 Label* on_end_of_input,
                                                 bool check_bounds,
                                                 int characters,
-                                                int eats_at_least) {
-  // By default, eats_at_least = characters.
-  if (eats_at_least == kUseCharactersValue) {
-    eats_at_least = characters;
+                                                int bounds_check_offset) {
+  DCHECK_IMPLIES(bounds_check_offset < 0,
+                 bounds_check_offset == kDefaultBoundsCheckOffset ||
+                     bounds_check_offset == cp_offset);
+  if (bounds_check_offset == kDefaultBoundsCheckOffset) {
+    bounds_check_offset = CalculateBoundsCheckOffset(cp_offset, characters);
   }
 
   LoadCurrentCharacterImpl(cp_offset, on_end_of_input, check_bounds, characters,
-                           eats_at_least);
+                           bounds_check_offset);
 }
 
 void NativeRegExpMacroAssembler::LoadCurrentCharacterImpl(
     int cp_offset, Label* on_end_of_input, bool check_bounds, int characters,
-    int eats_at_least) {
-  // It's possible to preload a small number of characters when each success
-  // path requires a large number of characters, but not the reverse.
-  DCHECK_GE(eats_at_least, characters);
-
+    int bounds_check_offset) {
   CHECK(base::IsInRange(cp_offset, kMinCPOffset, kMaxCPOffset));
   if (check_bounds) {
-    if (cp_offset >= 0) {
-      CheckPosition(cp_offset + eats_at_least - 1, on_end_of_input);
-    } else {
-      CheckPosition(cp_offset, on_end_of_input);
-    }
+    DCHECK_LE(cp_offset, bounds_check_offset);
+    CheckPosition(bounds_check_offset, on_end_of_input);
   }
   LoadCurrentCharacterUnchecked(cp_offset, characters);
 }
 
 void RegExpMacroAssembler::SkipUntilCharAnd(int cp_offset, int advance_by,
                                             unsigned character, unsigned mask,
-                                            int eats_at_least, Label* on_match,
+                                            int bounds_check_offset,
+                                            Label* on_match,
                                             Label* on_no_match) {
+  auto emit_scalar_check = [&]() {
+    LoadCurrentCharacter(cp_offset, on_no_match, true, 1, bounds_check_offset);
+    CheckCharacterAfterAnd(character, mask, on_match);
+    AdvanceCurrentPosition(advance_by);
+  };
+  if (SkipUntilCharAndUseSimd(advance_by)) {
+    // Scalar check for the first position to avoid SIMD setup overhead if we
+    // find a potential match immediately.
+    emit_scalar_check();
+    SkipUntilCharAndSimd(cp_offset, advance_by, character, mask,
+                         bounds_check_offset, on_match, on_no_match);
+  }
   Label loop;
   Bind(&loop);
-  LoadCurrentCharacter(cp_offset, on_no_match, true, 1, eats_at_least);
-  CheckCharacterAfterAnd(character, mask, on_match);
-  AdvanceCurrentPosition(advance_by);
+  emit_scalar_check();
   GoTo(&loop);
 }
 
 void RegExpMacroAssembler::SkipUntilChar(int cp_offset, int advance_by,
-                                         unsigned character, Label* on_match,
-                                         Label* on_no_match) {
-  Label loop;
-  Bind(&loop);
-  LoadCurrentCharacter(cp_offset, on_no_match, true);
-  CheckCharacter(character, on_match);
-  AdvanceCurrentPosition(advance_by);
-  GoTo(&loop);
-}
+                                         unsigned character,
+                                         int bounds_check_offset,
+                                         Label* on_match, Label* on_no_match) {
+  auto emit_scalar_check = [&]() {
+    LoadCurrentCharacter(cp_offset, on_no_match, true, 1, bounds_check_offset);
+    CheckCharacter(character, on_match);
+    AdvanceCurrentPosition(advance_by);
+  };
 
-void RegExpMacroAssembler::SkipUntilCharPosChecked(
-    int cp_offset, int advance_by, unsigned character, int eats_at_least,
-    Label* on_match, Label* on_no_match) {
+  if (SkipUntilCharUseSimd(advance_by)) {
+    // Scalar check for the first position to avoid SIMD setup overhead if we
+    // find a potential match immediately.
+    emit_scalar_check();
+
+    SkipUntilCharSimd(cp_offset, advance_by, character, bounds_check_offset,
+                      on_match, on_no_match);
+  }
+
+  // Fallback scalar loop
   Label loop;
   Bind(&loop);
-  LoadCurrentCharacter(cp_offset, on_no_match, true, 1, eats_at_least);
-  CheckCharacter(character, on_match);
-  AdvanceCurrentPosition(advance_by);
+  emit_scalar_check();
   GoTo(&loop);
 }
 
 void RegExpMacroAssembler::SkipUntilCharOrChar(int cp_offset, int advance_by,
                                                unsigned char1, unsigned char2,
+                                               int bounds_check_offset,
                                                Label* on_match,
                                                Label* on_no_match) {
+  auto emit_scalar_check = [&]() {
+    LoadCurrentCharacter(cp_offset, on_no_match, true, 1, bounds_check_offset);
+    CheckCharacter(char1, on_match);
+    CheckCharacter(char2, on_match);
+    AdvanceCurrentPosition(advance_by);
+  };
+
+  if (SkipUntilCharOrCharUseSimd(advance_by)) {
+    // Scalar check for the first position to avoid SIMD setup overhead if we
+    // find a potential match immediately.
+    emit_scalar_check();
+
+    SkipUntilCharOrCharSimd(cp_offset, advance_by, char1, char2,
+                            bounds_check_offset, on_match, on_no_match);
+  }
   Label loop;
   Bind(&loop);
-  LoadCurrentCharacter(cp_offset, on_no_match, true);
-  CheckCharacter(char1, on_match);
-  CheckCharacter(char2, on_match);
-  AdvanceCurrentPosition(advance_by);
+  emit_scalar_check();
   GoTo(&loop);
 }
 
 void RegExpMacroAssembler::SkipUntilGtOrNotBitInTable(
     int cp_offset, int advance_by, unsigned character, Handle<ByteArray> table,
-    Label* on_match, Label* on_no_match) {
+    int bounds_check_offset, Label* on_match, Label* on_no_match) {
   DCHECK(base::IsInRange(character, std::numeric_limits<base::uc16>::min(),
                          std::numeric_limits<base::uc16>::max()));
   Label loop, advance_and_continue;
   Bind(&loop);
-  LoadCurrentCharacter(cp_offset, on_no_match, true);
+  LoadCurrentCharacter(cp_offset, on_no_match, true, 1, bounds_check_offset);
   CheckCharacterGT(character, on_match);
   CheckBitInTable(table, &advance_and_continue);
   GoTo(on_match);
@@ -397,35 +458,35 @@ void RegExpMacroAssembler::SkipUntilOneOfMasked3(
   //
   // sequence offset name
   // bc0   0  SkipUntilBitInTable
-  // bc1  20  CheckPosition
-  // bc2  28  Load4CurrentCharsUnchecked
-  // bc3  2c  AndCheck4Chars
-  // bc4  3c  AdvanceCpAndGoto
-  // bc5  48  Load4CurrentChars
-  // bc6  4c  AndCheck4Chars
-  // bc7  5c  AndCheck4Chars
-  // bc8  6c  AndCheckNot4Chars
+  // bc1  24  Load4CurrentChars
+  // bc2  30  AndCheck4Chars
+  // bc3  40  AdvanceCpAndGoto
+  // bc4  48  Load4CurrentChars
+  // bc5  54  AndCheck4Chars
+  // bc6  64  AndCheck4Chars
+  // bc7  74  AndCheckNot4Chars
 
-  Label bc0_skip_until_bit_in_table, bc1_check_current_position,
-      bc4_advance_cp_and_goto, bc5_load_4_current_chars;
+  Label bc0_skip_until_bit_in_table, bc1_load_4_current_chars,
+      bc3_advance_cp_and_goto, bc4_load_4_current_chars;
   Bind(&bc0_skip_until_bit_in_table);
   SkipUntilBitInTable(args.bc0_cp_offset, args.bc0_table, args.bc0_nibble_table,
-                      args.bc0_advance_by, &bc1_check_current_position,
-                      &bc1_check_current_position);
-  Bind(&bc1_check_current_position);
-  CheckPosition(args.bc1_cp_offset, args.bc1_on_failure);
-  LoadCurrentCharacter(args.bc2_cp_offset, nullptr, false, 4);
-  CheckCharacterAfterAnd(args.bc3_characters, args.bc3_mask,
-                         &bc5_load_4_current_chars);
-  Bind(&bc4_advance_cp_and_goto);
-  AdvanceCurrentPosition(args.bc4_by);
+                      args.bc0_advance_by, args.bc0_cp_offset,
+                      &bc1_load_4_current_chars, &bc1_load_4_current_chars);
+  Bind(&bc1_load_4_current_chars);
+  LoadCurrentCharacter(args.bc1_cp_offset, args.bc1_on_failure, true, 4,
+                       args.bc1_bounds_check_offset);
+  CheckCharacterAfterAnd(args.bc2_characters, args.bc2_mask,
+                         &bc4_load_4_current_chars);
+  Bind(&bc3_advance_cp_and_goto);
+  AdvanceCurrentPosition(args.bc3_by);
   GoTo(&bc0_skip_until_bit_in_table);
-  Bind(&bc5_load_4_current_chars);
-  LoadCurrentCharacter(args.bc5_cp_offset, &bc4_advance_cp_and_goto, true, 4);
+  Bind(&bc4_load_4_current_chars);
+  LoadCurrentCharacter(args.bc4_cp_offset, &bc3_advance_cp_and_goto, true, 4,
+                       args.bc4_bounds_check_offset);
+  CheckCharacterAfterAnd(args.bc5_characters, args.bc5_mask, args.bc5_on_equal);
   CheckCharacterAfterAnd(args.bc6_characters, args.bc6_mask, args.bc6_on_equal);
-  CheckCharacterAfterAnd(args.bc7_characters, args.bc7_mask, args.bc7_on_equal);
-  CheckNotCharacterAfterAnd(args.bc8_characters, args.bc8_mask,
-                            &bc4_advance_cp_and_goto);
+  CheckNotCharacterAfterAnd(args.bc7_characters, args.bc7_mask,
+                            &bc3_advance_cp_and_goto);
   GoTo(args.fallthrough_jump_target);
 }
 
@@ -483,13 +544,14 @@ int NativeRegExpMacroAssembler::CheckStackGuardState(
     } else if (check.InterruptRequested()) {
       [[maybe_unused]] AllowGarbageCollection yes_gc;
       Tagged<Object> result = isolate->stack_guard()->HandleInterrupts();
-      if (IsExceptionHole(result, isolate)) return_value = EXCEPTION;
+      if (IsExceptionHole(result)) return_value = EXCEPTION;
     }
 
     // We are not using operator == here because it does a slow DCHECK
     // CheckObjectComparisonAllowed() which might crash when trying to access
     // the page header of the stale pointer.
-    if (!code_handle->SafeEquals(re_code)) {  // Return address no longer valid
+    if (!Tagged<InstructionStream>(*code_handle).SafeEquals(re_code)) {
+      // Return address no longer valid
       // Overwrite the return address on the stack.
       intptr_t delta = code_handle->address() - re_code.address();
       Address new_pc = old_pc + delta;
@@ -561,8 +623,23 @@ int NativeRegExpMacroAssembler::Match(DirectHandle<IrRegExpData> regexp_data,
       subject_ptr->AddressOfCharacterAt(start_offset + slice_offset, no_gc);
   int byte_length = char_length << char_size_shift;
   const uint8_t* input_end = input_start + byte_length;
-  return Execute(*subject, start_offset, input_start, input_end, offsets_vector,
-                 offsets_vector_length, isolate, *regexp_data);
+
+#ifdef V8_ENABLE_REGEXP_DIAGNOSTICS
+  if (V8_UNLIKELY(v8_flags.trace_regexp_exec)) {
+    RegExp::TraceExecutionBegin(reinterpret_cast<Address>(isolate));
+  }
+#endif  // V8_ENABLE_REGEXP_DIAGNOSTICS
+  int res =
+      Execute(*subject, start_offset, input_start, input_end, offsets_vector,
+              offsets_vector_length, isolate, *regexp_data);
+#ifdef V8_ENABLE_REGEXP_DIAGNOSTICS
+  if (V8_UNLIKELY(v8_flags.trace_regexp_exec)) {
+    RegExp::TraceExecutionEnd(reinterpret_cast<Address>(isolate),
+                              regexp_data->ptr(), subject->ptr(), start_offset,
+                              res);
+  }
+#endif  // V8_ENABLE_REGEXP_DIAGNOSTICS
+  return res;
 }
 
 // static

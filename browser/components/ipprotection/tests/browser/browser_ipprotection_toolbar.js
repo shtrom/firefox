@@ -119,6 +119,32 @@ add_task(async function toolbar_icon_status() {
     button.classList.contains("ipprotection-on"),
     "Toolbar icon should now show connected status"
   );
+  // Regression guard for bug 2034698: state changes must not swap the toolbar
+  // icon's image (which triggered a one-frame blank). Instead every state's
+  // artwork is an always-painted overlay layer toggled via opacity, so the
+  // "on" layer is revealed while the base (off) icon is hidden.
+  let onLayer = button.querySelector(
+    ".ipprotection-icon-layer[data-state='on']"
+  );
+  let baseIcon = button.querySelector(
+    ".ipprotection-icon-stack > .toolbarbutton-icon"
+  );
+  let iconStack = button.querySelector(".ipprotection-icon-stack");
+  Assert.ok(
+    iconStack.classList.contains("toolbarbutton-badge-stack"),
+    "Icon stack should have the toolbarbutton-badge-stack class for positioning and hover state"
+  );
+  Assert.ok(onLayer, "On-state overlay layer should exist");
+  Assert.equal(
+    getComputedStyle(onLayer).opacity,
+    "1",
+    "On layer should be revealed when connected"
+  );
+  Assert.equal(
+    getComputedStyle(baseIcon).opacity,
+    "0",
+    "Base (off) icon should be hidden when connected"
+  );
   let vpnOffPromise = BrowserTestUtils.waitForEvent(
     lazy.IPPProxyManager,
     "IPPProxyManager:StateChanged",
@@ -133,6 +159,16 @@ add_task(async function toolbar_icon_status() {
     !button.classList.contains("ipprotection-on"),
     "Toolbar icon should now show disconnected status"
   );
+  Assert.equal(
+    getComputedStyle(onLayer).opacity,
+    "0",
+    "On layer should be hidden when disconnected"
+  );
+  Assert.equal(
+    getComputedStyle(baseIcon).opacity,
+    "1",
+    "Base (off) icon should be shown when disconnected"
+  );
 
   cleanupService();
 
@@ -140,6 +176,45 @@ add_task(async function toolbar_icon_status() {
   let panelHiddenPromise = waitForPanelEvent(document, "popuphidden");
   EventUtils.synthesizeKey("KEY_Escape");
   await panelHiddenPromise;
+});
+
+/**
+ * Tests that the panel opens when the toolbar button is activated via the
+ * Enter or Space keys. Bug 2027922 — on macOS, native XUL toolbarbutton key
+ * handling does not fire `command` for Enter, so we rely on the explicit
+ * keypress handler in navigator-toolbox.js.
+ */
+add_task(async function toolbar_keyboard_activation() {
+  for (let key of ["KEY_Enter", " "]) {
+    let button = document.getElementById(IPProtectionWidget.WIDGET_ID);
+    Assert.ok(
+      BrowserTestUtils.isVisible(button),
+      "IP Protection widget should be visible"
+    );
+
+    button.setAttribute("tabindex", "-1");
+    button.focus();
+
+    let panelShownPromise = waitForPanelEvent(document, "popupshown");
+    let panelInitPromise = BrowserTestUtils.waitForEvent(
+      document,
+      "IPProtection:Init"
+    );
+    EventUtils.synthesizeKey(key, {}, window);
+    await Promise.all([panelShownPromise, panelInitPromise]);
+
+    Assert.equal(
+      button.getAttribute("open"),
+      "true",
+      `Panel should be open after pressing ${key}`
+    );
+
+    let panelHiddenPromise = waitForPanelEvent(document, "popuphidden");
+    EventUtils.synthesizeKey("KEY_Escape");
+    await panelHiddenPromise;
+
+    button.removeAttribute("tabindex");
+  }
 });
 
 /**

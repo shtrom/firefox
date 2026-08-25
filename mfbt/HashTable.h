@@ -73,8 +73,8 @@
 #define mozilla_HashTable_h
 
 #include <bit>
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 #include "mozilla/AllocPolicy.h"
 #include "mozilla/Assertions.h"
@@ -911,7 +911,9 @@ struct CStringHasher {
   using Key = const char*;
   using Lookup = const char*;
 
-  static HashNumber hash(const Lookup& aLookup) { return HashString(aLookup); }
+  static HashNumber hash(const Lookup& aLookup) {
+    return HashString(aLookup, strlen(aLookup));
+  }
 
   static bool match(const Key& aKey, const Lookup& aLookup) {
     return strcmp(aKey, aLookup) == 0;
@@ -957,13 +959,13 @@ struct FallibleHashMethods {
 };
 
 template <typename HashPolicy, typename Lookup>
-static bool MaybeGetHash(Lookup&& aLookup, HashNumber* aHashOut) {
+bool MaybeGetHash(Lookup&& aLookup, HashNumber* aHashOut) {
   return FallibleHashMethods<typename HashPolicy::Base>::maybeGetHash(
       std::forward<Lookup>(aLookup), aHashOut);
 }
 
 template <typename HashPolicy, typename Lookup>
-static bool EnsureHash(Lookup&& aLookup, HashNumber* aHashOut) {
+bool EnsureHash(Lookup&& aLookup, HashNumber* aHashOut) {
   return FallibleHashMethods<typename HashPolicy::Base>::ensureHash(
       std::forward<Lookup>(aLookup), aHashOut);
 }

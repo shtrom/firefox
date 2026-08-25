@@ -5,18 +5,18 @@
 #ifndef netwerk_dns_GetAddrInfo_h
 #define netwerk_dns_GetAddrInfo_h
 
-#include "nsError.h"
-#include "nscore.h"
-#include "nsINativeDNSResolverOverride.h"
-#include "nsHashKeys.h"
-#include "nsTHashMap.h"
-#include "mozilla/RWLock.h"
-#include "nsTArray.h"
-#include "prio.h"
-#include "mozilla/net/DNS.h"
-#include "nsIDNSByTypeRecord.h"
 #include "mozilla/Logging.h"
+#include "mozilla/RWLock.h"
+#include "mozilla/net/DNS.h"
+#include "nsError.h"
+#include "nsHashKeys.h"
+#include "nsIDNSByTypeRecord.h"
 #include "nsIDNSService.h"
+#include "nsINativeDNSResolverOverride.h"
+#include "nsTArray.h"
+#include "nsTHashMap.h"
+#include "nscore.h"
+#include "prio.h"
 
 #if defined(XP_WIN)
 #  define DNSQUERY_AVAILABLE 1
@@ -76,13 +76,19 @@ nsresult ResolveHTTPSRecord(const nsACString& aHost,
 
 /**
  * The platform specific implementation of HTTPS resolution.
+ *
+ * If the record for aHost is an HTTPS AliasMode (SvcPriority 0) record whose
+ * target could not be resolved within the same response, aAliasName is set to
+ * the target so the caller can issue a fresh lookup for it.
  */
 nsresult ResolveHTTPSRecordImpl(const nsACString& aHost,
                                 nsIDNSService::DNSFlags aFlags,
-                                TypeRecordResultType& aResult, uint32_t& aTTL);
+                                TypeRecordResultType& aResult, uint32_t& aTTL,
+                                nsACString& aAliasName);
 
 nsresult ParseHTTPSRecord(nsCString& aHost, DNSPacket& aDNSPacket,
-                          TypeRecordResultType& aResult, uint32_t& aTTL);
+                          TypeRecordResultType& aResult, uint32_t& aTTL,
+                          nsACString& aAliasName);
 
 // Use the provided aHost to create a mock HTTPS record.
 nsresult CreateAndResolveMockHTTPSRecord(const nsACString& aHost,
@@ -112,7 +118,8 @@ class NativeDNSResolverOverride : public nsINativeDNSResolverOverride {
                                nsIDNSService::DNSFlags aFlags,
                                AddrInfo** aAddrInfo);
   friend bool FindHTTPSRecordOverride(const nsACString& aHost,
-                                      TypeRecordResultType& aResult);
+                                      TypeRecordResultType& aResult,
+                                      nsACString& aAliasName);
 };
 
 }  // namespace net

@@ -11,7 +11,6 @@
 #include "mozilla/extensions/WebExtensionPolicy.h"
 #include "mozilla/net/CookieJarSettings.h"
 #include "mozilla/ScopeExit.h"
-#include "mozilla/StaticPrefs_privacy.h"
 #include "mozilla/StorageAccess.h"
 #include "nsContentUtils.h"
 #include "nsICookieJarSettings.h"
@@ -314,7 +313,7 @@ nsresult StoragePrincipalHelper::GetPrincipal(nsIChannel* aChannel,
     case eForeignPartitionedPrincipal:
       // We only support foreign partitioned principal when dFPI is enabled.
       if (cjs->GetCookieBehavior() ==
-              nsICookieService::BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN &&
+              nsICookieService::BEHAVIOR_PARTITION_FOREIGN &&
           AntiTrackingUtils::IsThirdPartyChannel(aChannel)) {
         outPrincipal = partitionedPrincipal;
       }
@@ -353,7 +352,7 @@ nsresult StoragePrincipalHelper::GetPrincipal(nsPIDOMWindowInner* aWindow,
     case eForeignPartitionedPrincipal:
       // We only support foreign partitioned principal when dFPI is enabled.
       if (doc->CookieJarSettings()->GetCookieBehavior() ==
-              nsICookieService::BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN &&
+              nsICookieService::BEHAVIOR_PARTITION_FOREIGN &&
           AntiTrackingUtils::IsThirdPartyWindow(aWindow, nullptr)) {
         outPrincipal = doc->PartitionedPrincipal();
       } else {
@@ -370,12 +369,6 @@ nsresult StoragePrincipalHelper::GetPrincipal(nsPIDOMWindowInner* aWindow,
 bool StoragePrincipalHelper::ShouldUsePartitionPrincipalForServiceWorker(
     nsIDocShell* aDocShell) {
   MOZ_ASSERT(aDocShell);
-
-  // We don't use the partitioned principal for service workers if it's
-  // disabled.
-  if (!StaticPrefs::privacy_partition_serviceWorkers()) {
-    return false;
-  }
 
   RefPtr<dom::Document> document = aDocShell->GetExtantDocument();
 
@@ -405,7 +398,7 @@ bool StoragePrincipalHelper::ShouldUsePartitionPrincipalForServiceWorker(
 
   // We only support partitioned service workers when dFPI is enabled.
   if (cookieJarSettings->GetCookieBehavior() !=
-      nsICookieService::BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN) {
+      nsICookieService::BEHAVIOR_PARTITION_FOREIGN) {
     return false;
   }
 
@@ -422,18 +415,12 @@ bool StoragePrincipalHelper::ShouldUsePartitionPrincipalForServiceWorker(
     dom::WorkerPrivate* aWorkerPrivate) {
   MOZ_ASSERT(aWorkerPrivate);
 
-  // We don't use the partitioned principal for service workers if it's
-  // disabled.
-  if (!StaticPrefs::privacy_partition_serviceWorkers()) {
-    return false;
-  }
-
   nsCOMPtr<nsICookieJarSettings> cookieJarSettings =
       aWorkerPrivate->CookieJarSettings();
 
   // We only support partitioned service workers when dFPI is enabled.
   if (cookieJarSettings->GetCookieBehavior() !=
-      nsICookieService::BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN) {
+      nsICookieService::BEHAVIOR_PARTITION_FOREIGN) {
     return false;
   }
 
@@ -482,7 +469,7 @@ bool StoragePrincipalHelper::GetOriginAttributes(
       // We only support foreign partitioned principal when dFPI is enabled.
       // Otherwise, we will use the regular principal.
       if (cjs->GetCookieBehavior() ==
-              nsICookieService::BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN &&
+              nsICookieService::BEHAVIOR_PARTITION_FOREIGN &&
           AntiTrackingUtils::IsThirdPartyChannel(aChannel)) {
         ChooseOriginAttributes(aChannel, aAttributes, true);
       }

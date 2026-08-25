@@ -9,17 +9,13 @@ ChromeUtils.defineESModuleGetters(lazy, {
 
 const PC_CONTRACT = "@mozilla.org/dom/peerconnection;1";
 const PC_OBS_CONTRACT = "@mozilla.org/dom/peerconnectionobserver;1";
-const PC_ICE_CONTRACT = "@mozilla.org/dom/rtcicecandidate;1";
 const PC_SESSION_CONTRACT = "@mozilla.org/dom/rtcsessiondescription;1";
-const PC_STATIC_CONTRACT = "@mozilla.org/dom/peerconnectionstatic;1";
 const PC_COREQUEST_CONTRACT = "@mozilla.org/dom/createofferrequest;1";
 
 const PC_CID = Components.ID("{bdc2e533-b308-4708-ac8e-a8bfade6d851}");
 const PC_OBS_CID = Components.ID("{d1748d4c-7f6a-4dc5-add6-d55b7678537e}");
-const PC_ICE_CID = Components.ID("{02b9970c-433d-4cc2-923d-f7028ac66073}");
 const PC_SESSION_CID = Components.ID("{1775081b-b62d-4954-8ffe-a067bbf508a7}");
 const PC_MANAGER_CID = Components.ID("{7293e901-2be3-4c02-b4bd-cbef6fc24f78}");
-const PC_STATIC_CID = Components.ID("{0fb47c47-a205-4583-a9fc-cbadf8c95880}");
 const PC_COREQUEST_CID = Components.ID(
   "{74b2122d-65a8-4824-aa9e-3d664cb75dc2}"
 );
@@ -55,7 +51,6 @@ export class GlobalPCList {
   constructor() {
     this._list = {};
     this._networkdown = false; // XXX Need to query current state somehow
-    this._lifecycleobservers = {};
     this._nextId = 1;
     Services.obs.addObserver(this, "inner-window-destroyed");
     Services.obs.addObserver(this, "profile-change-net-teardown");
@@ -66,12 +61,6 @@ export class GlobalPCList {
     Services.obs.addObserver(this, "PeerConnection:response:deny");
     if (Services.cpmm) {
       Services.cpmm.addMessageListener("gmp-plugin-crash", this);
-    }
-  }
-
-  notifyLifecycleObservers(pc, type) {
-    for (var key of Object.keys(this._lifecycleobservers)) {
-      this._lifecycleobservers[key](pc, pc._winID, type);
     }
   }
 
@@ -157,10 +146,6 @@ export class GlobalPCList {
     if (topic == "inner-window-destroyed") {
       let winID = subject.QueryInterface(Ci.nsISupportsPRUint64).data;
       cleanupWinId(this._list, winID);
-
-      if (this._lifecycleobservers.hasOwnProperty(winID)) {
-        delete this._lifecycleobservers[winID];
-      }
     } else if (
       topic == "profile-change-net-teardown" ||
       topic == "network:offline-about-to-go-offline"
@@ -178,8 +163,7 @@ export class GlobalPCList {
       if (subject instanceof Ci.nsIWritablePropertyBag2) {
         let pluginID = subject.getPropertyAsUint32("pluginID");
         let pluginName = subject.getPropertyAsAString("pluginName");
-        let data = { pluginID, pluginName };
-        this.handleGMPCrash(data);
+        this.handleGMPCrash({ pluginID, pluginName });
       }
     } else if (
       topic == "PeerConnection:response:allow" ||
@@ -200,10 +184,6 @@ export class GlobalPCList {
       }
     }
   }
-
-  _registerPeerConnectionLifecycleCallback(winID, cb) {
-    this._lifecycleobservers[winID] = cb;
-  }
 }
 
 setupPrototype(GlobalPCList, {
@@ -213,86 +193,7 @@ setupPrototype(GlobalPCList, {
 
 var _globalPCList = new GlobalPCList();
 
-// Parses grammar in RFC5245 section 15 and ICE TCP from RFC6544 section 4.5.
-function parseCandidate(line) {
-  const match = line.match(
-    /^(a=)?candidate:([A-Za-z0-9+\/]{1,32}) (\d+) (UDP|TCP) (\d+) ([A-Za-z0-9.:-]+) (\d+) typ (host|srflx|prflx|relay)(?: raddr ([A-Za-z0-9.:-]+) rport (\d+))?(.*)$/i
-  );
-  if (!match) {
-    return null;
-  }
-  const candidate = {
-    foundation: match[2],
-    componentId: parseInt(match[3], 10),
-    transport: match[4],
-    priority: parseInt(match[5], 10),
-    address: match[6],
-    port: parseInt(match[7], 10),
-    type: match[8],
-    relatedAddress: match[9],
-    relatedPort: match[10],
-  };
-  if (candidate.componentId < 1 || candidate.componentId > 256) {
-    return null;
-  }
-  if (candidate.priority < 0 || candidate.priority > 4294967295) {
-    return null;
-  }
-  if (candidate.port < 0 || candidate.port > 65535) {
-    return null;
-  }
-  candidate.component = { 1: "rtp", 2: "rtcp" }[candidate.componentId] || null;
-  candidate.protocol =
-    { udp: "udp", tcp: "tcp" }[candidate.transport.toLowerCase()] || null;
-
-  const tcpTypeMatch = match[11].match(/tcptype (\S+)/i);
-  if (tcpTypeMatch) {
-    candidate.tcpType = tcpTypeMatch[1];
-    if (
-      candidate.protocol != "tcp" ||
-      !["active", "passive", "so"].includes(candidate.tcpType)
-    ) {
-      return null;
-    }
-  }
-  return candidate;
-}
-
-export class RTCIceCandidate {
-  init(win) {
-    this._win = win;
-  }
-
-  __init(dict) {
-    if (dict.sdpMid == null && dict.sdpMLineIndex == null) {
-      throw new this._win.TypeError(
-        "Either sdpMid or sdpMLineIndex must be specified"
-      );
-    }
-    Object.assign(this, dict);
-    const candidate = parseCandidate(this.candidate);
-    if (!candidate) {
-      return;
-    }
-    Object.assign(this, candidate);
-  }
-
-  toJSON() {
-    return {
-      candidate: this.candidate,
-      sdpMid: this.sdpMid,
-      sdpMLineIndex: this.sdpMLineIndex,
-      usernameFragment: this.usernameFragment,
-    };
-  }
-}
-
-setupPrototype(RTCIceCandidate, {
-  classID: PC_ICE_CID,
-  contractID: PC_ICE_CONTRACT,
-  QueryInterface: ChromeUtils.generateQI(["nsIDOMGlobalPropertyInitializer"]),
-});
-
+// eslint-disable-next-line no-shadow
 export class RTCSessionDescription {
   init(win) {
     this._win = win;
@@ -362,6 +263,7 @@ setupPrototype(RTCSessionDescription, {
   QueryInterface: ChromeUtils.generateQI(["nsIDOMGlobalPropertyInitializer"]),
 });
 
+// eslint-disable-next-line no-shadow
 export class RTCPeerConnection {
   constructor() {
     this._pc = null;
@@ -378,9 +280,6 @@ export class RTCPeerConnection {
     // canTrickle == null means unknown; when a remote description is received it
     // is set to true or false based on the presence of the "trickle" ice-option
     this._canTrickle = null;
-
-    // So we can record telemetry on state transitions
-    this._iceConnectionState = "new";
 
     this._hasStunServer = this._hasTurnServer = false;
     this._iceGatheredRelayCandidates = false;
@@ -461,6 +360,17 @@ export class RTCPeerConnection {
       if (rtcConfig.bundlePolicy != this._config.bundlePolicy) {
         throw new this._win.DOMException(
           "Cannot change bundlePolicy with setConfiguration",
+          "InvalidModificationError"
+        );
+      }
+
+      // alwaysNegotiateDataChannels must match
+      if (
+        rtcConfig.alwaysNegotiateDataChannels !=
+        this._config.alwaysNegotiateDataChannels
+      ) {
+        throw new this._win.DOMException(
+          "Cannot change alwaysNegotiateDataChannels with setConfiguration",
           "InvalidModificationError"
         );
       }
@@ -576,7 +486,6 @@ export class RTCPeerConnection {
 
     this._certificateReady = this._initCertificate(certificate);
     this._initIdp();
-    _globalPCList.notifyLifecycleObservers(this, "initialized");
   }
 
   getConfiguration() {
@@ -824,16 +733,16 @@ export class RTCPeerConnection {
       if (typeof this._win.onerror === "function") {
         this._win.onerror(e.message, e.fileName, e.lineNumber);
       }
-    } catch (e) {
+    } catch (err) {
       // If onerror itself throws, service it.
       try {
         this.logMsg(
-          e.message,
-          e.fileName,
-          e.lineNumber,
+          err.message,
+          err.fileName,
+          err.lineNumber,
           Ci.nsIScriptError.errorFlag
         );
-      } catch (e) {}
+      } catch {}
     }
   }
 
@@ -1321,6 +1230,9 @@ export class RTCPeerConnection {
   }
 
   addIceCandidate(cand, onSucc, onErr) {
+    // Spec requires us to return an already-rejected (with TypeError) promise
+    // if this fails, without any chaining or using RTCIceCandidate's
+    // constructor to catch the error.
     if (
       cand.candidate != "" &&
       cand.sdpMid == null &&
@@ -1385,14 +1297,13 @@ export class RTCPeerConnection {
       );
     }
 
-    let transceiver = this.getTransceivers().find(transceiver => {
-      return (
-        transceiver.sender.track == null &&
-        transceiver.getKind() == track.kind &&
-        !transceiver.stopped &&
-        !transceiver.hasBeenUsedToSend()
-      );
-    });
+    let transceiver = this.getTransceivers().find(
+      t =>
+        t.sender.track == null &&
+        t.getKind() == track.kind &&
+        !t.stopped &&
+        !t.hasBeenUsedToSend()
+    );
 
     if (transceiver) {
       transceiver.sender.setTrack(track);
@@ -1428,7 +1339,7 @@ export class RTCPeerConnection {
     }
 
     let transceiver = this.getTransceivers().find(
-      transceiver => !transceiver.stopped && transceiver.sender == sender
+      t => !t.stopped && t.sender == sender
     );
 
     // If the transceiver was removed due to rollback, let it slide.
@@ -1486,7 +1397,6 @@ export class RTCPeerConnection {
       return;
     }
     this._closed = true;
-    this.changeIceConnectionState("closed");
     if (this._localIdp) {
       this._localIdp.close();
     }
@@ -1615,7 +1525,7 @@ export class RTCPeerConnection {
     return this._pc.iceGatheringState;
   }
   get iceConnectionState() {
-    return this._iceConnectionState;
+    return this._pc.iceConnectionState;
   }
   get connectionState() {
     return this._pc.connectionState;
@@ -1631,7 +1541,6 @@ export class RTCPeerConnection {
   }
 
   handleIceGatheringStateChange() {
-    _globalPCList.notifyLifecycleObservers(this, "icegatheringstatechange");
     this.dispatchEvent(new this._win.Event("icegatheringstatechange"));
     if (this.iceGatheringState === "complete") {
       this.dispatchEvent(
@@ -1639,16 +1548,6 @@ export class RTCPeerConnection {
           candidate: null,
         })
       );
-    }
-  }
-
-  changeIceConnectionState(state) {
-    if (state != this._iceConnectionState) {
-      this._iceConnectionState = state;
-      _globalPCList.notifyLifecycleObservers(this, "iceconnectionstatechange");
-      if (!this._closed) {
-        this.dispatchEvent(new this._win.Event("iceconnectionstatechange"));
-      }
     }
   }
 
@@ -1793,6 +1692,7 @@ setupPrototype(RTCPeerConnection, {
 
 // This is a separate class because we don't want to expose it to DOM.
 
+// eslint-disable-next-line no-shadow
 export class PeerConnectionObserver {
   init(win) {
     this._win = win;
@@ -1879,36 +1779,8 @@ export class PeerConnectionObserver {
     );
   }
 
-  // This method is primarily responsible for updating iceConnectionState.
-  // This state is defined in the WebRTC specification as follows:
-  //
-  // iceConnectionState:
-  // -------------------
-  //   new           Any of the RTCIceTransports are in the new state and none
-  //                 of them are in the checking, failed or disconnected state.
-  //
-  //   checking      Any of the RTCIceTransports are in the checking state and
-  //                 none of them are in the failed or disconnected state.
-  //
-  //   connected     All RTCIceTransports are in the connected, completed or
-  //                 closed state and at least one of them is in the connected
-  //                 state.
-  //
-  //   completed     All RTCIceTransports are in the completed or closed state
-  //                 and at least one of them is in the completed state.
-  //
-  //   failed        Any of the RTCIceTransports are in the failed state.
-  //
-  //   disconnected  Any of the RTCIceTransports are in the disconnected state
-  //                 and none of them are in the failed state.
-  //
-  //   closed        All of the RTCIceTransports are in the closed state.
-
-  handleIceConnectionStateChange(iceConnectionState) {
+  logIceConnectionStateChange(iceConnectionState) {
     let pc = this._dompc;
-    if (pc.iceConnectionState === iceConnectionState) {
-      return;
-    }
 
     if (iceConnectionState === "failed") {
       if (!pc._hasStunServer) {
@@ -1927,8 +1799,6 @@ export class PeerConnectionObserver {
         pc.logError("ICE failed, see about:webrtc for more details");
       }
     }
-
-    pc.changeIceConnectionState(iceConnectionState);
   }
 
   onStateChange(state) {
@@ -1947,7 +1817,8 @@ export class PeerConnectionObserver {
 
     switch (state) {
       case "IceConnectionState":
-        this.handleIceConnectionStateChange(this._dompc._pc.iceConnectionState);
+        this.logIceConnectionStateChange(this._dompc.iceConnectionState);
+        this.dispatchEvent(new this._win.Event("iceconnectionstatechange"));
         break;
 
       case "IceGatheringState":
@@ -1955,7 +1826,6 @@ export class PeerConnectionObserver {
         break;
 
       case "ConnectionState":
-        _globalPCList.notifyLifecycleObservers(this, "connectionstatechange");
         this.dispatchEvent(new this._win.Event("connectionstatechange"));
         break;
 
@@ -2019,22 +1889,7 @@ setupPrototype(PeerConnectionObserver, {
   QueryInterface: ChromeUtils.generateQI(["nsIDOMGlobalPropertyInitializer"]),
 });
 
-export class RTCPeerConnectionStatic {
-  init(win) {
-    this._winID = win.windowGlobalChild.innerWindowId;
-  }
-
-  registerPeerConnectionLifecycleCallback(cb) {
-    _globalPCList._registerPeerConnectionLifecycleCallback(this._winID, cb);
-  }
-}
-
-setupPrototype(RTCPeerConnectionStatic, {
-  classID: PC_STATIC_CID,
-  contractID: PC_STATIC_CONTRACT,
-  QueryInterface: ChromeUtils.generateQI(["nsIDOMGlobalPropertyInitializer"]),
-});
-
+// eslint-disable-next-line no-shadow
 export class CreateOfferRequest {
   constructor(windowID, innerWindowID, callID, isSecure) {
     Object.assign(this, { windowID, innerWindowID, callID, isSecure });

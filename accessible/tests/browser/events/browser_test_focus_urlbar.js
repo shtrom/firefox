@@ -16,7 +16,8 @@ ChromeUtils.defineESModuleGetters(this, {
   UrlbarProvider: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
   ProvidersManager:
     "moz-src:///browser/components/urlbar/UrlbarProvidersManager.sys.mjs",
-  UrlbarResult: "moz-src:///browser/components/urlbar/UrlbarResult.sys.mjs",
+  UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarTestUtils: "resource://testing-common/UrlbarTestUtils.sys.mjs",
   UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
 });
@@ -24,20 +25,6 @@ ChromeUtils.defineESModuleGetters(this, {
 function isEventForAutocompleteItem(event) {
   // XXX: See bug 2016839
   return event.accessible.role == ROLE_OPTION;
-}
-
-function isEventForButton(event) {
-  return event.accessible.role == ROLE_PUSHBUTTON;
-}
-
-function isEventForOneOffEngine(event) {
-  let parent = event.accessible.parent;
-  return (
-    event.accessible.role == ROLE_PUSHBUTTON &&
-    parent &&
-    parent.role == ROLE_GROUPING &&
-    parent.name
-  );
 }
 
 function isEventForMenuPopup(event) {
@@ -68,7 +55,7 @@ class TipTestProvider extends UrlbarProvider {
     return "TipTestProvider";
   }
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return UrlbarShared.PROVIDER_TYPE.PROFILE;
   }
   async isActive() {
     return true;
@@ -86,23 +73,19 @@ class TipTestProvider extends UrlbarProvider {
 
 // Check that the URL bar manages accessibility focus appropriately.
 async function runTests() {
-  // TODO: Remove in https://bugzilla.mozilla.org/show_bug.cgi?id=1923383
-  await SpecialPowers.pushPrefEnv({
-    set: [["browser.urlbar.scotchBonnet.enableOverride", false]],
-  });
   registerCleanupFunction(async function () {
     await UrlbarTestUtils.promisePopupClose(window);
     await PlacesUtils.history.clear();
   });
 
   await PlacesTestUtils.addVisits([
-    // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+    // eslint-disable-next-line sdl/no-insecure-url
     "http://example1.com/blah",
-    // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+    // eslint-disable-next-line sdl/no-insecure-url
     "http://example2.com/blah",
-    // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+    // eslint-disable-next-line sdl/no-insecure-url
     "http://example1.com/",
-    // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+    // eslint-disable-next-line sdl/no-insecure-url
     "http://example2.com/",
   ]);
 
@@ -213,12 +196,6 @@ async function runTests() {
   event = await focused;
   testStates(event.accessible, STATE_FOCUSED);
 
-  info("Ensuring autocomplete focus on arrow up for search settings button");
-  focused = waitForEvent(EVENT_FOCUS, isEventForButton);
-  EventUtils.synthesizeKey("KEY_ArrowUp");
-  event = await focused;
-  testStates(event.accessible, STATE_FOCUSED);
-
   info("Ensuring text box focus when text is typed");
   focused = waitForEvent(EVENT_FOCUS, textBox);
   EventUtils.sendString("z");
@@ -251,18 +228,6 @@ async function runTests() {
   while (UrlbarTestUtils.getSelectedRowIndex(window) != resultCount - 1) {
     EventUtils.synthesizeKey("KEY_ArrowDown");
   }
-
-  info("Ensuring one-off search button focus on arrow down");
-  focused = waitForEvent(EVENT_FOCUS, isEventForOneOffEngine);
-  EventUtils.synthesizeKey("KEY_ArrowDown");
-  event = await focused;
-  testStates(event.accessible, STATE_FOCUSED);
-
-  info("Ensuring autocomplete focus on arrow up");
-  focused = waitForEvent(EVENT_FOCUS, isEventForAutocompleteItem);
-  EventUtils.synthesizeKey("KEY_ArrowUp");
-  event = await focused;
-  testStates(event.accessible, STATE_FOCUSED);
 
   info("Ensuring text box focus on text selection");
   focused = waitForEvent(EVENT_FOCUS, textBox);
@@ -334,22 +299,22 @@ async function runTests() {
 async function runTipTests() {
   let matches = [
     new UrlbarResult({
-      type: UrlbarUtils.RESULT_TYPE.URL,
-      source: UrlbarUtils.RESULT_SOURCE.HISTORY,
-      // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+      type: UrlbarShared.RESULT_TYPE.URL,
+      source: UrlbarShared.RESULT_SOURCE.HISTORY,
+      // eslint-disable-next-line sdl/no-insecure-url
       payload: { url: "http://mozilla.org/a" },
     }),
     new UrlbarResult({
-      type: UrlbarUtils.RESULT_TYPE.TIP,
-      source: UrlbarUtils.RESULT_SOURCE.OTHER_LOCAL,
+      type: UrlbarShared.RESULT_TYPE.TIP,
+      source: UrlbarShared.RESULT_SOURCE.OTHER_LOCAL,
       payload: {
-        // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+        // eslint-disable-next-line sdl/no-insecure-url
         helpUrl: "http://example.com/",
         type: "test",
         titleL10n: { id: "urlbar-search-tips-confirm" },
         buttons: [
           {
-            // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+            // eslint-disable-next-line sdl/no-insecure-url
             url: "http://example.com/",
             l10n: { id: "urlbar-search-tips-confirm" },
           },
@@ -357,15 +322,15 @@ async function runTipTests() {
       },
     }),
     new UrlbarResult({
-      type: UrlbarUtils.RESULT_TYPE.URL,
-      source: UrlbarUtils.RESULT_SOURCE.HISTORY,
-      // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+      type: UrlbarShared.RESULT_TYPE.URL,
+      source: UrlbarShared.RESULT_SOURCE.HISTORY,
+      // eslint-disable-next-line sdl/no-insecure-url
       payload: { url: "http://mozilla.org/b" },
     }),
     new UrlbarResult({
-      type: UrlbarUtils.RESULT_TYPE.URL,
-      source: UrlbarUtils.RESULT_SOURCE.HISTORY,
-      // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+      type: UrlbarShared.RESULT_TYPE.URL,
+      source: UrlbarShared.RESULT_SOURCE.HISTORY,
+      // eslint-disable-next-line sdl/no-insecure-url
       payload: { url: "http://mozilla.org/c" },
     }),
   ];

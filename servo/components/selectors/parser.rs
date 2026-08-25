@@ -33,9 +33,6 @@ use to_shmem_derive::ToShmem;
 
 /// A trait that represents a pseudo-element.
 pub trait PseudoElement: Sized + ToCss {
-    /// The `SelectorImpl` this pseudo-element is used for.
-    type Impl: SelectorImpl;
-
     /// Whether the pseudo-element supports a given state selector to the right
     /// of it.
     fn accepts_state_pseudo_classes(&self) -> bool {
@@ -80,9 +77,6 @@ pub trait PseudoElement: Sized + ToCss {
 
 /// A trait that represents a pseudo-class.
 pub trait NonTSPseudoClass: Sized + ToCss {
-    /// The `SelectorImpl` this pseudo-element is used for.
-    type Impl: SelectorImpl;
-
     /// Whether this pseudo-class is :active or :hover.
     fn is_active_or_hover(&self) -> bool;
 
@@ -93,7 +87,8 @@ pub trait NonTSPseudoClass: Sized + ToCss {
 
     fn visit<V>(&self, _visitor: &mut V) -> bool
     where
-        V: SelectorVisitor<Impl = Self::Impl>,
+        V: SelectorVisitor,
+        <V as SelectorVisitor>::Impl: SelectorImpl<NonTSPseudoClass = Self>,
     {
         true
     }
@@ -246,10 +241,10 @@ macro_rules! with_all_bounds {
 
             /// non tree-structural pseudo-classes
             /// (see: https://drafts.csswg.org/selectors/#structural-pseudos)
-            type NonTSPseudoClass: $($CommonBounds)* + NonTSPseudoClass<Impl = Self>;
+            type NonTSPseudoClass: $($CommonBounds)* + NonTSPseudoClass;
 
             /// pseudo-elements
-            type PseudoElement: $($CommonBounds)* + PseudoElement<Impl = Self>;
+            type PseudoElement: $($CommonBounds)* + PseudoElement;
 
             /// Whether attribute hashes should be collected for filtering
             /// purposes.
@@ -747,14 +742,43 @@ where
 }
 
 fn collect_ancestor_hashes<Impl: SelectorImpl>(
-    iter: SelectorIter<Impl>,
+    mut iter: SelectorIter<Impl>,
     quirks_mode: QuirksMode,
     hashes: &mut [u32; 4],
     len: &mut usize,
-) {
-    collect_selector_hashes(AncestorIter::new(iter), quirks_mode, hashes, len, |s| {
+) -> bool {
+    loop {
+        while let Some(item) = iter.next() {
+            if let Component::Is(ref list) | Component::Where(ref list) = item {
+                let slice = list.slice();
+                if slice.len() == 1
+                    && !collect_ancestor_hashes(slice[0].iter(), quirks_mode, hashes, len)
+                {
+                    return false;
+                }
+            }
+        }
+        let Some(c) = iter.next_sequence() else {
+            return true;
+        };
+        match c {
+            // We got to an ancestor combinator, let collect_selector_hashes take it from there.
+            Combinator::Child | Combinator::Descendant => break,
+            Combinator::LaterSibling | Combinator::NextSibling => {
+                iter.skip_until_ancestor();
+                break;
+            },
+            // Keep scanning the subject for other potential ancestor combinators inside :where()
+            // and :is(). Note that if this is ever changed to stop at the "pseudo-element"
+            // combinator and treat it as a regular ancestor combinator, we will need to fix the way
+            // we compute hashes for revalidation selectors.
+            Combinator::Part | Combinator::SlotAssignment | Combinator::PseudoElement => {},
+        }
+    }
+
+    collect_selector_hashes(AncestorIter(iter), quirks_mode, hashes, len, |s| {
         AncestorIter(s.iter())
-    });
+    })
 }
 
 impl AncestorHashes {
@@ -1181,7 +1205,7 @@ impl<Impl: SelectorImpl> Selector<Impl> {
             specificity: &mut Specificity,
             flags: &mut SelectorFlags,
             forbidden_flags: SelectorFlags,
-        ) -> Vec<RelativeSelector<Impl>> {
+        ) -> Box<[RelativeSelector<Impl>]> {
             let mut any = false;
 
             let result = orig
@@ -1307,9 +1331,7 @@ impl<Impl: SelectorImpl> Selector<Impl> {
                     &mut specificity,
                     &mut flags,
                     forbidden_flags,
-                )
-                .into_boxed_slice()),
-
+                )),
                 Host(Some(ref selector)) => Host(Some(replace_parent_on_selector(
                     selector,
                     parent,
@@ -1492,6 +1514,17 @@ impl<'a, Impl: 'a + SelectorImpl> SelectorIter<'a, Impl> {
         self.next_combinator.take()
     }
 
+    /// Skips a sequence of simple selectors and all subsequent sequences until
+    /// a non-pseudo-element ancestor combinator is reached.
+    fn skip_until_ancestor(&mut self) {
+        loop {
+            while self.next().is_some() {}
+            if self.next_sequence().is_none_or(|c| c.is_ancestor()) {
+                break;
+            }
+        }
+    }
+
     #[inline]
     pub(crate) fn matches_for_stateless_pseudo_element(&mut self) -> bool {
         let first = match self.next() {
@@ -1580,32 +1613,6 @@ impl<'a, Impl: SelectorImpl> Iterator for CombinatorIter<'a, Impl> {
 
 /// An iterator over all simple selectors belonging to ancestors.
 struct AncestorIter<'a, Impl: 'a + SelectorImpl>(SelectorIter<'a, Impl>);
-impl<'a, Impl: 'a + SelectorImpl> AncestorIter<'a, Impl> {
-    /// Creates an AncestorIter. The passed-in iterator is assumed to point to
-    /// the beginning of the child sequence, which will be skipped.
-    fn new(inner: SelectorIter<'a, Impl>) -> Self {
-        let mut result = AncestorIter(inner);
-        result.skip_until_ancestor();
-        result
-    }
-
-    /// Skips a sequence of simple selectors and all subsequent sequences until
-    /// a non-pseudo-element ancestor combinator is reached.
-    fn skip_until_ancestor(&mut self) {
-        loop {
-            while self.0.next().is_some() {}
-            // If this is ever changed to stop at the "pseudo-element"
-            // combinator, we will need to fix the way we compute hashes for
-            // revalidation selectors.
-            if self.0.next_sequence().map_or(true, |x| {
-                matches!(x, Combinator::Child | Combinator::Descendant)
-            }) {
-                break;
-            }
-        }
-    }
-}
-
 impl<'a, Impl: SelectorImpl> Iterator for AncestorIter<'a, Impl> {
     type Item = &'a Component<Impl>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -1614,14 +1621,10 @@ impl<'a, Impl: SelectorImpl> Iterator for AncestorIter<'a, Impl> {
         if next.is_some() {
             return next;
         }
-
         // See if there are more sequences. If so, skip any non-ancestor sequences.
-        if let Some(combinator) = self.0.next_sequence() {
-            if !matches!(combinator, Combinator::Child | Combinator::Descendant) {
-                self.skip_until_ancestor();
-            }
+        if !self.0.next_sequence()?.is_ancestor() {
+            self.0.skip_until_ancestor();
         }
-
         self.0.next()
     }
 }
@@ -1649,18 +1652,6 @@ pub enum Combinator {
 }
 
 impl Combinator {
-    /// Returns true if this combinator is a child or descendant combinator.
-    #[inline]
-    pub fn is_ancestor(&self) -> bool {
-        matches!(
-            *self,
-            Combinator::Child
-                | Combinator::Descendant
-                | Combinator::PseudoElement
-                | Combinator::SlotAssignment
-        )
-    }
-
     /// Returns true if this combinator is a pseudo-element combinator.
     #[inline]
     pub fn is_pseudo_element(&self) -> bool {
@@ -1671,6 +1662,13 @@ impl Combinator {
     #[inline]
     pub fn is_sibling(&self) -> bool {
         matches!(*self, Combinator::NextSibling | Combinator::LaterSibling)
+    }
+
+    /// Returns true if this combinator represents a jump to an ancestor. Note that this includes
+    /// combinators like ::part() / ::slotted() and pseudo-elements!
+    #[inline]
+    pub fn is_ancestor(&self) -> bool {
+        !self.is_sibling()
     }
 }
 
@@ -3167,7 +3165,7 @@ where
 
     let attribute_flags = parse_attribute_flags(input)?;
     let value = value.as_ref().into();
-    let local_name_lower;
+    let local_name_lower: Impl::LocalName;
     let local_name_is_ascii_lowercase;
     let case_sensitivity;
     {
@@ -3177,8 +3175,12 @@ where
         local_name_lower = local_name_lower_cow.as_ref().into();
         local_name_is_ascii_lowercase = matches!(local_name_lower_cow, Cow::Borrowed(..));
     }
-    let local_name = local_name.as_ref().into();
     if namespace.is_some() || !local_name_is_ascii_lowercase {
+        let local_name = if local_name_is_ascii_lowercase {
+            local_name_lower.clone()
+        } else {
+            local_name.as_ref().into()
+        };
         Ok(Component::AttributeOther(Box::new(
             AttrSelectorWithOptionalNamespace {
                 namespace,
@@ -3193,7 +3195,7 @@ where
         )))
     } else {
         Ok(Component::AttributeInNoNamespace {
-            local_name,
+            local_name: local_name_lower,
             operator,
             value,
             case_sensitivity,
@@ -3211,6 +3213,68 @@ enum AttributeFlags {
     CaseSensitivityDependsOnName,
 }
 
+/// Whether `name`, which must already be ASCII-lowercased, is an attribute that HTML matches
+/// ASCII-case-insensitively, as per[1].
+///
+/// A `matches!` over string literals lowers to a jump table on the string length followed by
+/// inlined constant-width comparisons [2]. For a set this small that measures several times faster
+/// than either a perfect hash (which has to hash the name first) or a binary search (which spends
+/// its time on mispredicted branches).
+///
+/// [1]: https://html.spec.whatwg.org/multipage/#selectors
+/// [2]: https://rust.godbolt.org/z/9jxPnbos6
+fn is_ascii_case_insensitive_html_attribute(name: &str) -> bool {
+    matches!(
+        name,
+        "accept"
+            | "accept-charset"
+            | "align"
+            | "alink"
+            | "axis"
+            | "bgcolor"
+            | "charset"
+            | "checked"
+            | "clear"
+            | "codetype"
+            | "color"
+            | "compact"
+            | "declare"
+            | "defer"
+            | "dir"
+            | "direction"
+            | "disabled"
+            | "enctype"
+            | "face"
+            | "frame"
+            | "hreflang"
+            | "http-equiv"
+            | "lang"
+            | "language"
+            | "link"
+            | "media"
+            | "method"
+            | "multiple"
+            | "nohref"
+            | "noresize"
+            | "noshade"
+            | "nowrap"
+            | "readonly"
+            | "rel"
+            | "rev"
+            | "rules"
+            | "scope"
+            | "scrolling"
+            | "selected"
+            | "shape"
+            | "target"
+            | "text"
+            | "type"
+            | "valign"
+            | "valuetype"
+            | "vlink"
+    )
+}
+
 impl AttributeFlags {
     fn to_case_sensitivity(
         self,
@@ -3221,13 +3285,7 @@ impl AttributeFlags {
             AttributeFlags::CaseSensitive => ParsedCaseSensitivity::ExplicitCaseSensitive,
             AttributeFlags::AsciiCaseInsensitive => ParsedCaseSensitivity::AsciiCaseInsensitive,
             AttributeFlags::CaseSensitivityDependsOnName => {
-                if !have_namespace
-                    && include!(concat!(
-                        env!("OUT_DIR"),
-                        "/ascii_case_insensitive_html_attributes.rs"
-                    ))
-                    .contains(local_name_lower)
-                {
+                if !have_namespace && is_ascii_case_insensitive_html_attribute(local_name_lower) {
                     ParsedCaseSensitivity::AsciiCaseInsensitiveIfInHtmlElementInHtmlDocument
                 } else {
                     ParsedCaseSensitivity::CaseSensitive
@@ -3786,8 +3844,6 @@ pub mod tests {
     }
 
     impl parser::PseudoElement for PseudoElement {
-        type Impl = DummySelectorImpl;
-
         fn accepts_state_pseudo_classes(&self) -> bool {
             true
         }
@@ -3810,8 +3866,6 @@ pub mod tests {
     }
 
     impl parser::NonTSPseudoClass for PseudoClass {
-        type Impl = DummySelectorImpl;
-
         #[inline]
         fn is_active_or_hover(&self) -> bool {
             matches!(*self, PseudoClass::Active | PseudoClass::Hover)
@@ -4135,6 +4189,67 @@ pub mod tests {
 
     fn specificity(a: u32, b: u32, c: u32) -> u32 {
         a << 20 | b << 10 | c
+    }
+
+    #[test]
+    fn test_ancestor_hashes_in_subject_position() {
+        fn ancestor_hash_count(selector: &str) -> usize {
+            let list = parse(selector).unwrap();
+            assert_eq!(list.slice().len(), 1);
+            let mut hashes = [0u32; 4];
+            let mut len = 0;
+            collect_ancestor_hashes(
+                list.slice()[0].iter(),
+                QuirksMode::NoQuirks,
+                &mut hashes,
+                &mut len,
+            );
+            len
+        }
+
+        // Subject-only selectors don't contribute any ancestor hashes.
+        assert_eq!(ancestor_hash_count(".subject"), 0);
+        assert_eq!(ancestor_hash_count(":where(.subject)"), 0);
+
+        // An ancestor combinator inside :is() / :where() in subject position
+        // should still contribute ancestor hashes (bug 2040922).
+        assert_eq!(ancestor_hash_count(":where(.ancestor > .subject)"), 1);
+        assert_eq!(ancestor_hash_count(":is(.ancestor .subject)"), 1);
+        assert_eq!(
+            ancestor_hash_count(":where(.ancestor > :not(:last-child))"),
+            1
+        );
+
+        // Real ancestors combine with ancestor combinators nested in a subject
+        // :where().
+        assert_eq!(
+            ancestor_hash_count(".real-ancestor :where(.inner-ancestor > .subject)"),
+            2
+        );
+
+        // :is() / :where() with more than one selector OR their selectors, so no
+        // hash can be collected from them, even when they contain ancestor
+        // combinators.
+        assert_eq!(ancestor_hash_count(":is(.a, .b) .subject"), 0);
+        assert_eq!(
+            ancestor_hash_count(":where(.ancestor > .subject, .other)"),
+            0
+        );
+        // But a real ancestor next to a multi-selector subject :where() is still
+        // collected.
+        assert_eq!(ancestor_hash_count(".real-ancestor :where(.a > .b, .c)"), 1);
+
+        // Pseudo-elements match on their originating element, so simple
+        // selectors in front of the pseudo-element combinator are part of the
+        // subject and don't contribute ancestor hashes.
+        assert_eq!(ancestor_hash_count(".subject::before"), 0);
+        assert_eq!(ancestor_hash_count(".real-ancestor .subject::before"), 1);
+        // An ancestor combinator nested in a subject :where() is still collected
+        // even when the subject carries a pseudo-element.
+        assert_eq!(
+            ancestor_hash_count(":where(.ancestor > .subject)::before"),
+            1
+        );
     }
 
     #[test]

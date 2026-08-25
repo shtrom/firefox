@@ -48,8 +48,6 @@ pub enum CreateBlasError {
         "Limit `max_blas_primitive_count` is {0}, but the BLAS had a maximum of {1} primitives"
     )]
     TooManyPrimitives(u32, u32),
-    #[error("AABB geometry stride {0} is invalid (must be >= {1} and a multiple of 8)")]
-    InvalidAabbStride(BufferAddress, BufferAddress),
 }
 
 impl WebGpuError for CreateBlasError {
@@ -60,8 +58,7 @@ impl WebGpuError for CreateBlasError {
             Self::MissingIndexData
             | Self::InvalidVertexFormat(..)
             | Self::TooManyGeometries(..)
-            | Self::TooManyPrimitives(..)
-            | Self::InvalidAabbStride(..) => ErrorType::Validation,
+            | Self::TooManyPrimitives(..) => ErrorType::Validation,
         }
     }
 }
@@ -281,11 +278,11 @@ impl WebGpuError for ValidateAsActionsError {
 }
 
 #[derive(Debug)]
-pub struct BlasTriangleGeometry<'a> {
+pub struct BlasTriangleGeometry<'a, Buffer = BufferId> {
     pub size: &'a wgt::BlasTriangleGeometrySizeDescriptor,
-    pub vertex_buffer: BufferId,
-    pub index_buffer: Option<BufferId>,
-    pub transform_buffer: Option<BufferId>,
+    pub vertex_buffer: Buffer,
+    pub index_buffer: Option<Buffer>,
+    pub transform_buffer: Option<Buffer>,
     pub first_vertex: u32,
     pub vertex_stride: BufferAddress,
     pub first_index: Option<u32>,
@@ -293,42 +290,42 @@ pub struct BlasTriangleGeometry<'a> {
 }
 
 #[derive(Debug)]
-pub struct BlasAabbGeometry<'a> {
+pub struct BlasAabbGeometry<'a, Buffer = BufferId> {
     pub size: &'a wgt::BlasAABBGeometrySizeDescriptor,
     pub stride: BufferAddress,
-    pub aabb_buffer: BufferId,
+    pub aabb_buffer: Buffer,
     pub primitive_offset: u32,
 }
 
-pub enum BlasGeometries<'a> {
-    TriangleGeometries(Box<dyn Iterator<Item = BlasTriangleGeometry<'a>> + 'a>),
-    AabbGeometries(Box<dyn Iterator<Item = BlasAabbGeometry<'a>> + 'a>),
+pub enum BlasGeometries<'a, Buffer = BufferId> {
+    TriangleGeometries(Box<dyn Iterator<Item = BlasTriangleGeometry<'a, Buffer>> + 'a>),
+    AabbGeometries(Box<dyn Iterator<Item = BlasAabbGeometry<'a, Buffer>> + 'a>),
 }
 
-pub struct BlasBuildEntry<'a> {
-    pub blas_id: BlasId,
-    pub geometries: BlasGeometries<'a>,
+pub struct BlasBuildEntry<'a, Blas = BlasId, Buffer = BufferId> {
+    pub blas: Blas,
+    pub geometries: BlasGeometries<'a, Buffer>,
 }
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct TlasBuildEntry {
-    pub tlas_id: TlasId,
-    pub instance_buffer_id: BufferId,
+pub struct TlasBuildEntry<Tlas = TlasId, Buffer = BufferId> {
+    pub tlas: Tlas,
+    pub instance_buffer: Buffer,
     pub instance_count: u32,
 }
 
 #[derive(Debug)]
-pub struct TlasInstance<'a> {
-    pub blas_id: BlasId,
+pub struct TlasInstance<'a, Blas = BlasId> {
+    pub blas: Blas,
     pub transform: &'a [f32; 12],
     pub custom_data: u32,
     pub mask: u8,
 }
 
-pub struct TlasPackage<'a> {
-    pub tlas_id: TlasId,
-    pub instances: Box<dyn Iterator<Item = Option<TlasInstance<'a>>> + 'a>,
+pub struct TlasPackage<'a, Tlas = TlasId, Blas = BlasId> {
+    pub tlas: Tlas,
+    pub instances: Box<dyn Iterator<Item = Option<TlasInstance<'a, Blas>>> + 'a>,
     pub lowest_unmodified: u32,
 }
 

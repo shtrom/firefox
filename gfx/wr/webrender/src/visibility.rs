@@ -4,7 +4,29 @@
 
 //! # Visibility pass
 //!
-//! TODO: document what this pass does!
+//! The first of the two frame building traversals of the picture tree, the
+//! second being the [prepare pass](crate::prepare). It is driven by
+//! `FrameBuilder::build_layer_screen_rects_and_cull_layers`, which calls
+//! [`update_prim_visibility`] once per snapshot picture and once per tile cache
+//! slice. From there the pass walks down the picture tree, pushing and popping
+//! off-screen surfaces as it goes.
+//!
+//! For each primitive instance it visits, the pass works out whether the
+//! primitive is drawn this frame and under which clips, and records the answer
+//! in a [`PrimitiveDrawHeader`], pushed into `scratch.primitive.frame.draws`
+//! as each drawn primitive is found.
+//! Later passes read those headers instead of re-deriving the information.
+//! In addition to visibility calculation, this pass performs snapping and
+//! builds clip chain instances.
+//!
+//! ## Surface bookkeeping
+//!
+//! Alongside the per-primitive state, the traversal accumulates the exact
+//! (clipped) local rect of each off-screen surface from the coverage rects of
+//! the primitives drawn into it, and propagates culling rects from parent to
+//! child surfaces. The prepare pass sizes the surfaces' render tasks from those
+//! accumulated rects, so they must be complete before it runs, which is the
+//! main reason visibility is a separate pass.
 //!
 
 use api::DebugFlags;
@@ -12,35 +34,33 @@ use api::units::*;
 use std::usize;
 use crate::clip::ClipStore;
 use crate::composite::CompositeState;
-use crate::profiler::TransactionProfile;
+use crate::profiler::{self, TransactionProfile};
 use crate::renderer::GpuBufferBuilder;
 use crate::spatial_tree::{SpatialTree, SpatialNodeIndex};
-use crate::clip::{ClipChainInstance, ClipTree};
+use crate::clip::{ClipChainInstance, ClipTree, ClipNodeId};
 use crate::composite::CompositorSurfaceKind;
 use crate::frame_builder::FrameBuilderConfig;
-use crate::picture::{PictureCompositeMode, ClusterFlags, SurfaceInfo};
+use crate::picture::ClusterFlags;
+use crate::picture_composite_mode::PictureCompositeMode;
+use crate::surface::SurfaceInfo;
 use crate::tile_cache::TileCacheInstance;
-use crate::picture::{PictureScratch, SurfaceIndex, RasterConfig};
+use crate::picture::{PictureScratch, RasterConfig};
+use crate::surface::SurfaceIndex;
 use crate::tile_cache::SubSliceIndex;
-use crate::prim_store::{ClipTaskIndex, PictureIndex, PrimitiveKind, SegmentInstanceIndex};
+use crate::prim_store::{ClipSnap, ClipTaskIndex, PictureIndex, PrimitiveKind};
 use crate::prim_store::{PrimitiveStore, PrimitiveInstance, PrimitiveInstanceIndex};
-use crate::prim_store::backdrop::BackdropRenderScratch;
-use crate::prim_store::borders::{ImageBorderScratch, NormalBorderScratch};
-use crate::prim_store::image::ImageScratch;
-use crate::prim_store::line_dec::LineDecorationScratch;
 use crate::prim_store::storage;
 use crate::prim_store::text_run::TextRunScratch;
 use crate::render_backend::{DataStores, ScratchBuffer};
 use crate::render_task_graph::RenderTaskGraphBuilder;
 use crate::resource_cache::ResourceCache;
 use crate::scene::SceneProperties;
-use crate::space::SpaceMapper;
+use crate::space::{SpaceMapper, SpaceSnapper};
 use crate::util::MaxRect;
 
 pub struct FrameVisibilityContext<'a> {
     pub spatial_tree: &'a SpatialTree,
-    pub global_screen_world_rect: WorldRect,
-    pub global_device_pixel_scale: DevicePixelScale,
+    pub global_screen_device_rect: DeviceRect,
     pub debug_flags: DebugFlags,
     pub scene_properties: &'a SceneProperties,
     pub config: FrameBuilderConfig,
@@ -51,7 +71,7 @@ pub struct FrameVisibilityState<'a> {
     pub clip_store: &'a mut ClipStore,
     pub resource_cache: &'a mut ResourceCache,
     pub frame_gpu_data: &'a mut GpuBufferBuilder,
-    pub data_stores: &'a mut DataStores,
+    pub data_stores: &'a DataStores,
     pub clip_tree: &'a mut ClipTree,
     pub composite_state: &'a mut CompositeState,
     pub rg_builder: &'a mut RenderTaskGraphBuilder,
@@ -98,7 +118,9 @@ bitflags! {
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "capture", derive(Serialize))]
 pub enum DrawState {
-    /// Uninitialized - this should never be encountered after prim reset
+    /// No state resolved yet. Only observable between a header being created
+    /// and the visibility pass deciding the primitive's fate; a draw that
+    /// reaches prepare or batching in this state is a bug.
     Unset,
     /// Culled for being off-screen, or not possible to render (e.g. missing image resource)
     Culled,
@@ -124,43 +146,11 @@ pub enum DrawState {
 #[cfg_attr(feature = "capture", derive(Serialize))]
 pub enum KindScratchHandle {
     None,
-    LineDecoration(storage::Index<LineDecorationScratch>),
-    NormalBorder(storage::Index<NormalBorderScratch>),
-    ImageBorder(storage::Index<ImageBorderScratch>),
-    Image(storage::Index<ImageScratch>),
     TextRun(storage::Index<TextRunScratch>),
     Picture(storage::Index<PictureScratch>),
-    BackdropRender(storage::Index<BackdropRenderScratch>),
 }
 
 impl KindScratchHandle {
-    /// Extract the LineDecoration scratch index. Panics if the variant
-    /// doesn't match — readers in the LineDecoration arm of the
-    /// PrimitiveKind match know the variant by construction.
-    pub fn unwrap_line_decoration(&self) -> storage::Index<LineDecorationScratch> {
-        match *self {
-            KindScratchHandle::LineDecoration(h) => h,
-            _ => panic!("kind_scratch mismatch: expected LineDecoration, got {:?}", self),
-        }
-    }
-    pub fn unwrap_normal_border(&self) -> storage::Index<NormalBorderScratch> {
-        match *self {
-            KindScratchHandle::NormalBorder(h) => h,
-            _ => panic!("kind_scratch mismatch: expected NormalBorder, got {:?}", self),
-        }
-    }
-    pub fn unwrap_image_border(&self) -> storage::Index<ImageBorderScratch> {
-        match *self {
-            KindScratchHandle::ImageBorder(h) => h,
-            _ => panic!("kind_scratch mismatch: expected ImageBorder, got {:?}", self),
-        }
-    }
-    pub fn unwrap_image(&self) -> storage::Index<ImageScratch> {
-        match *self {
-            KindScratchHandle::Image(h) => h,
-            _ => panic!("kind_scratch mismatch: expected Image, got {:?}", self),
-        }
-    }
     pub fn unwrap_text_run(&self) -> storage::Index<TextRunScratch> {
         match *self {
             KindScratchHandle::TextRun(h) => h,
@@ -173,25 +163,25 @@ impl KindScratchHandle {
             _ => panic!("kind_scratch mismatch: expected Picture, got {:?}", self),
         }
     }
-    pub fn unwrap_backdrop_render(&self) -> storage::Index<BackdropRenderScratch> {
-        match *self {
-            KindScratchHandle::BackdropRender(h) => h,
-            _ => panic!("kind_scratch mismatch: expected BackdropRender, got {:?}", self),
-        }
-    }
 }
+
+/// Index of a draw in the per-frame `scratch.frame.draws` storage.
+///
+/// Distinct from `PrimitiveInstanceIndex`, which identifies the scene-relative
+/// primitive instance a draw was produced from. Draws are pushed as the
+/// visibility pass finds them, so the two are unrelated numbers; cross between
+/// them with `PrimitiveFrameScratch::draw_index_for_instance` (instance to draw,
+/// fallible) or `PrimitiveDrawHeader::prim_instance_index` (draw to instance).
+pub type PrimitiveDrawIndex = storage::Index<PrimitiveDrawHeader>;
 
 /// Information stored for a visible primitive about the visible
 /// rect and associated clip information.
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "capture", derive(Serialize))]
 pub struct PrimitiveDrawHeader {
-    /// Back-reference to the prim instance this draw belongs to.
-    /// Currently redundant with the identity-indexed lookup from
-    /// `scratch.frame.draws[PrimitiveInstanceIndex.0]`, but reserved
-    /// for a follow-up that switches the storage to push-per-draw —
-    /// readers iterating draws directly will need this to reach the
-    /// instance.
+    /// Back-reference to the prim instance this draw belongs to. This is the
+    /// only way to get from a draw to its instance: consumers reached via the
+    /// command stream hold a `PrimitiveDrawIndex`, which is unrelated to it.
     pub prim_instance_index: PrimitiveInstanceIndex,
 
     /// The clip chain instance that was built for this primitive.
@@ -215,21 +205,22 @@ pub struct PrimitiveDrawHeader {
     /// BoxShadow, Rectangle/YuvImage).
     pub kind_scratch: KindScratchHandle,
 
-    /// Index into PrimitiveFrameScratch.segment_instances for prims
-    /// that opt into segmented brush rendering (Rectangle, YuvImage,
-    /// non-tiled Image). UNUSED for prims that don't segment, or for
-    /// the trivial single-segment case. Built fresh each frame in
-    /// build_segments_if_needed.
-    pub segment_instance_index: SegmentInstanceIndex,
-
     /// Per-frame compositing decision for Image / YuvImage primitives.
     /// Set during the visibility pass by tile-cache promotion logic;
     /// `Blit` for kinds that aren't candidates for compositor surfaces
     /// or for draws that didn't get promoted this frame.
     pub compositor_surface_kind: CompositorSurfaceKind,
+
+    /// Local-space rect of the primitive after device-pixel snapping has
+    /// been applied. Populated for every prim each frame by the visibility
+    /// pass (snapping `PrimitiveInstance.unsnapped_pattern_rect` against the
+    /// surface raster node) before any visibility / prepare consumer reads it.
+    pub snapped_pattern_rect: LayoutRect,
 }
 
 impl PrimitiveDrawHeader {
+    /// A blank draw header, for the visibility pass to fill in and push once it
+    /// knows the primitive is drawn.
     pub fn new() -> Self {
         PrimitiveDrawHeader {
             prim_instance_index: PrimitiveInstanceIndex::INVALID,
@@ -237,16 +228,19 @@ impl PrimitiveDrawHeader {
             clip_chain: ClipChainInstance::empty(),
             clip_task_index: ClipTaskIndex::INVALID,
             kind_scratch: KindScratchHandle::None,
-            segment_instance_index: SegmentInstanceIndex::UNUSED,
             compositor_surface_kind: CompositorSurfaceKind::Blit,
+            snapped_pattern_rect: LayoutRect::zero(),
         }
     }
 
-    pub fn reset(&mut self) {
+    /// Mark a pushed draw as not drawn after all, for the cases prepare only
+    /// discovers late. Clears the fields prepare may already have filled in as
+    /// well as the state, so that nothing stale is left reachable through the
+    /// header.
+    pub fn mark_culled(&mut self) {
         self.state = DrawState::Culled;
         self.clip_task_index = ClipTaskIndex::INVALID;
         self.kind_scratch = KindScratchHandle::None;
-        self.segment_instance_index = SegmentInstanceIndex::UNUSED;
         self.compositor_surface_kind = CompositorSurfaceKind::Blit;
     }
 }
@@ -254,7 +248,7 @@ impl PrimitiveDrawHeader {
 pub fn update_prim_visibility(
     pic_index: PictureIndex,
     parent_surface_index: Option<SurfaceIndex>,
-    world_culling_rect: &WorldRect,
+    root_culling_rect: &DeviceRect,
     store: &PrimitiveStore,
     is_root_tile_cache: bool,
     frame_context: &FrameVisibilityContext,
@@ -327,38 +321,82 @@ pub fn update_prim_visibility(
     );
     let visibility_spatial_node_index = surface.visibility_spatial_node_index;
 
-    for cluster in &pic.prim_list.clusters {
-        profile_scope!("cluster");
+    // Snappers into this surface's raster space (the space its content is
+    // rasterized in), reused across all clusters/prims in this surface (and a
+    // no-op for surfaces that don't snap). `snapper` is re-targeted once per
+    // cluster and snaps prim/clip-leaf rects (all prims in a cluster share its
+    // spatial node, so it stays a cache hit); `clip_snapper` snaps the per-prim
+    // clip chain.
+    let mut snapper = SpaceSnapper::new(surface, frame_context.spatial_tree);
+    let mut clip_snapper = snapper.clone();
 
-        // Each prim instance must have reset called each frame, to clear
-        // indices into various scratch buffers. If this doesn't occur,
-        // the primitive may incorrectly be considered visible, which can
-        // cause unexpected conditions to occur later during the frame.
-        // Primitive instances are normally reset in the main loop below,
-        // but we must also reset them in the rare case that the cluster
-        // visibility has changed (due to an invalid transform and/or
-        // backface visibility changing for this cluster).
-        // TODO(gw): This is difficult to test for in CI - as a follow up,
-        //           we should add a debug flag that validates the prim
-        //           instance is always reset every frame to catch similar
-        //           issues in future.
-        for idx in cluster.prim_range() {
-            frame_state.scratch.primitive.frame.draws[idx].reset();
-            frame_state.scratch.primitive.frame.draws[idx].prim_instance_index =
-                PrimitiveInstanceIndex(idx as u32);
-        }
+    for cluster in &pic.prim_list.clusters {
+        tracy_rs::profile_scope!("cluster");
+
+        // No per-frame reset is needed: a draw exists only if it was pushed
+        // this frame, so stale state from a previous frame cannot be observed.
 
         // Get the cluster and see if is visible
         if !cluster.flags.contains(ClusterFlags::IS_VISIBLE) {
             continue;
         }
 
+        frame_state.profile.add(
+            profiler::VISIBILITY_VISITED_PRIMS,
+            cluster.prim_range().len(),
+        );
+
         map_local_to_picture.set_target_spatial_node(
             cluster.spatial_node_index,
             frame_context.spatial_tree,
         );
 
+        // Snap each prim's rect and clip-leaf rect from this cluster's
+        // spatial-node space into the surface's raster space, before any
+        // visibility / prepare / batch consumer reads them.
+        snapper.set_target_spatial_node(cluster.spatial_node_index, frame_context.spatial_tree);
+
         for prim_instance_index in cluster.prim_range() {
+            // A prim's snap policy is folded into its clip leaf: device-space
+            // prims (text) carry the `INVALID` sentinel and snap nothing - their
+            // rect and clips stay at exact sub-pixel positions so a fractional
+            // clip edge is an AA boundary through the glyphs (bug 2050692).
+            // Everyone else snaps their rect and own clips to the device grid.
+            // How the rect itself is rounded (nearest / round-out for unsnapped
+            // text / thickness-preserving for decoration lines) is decided by
+            // `PrimitiveInstance::snap_rounding`.
+            let prim_instance = &frame_state.prim_instances[prim_instance_index];
+            let leaf_id = prim_instance.clip_leaf_id;
+            let snaps = frame_state.clip_tree.get_leaf(leaf_id).prim_clip_root
+                != ClipNodeId::INVALID;
+
+            let policy = prim_instance.snap_policy(snaps, frame_state.data_stores);
+            let snapped_pattern_rect =
+                snapper.snap_rect_rounded(&prim_instance.unsnapped_pattern_rect, policy.rect);
+
+            // The draw header is accumulated here and pushed only once the
+            // primitive is known to be drawn, so culled primitives cost nothing.
+            let mut draw = PrimitiveDrawHeader::new();
+            draw.prim_instance_index = PrimitiveInstanceIndex(prim_instance_index as u32);
+            draw.snapped_pattern_rect = snapped_pattern_rect;
+
+            // Picture / tile-cache leaves carry `max_rect` (snapping it would
+            // overflow the snap transform); pass those through. Otherwise the
+            // leaf clip rounds per the prim's clip policy: nearest for snapping
+            // prims (crisp fill/border edges), exact for surfaces, and round-out
+            // on the non-sub-pixel axis for text runs (bug 2055145).
+            let leaf = frame_state.clip_tree.get_leaf_mut(leaf_id);
+            let unsnapped = leaf.unsnapped_local_clip_rect;
+            leaf.snapped_local_clip_rect = if unsnapped == LayoutRect::max_rect() {
+                unsnapped
+            } else {
+                match policy.clip {
+                    ClipSnap::Nearest => snapper.snap_rect(&unsnapped),
+                    ClipSnap::Exact => unsnapped,
+                    ClipSnap::Text(rounding) => snapper.snap_rect_rounded(&unsnapped, rounding),
+                }
+            };
+
             if let PrimitiveKind::Picture { pic_index, .. } = frame_state.prim_instances[prim_instance_index].kind {
                 if !store.pictures[pic_index.0].is_visible(frame_context.spatial_tree) {
                     continue;
@@ -387,7 +425,7 @@ pub fn update_prim_visibility(
                 update_prim_visibility(
                     pic_index,
                     Some(surface_index),
-                    world_culling_rect,
+                    root_culling_rect,
                     store,
                     false,
                     frame_context,
@@ -397,7 +435,8 @@ pub fn update_prim_visibility(
 
                 if is_passthrough {
                     // Pass through pictures are always considered visible in all dirty tiles.
-                    frame_state.scratch.primitive.frame.draws[prim_instance_index].state = DrawState::PassThrough;
+                    draw.state = DrawState::PassThrough;
+                    frame_state.scratch.primitive.frame.push_draw(draw);
 
                     continue;
                 } else {
@@ -409,6 +448,7 @@ pub fn update_prim_visibility(
 
             let local_coverage_rect = frame_state.data_stores.get_local_prim_coverage_rect(
                 prim_instance,
+                draw.snapped_pattern_rect,
                 &store.pictures,
                 frame_state.surfaces,
             );
@@ -417,6 +457,8 @@ pub fn update_prim_visibility(
                 cluster.spatial_node_index,
                 map_local_to_picture.ref_spatial_node_index,
                 visibility_spatial_node_index,
+                &mut clip_snapper,
+                policy.clip,
                 prim_instance.clip_leaf_id,
                 &frame_context.spatial_tree,
                 &frame_state.data_stores.clip,
@@ -433,31 +475,57 @@ pub fn update_prim_visibility(
                     &mut frame_state.frame_gpu_data.f32,
                     frame_state.resource_cache,
                     &surface_culling_rect,
-                    &mut frame_state.data_stores.clip,
+                    &frame_state.data_stores.clip,
                     frame_state.rg_builder,
                     true,
                 );
 
-            frame_state.scratch.primitive.frame.draws[prim_instance_index].clip_chain = match clip_chain {
+            let clip_chain = match clip_chain {
                 Some(clip_chain) => clip_chain,
                 None => {
                     continue;
                 }
             };
+            draw.clip_chain = clip_chain;
+
+            // Everything below needs a draw index (the tile-cache dependency
+            // update records one on any compositor surface it promotes), so the
+            // draw is pushed here. A primitive that `update_prim_dependencies`
+            // then culls keeps its draw, and prepare skips it on `DrawState`.
+            let draw_index = frame_state.scratch.primitive.frame.push_draw(draw);
+
+            let is_mix_blend_picture = |prim_instance: &PrimitiveInstance| {
+                if let PrimitiveKind::Picture { pic_index, .. } = prim_instance.kind {
+                    let pic = &store.pictures[pic_index.0];
+
+                    matches!(
+                        pic.composite_mode,
+                        Some(PictureCompositeMode::MixBlend(_))
+                    )
+                } else {
+                    false
+                }
+            };
+
+            if is_root_tile_cache && is_mix_blend_picture(prim_instance) {
+                if let Some(tile_cache) = tile_cache {
+                    tile_cache.mix_blend_pic_rects.push(clip_chain.pic_coverage_rect);
+                }
+            }
 
             {
                 let prim_surface_index = frame_state.surface_stack.last().unwrap().1;
-                let prim_clip_chain = &frame_state.scratch.primitive.frame.draws[prim_instance_index].clip_chain;
 
                 // Accumulate the exact (clipped) local rect into the parent surface.
                 let surface = &mut frame_state.surfaces[prim_surface_index.0];
-                surface.clipped_local_rect = surface.clipped_local_rect.union(&prim_clip_chain.pic_coverage_rect);
+                surface.clipped_local_rect =
+                    surface.clipped_local_rect.union(&clip_chain.pic_coverage_rect);
             }
 
             let new_state = match tile_cache {
                 Some(tile_cache) => {
                     tile_cache.update_prim_dependencies(
-                        PrimitiveInstanceIndex(prim_instance_index as u32),
+                        draw_index,
                         prim_instance,
                         cluster.spatial_node_index,
                         // It's OK to pass the local_coverage_rect here as it's only
@@ -485,7 +553,7 @@ pub fn update_prim_visibility(
                     }
                 }
             };
-            frame_state.scratch.primitive.frame.draws[prim_instance_index].state = new_state;
+            frame_state.scratch.primitive.frame.draw_mut(draw_index).state = new_state;
         }
     }
 
@@ -518,49 +586,35 @@ pub fn update_prim_visibility(
     }
 }
 
-pub fn compute_conservative_visible_rect(
+/// The part of a primitive's local rect that the surface it is drawn into needs.
+///
+/// This is the rect to enumerate repetitions or image tiles against. For a
+/// primitive drawn straight onto a picture cache slice the surface's clipping
+/// rect is the dirty region, so only the repetitions that will be rasterized
+/// are emitted. For a surface that samples outside of its own footprint (a
+/// blur) it is the inflated region that surface needs, so the repetitions
+/// feeding the blur's margin are kept even though they fall outside the dirty
+/// region (bug 2064321).
+///
+/// `bounds` is the primitive's own extent: the result never exceeds it, and it
+/// is the fallback if the primitive's transform cannot be inverted.
+pub fn compute_surface_visible_rect(
+    surface: &SurfaceInfo,
     clip_chain: &ClipChainInstance,
-    culling_rect: VisRect,
-    visibility_node_index: SpatialNodeIndex,
     prim_spatial_node_index: SpatialNodeIndex,
+    bounds: &LayoutRect,
     spatial_tree: &SpatialTree,
 ) -> LayoutRect {
-    // Mapping from picture space -> world space
-    let map_pic_to_vis: SpaceMapper<PicturePixel, VisPixel> = SpaceMapper::new_with_target(
-        visibility_node_index,
-        clip_chain.pic_spatial_node_index,
-        culling_rect,
-        spatial_tree,
-    );
-
-    // Mapping from local space -> picture space
-    let map_local_to_pic: SpaceMapper<LayoutPixel, PicturePixel> = SpaceMapper::new_with_target(
-        clip_chain.pic_spatial_node_index,
+    let map_prim_to_surface: SpaceMapper<LayoutPixel, PicturePixel> = SpaceMapper::new_with_target(
+        surface.surface_spatial_node_index,
         prim_spatial_node_index,
         PictureRect::max_rect(),
         spatial_tree,
     );
 
-    // Unmap the world culling rect from world -> picture space. If this mapping fails due
-    // to matrix weirdness, best we can do is use the clip chain's local clip rect.
-    let pic_culling_rect = match map_pic_to_vis.unmap(&culling_rect) {
-        Some(rect) => rect,
-        None => return clip_chain.local_clip_rect,
-    };
-
-    // Intersect the unmapped world culling rect with the primitive's clip chain rect that
-    // is in picture space (the clip-chain already takes into account the bounds of the
-    // primitive local_rect and local_clip_rect). If there is no intersection here, the
-    // primitive is not visible at all.
-    let pic_culling_rect = match pic_culling_rect.intersection(&clip_chain.pic_coverage_rect) {
-        Some(rect) => rect,
-        None => return LayoutRect::zero(),
-    };
-
-    // Unmap the picture culling rect from picture -> local space. If this mapping fails due
-    // to matrix weirdness, best we can do is use the clip chain's local clip rect.
-    match map_local_to_pic.unmap(&pic_culling_rect) {
-        Some(rect) => rect,
-        None => clip_chain.local_clip_rect,
-    }
+    surface.clipping_rect
+        .intersection(&clip_chain.pic_coverage_rect)
+        .and_then(|rect| map_prim_to_surface.unmap(&rect))
+        .unwrap_or(*bounds)
+        .intersection_unchecked(bounds)
 }

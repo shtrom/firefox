@@ -9,3 +9,5 @@
  */
 
 #error "Do not include this header file."
+
+//   release: NSPR_4_40_RTM (2026-08-05T13:57:49+09:00).

@@ -40,16 +40,15 @@
     }
   }
 
-  .forecast-footer {
-    position: absolute;
-    inset-block-end: calc(var(--space-xlarge) * -1);
-    inset-inline-end: 0;
-    font-size: var(--font-size-xsmall);
+  .sponsored-text {
+    visibility: hidden;
+    text-wrap-mode: nowrap;
+    font-size: var(--newtab-font-size-xsmall);
+    color: var(--text-color-deemphasized);
+  }
 
-    .sponsored-text {
-      visibility: hidden;
-      text-wrap-mode: nowrap;
-    }
+  .forecast-footer {
+    margin-block-start: var(--space-small);
 
     .full-forecast {
       display: none;
@@ -58,7 +57,7 @@
       background: url('chrome://global/skin/icons/arrow-right.svg') no-repeat right center;
       -moz-context-properties: fill;
       fill: currentColor;
-      font-size: var(--font-size-xsmall);
+      font-size: var(--newtab-font-size-xsmall);
 
       &:dir(rtl) {
         background-image: url('chrome://global/skin/icons/arrow-left.svg');
@@ -70,7 +69,7 @@
   // Hover Rules
   &:hover,
   &:focus-within {
-    .forecast-footer .sponsored-text {
+    .sponsored-text {
       visibility: visible;
     }
 
@@ -125,7 +124,7 @@
       align-self: flex-start;
       margin-inline-start: auto;
       color: var(--text-color-deemphasized);
-      font-size: var(--font-size-xsmall);
+      font-size: var(--newtab-font-size-xsmall);
       gap: var(--space-small);
 
       .high-temperature,
@@ -242,7 +241,7 @@
     }
   }
 
-  // Only applies to sidebar.
+  // Size Specific Layout Rules
   &.small-widget {
     grid-column: span 2;
     grid-row: span 2;
@@ -250,13 +249,19 @@
 
   &.medium-widget {
     .weather-container {
-      align-items: center;
+      align-items: stretch;
       justify-content: space-between;
       gap: var(--space-medium);
     }
 
     .weather-conditions-view {
       flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .weather-conditions-view .sponsored-text {
+      margin-block-start: auto;
     }
 
     .weather-info-link {
@@ -291,11 +296,6 @@
 
     .forecast-row-items li:nth-child(n+3) {
       display: none;
-    }
-
-    .forecast-footer {
-      inset-inline-end: auto;
-      inset-inline-start: 0;
     }
   }
 
@@ -347,11 +347,10 @@
     }
 
     .forecast-footer {
+      margin-block-start: 0;
       padding-block-start: var(--space-large);
       // Bug 2030130 - When warning is visible, reduce padding:
       // padding-block-start: var(--space-small);
-      position: relative;
-      inset: unset;
       display: flex;
       justify-content: space-between;
 
@@ -393,6 +392,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      gap: var(--space-small);
       height: 100%;
     }
 
@@ -452,7 +452,26 @@
 
     &.small-widget {
       .weather-opt-in-container-title {
-        padding-block-start: var(--space-small);
+        padding-block-start: var(--space-medium);
+        font-size: var(--newtab-font-size-xsmall);
+        line-height: 1.25;
+      }
+
+      // Float a spacer into the top-inline-end corner so the heading wraps
+      // around the context menu button, then reclaims full width below it.
+      .weather-opt-in-container-title::before {
+        content: '';
+        float: inline-end;
+        width: calc(var(--space-xlarge) + var(--space-large));
+        height: var(--space-medium);
+      }
+
+      .weather-opt-in-container-buttons {
+        padding-inline: var(--space-medium);
+      }
+
+      .weather-text-link {
+        font-size: var(--newtab-font-size-xsmall);
       }
     }
 

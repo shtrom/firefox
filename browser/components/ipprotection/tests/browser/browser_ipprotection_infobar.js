@@ -46,6 +46,9 @@ function dispatchUsageEvent(remainingPercent) {
   );
 }
 
+const MAX_BYTES = "5368709120";
+const REMAINING_20 = "1073741824";
+
 DEFAULT_EXPERIMENT = null;
 
 const REGEX_DECIMAL = /^\d+\.\d$/;
@@ -239,7 +242,10 @@ add_task(async function test_90_percent_overrides_75_percent() {
 });
 
 add_task(async function test_remove_infobar_after_sign_out() {
-  setupService({ isReady: true });
+  setupService({
+    isReady: true,
+    usageInfo: makeUsage(MAX_BYTES, REMAINING_20),
+  });
   IPProtectionService.updateState();
 
   IPProtectionInfobarManager.init();
@@ -584,7 +590,10 @@ add_task(async function test_bandwidth_reset_clears_dismissed_state() {
 });
 
 add_task(async function test_dismissed_state_persists_through_sign_out() {
-  setupService({ isReady: true });
+  setupService({
+    isReady: true,
+    usageInfo: makeUsage(MAX_BYTES, REMAINING_20),
+  });
   IPProtectionService.updateState();
 
   IPProtectionInfobarManager.init();
@@ -615,7 +624,10 @@ add_task(async function test_dismissed_state_persists_through_sign_out() {
   IPProtectionService.updateState();
   await TestUtils.waitForTick();
 
-  setupService({ isReady: true });
+  setupService({
+    isReady: true,
+    usageInfo: makeUsage(MAX_BYTES, REMAINING_20),
+  });
   IPProtectionService.updateState();
 
   dispatchUsageEvent(0.2);
@@ -899,6 +911,40 @@ add_task(async function test_handles_missing_usage_data() {
     notification90,
     null,
     "No 90% notification with missing usage data"
+  );
+
+  IPProtectionInfobarManager.uninit();
+});
+
+add_task(async function test_init_guarded_by_bandwidth_pref() {
+  IPProtectionInfobarManager.uninit();
+
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.ipProtection.bandwidth.enabled", false]],
+  });
+
+  IPProtectionInfobarManager.init();
+  Assert.ok(
+    !IPProtectionInfobarManager.initialized,
+    "init() is a no-op while bandwidth tracking is disabled"
+  );
+
+  dispatchUsageEvent(0.05);
+  await TestUtils.waitForTick();
+
+  Assert.equal(
+    window.gNotificationBox.getNotificationWithValue(
+      "ip-protection-bandwidth-warning-90"
+    ),
+    null,
+    "No infobar appears while bandwidth tracking is disabled"
+  );
+
+  await SpecialPowers.popPrefEnv();
+
+  Assert.ok(
+    IPProtectionInfobarManager.initialized,
+    "Manager auto-inits when pref toggles back to true"
   );
 
   IPProtectionInfobarManager.uninit();

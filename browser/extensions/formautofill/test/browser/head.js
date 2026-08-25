@@ -29,6 +29,10 @@ const { VALID_ADDRESS_FIELDS, VALID_CREDIT_CARD_FIELDS } =
     "resource://autofill/FormAutofillStorageBase.sys.mjs"
   );
 
+const { formAutofillStorage } = ChromeUtils.importESModule(
+  "resource://autofill/FormAutofillStorage.sys.mjs"
+);
+
 const { FormAutofillUtils } = ChromeUtils.importESModule(
   "resource://gre/modules/shared/FormAutofillUtils.sys.mjs"
 );
@@ -353,10 +357,13 @@ async function ensureCreditCardDialogNotClosed(win) {
   win.removeEventListener("unload", unloadHandler);
 }
 
-function getDisplayedPopupItems(
-  browser,
-  selector = ".autocomplete-richlistitem"
-) {
+function getDisplayedPopupItems(browser, selector = ".autocomplete-row-item") {
+  const baseSelector = ".autocomplete-row-item";
+  const originalType = selector.includes("[originaltype=")
+    ? selector.replace(".autocomplete-richlistitem", "").trim()
+    : "";
+  selector = baseSelector + originalType;
+
   info("getDisplayedPopupItems");
   const {
     autoCompletePopup: { richlistbox: itemsBox },
@@ -364,6 +371,18 @@ function getDisplayedPopupItems(
   const listItemElems = itemsBox.querySelectorAll(selector);
 
   return [...listItemElems].filter(item => !item.hasAttribute("collapsed"));
+}
+
+function getACItemLabel(item) {
+  return item.querySelector("autocomplete-row-item").label;
+}
+
+function getACItemValue(item) {
+  return item.querySelector("autocomplete-row-item").value;
+}
+
+function getACItemIcon(item) {
+  return item.querySelector("autocomplete-row-item").icon;
 }
 
 async function sleep(ms = 500) {
@@ -407,6 +426,14 @@ async function waitForStorageChangedEvents(...eventTypes) {
       )
     )
   );
+}
+
+// Run a UI action that mutates storage and wait for the matching
+// `formautofill-storage-changed` notification, so assertions see the result.
+async function withStorageChange(eventType, action) {
+  const observed = waitForStorageChangedEvents(eventType);
+  await action();
+  await observed;
 }
 
 /**
@@ -698,7 +725,9 @@ async function waitForPopupEnabled(browser) {
   await BrowserTestUtils.waitForMutationCondition(
     itemsBox,
     { subtree: true, attributes: true, attributeFilter: ["disabled"] },
-    () => !itemsBox.querySelectorAll(".autocomplete-richlistitem")[0].disabled
+    () => {
+      return !itemsBox.querySelectorAll(".autocomplete-row-item")[0].disabled;
+    }
   );
 }
 
@@ -818,6 +847,10 @@ function getCreditCards() {
   return getRecords({ collectionName: "creditCards" });
 }
 
+function getPassports() {
+  return getRecords({ collectionName: "passports" });
+}
+
 async function saveAddress(address) {
   info("expecting address saved");
   let observePromise = TestUtils.topicObserved("formautofill-storage-changed");
@@ -879,7 +912,7 @@ async function clickDoorhangerButton(buttonType, index = 0) {
   } else if (buttonType == MENU_BUTTON) {
     // Click the dropmarker arrow and wait for the menu to show up.
     info("expecting notification menu button present");
-    await BrowserTestUtils.waitForCondition(() => getNotification().menubutton);
+    await TestUtils.waitForCondition(() => getNotification().menubutton);
     await sleep(2000); // menubutton needs extra time for binding
     let notification = getNotification();
 
@@ -889,11 +922,12 @@ async function clickDoorhangerButton(buttonType, index = 0) {
       "popupshown"
     );
 
-    notification.menubutton.click();
+    notification.menubutton.chevronButtonEl.click();
     info("expecting notification popup show up");
     await dropdownPromise;
 
-    button = notification.querySelectorAll("menuitem")[index];
+    // Only look in the dropmarker popup; some doorhangers have other menus too.
+    button = notification.menupopup.querySelectorAll("menuitem")[index];
     if (notification.menupopup.isNativeMenu) {
       notification.menupopup.activateItem(button);
     } else {
@@ -909,7 +943,7 @@ async function clickAddressDoorhangerButton(buttonType, subType) {
   const notification = getNotification();
   let button;
   if (buttonType == EDIT_ADDRESS_BUTTON) {
-    button = AddressSaveDoorhanger.editButton(notification);
+    button = notification.querySelector(`#${AddressSaveDoorhanger.editLinkId}`);
   } else if (buttonType == ADDRESS_MENU_BUTTON) {
     const menu = AutofillDoorhanger.menuButton(notification);
     const menupopup = AutofillDoorhanger.menuPopup(notification);
@@ -929,6 +963,10 @@ async function clickAddressDoorhangerButton(buttonType, subType) {
     await clickDoorhangerButton(buttonType);
     return;
   }
+
+  // The doorhanger's strings are applied asynchronously. An untranslated label
+  // has an empty rect, so the synthesized click would land on its container.
+  await notification.ownerDocument.l10n.translateFragment(notification);
 
   EventUtils.synthesizeMouseAtCenter(button, {});
 }
@@ -960,6 +998,17 @@ async function removeAllRecords() {
   let creditCards = await getCreditCards();
   if (creditCards.length) {
     await removeCreditCards(creditCards.map(cc => cc.guid));
+  }
+  // Passports have no "FormAutofill:RemovePassports" actor message, so clear
+  // them straight from storage. Guarded on the feature pref so tests that never
+  // enabled passports don't touch the Rust-backed passport store.
+  if (
+    Services.prefs.getCharPref(
+      "extensions.formautofill.passports.supported",
+      "off"
+    ) != "off"
+  ) {
+    await formAutofillStorage.passports.removeAll();
   }
 }
 
@@ -1069,7 +1118,9 @@ function fillEditDoorhanger(record) {
   for (const [key, value] of Object.entries(record)) {
     const id = AddressEditDoorhanger.getInputId(key);
     const element = notification.querySelector(`#${id}`);
-    element.value = value;
+    if (element) {
+      element.value = value;
+    }
   }
 }
 
@@ -1493,6 +1544,9 @@ async function triggerCapture(browser, submitButtonSelector, fillSelectors) {
  *        Region to assign before running the test
  * @param {Array} patterns.expectedResult
  *        The expected result of this heuristic test. See below for detailed explanation
+ * @param {Function} patterns.onTestSetup
+ *        Function that is executed after preferences and profile data are set, but before
+ *        the test document is opened.
  * @param {Function} patterns.onTestStart
  *        Function that is executed before the test starts. This runs after the form
  *        field has been focused.
@@ -1629,6 +1683,10 @@ async function add_heuristic_tests(
       await setStorage(testPattern.profile);
     }
 
+    if (testPattern.onTestSetup) {
+      await testPattern.onTestSetup();
+    }
+
     await BrowserTestUtils.withNewTab(TEST_URL, async browser => {
       await SimpleTest.promiseFocus(browser);
 
@@ -1686,7 +1744,7 @@ async function add_heuristic_tests(
       info(`Waiting for expected section count`);
       const actor =
         browser.browsingContext.currentWindowGlobal.getActor("FormAutofill");
-      await BrowserTestUtils.waitForCondition(() => {
+      await TestUtils.waitForCondition(() => {
         const sections = Array.from(actor.sectionsByRootId.values()).flat();
         return sections.length == testPattern.expectedResult.length;
       }, "Expected section count.");

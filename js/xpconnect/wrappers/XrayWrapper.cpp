@@ -3,16 +3,25 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "XrayWrapper.h"
-#include "AccessCheck.h"
-#include "WrapperFactory.h"
 
+#include "mozilla/dom/BindingUtils.h"
+#include "mozilla/dom/ObservableArrayProxyHandler.h"
+#include "mozilla/dom/ProxyHandlerUtils.h"
+#include "mozilla/dom/WindowProxyHolder.h"
+#include "mozilla/dom/XrayExpandoClass.h"
+#include "mozilla/FloatingPoint.h"
+
+#include "AccessCheck.h"
+#include "jsapi.h"
 #include "nsDependentString.h"
+#include "nsGlobalWindowInner.h"
 #include "nsIConsoleService.h"
 #include "nsIScriptError.h"
-
+#include "nsJSUtils.h"
+#include "nsPrintfCString.h"
+#include "WrapperFactory.h"
 #include "xpcprivate.h"
 
-#include "jsapi.h"
 #include "js/CallAndConstruct.h"  // JS::Call, JS::Construct, JS::IsCallable
 #include "js/ColumnNumber.h"      // JS::ColumnNumberOneOrigin
 #include "js/experimental/TypedData.h"  // JS_GetTypedArrayLength
@@ -22,15 +31,6 @@
 #include "js/PropertyAndElement.h"  // JS_AlreadyHasOwnPropertyById, JS_DefineProperty, JS_DefinePropertyById, JS_DeleteProperty, JS_DeletePropertyById, JS_HasProperty, JS_HasPropertyById
 #include "js/PropertyDescriptor.h"  // JS::PropertyDescriptor, JS_GetOwnPropertyDescriptorById, JS_GetPropertyDescriptorById
 #include "js/PropertySpec.h"
-#include "nsGlobalWindowInner.h"
-#include "nsJSUtils.h"
-#include "nsPrintfCString.h"
-
-#include "mozilla/FloatingPoint.h"
-#include "mozilla/dom/BindingUtils.h"
-#include "mozilla/dom/ProxyHandlerUtils.h"
-#include "mozilla/dom/WindowProxyHolder.h"
-#include "mozilla/dom/XrayExpandoClass.h"
 
 using namespace mozilla::dom;
 using namespace JS;
@@ -46,23 +46,16 @@ namespace xpc {
 
 #define Between(x, a, b) (a <= x && x <= b)
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
 static_assert(JSProto_URIError - JSProto_Error == 9,
               "New prototype added in error object range");
-#else
-static_assert(JSProto_URIError - JSProto_Error == 8,
-              "New prototype added in error object range");
-#endif
 #define AssertErrorObjectKeyInBounds(key)                      \
   static_assert(Between(key, JSProto_Error, JSProto_URIError), \
                 "We depend on js/ProtoKey.h ordering here");
 MOZ_FOR_EACH(AssertErrorObjectKeyInBounds, (),
              (JSProto_Error, JSProto_InternalError, JSProto_AggregateError,
               JSProto_EvalError, JSProto_RangeError, JSProto_ReferenceError,
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
-              JSProto_SuppressedError,
-#endif
-              JSProto_SyntaxError, JSProto_TypeError, JSProto_URIError));
+              JSProto_SuppressedError, JSProto_SyntaxError, JSProto_TypeError,
+              JSProto_URIError));
 
 static_assert(JSProto_Uint8ClampedArray - JSProto_Int8Array == 8,
               "New prototype added in typed array range");
@@ -110,11 +103,9 @@ static bool IsJSXraySupported(JSProtoKey key) {
     case JSProto_Set:
     case JSProto_WeakMap:
     case JSProto_WeakSet:
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
     case JSProto_SuppressedError:
     case JSProto_DisposableStack:
     case JSProto_AsyncDisposableStack:
-#endif
       return true;
     default:
       return false;
@@ -140,6 +131,10 @@ XrayType GetXrayType(JSObject* obj) {
   // though, we need to make an exception for compatibility.
   if (IsSandbox(obj)) {
     return NotXray;
+  }
+
+  if (mozilla::dom::IsObservableArrayProxy(obj)) {
+    return XrayForJSObject;
   }
 
   return XrayForOpaqueObject;
@@ -681,7 +676,6 @@ bool JSXrayTraits::resolveOwnProperty(
       }
 #endif
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
       if (key == JSProto_SuppressedError) {
         // The .suppressed property of SuppressedErrors can have any value.
         if (id == GetJSIDByIndex(cx, XPCJSContext::IDX_SUPPRESSED)) {
@@ -693,7 +687,6 @@ bool JSXrayTraits::resolveOwnProperty(
           return getOwnPropertyFromWrapperIfSafe(cx, wrapper, id, desc);
         }
       }
-#endif
 
       if (key == JSProto_AggregateError &&
           id == GetJSIDByIndex(cx, XPCJSContext::IDX_ERRORS)) {
@@ -1148,6 +1141,18 @@ JSObject* JSXrayTraits::createHolder(JSContext* cx, JSObject* wrapper) {
   // JSProto_Object, and since Arguments would otherwise get JSProto_Object,
   // this does not cause any behavior change at those sites.
   if (key == JSProto_Object && js::IsArgumentsObject(target)) {
+    key = JSProto_Array;
+  }
+
+  // An ObservableArray is a Proxy wrapping an Array, which should behave like
+  // an Array from the consumer's perspective. To do so, its prototype must be
+  // Array.prototype. But when JSXrayTraits::getPrototype() calls
+  // JS_GetClassPrototype(), js::GlobalObject::getPrototype fails to resolve
+  // the prototype because an ObservableArray is a Proxy without prototype
+  // instead of a standard JS class (that would have a standard prototype).
+  // To get JSXrayTraits::getPrototype() to return Array.prototype, set the key
+  // on the holder to JSProto_Array here.
+  if (key == JSProto_Proxy && mozilla::dom::IsObservableArrayProxy(target)) {
     key = JSProto_Array;
   }
 
@@ -1878,7 +1883,7 @@ static bool RecreateLostWaivers(JSContext* cx, const PropertyDescriptor* orig,
     rewaived = &wrapped.value().toObject();
     rewaived = WrapperFactory::WaiveXray(cx, UncheckedUnwrap(rewaived));
     NS_ENSURE_TRUE(rewaived, false);
-    wrapped.value().set(ObjectValue(*rewaived));
+    wrapped.value().setObject(*rewaived);
   }
   if (getterWasWaived && !IsCrossCompartmentWrapper(wrapped.getter())) {
     // We can't end up with WindowProxy or Location as getters.

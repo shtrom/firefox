@@ -5,8 +5,9 @@
 #ifndef GLCONTEXT_H_
 #define GLCONTEXT_H_
 
-#include <bitset>
 #include <stdint.h>
+
+#include <bitset>
 #include <stack>
 #include <vector>
 
@@ -24,23 +25,22 @@
 #  define MOZ_GL_DEBUG_BUILD 1
 #endif
 
-#include "mozilla/IntegerRange.h"
-#include "mozilla/RefPtr.h"
-#include "mozilla/UniquePtr.h"
-#include "mozilla/ThreadLocal.h"
-
-#include "MozFramebuffer.h"
-#include "nsTArray.h"
 #include "GLConsts.h"
+#include "GLContextSymbols.h"
+#include "GLContextTypes.h"
 #include "GLDefs.h"
 #include "GLTypes.h"
-#include "nsRegionFwd.h"
-#include "nsString.h"
-#include "GLContextTypes.h"
-#include "GLContextSymbols.h"
+#include "MozFramebuffer.h"
 #include "base/platform_thread.h"  // for PlatformThreadId
 #include "mozilla/GenericRefCounted.h"
+#include "mozilla/IntegerRange.h"
+#include "mozilla/RefPtr.h"
+#include "mozilla/ThreadLocal.h"
+#include "mozilla/UniquePtr.h"
 #include "mozilla/WeakPtr.h"
+#include "nsRegionFwd.h"
+#include "nsString.h"
+#include "nsTArray.h"
 
 template <class ElemT, class... More>
 constexpr inline std::array<ElemT, 1 + sizeof...(More)> make_array(
@@ -81,6 +81,7 @@ enum class GLFeature {
   clear_buffers,
   copy_buffer,
   copy_image,
+  debug,
   depth_clamp,
   depth_texture,
   draw_buffers,
@@ -229,6 +230,12 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
    * for an ANGLE implementation.
    */
   virtual bool IsWARP() const { return false; }
+
+  /**
+   * Returns true if the context is using ANGLE's D3D backend. This should only
+   * be overridden for an ANGLE implementation.
+   */
+  virtual bool IsD3DANGLE() const { return false; }
 
   virtual void GetWSIInfo(nsCString* const out) const = 0;
 
@@ -524,11 +531,11 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
 
  protected:
   void MarkExtensionUnsupported(GLExtensions aKnownExtension) {
-    mAvailableExtensions[aKnownExtension] = 0;
+    mAvailableExtensions[aKnownExtension] = false;
   }
 
   void MarkExtensionSupported(GLExtensions aKnownExtension) {
-    mAvailableExtensions[aKnownExtension] = 1;
+    mAvailableExtensions[aKnownExtension] = true;
   }
 
   std::bitset<Extensions_Max> mAvailableExtensions;
@@ -2447,7 +2454,7 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
   // Extension ARB_sync (GL)
  public:
   GLsync fFenceSync(GLenum condition, GLbitfield flags) {
-    GLsync ret = 0;
+    GLsync ret = nullptr;
     BEFORE_GL_CALL;
     ASSERT_SYMBOL_PRESENT(fFenceSync);
     ret = mSymbols.fFenceSync(condition, flags);
@@ -3850,6 +3857,11 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
 #endif
   }
 
+  // Returns the texture target Mac IOSurfaces should be bound to
+  virtual GLenum GetPreferredMacIOSurfaceTextureTarget() const {
+    MOZ_CRASH("unimplemented");
+  }
+
   virtual bool RenewSurface(widget::CompositorWidget* aWidget) { return false; }
 
   // Shared code for GL extensions and GLX extensions.
@@ -4024,10 +4036,7 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
       if (name < aOther.name) return true;
       return false;
     }
-    bool operator==(const NamedResource& aOther) const {
-      return origin == aOther.origin && name == aOther.name &&
-             originDeleted == aOther.originDeleted;
-    }
+    bool operator==(const NamedResource& aOther) const = default;
   };
 
   nsTArray<NamedResource> mTrackedPrograms;

@@ -6,19 +6,17 @@
 #define nsHttpConnection_h_
 
 #include <functional>
+
+#include "ARefBase.h"
 #include "HttpConnectionBase.h"
-#include "nsHttpConnectionInfo.h"
-#include "nsHttpResponseHead.h"
+#include "HttpTrafficAnalyzer.h"
+#include "TimingStruct.h"
+#include "TlsHandshaker.h"
+#include "mozilla/Mutex.h"
 #include "nsAHttpTransaction.h"
 #include "nsCOMPtr.h"
-#include "nsProxyRelease.h"
-#include "prinrval.h"
-#include "mozilla/Mutex.h"
-#include "ARefBase.h"
-#include "TimingStruct.h"
-#include "HttpTrafficAnalyzer.h"
-#include "TlsHandshaker.h"
-
+#include "nsHttpConnectionInfo.h"
+#include "nsHttpResponseHead.h"
 #include "nsIAsyncInputStream.h"
 #include "nsIAsyncOutputStream.h"
 #include "nsIInterfaceRequestor.h"
@@ -27,6 +25,8 @@
 #include "nsISupportsPriority.h"
 #include "nsITimer.h"
 #include "nsITlsHandshakeListener.h"
+#include "nsProxyRelease.h"
+#include "prinrval.h"
 
 class nsISocketTransport;
 class nsITLSSocketControl;
@@ -96,6 +96,9 @@ class nsHttpConnection final : public HttpConnectionBase,
   // AvailableForDispatchNow() to avoid a redundant probe before
   // GetIdleConnection() performs the definitive check.
   bool CanReuseLikely();
+  // Returns a short string naming which CanDirectlyActivate() condition is
+  // false, for use in diagnostic logs. Returns "ok" when all pass.
+  const char* CanDirectlyActivateReason() const;
 
   // Returns time in seconds for how long connection can be reused.
   uint32_t TimeToLive();
@@ -121,6 +124,15 @@ class nsHttpConnection final : public HttpConnectionBase,
   HttpVersion GetLastHttpResponseVersion() { return mLastHttpResponseVersion; }
 
   nsresult HandshakeError() const { return mHandshakeError; }
+
+  // Forwarded from TlsHandshaker on CertificateRequest / its resolution;
+  // HappyEyeballsTransaction uses these to pause around the cert dialog.
+  void OnClientAuthCertificateRequested();
+  void OnClientAuthCertificateSelected();
+
+  // Retry ECH config captured at TLS handshake error time. Cached because the
+  // NSS SSL state is no longer queryable by HE's failed-connection callback.
+  const nsACString& CachedRetryEchConfig() const { return mRetryEchConfig; }
 
   friend class HttpConnectionForceIO;
   friend class TlsHandshaker;
@@ -194,7 +206,7 @@ class nsHttpConnection final : public HttpConnectionBase,
   // The following functions are related to setting up a tunnel.
   [[nodiscard]] static nsresult MakeConnectString(
       nsAHttpTransaction* trans, nsHttpRequestHead* request, nsACString& result,
-      bool h2ws, bool aShouldResistFingerprinting);
+      bool aShouldResistFingerprinting);
   [[nodiscard]] static nsresult ReadFromStream(nsIInputStream*, void*,
                                                const char*, uint32_t, uint32_t,
                                                uint32_t*);
@@ -215,7 +227,8 @@ class nsHttpConnection final : public HttpConnectionBase,
   nsresult SetupProxyConnectStream() override;
   nsresult SendConnectRequest(void* closure, uint32_t* transactionBytes);
 
-  void HandleTunnelResponse(uint16_t responseStatus, bool* reset);
+  void HandleTunnelResponse(const nsHttpResponseHead& responseHead,
+                            bool* reset);
   void HandleWebSocketResponse(nsHttpRequestHead* requestHead,
                                nsHttpResponseHead* responseHead,
                                uint16_t responseStatus);
@@ -346,6 +359,10 @@ class nsHttpConnection final : public HttpConnectionBase,
   // by HappyEyeballsTransaction::ReadSegments to surface the cert/TLS
   // error instead of NS_BASE_STREAM_CLOSED.
   nsresult mHandshakeError{NS_OK};
+
+  // Set in PostProcessNPNSetup on SSL_ERROR_ECH_RETRY_WITH_ECH. See
+  // CachedRetryEchConfig().
+  nsCString mRetryEchConfig;
 
   // If a large keepalive has been requested for any trans,
   // scale the default by this factor

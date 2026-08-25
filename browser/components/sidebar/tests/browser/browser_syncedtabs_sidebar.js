@@ -161,7 +161,7 @@ add_task(async function test_tabs() {
 
       // We need to wait for the document to flush to ensure it's completely opened
       await content.promiseDocumentFlushed(() => {});
-      await EventUtils.synthesizeMouseAtCenter(
+      EventUtils.synthesizeMouseAtCenter(
         row.mainEl,
         { type: "mouseover" },
         content
@@ -183,7 +183,7 @@ add_task(async function test_tabs() {
           row.shadowRoot,
           { childList: true },
           () => row.secondaryButtonEl,
-          `Dismiss button should appear for tab ${j + 1}`
+          { msg: `Dismiss button should appear for tab ${j + 1}` }
         );
         // Check the presence of the dismiss button
         const dismissButton = row.secondaryButtonEl;
@@ -201,7 +201,7 @@ add_task(async function test_tabs() {
               undoButton.style.display !== "none"
             );
           },
-          `Undo button is shown after dismissing tab ${j + 1}.`
+          { msg: `Undo button is shown after dismissing tab ${j + 1}.` }
         );
 
         // Simulate clicking the undo button
@@ -221,7 +221,7 @@ add_task(async function test_tabs() {
               !row.secondaryButtonEl.classList.contains("undo-button")
             );
           },
-          `Dismiss button is restored after undoing tab ${j + 1}.`
+          { msg: `Dismiss button is restored after undoing tab ${j + 1}.` }
         );
       }
     }
@@ -525,7 +525,7 @@ add_task(async function test_tabs_click_auxclick() {
     // See the comment in test_history_hover_buttons in
     // browser_history_sidebar.js
     AccessibilityUtils.setEnv({ focusableRule: false });
-    await EventUtils.synthesizeMouseAtCenter(
+    EventUtils.synthesizeMouseAtCenter(
       row.mainEl,
       {
         button: 0,
@@ -556,7 +556,7 @@ add_task(async function test_tabs_click_auxclick() {
     );
 
     AccessibilityUtils.setEnv({ focusableRule: false });
-    await EventUtils.synthesizeMouseAtCenter(
+    EventUtils.synthesizeMouseAtCenter(
       row.mainEl,
       {
         button: 1,
@@ -583,7 +583,7 @@ add_task(async function test_tabs_click_auxclick() {
     );
 
     AccessibilityUtils.setEnv({ focusableRule: false });
-    await EventUtils.synthesizeMouseAtCenter(
+    EventUtils.synthesizeMouseAtCenter(
       row.mainEl,
       {
         button: 1,

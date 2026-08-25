@@ -39,8 +39,6 @@ async function reformatExpectedWebCompatInfo(tab, overrides) {
   const experiments = overrides.experiments || [];
   const atOverrides = overrides.antitracking;
   const blockList = atOverrides?.blockList ?? antitracking.blockList;
-  const blockedOrigins =
-    atOverrides?.blockedOrigins ?? antitracking.blockedOrigins ?? [];
   const hasMixedActiveContentBlocked =
     atOverrides?.hasMixedActiveContentBlocked ??
     antitracking.hasMixedActiveContentBlocked;
@@ -114,7 +112,6 @@ async function reformatExpectedWebCompatInfo(tab, overrides) {
         tabInfo: {
           antitracking: {
             blockList,
-            blockedOrigins,
             btpHasPurgedSite,
             etpCategory,
             hasMixedActiveContentBlocked,
@@ -146,6 +143,13 @@ async function reformatExpectedWebCompatInfo(tab, overrides) {
     utm_campaign: "report-broken-site",
     utm_source: "desktop-reporter",
   };
+
+  const blockedOrigins =
+    atOverrides?.blockedOrigins ?? antitracking.blockedOrigins;
+  if (blockedOrigins) {
+    reformatted.details.additionalData.tabInfo.antitracking.blockedOrigins =
+      blockedOrigins;
+  }
 
   // We only care about this pref on Linux right now on webcompat.com.
   if (AppConstants.platform != "linux") {
@@ -202,6 +206,24 @@ async function testSendMoreInfo(tab, menu, expectedOverrides = {}) {
     description,
   });
 
+  if (expectedOverrides?.screenshotOptOut) {
+    const { screenshotToggle } = rbs;
+    await isVisible(screenshotToggle);
+    if (screenshotToggle.pressed) {
+      screenshotToggle.click();
+    }
+    await isNotPressed(screenshotToggle);
+  }
+
+  if (expectedOverrides?.antitracking?.blockedOrigins) {
+    const { blockedTrackersToggle } = rbs;
+    await isVisible(blockedTrackersToggle);
+    if (!blockedTrackersToggle.pressed) {
+      blockedTrackersToggle.click();
+    }
+    await isPressed(blockedTrackersToggle);
+  }
+
   const receivedData = await rbs.clickSendMoreInfo();
   await checkWebcompatComPayload(
     tab,
@@ -212,9 +234,14 @@ async function testSendMoreInfo(tab, menu, expectedOverrides = {}) {
     receivedData
   );
 
-  // re-opening the panel, the url, reason, and description should be reset
+  // re-opening the panel, the url, reason, and description should not be reset
   rbs = await menu.openReportBrokenSite();
-  rbs.isProperlyReset();
+  ok(
+    !rbs.urlInputs.some(i => i.input && i.input.value != url),
+    "URL inputs were not reset"
+  );
+  is(rbs.reason, reason, "Reason was not reset");
+  is(rbs.description, description, "Description was not reset");
   rbs.close();
 }
 
@@ -254,10 +281,18 @@ async function checkWebcompatComPayload(
   ok(app.version?.length, "Got an app version");
   ok(details.channel?.length, "Got an app channel");
   ok(details.defaultUserAgent?.length, "Got a default UA string");
-  ok(additionalData.tabInfo.useragentString?.length, "Got a final UA string");
+  if (!expectedOverrides.expectNoTabDetails) {
+    ok(additionalData.tabInfo.useragentString?.length, "Got a final UA string");
+  }
 
   // Check that if there is also a screenshot, that it is valid.
   const { screenshot } = receivedData;
+  if (expectedOverrides?.screenshotOptOut) {
+    ok(
+      !screenshot,
+      "opted out of a screenshot, so it ought to not be included"
+    );
+  }
   if (screenshot) {
     const isScreenshotValid = await new Promise(done => {
       var image = new Image();
@@ -269,6 +304,10 @@ async function checkWebcompatComPayload(
   }
 
   filterFrameworkDetectorFails(message.details, expected.details);
+
+  if (expectedOverrides.expectNoTabDetails) {
+    removeTabSpecificInfo(expected.details.additionalData.tabInfo);
+  }
 
   ok(areObjectsEqual(message, expected), "sent info matches expectations");
 }

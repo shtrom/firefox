@@ -3,76 +3,33 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "AccEvent.h"
-#include "LocalAccessible-inl.h"
-
-#include "EmbeddedObjCollector.h"
 #include "AccGroupInfo.h"
 #include "AccIterator.h"
+#include "ApplicationAccessible.h"
 #include "CachedTableAccessible.h"
 #include "CssAltContent.h"
 #include "DocAccessible-inl.h"
-#include "mozilla/a11y/AccAttributes.h"
-#include "mozilla/a11y/DocAccessibleChild.h"
-#include "mozilla/a11y/Platform.h"
-#include "mozilla/FocusModel.h"
-#include "nsAccUtils.h"
-#include "nsMenuPopupFrame.h"
-#include "nsAccessibilityService.h"
-#include "ApplicationAccessible.h"
-#include "mozilla/dom/ContentList.h"
-#include "nsGenericHTMLElement.h"
-#include "NotificationController.h"
-#include "nsEventShell.h"
-#include "nsTextEquivUtils.h"
+#include "EmbeddedObjCollector.h"
 #include "EventTree.h"
+#include "HTMLElementAccessibles.h"
+#include "HTMLSelectAccessible.h"
+#include "HTMLTableAccessible.h"
+#include "ImageAccessible.h"
+#include "LocalAccessible-inl.h"
+#include "NotificationController.h"
 #include "OuterDocAccessible.h"
 #include "Pivot.h"
 #include "Relation.h"
-#include "mozilla/a11y/Role.h"
 #include "RootAccessible.h"
 #include "States.h"
 #include "TextLeafAccessible.h"
 #include "TextLeafRange.h"
 #include "TextRange.h"
-#include "HTMLElementAccessibles.h"
-#include "HTMLSelectAccessible.h"
-#include "HTMLTableAccessible.h"
-#include "ImageAccessible.h"
-
-#include "nsComputedDOMStyle.h"
-#include "nsGkAtoms.h"
-#include "nsIDOMXULButtonElement.h"
-#include "nsIDOMXULSelectCntrlEl.h"
-#include "nsIDOMXULSelectCntrlItemEl.h"
-#include "nsIMutationObserver.h"
-
-#include "mozilla/dom/Document.h"
-#include "mozilla/dom/HTMLAnchorElement.h"
-#include "mozilla/dom/HTMLFormElement.h"
-#include "mozilla/dom/HTMLInputElement.h"
-#include "mozilla/dom/NodeList.h"
-#include "mozilla/dom/PopoverData.h"
-#include "mozilla/gfx/Matrix.h"
-#include "nsIContent.h"
-#include "nsIFormControl.h"
-
-#include "nsDisplayList.h"
-#include "nsLayoutUtils.h"
-#include "nsPresContext.h"
-#include "nsIFrame.h"
-#include "nsTextFrame.h"
-#include "nsIDocShellTreeItem.h"
-#include "nsStyleStructInlines.h"
-#include "nsFocusManager.h"
-
-#include "nsString.h"
-#include "nsAtom.h"
-#include "nsContainerFrame.h"
-
 #include "mozilla/Assertions.h"
 #include "mozilla/BasicEvents.h"
 #include "mozilla/ErrorResult.h"
 #include "mozilla/FloatingPoint.h"
+#include "mozilla/FocusModel.h"
 #include "mozilla/PerfStats.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/ProfilerMarkers.h"
@@ -80,11 +37,49 @@
 #include "mozilla/StaticPrefs_accessibility.h"
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_ui.h"
+#include "mozilla/a11y/AccAttributes.h"
+#include "mozilla/a11y/DocAccessibleChild.h"
+#include "mozilla/a11y/Platform.h"
+#include "mozilla/a11y/Role.h"
+#include "mozilla/dom/ContentList.h"
+#include "mozilla/dom/Document.h"
 #include "mozilla/dom/Element.h"
+#include "mozilla/dom/HTMLAnchorElement.h"
+#include "mozilla/dom/HTMLFormElement.h"
+#include "mozilla/dom/HTMLHeadingElement.h"
+#include "mozilla/dom/HTMLInputElement.h"
 #include "mozilla/dom/HTMLLabelElement.h"
 #include "mozilla/dom/KeyboardEventBinding.h"
+#include "mozilla/dom/NodeList.h"
+#include "mozilla/dom/PopoverData.h"
 #include "mozilla/dom/TreeWalker.h"
 #include "mozilla/dom/UserActivation.h"
+#include "mozilla/gfx/Matrix.h"
+#include "nsAccUtils.h"
+#include "nsAccessibilityService.h"
+#include "nsAtom.h"
+#include "nsComputedDOMStyle.h"
+#include "nsContainerFrame.h"
+#include "nsDisplayList.h"
+#include "nsEventShell.h"
+#include "nsFocusManager.h"
+#include "nsGenericHTMLElement.h"
+#include "nsGkAtoms.h"
+#include "nsIContent.h"
+#include "nsIDOMXULButtonElement.h"
+#include "nsIDOMXULSelectCntrlEl.h"
+#include "nsIDOMXULSelectCntrlItemEl.h"
+#include "nsIDocShellTreeItem.h"
+#include "nsIFormControl.h"
+#include "nsIFrame.h"
+#include "nsIMutationObserver.h"
+#include "nsLayoutUtils.h"
+#include "nsMenuPopupFrame.h"
+#include "nsPresContext.h"
+#include "nsString.h"
+#include "nsStyleStructInlines.h"
+#include "nsTextEquivUtils.h"
+#include "nsTextFrame.h"
 
 using namespace mozilla;
 using namespace mozilla::a11y;
@@ -745,6 +740,13 @@ nsRect LocalAccessible::BoundsInAppUnits() const {
   nsIFrame* boundingFrame = nullptr;
   nsRect unionRectTwips = RelativeBounds(&boundingFrame);
   if (!boundingFrame) {
+    if (nsCoreUtils::IsDisplayContents(mContent)) {
+      nsRect result;
+      for (uint32_t i = 0, n = ChildCount(); i < n; i++) {
+        result.UnionRect(result, LocalChildAt(i)->BoundsInAppUnits());
+      }
+      return result;
+    }
     return nsRect();
   }
 
@@ -881,12 +883,16 @@ nsresult LocalAccessible::HandleAccEvent(AccEvent* aEvent) {
 
   if (IPCAccessibilityActive() && Document()) {
     DocAccessibleChild* ipcDoc = mDoc->IPCDoc();
-    // If ipcDoc is null, we can't fire the event to the client. We shouldn't
-    // have fired the event in the first place, since this makes events
-    // inconsistent for local and remote documents. To avoid this, don't call
-    // nsEventShell::FireEvent on a DocAccessible for which
-    // HasLoadState(eTreeConstructed) is false.
-    MOZ_ASSERT(ipcDoc);
+    // If ipcDoc is null, we can't fire the event to the client in the parent
+    // process. This could happen for two reasons:
+    // 1. There is no client in the parent process, so we didn't create a
+    // DocAccessibleChild.
+    // 2. A DocAccessibleChild would have been created, but we incorrectly fired
+    // an event before that happened. In this case, we shouldn't have fired the
+    // event in the first place, since this makes events inconsistent for local
+    // and remote documents. To avoid this, don't call nsEventShell::FireEvent
+    // on a DocAccessible for which HasLoadState(eTreeConstructed) is false.
+    MOZ_ASSERT(mDoc->HasLoadState(DocAccessible::eTreeConstructed));
     if (ipcDoc) {
       uint64_t id = aEvent->GetAccessible()->ID();
 
@@ -1361,8 +1367,6 @@ void LocalAccessible::DOMAttributeChanged(int32_t aNameSpaceID,
   // DOM attribute & resulting layout to actually change. Otherwise,
   // assistive technology will retrieve the wrong state/value/selection info.
 
-  CssAltContent::HandleAttributeChange(mContent, aNameSpaceID, aAttribute);
-
   // XXX todo
   // We still need to handle special HTML cases here
   // For example, if an <img>'s usemap attribute is modified
@@ -1587,9 +1591,11 @@ void LocalAccessible::DOMAttributeChanged(int32_t aNameSpaceID,
     LocalAccessible* widget = nsAccUtils::GetSelectableContainer(this, State());
     if (widget) {
       AccSelChangeEvent::SelChangeType selChangeType;
-      if (aNameSpaceID != kNameSpaceID_None) {
-        selChangeType = elm->AttrValueIs(aNameSpaceID, aAttribute,
-                                         nsGkAtoms::_true, eCaseMatters)
+      if (aAttribute == nsGkAtoms::selected) {
+        // The condition above guarantees a XUL element here. In XUL, `selected`
+        // is a boolean attribute whose mere presence indicates selection,
+        // unlike aria-selected which is "true"/"false".
+        selChangeType = elm->HasAttr(nsGkAtoms::selected)
                             ? AccSelChangeEvent::eSelectionAdd
                             : AccSelChangeEvent::eSelectionRemove;
       } else {
@@ -2918,9 +2924,9 @@ void LocalAccessible::BindToParent(LocalAccessible* aParent,
     }
   }
 
-  mContextFlags |=
-      static_cast<uint32_t>((mParent->IsAlert() || mParent->IsInsideAlert())) &
-      eInsideAlert;
+  if (mParent->IsAlert() || mParent->IsInsideAlert()) {
+    mContextFlags |= eInsideAlert;
+  }
 
   if (IsTableRow() || IsTableCell()) {
     CachedTableAccessible::Invalidate(this);
@@ -2938,7 +2944,7 @@ void LocalAccessible::BindToParent(LocalAccessible* aParent,
     // queue cache updates for that popover's invokers. This handles the case
     // where interactive descendants are added to the hint popover after it's
     // already been shown.
-    if (aParent && aParent->Elm() && IsOpenHintPopover(aParent->Elm())) {
+    if (aParent->Elm() && IsOpenHintPopover(aParent->Elm())) {
       mDoc->QueueCacheUpdateForPopoverInvokers(aParent->Elm());
     }
   }
@@ -3162,9 +3168,7 @@ Accessible* LocalAccessible::EmbeddedChildAt(uint32_t aIndex) {
     if (!mEmbeddedObjCollector) {
       mEmbeddedObjCollector.reset(new EmbeddedObjCollector(this));
     }
-    return mEmbeddedObjCollector.get()
-               ? mEmbeddedObjCollector->GetAccessibleAt(aIndex)
-               : nullptr;
+    return mEmbeddedObjCollector->GetAccessibleAt(aIndex);
   }
 
   return ChildAt(aIndex);
@@ -3176,9 +3180,7 @@ int32_t LocalAccessible::IndexOfEmbeddedChild(Accessible* aChild) {
     if (!mEmbeddedObjCollector) {
       mEmbeddedObjCollector.reset(new EmbeddedObjCollector(this));
     }
-    return mEmbeddedObjCollector.get()
-               ? mEmbeddedObjCollector->GetIndexAt(aChild->AsLocal())
-               : -1;
+    return mEmbeddedObjCollector->GetIndexAt(aChild->AsLocal());
   }
 
   return GetIndexOf(aChild->AsLocal());
@@ -3509,8 +3511,7 @@ void LocalAccessible::SendCache(uint64_t aCacheDomain,
   }
 
   // Only send cache updates for domains that are active.
-  const uint64_t domainsToSend =
-      nsAccessibilityService::GetActiveCacheDomains() & aCacheDomain;
+  const uint64_t domainsToSend = mDoc->EffectiveCacheDomains() & aCacheDomain;
 
   // Avoid sending cache updates if we have no domains to update.
   if (domainsToSend == CacheDomain::None) {
@@ -4152,6 +4153,13 @@ already_AddRefed<AccAttributes> LocalAccessible::BundleFieldsForCache(
         fields->SetAttribute(attr, DeleteEntry());
       }
     }
+
+    int32_t headingLevel = HeadingLevel();
+    if (headingLevel > 0) {
+      fields->SetAttribute(CacheKey::HeadingLevel, headingLevel);
+    } else if (IsUpdatePush(CacheDomain::GroupInfo)) {
+      fields->SetAttribute(CacheKey::HeadingLevel, DeleteEntry());
+    }
   }
 
   if (aCacheDomain & CacheDomain::Actions) {
@@ -4701,6 +4709,13 @@ void LocalAccessible::DOMNodeClass(nsString& aClass) const {
   if (auto* el = dom::Element::FromNodeOrNull(mContent)) {
     el->GetClassName(aClass);
   }
+}
+
+int32_t LocalAccessible::HeadingLevel() const {
+  if (auto* el = dom::HTMLHeadingElement::FromNodeOrNull(mContent)) {
+    return static_cast<int32_t>(el->ComputedLevel());
+  }
+  return 0;
 }
 
 void LocalAccessible::LiveRegionAttributes(nsAString* aLive,

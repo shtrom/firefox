@@ -41,7 +41,7 @@ async function waitUntilRowsMatch(openTabs, cardIndex, expectedURLs) {
   info(
     `waitUntilRowsMatch, wait for there to be at least ${cardIndex + 1} cards`
   );
-  await BrowserTestUtils.waitForCondition(() => {
+  await TestUtils.waitForCondition(() => {
     if (!openTabs.initialWindowsReady) {
       info("openTabs.initialWindowsReady isn't true");
       return false;
@@ -547,6 +547,17 @@ add_task(async function test_send_mobile_signed_out_submenu_text() {
 
     ok(sendTabPanelItem, "Send tabs to mobile submenu panel item exists");
 
+    let sendTabSubmenuList = sendTabPanelItem.shadowRoot.querySelector(
+      "panel-list[id=send-tab-menu3]"
+    );
+    ok(sendTabSubmenuList, "Send tabs to mobile submenu panel list exists");
+
+    let signInPanelItem = sendTabSubmenuList.querySelector(
+      "panel-item[data-l10n-id=fxviewtabrow-send-to-mobile-sign-in]"
+    );
+
+    ok(signInPanelItem, "Send tabs to mobile sign in panel item exists");
+
     sandbox.restore();
     TabsSetupFlowManager.resetInternalState();
     while (gBrowser.tabs.length > 1) {
@@ -598,7 +609,7 @@ add_task(
       ok(sendTabSubmenuList, "Send tabs to mobile submenu panel list exists");
 
       let enableSyncPanelItem = sendTabSubmenuList.querySelector(
-        "panel-item[data-l10n-id=fxviewtabrow-send-to-mobile-enable-sync2]"
+        "panel-item[data-l10n-id=fxviewtabrow-send-to-mobile-turn-on-sync]"
       );
 
       ok(
@@ -657,7 +668,7 @@ add_task(async function test_send_mobile_single_device_submenu_text() {
     ok(sendTabSubmenuList, "Send tabs to mobile submenu panel list exists");
 
     let connectPhonePanelItem = sendTabSubmenuList.querySelector(
-      "panel-item[data-l10n-id=fxviewtabrow-send-to-mobile-connect-phone2]"
+      "panel-item[data-l10n-id=fxviewtabrow-send-to-mobile-connect-device]"
     );
 
     ok(
@@ -672,6 +683,70 @@ add_task(async function test_send_mobile_single_device_submenu_text() {
     ok(
       deviceMissingPanelItem,
       "Send tabs to mobile device missing panel item exists"
+    );
+
+    sandbox.restore();
+    TabsSetupFlowManager.resetInternalState();
+    while (gBrowser.tabs.length > 1) {
+      BrowserTestUtils.removeTab(gBrowser.tabs[0]);
+    }
+  });
+});
+
+add_task(async function test_send_mobile_unverified_account_text() {
+  const sandbox = setupSyncFxAMocks({
+    state: UIState.STATUS_NOT_VERIFIED,
+    fxaDevices: [],
+  });
+  sandbox.stub(gSync, "getSendTabTargets").callsFake(() => []);
+  sandbox.stub(gSync, "isUnverified").get(() => true);
+
+  await withFirefoxView({}, async () => {
+    // TEST_URL2 is our only tab, left over from previous test
+    Assert.deepEqual(
+      getVisibleTabURLs(),
+      [TEST_URL2],
+      `We initially have a single ${TEST_URL2} tab`
+    );
+
+    Services.obs.notifyObservers(null, UIState.ON_UPDATE);
+    let [cards, rows] = await moreMenuSetup([TEST_URL3]);
+
+    let firstTab = rows[0];
+    let panelList = await openContextMenuForItem(firstTab, cards[0]);
+
+    let sendTabPanelItem = panelList.querySelector(
+      "panel-item[data-l10n-id=fxviewtabrow-send-to-mobile]"
+    );
+
+    ok(sendTabPanelItem, "Send tabs to mobile panel item exists");
+
+    let sendTabSubmenuList = sendTabPanelItem.shadowRoot.querySelector(
+      "panel-list[id=send-tab-menu4]"
+    );
+    ok(sendTabSubmenuList, "Send tabs to mobile submenu panel list exists");
+
+    let unverifiedPanelItem = sendTabSubmenuList.querySelector(
+      "panel-item[data-l10n-id=fxviewtabrow-send-to-mobile-not-verified]"
+    );
+
+    ok(
+      unverifiedPanelItem,
+      "Send tabs to mobile unverified account panel item exists"
+    );
+    Assert.equal(
+      unverifiedPanelItem.getAttribute("disabled"),
+      "true",
+      "Send tabs to mobile unverified account panel item is disabled"
+    );
+
+    let verifyAccountPanelItem = sendTabSubmenuList.querySelector(
+      "panel-item[data-l10n-id=fxviewtabrow-send-to-mobile-verify-account]"
+    );
+
+    ok(
+      verifyAccountPanelItem,
+      "Send tabs to mobile verify account panel item exists"
     );
 
     sandbox.restore();

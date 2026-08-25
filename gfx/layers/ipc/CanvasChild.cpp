@@ -5,28 +5,28 @@
 #include "CanvasChild.h"
 
 #include "MainThreadUtils.h"
+#include "RecordedCanvasEventImpl.h"
+#include "mozilla/AppShutdown.h"
+#include "mozilla/Mutex.h"
+#include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/dom/WorkerPrivate.h"
 #include "mozilla/dom/WorkerRef.h"
 #include "mozilla/dom/WorkerRunnable.h"
 #include "mozilla/gfx/CanvasManagerChild.h"
 #include "mozilla/gfx/CanvasShutdownManager.h"
 #include "mozilla/gfx/DrawTargetRecording.h"
-#include "mozilla/gfx/gfxVars.h"
-#include "mozilla/gfx/Tools.h"
-#include "mozilla/gfx/Rect.h"
 #include "mozilla/gfx/Point.h"
+#include "mozilla/gfx/Rect.h"
+#include "mozilla/gfx/Tools.h"
+#include "mozilla/gfx/gfxVars.h"
 #include "mozilla/ipc/Endpoint.h"
 #include "mozilla/ipc/ProcessChild.h"
 #include "mozilla/ipc/SharedMemoryHandle.h"
 #include "mozilla/layers/CanvasDrawEventRecorder.h"
 #include "mozilla/layers/ImageDataSerializer.h"
 #include "mozilla/layers/SourceSurfaceSharedData.h"
-#include "mozilla/AppShutdown.h"
-#include "mozilla/Mutex.h"
-#include "mozilla/StaticPrefs_gfx.h"
-#include "nsIObserverService.h"
 #include "nsICanvasRenderingContextInternal.h"
-#include "RecordedCanvasEventImpl.h"
+#include "nsIObserverService.h"
 
 namespace mozilla {
 namespace layers {
@@ -135,7 +135,17 @@ class SourceSurfaceCanvasRecording final : public gfx::SourceSurface {
         });
   }
 
-  gfx::SurfaceType GetType() const final { return mRecordedSurface->GetType(); }
+  gfx::SurfaceType GetType() const final {
+    return gfx::SurfaceType::CANVAS_RECORDING;
+  }
+
+  gfx::SurfaceType GetUnderlyingType() const final {
+    return mRecordedSurface->GetType();
+  }
+
+  already_AddRefed<SourceSurface> GetUnderlyingSurface() final {
+    return do_AddRef(mRecordedSurface);
+  }
 
   gfx::IntSize GetSize() const final { return mRecordedSurface->GetSize(); }
 
@@ -193,7 +203,9 @@ class SourceSurfaceCanvasRecording final : public gfx::SourceSurface {
       mRecorder->RecordEvent(RecordedAddExportSurface(mExportID, this));
     }
     aDesc = SurfaceDescriptorCanvasSurface(
-        static_cast<gfx::CanvasManagerChild*>(mCanvasChild->Manager())->Id(),
+        mozilla::ipc::ActorCast<gfx::CanvasManagerChild>(
+            mCanvasChild->Manager())
+            ->Id(),
         mCanvasChild->Id(), uintptr_t(mExportID));
     return true;
   }
@@ -282,7 +294,7 @@ class CanvasDataShmemHolder {
     }
 
     MutexAutoLock lock(mMutex);
-    mWorkerRef = new dom::ThreadSafeWorkerRef(workerRef);
+    mWorkerRef = MakeRefPtr<dom::ThreadSafeWorkerRef>(workerRef);
     return true;
   }
 
@@ -645,12 +657,19 @@ already_AddRefed<gfx::DataSourceSurface> CanvasChild::GetDataSurface(
     return nullptr;
   }
 
+  size_t sizeRequired = SizeOfDataSurfaceShmem(ssSize, ssFormat);
+  if (!sizeRequired) {
+    return nullptr;
+  }
+
   // Shmem is only valid if the surface is the latest snapshot (not detached).
   if (!aDetached) {
     // If there is a shmem associated with this snapshot id, then we want to try
-    // use that directly without having to allocate a new shmem for retrieval.
+    // to use that directly instead of allocating a new shmem for retrieval.
+    // Also check that it meets the size required.
     auto it = mTextureInfo.find(aTextureOwnerId);
-    if (it != mTextureInfo.end() && it->second.mSnapshotShmem) {
+    if (it != mTextureInfo.end() && it->second.mSnapshotShmem &&
+        !NS_WARN_IF(sizeRequired > it->second.mSnapshotShmem->Size())) {
       const auto* shmemPtr = it->second.mSnapshotShmem->DataAs<uint8_t>();
       MOZ_ASSERT(shmemPtr);
       mRecorder->RecordEvent(RecordedPrepareShmem(aTextureOwnerId));
@@ -673,11 +692,6 @@ already_AddRefed<gfx::DataSourceSurface> CanvasChild::GetDataSurface(
       aMayInvalidate = true;
       return dataSurface.forget();
     }
-  }
-
-  size_t sizeRequired = SizeOfDataSurfaceShmem(ssSize, ssFormat);
-  if (!sizeRequired) {
-    return nullptr;
   }
 
   RecordEvent(RecordedCacheDataSurface(aSurface));
@@ -816,9 +830,14 @@ already_AddRefed<gfx::SourceSurface> CanvasChild::SnapshotExternalCanvas(
   // running under the same thread, and that events can be paused or resumed
   // while synchronizing between WebGL and AC2D.
   if (!gfx::gfxVars::UseAcceleratedCanvas2D() ||
-      !StaticPrefs::gfx_canvas_remote_use_canvas_translator_event_AtStartup()) {
+      !StaticPrefs::gfx_canvas_remote_use_canvas_translator_event_AtStartup() ||
+      !aActor) {
     return nullptr;
   }
+
+  uint32_t managerId =
+      mozilla::ipc::ActorCast<gfx::CanvasManagerChild>(Manager())->Id();
+  ActorId canvasId = aActor->Id();
 
   gfx::SurfaceFormat format = aCanvas->GetIsOpaque()
                                   ? gfx::SurfaceFormat::B8G8R8X8
@@ -844,9 +863,6 @@ already_AddRefed<gfx::SourceSurface> CanvasChild::SnapshotExternalCanvas(
   mRecorder->RecordEvent(aTarget,
                          RecordedResolveExternalSnapshot(
                              syncId, gfx::ReferencePtr(surface), size, format));
-
-  uint32_t managerId = static_cast<gfx::CanvasManagerChild*>(Manager())->Id();
-  ActorId canvasId = aActor->Id();
 
   // Actually send the request via IPDL to snapshot the external WebGL canvas.
   SendSnapshotExternalCanvas(syncId, managerId, canvasId);

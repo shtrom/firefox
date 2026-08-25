@@ -13,7 +13,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   ContentSharingUtils:
-    "resource:///modules/contentsharing/ContentSharingUtils.sys.mjs",
+    "moz-src:///browser/components/sharing/ContentSharingUtils.sys.mjs",
   CustomizableUI:
     "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   MigrationUtils: "resource:///modules/MigrationUtils.sys.mjs",
@@ -915,7 +915,11 @@ export var PlacesUIUtils = {
     aNode,
     aWhere,
     aWindow,
-    { aPrivate = false, userContextId = 0 } = {}
+    {
+      aPrivate = false,
+      userContextId = undefined,
+      eventDetail = undefined,
+    } = {}
   ) {
     if (
       aNode &&
@@ -954,6 +958,7 @@ export var PlacesUIUtils = {
         allowInheritPrincipal: isJavaScriptURL,
         private: aPrivate,
         userContextId,
+        eventDetail,
         resolveOnContentBrowserCreated,
       });
       if (aWindow.updateTelemetry) {
@@ -1477,6 +1482,7 @@ export var PlacesUIUtils = {
         "sidebar-history-context-menu",
         "placesContext",
         "sidebar-synced-tabs-context-menu",
+        "sidebar-bookmarks-context-menu",
       ].includes(menupopup.id)
     ) {
       PlacesUIUtils.lastContextMenuTriggerNode = null;
@@ -1484,21 +1490,28 @@ export var PlacesUIUtils = {
     }
   },
 
-  createContainerTabMenu(event) {
+  createContainerTabMenu(event, source = "places_context_menu") {
     let window = event.target.documentGlobal;
-    return window.createUserContextMenu(event, { isContextMenu: true });
+    return window.createUserContextMenu(event, {
+      isContextMenu: true,
+      containerSource: source,
+    });
   },
 
-  openInContainerTab(event) {
+  openInContainerTab(event, source = "places_context_menu") {
     PlacesUIUtils.lastContextMenuCommand = "placesCmd_open:newcontainertab";
     let userContextId = parseInt(
       event.target.getAttribute("data-usercontextid")
     );
     let triggerNode = this.lastContextMenuTriggerNode;
     let isManaged = !!triggerNode?.closest("#managed-bookmarks");
+    let eventDetail = { containerSource: source };
     if (isManaged) {
       let window = triggerNode.documentGlobal;
-      window.openTrustedLinkIn(triggerNode.link, "tab", { userContextId });
+      window.openTrustedLinkIn(triggerNode.link, "tab", {
+        userContextId,
+        eventDetail,
+      });
       return;
     }
     let view = this.getViewForNode(triggerNode);
@@ -1508,6 +1521,7 @@ export var PlacesUIUtils = {
       view?.ownerWindow || triggerNode.documentGlobal.top,
       {
         userContextId,
+        eventDetail,
       }
     );
   },
@@ -1783,6 +1797,24 @@ export var PlacesUIUtils = {
       } else {
         longTitles.set(titleBeginning, [candidate]);
       }
+    }
+  },
+
+  /**
+   * Event handler for experimental link sharing context menu item.
+   */
+  shareBookmarkFolder() {
+    let view = PlacesUIUtils.getViewForNode(
+      PlacesUIUtils.lastContextMenuTriggerNode
+    );
+    try {
+      lazy.ContentSharingUtils.createShareableLinkFromBookmarkFolders(
+        view.selectedNodes
+          .filter(n => lazy.PlacesUtils.nodeIsFolderOrShortcut(n))
+          .map(n => lazy.PlacesUtils.getConcreteItemGuid(n))
+      );
+    } catch (ex) {
+      console.error("Failed to create shareable link: ", ex);
     }
   },
 };

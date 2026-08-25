@@ -6,7 +6,6 @@
 
 /* Global rules */
 :root {
-  /* stylelint-disable-next-line media-query-no-invalid */
   @media not -moz-pref("browser.settings-redesign.enabled") {
     /**
      * Pre-SRD, headings are 1 level higher than they should be. These overrides
@@ -22,9 +21,8 @@
   --card-padding-inline: var(--space-xlarge);
   --card-padding-block: var(--card-padding-inline);
 
-  /* stylelint-disable-next-line media-query-no-invalid */
   @media -moz-pref("browser.settings-redesign.enabled") {
-    --background-color-canvas: light-dark(var(--color-gray-05), var(--color-gray-90));
+    --background-color-canvas: light-dark(var(--color-gray-0), var(--color-gray-90));
   }
 
   user-select: text;
@@ -85,7 +83,7 @@
      up after searching. */
   z-index: 2;
   background-color: var(--background-color-canvas);
-  padding-top: 40px;
+  padding-top: var(--page-space-block-start);
   padding-bottom: var(--search-container-padding);
   padding-inline: var(--focus-outline-offset);
   /* Ensure focus indicators on elements below the search container
@@ -97,10 +95,8 @@
   width: 100%;
 }
 
-@media (max-width: 950px) {
-  #search-container:has(#policies-container-content:not([hidden])) {
-    padding-top: var(--space-small);
-  }
+#policies-container-content:not([hidden]) + #searchInput {
+  margin-block-start: var(--space-small);
 }
 
 .main-content {
@@ -108,11 +104,8 @@
   --search-container-margin: calc(var(--focus-outline-width) + var(--focus-outline-offset));
 
   contain: inline-size;
-  /* 72px matches moz-page-nav's --page-nav-margin-top, minus the 40px
-     padding-top already set in common-shared.css. */
-  margin-top: 32px;
   padding-top: 0;
-  scroll-padding-top: calc(40px + var(--search-container-padding) + var(--search-container-margin) + 40px);
+  scroll-padding-top: calc(calc(2 * var(--page-space-block-start)) + var(--search-container-padding) + var(--search-container-margin));
 
   @media (max-width: 950px) {
     padding-inline: var(--space-medium);
@@ -139,7 +132,7 @@ setting-group[data-category] {
 }
 
 /* Bug 2002963 - payments and addresses are in a groupbox together, but they probably shouldn't be */
-#formAutofillGroupBox:not([hidden]) {
+#formAutofillGroupBox {
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -242,9 +235,8 @@ radio {
   margin: 4px 0;
 }
 
-/* stylelint-disable-next-line media-query-no-invalid */
 @media not -moz-pref("browser.settings-redesign.enabled") {
-  .spotlight:not(setting-group:has(> moz-card)) {
+  .spotlight {
     background-color: color-mix(in srgb, var(--color-accent-primary) 15%, transparent);
     outline: var(--border-color-selected) 1px dotted;
     animation: fade-out 0.5s ease-out 2s forwards;
@@ -252,22 +244,27 @@ radio {
     border: 1px solid transparent;
     border-radius: var(--border-radius-xsmall);
   }
-}
 
-/* stylelint-disable-next-line media-query-no-invalid */
-@media -moz-pref("browser.settings-redesign.enabled") {
-  .spotlight:not(setting-group:has(> moz-card)) {
-    outline: var(--border-color-selected) 2px solid;
-    outline-offset: var(--space-small);
-    animation: fade-out 0.5s ease-out 2s forwards;
-    border-radius: var(--border-radius-large);
+  [data-subcategory] {
+    margin-inline: -4px;
+    padding-inline: 4px;
   }
 }
 
-setting-group:has(> moz-card).spotlight {
-  outline: 2px solid var(--border-color-selected);
-  border-radius: var(--border-radius-medium);
-  animation: fade-out 0.5s ease-out 2s forwards;
+@media -moz-pref("browser.settings-redesign.enabled") {
+  .spotlight {
+    outline: 2px solid var(--border-color-selected);
+    animation: fade-out 0.5s ease-out 2s forwards;
+
+    setting-group& {
+      border-radius: var(--card-border-radius);
+    }
+
+    &:not(setting-group) {
+      border-radius: var(--border-radius-medium);
+      outline-offset: var(--space-small);
+    }
+  }
 }
 
 @keyframes fade-out {
@@ -277,16 +274,10 @@ setting-group:has(> moz-card).spotlight {
   }
 }
 
-[data-subcategory]:not(setting-group:has(> moz-card)) {
-  margin-inline: -4px;
-  padding-inline: 4px;
-}
-
 .ac-site-icon {
   display: flex;
 }
 
-/* stylelint-disable-next-line media-query-no-invalid */
 @media not -moz-pref("browser.settings-redesign.enabled") {
   /* Subcategory title */
 
@@ -316,7 +307,6 @@ setting-group:has(> moz-card).spotlight {
   min-height: calc(64px + 2 * var(--border-width));
 }
 
-/* stylelint-disable-next-line media-query-no-invalid */
 @media not -moz-pref("browser.migrate.preferences-entrypoint.enabled") {
   #dataMigrationGroup {
     display: none;
@@ -349,7 +339,7 @@ setting-group:has(> moz-card).spotlight {
 .extension-controlled-icon.close-icon {
   height: 30px;
   width: 30px;
-  margin-inline-start: 5px;
+  margin-inline: 5px 8px;
 }
 
 #getStarted {
@@ -358,15 +348,6 @@ setting-group:has(> moz-card).spotlight {
 
 #colors {
   margin-inline-start: 5px;
-}
-
-#FontsDialog menulist:empty {
-  /* When there's no menupopup, while the font builder is running,
-   * the height of the menulist would otherwise shrink. This throws
-   * off the height determination SubDialog.sys.mjs does, which then
-   * leads to content being cut off. Fix by enforcing a minimum height
-   * when there's no content: */
-  min-height: max(32px, calc(1.4em + 16px));
 }
 
 #useDocumentColors {
@@ -385,6 +366,7 @@ setting-group:has(> moz-card).spotlight {
 /** SRD applications section START **/
 #applicationsHandlersView {
   --box-group-max-height: 500px;
+  container-type: inline-size;
 
   moz-box-item.first label {
     font-weight: var(--font-weight-semibold);
@@ -392,7 +374,7 @@ setting-group:has(> moz-card).spotlight {
 
   moz-box-item label[slot="actions"],
   .actionsMenu {
-    width: 270px;
+    width: clamp(140px, 50cqi, 270px);
   }
 
   moz-box-item[hidden] {
@@ -524,7 +506,7 @@ richlistitem[selected] .actionsMenu:focus-visible {
   margin-inline-end: var(--space-small);
 }
 
-a[is="moz-support-link"]:not([hidden]) {
+a[is="moz-support-link"] {
   display: inline-block;
   white-space: initial;
 }
@@ -682,29 +664,8 @@ html|dialog,
   user-select: none;
 }
 
-.fxaPairDeviceIcon {
-  background-image: url("chrome://browser/content/logos/fxa-logo.svg");
-  background-position: center center;
-  background-repeat: no-repeat;
-  position: relative;
-  height: 80px;
-  padding-top: 42px;
-  margin-top: -40px;
-}
-
-.fxaPairDeviceIcon .close-icon {
-  margin-top: 10px;
-}
-
-.close-icon {
-  border: none;
-  background-color: transparent; /* override common.css, but keep hover/active states */
-  min-width: 0;
-  min-height: auto;
-  width: var(--icon-size-medium);
-  height: var(--icon-size-medium);
-  padding: 0;
-  margin-inline: 0 8px;
+.dialogClose {
+  margin-inline: 0 var(--space-xsmall);
 }
 
 .dialogFrame {
@@ -783,6 +744,10 @@ html|dialog,
 #fxaChangeDeviceName {
   margin-block: 4px;
   margin-inline-end: 0;
+}
+
+#fxaAccountDisabled {
+  margin-bottom: calc(-1 * var(--space-large));
 }
 
 #noFxaAccount > label:first-child {
@@ -917,7 +882,7 @@ dialog > .sync-engines-list + hbox {
   margin-block-end: 10px;
 }
 
-.sync-engines-list > div:not([hidden]) {
+.sync-engines-list > div {
   display: flex;
   break-inside: avoid;
 }
@@ -1002,6 +967,16 @@ dialog > .sync-engines-list + hbox {
 
 .info-box-container.smaller-font-size .info-icon {
   margin-top: 0.3em;
+}
+
+#search-results-back-button {
+  margin-block: var(--space-small) var(--space-xxsmall);
+  margin-inline: 0 var(--space-small);
+}
+
+#search-results-back-button:dir(rtl) {
+  /* RTL: flip the arrow icon */
+  transform: scaleX(-1);
 }
 
 #search-tooltip-container {
@@ -1171,8 +1146,8 @@ richlistitem .text-link:hover {
   align-items: center;
 }
 
-.proxy-grid-row:not([hidden]),
-.dnsOverHttps-grid-row:not([hidden]) {
+.proxy-grid-row,
+.dnsOverHttps-grid-row {
   display: contents;
 }
 
@@ -1211,10 +1186,8 @@ richlistitem .text-link:hover {
 }
 
 /* This is an HTML div (not XUL hbox), so it needs explicit display:flex for
-   horizontal icon+title layout. The :not([hidden]) guard prevents this from
-   overriding the hidden attribute's display:none (inline styles and CSS rules
-   both beat the UA stylesheet's hidden handling for HTML elements). */
-#moreFromMozillaCategory-header:not([hidden]) {
+   horizontal icon+title layout. */
+#moreFromMozillaCategory-header {
   display: flex;
   flex-wrap: wrap;
 }
@@ -1225,7 +1198,7 @@ richlistitem .text-link:hover {
   margin-block-end: var(--space-xlarge);
 }
 
-#moreFromMozillaCategory:not([hidden]) {
+#moreFromMozillaCategory {
   display: flex;
   flex-direction: column;
 }
@@ -1290,11 +1263,7 @@ richlistitem .text-link:hover {
   }
 }
 
-/*
- * The :not clause is required because hiding an element with `display: flex` only
- * partially hides it.
- */
-.qr-code-box:not([hidden="true"]) {
+.qr-code-box {
   max-width: 320px; /* a unit better than px for this & next? */
   min-height: 204px;
   margin-block: 10px 0;
@@ -1305,10 +1274,8 @@ richlistitem .text-link:hover {
   align-items: center;
   justify-content: space-evenly;
   border-radius: var(--border-radius-small);
-}
 
-@media (forced-colors) {
-  .qr-code-box:not([hidden="true"]) {
+  @media (forced-colors) {
     border: 1px solid currentColor;
   }
 }
@@ -1367,7 +1334,7 @@ richlistitem .text-link:hover {
 }
 
 @media (prefers-color-scheme: dark) {
-  .qr-code-box:not([hidden="true"]) {
+  .qr-code-box {
     background-color: rgba(91, 91, 102, 0.45);
   }
 
@@ -1397,6 +1364,33 @@ richlistitem .text-link:hover {
   }
 }
 /** SRD setting-chooser control END **/
+
+/** Browser icon picker (Windows-only) START **/
+.browser-icon-item {
+  --visual-picker-item-image-size: var(--icon-size-xlarge);
+  --visual-picker-item-padding: var(--space-large);
+}
+
+.browser-icon-item[disabled] {
+  pointer-events: none;
+  opacity: var(--button-opacity-disabled);
+  position: relative;
+
+  /* Gated (Bonus) icons are disabled until unlocked (default browser + pinned);
+   while locked, show a lock pinned to the trailing edge of the item. */
+  &::after {
+    content: url("chrome://global/skin/icons/security.svg");
+    -moz-context-properties: fill;
+    fill: currentColor;
+    position: absolute;
+    height: var(--icon-size);
+    width: var(--icon-size);
+    inset-inline-end: var(--space-large);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+/** Browser icon picker END **/
 
 /** SRD rows control for Homepage START **/
 setting-group[groupid="homepage"] {
@@ -1602,6 +1596,8 @@ setting-group[groupid="aiStatesDescription"] {
   margin: 0 0 var(--space-large);
 }
 
+/* Small subtree */
+/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
 .search-header:has(.section-heading) {
   margin: 0;
 }
@@ -1654,12 +1650,44 @@ setting-pane[onsearchpane] {
 }
 
 #addresses-list-header,
-#payments-list-header {
+#payments-list-header,
+#passports-list-header {
   --box-label-font-weight: var(--font-weight-heading);
+}
+
+#no-addresses-stored,
+#no-payments-stored,
+#no-passports-stored {
+  color: var(--text-color-deemphasized);
 }
 
 .box-header-bold {
   --box-label-font-weight: var(--font-weight-heading);
+}
+
+#containers-list {
+  --box-group-max-height: 525px;
+}
+
+.containers-identity-item {
+  --box-icon-start-fill: var(--identity-icon-color);
+  --box-icon-size: var(--icon-size-xlarge);
+
+  @media -moz-pref("browser.nova.enabled") {
+    --box-icon-start-fill: var(--identity-fill-color);
+    --box-icon-padding: round(up, var(--space-small), 0.5px);
+    --box-icon-border-radius: var(--border-radius-circle);
+    --box-icon-background: var(--identity-fill-tint);
+  }
+}
+
+#site-containers-list {
+  --box-group-max-height: 500px;
+
+  container-select {
+    --select-min-width: 10em;
+    --select-max-width: 10em;
+  }
 }
 
 .products-grid {

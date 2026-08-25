@@ -9,6 +9,7 @@
 #include "MMPrinter.h"
 #include "mozilla/AntiTrackingUtils.h"
 #include "mozilla/AsyncEventDispatcher.h"
+#include "mozilla/BasePrincipal.h"
 #include "mozilla/BounceTrackingProtection.h"
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/Components.h"
@@ -20,6 +21,7 @@
 #include "mozilla/ServoStyleSet.h"
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_network.h"
+#include "mozilla/StoragePrincipalHelper.h"
 #include "mozilla/dom/BrowserBridgeParent.h"
 #include "mozilla/dom/BrowserHost.h"
 #include "mozilla/dom/BrowserParent.h"
@@ -28,6 +30,7 @@
 #include "mozilla/dom/ChromeUtils.h"
 #include "mozilla/dom/ClientIPCTypes.h"
 #include "mozilla/dom/ClientInfo.h"
+#include "mozilla/dom/ClientValidation.h"
 #include "mozilla/dom/ContentChild.h"
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/DOMException.h"
@@ -44,6 +47,10 @@
 #include "mozilla/dom/Navigation.h"
 #include "mozilla/dom/NavigatorLogin.h"
 #include "mozilla/dom/PBackgroundSessionStorageCache.h"
+#include "mozilla/dom/ParentProcessChannelHandle.h"
+#include "mozilla/dom/PrefetchLog.h"
+#include "mozilla/dom/PrefetchMatchWaiter.h"
+#include "mozilla/dom/PrefetchRecordParent.h"
 #include "mozilla/dom/SerialManagerParent.h"
 #include "mozilla/dom/UseCounterMetrics.h"
 #include "mozilla/dom/WebAuthnTransactionParent.h"
@@ -58,6 +65,7 @@
 #include "mozilla/glean/GeckoviewMetrics.h"
 #include "mozilla/glean/NetwerkProtocolHttpMetrics.h"
 #include "mozilla/ipc/ProtocolUtils.h"
+#include "mozilla/net/CookieCommons.h"
 #include "mozilla/net/CookieServiceParent.h"
 #include "mozilla/net/NeckoParent.h"
 #include "mozilla/net/PCookieServiceParent.h"
@@ -68,6 +76,7 @@
 #include "nsFrameLoader.h"
 #include "nsFrameLoaderOwner.h"
 #include "nsIBrowser.h"
+#include "nsICertOverrideService.h"
 #include "nsICookieManager.h"
 #include "nsICookieService.h"
 #include "nsIEffectiveTLDService.h"
@@ -78,9 +87,9 @@
 #include "nsISharePicker.h"
 #include "nsISiteIntegrityService.h"
 #include "nsITimer.h"
-#include "nsITransportSecurityInfo.h"
 #include "nsIURIMutator.h"
 #include "nsIWebProgressListener.h"
+#include "nsIX509Cert.h"
 #include "nsIXPConnect.h"
 #include "nsIXULRuntime.h"
 #include "nsImportModule.h"
@@ -122,42 +131,75 @@ WindowGlobalParent::WindowGlobalParent(
       mDocumentHasLoaded(false),
       mDocumentHasUserInteracted(false),
       mBlockAllMixedContent(false),
-      mUpgradeInsecureRequests(false) {
+      mUpgradeInsecureRequests(false),
+      mPartitionStoragePrincipal(false) {
   MOZ_DIAGNOSTIC_ASSERT(XRE_IsParentProcess(), "Parent process only");
 }
 
 already_AddRefed<WindowGlobalParent> WindowGlobalParent::CreateDisconnected(
-    const WindowGlobalInit& aInit) {
+    const WindowGlobalInit& aInit, ContentParent* aForProcess) {
   RefPtr<CanonicalBrowsingContext> browsingContext =
       CanonicalBrowsingContext::Get(aInit.context().mBrowsingContextId);
   if (NS_WARN_IF(!browsingContext)) {
     return nullptr;
   }
 
+  MOZ_RELEASE_ASSERT(!aInit.staticCloneOf().IsDiscarded());
+
   RefPtr<WindowGlobalParent> wgp =
       GetByInnerWindowId(aInit.context().mInnerWindowId);
   MOZ_RELEASE_ASSERT(!wgp, "Creating duplicate WindowGlobalParent");
+
+  MOZ_RELEASE_ASSERT(VerifyPartitionedPrincipalMatchesDocumentPrincipal(
+                         aInit.principal(), aInit.partitionedPrincipal()),
+                     "Invalid partitioned principal from content");
 
   FieldValues fields(aInit.context().mFields);
   wgp =
       new WindowGlobalParent(browsingContext, aInit.context().mInnerWindowId,
                              aInit.context().mOuterWindowId, std::move(fields));
   wgp->mDocumentPrincipal = aInit.principal();
+  wgp->mDocumentPartitionedPrincipal = aInit.partitionedPrincipal();
   wgp->mDocumentURI = aInit.documentURI();
+  if (aInit.isVideoDocument() && wgp->mDocumentURI) {
+    wgp->RecordSubsequentNoCorsRequestState(wgp->mDocumentURI);
+  }
+  wgp->mStaticCloneOf = aInit.staticCloneOf().get_canonical();
   wgp->mIsInitialDocument = Some(aInit.isInitialDocument());
   wgp->mIsUncommittedInitialDocument = aInit.isUncommittedInitialDocument();
   wgp->mBlockAllMixedContent = aInit.blockAllMixedContent();
   wgp->mUpgradeInsecureRequests = aInit.upgradeInsecureRequests();
+  wgp->mPartitionStoragePrincipal = aInit.partitionStoragePrincipal();
   wgp->mSandboxFlags = aInit.sandboxFlags();
   wgp->mHttpsOnlyStatus = aInit.httpsOnlyStatus();
-  wgp->mSecurityInfo = aInit.securityInfo();
   net::CookieJarSettings::Deserialize(aInit.cookieJarSettings(),
                                       getter_AddRefs(wgp->mCookieJarSettings));
-  MOZ_RELEASE_ASSERT(wgp->mDocumentPrincipal, "Must have a valid principal");
+  MOZ_RELEASE_ASSERT(
+      !aForProcess || !wgp->mStaticCloneOf ||
+          wgp->mStaticCloneOf->GetContentParent() == aForProcess,
+      "Cannot static clone from a document in a different process!");
 
-  nsresult rv = wgp->SetDocumentStoragePrincipal(aInit.storagePrincipal());
-  MOZ_RELEASE_ASSERT(NS_SUCCEEDED(rv),
-                     "Must succeed in setting storage principal");
+  if (aInit.documentChannelHandle()) {
+    auto result = aInit.documentChannelHandle()->GetChannel(
+        browsingContext, wgp->mStaticCloneOf);
+    if (result.isOk()) {
+      wgp->mDocumentChannel = result.unwrap();
+    } else {
+      MOZ_CRASH_UNSAFE_PRINTF("Invalid documentChannelHandle: %s",
+                              result.unwrapErr().get());
+    }
+  }
+
+  if (aInit.failedChannelHandle()) {
+    auto result = aInit.failedChannelHandle()->GetChannel(browsingContext,
+                                                          wgp->mStaticCloneOf);
+    if (result.isOk()) {
+      wgp->mFailedChannel = result.unwrap();
+    } else {
+      MOZ_CRASH_UNSAFE_PRINTF("Invalid failedChannelHandle: %s",
+                              result.unwrapErr().get());
+    }
+  }
 
   return wgp.forget();
 }
@@ -175,9 +217,6 @@ void WindowGlobalParent::Init() {
   if (!IsInProcess()) {
     cp = static_cast<ContentParent*>(Manager()->Manager());
     processId = cp->ChildID();
-
-    // Ensure the content process has permissions for this principal.
-    cp->TransmitPermissionsForPrincipal(mDocumentPrincipal);
   }
 
   MOZ_DIAGNOSTIC_ASSERT(
@@ -216,6 +255,15 @@ void WindowGlobalParent::Init() {
           mDocumentPrincipal,
           getter_AddRefs(mDocContentBlockingAllowListPrincipal));
     }
+  }
+
+  // A fresh document on a reused BC id must not inherit the previous
+  // document's AudioSession override. BFCache restore reuses the WGP so
+  // Init() does not run on restore — only new document loads trigger this
+  // path.
+  if (auto* top = BrowsingContext()->Top();
+      top && top->HasCreatedMediaController()) {
+    top->GetMediaController()->ClearAudioSessionFor(BrowsingContext()->Id());
   }
 
   nsCOMPtr<nsIObserverService> obs = services::GetObserverService();
@@ -444,57 +492,41 @@ IPCResult WindowGlobalParent::RecvUpdateDocumentURI(NotNull<nsIURI*> aURI) {
   return IPC_OK();
 }
 
-nsresult WindowGlobalParent::SetDocumentStoragePrincipal(
-    nsIPrincipal* aNewDocumentStoragePrincipal) {
-  if (mDocumentPrincipal->Equals(aNewDocumentStoragePrincipal)) {
-    mDocumentStoragePrincipal = mDocumentPrincipal;
-    return NS_OK;
-  }
-
-  // Compare originNoSuffix to ensure it's equal.
-  nsCString noSuffix;
-  nsresult rv = mDocumentPrincipal->GetOriginNoSuffix(noSuffix);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  nsCString storageNoSuffix;
-  rv = aNewDocumentStoragePrincipal->GetOriginNoSuffix(storageNoSuffix);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  if (noSuffix != storageNoSuffix) {
-    return NS_ERROR_FAILURE;
-  }
-
-  if (!mDocumentPrincipal->OriginAttributesRef().EqualsIgnoringPartitionKey(
-          aNewDocumentStoragePrincipal->OriginAttributesRef())) {
-    return NS_ERROR_FAILURE;
-  }
-
-  mDocumentStoragePrincipal = aNewDocumentStoragePrincipal;
-  return NS_OK;
-}
-
 IPCResult WindowGlobalParent::RecvUpdateDocumentPrincipal(
     nsIPrincipal* aNewDocumentPrincipal,
-    nsIPrincipal* aNewDocumentStoragePrincipal) {
+    nsIPrincipal* aNewDocumentPartitionedPrincipal) {
   if (!mDocumentPrincipal->Equals(aNewDocumentPrincipal)) {
     return IPC_FAIL(this,
                     "Trying to reuse WindowGlobalParent but the principal of "
                     "the new document does not match the old one");
   }
-  mDocumentPrincipal = aNewDocumentPrincipal;
+  // NOTE: Unfortunately, we cannot check ->Equals for our old & new partitioned
+  // principals, as the partition key for an initial about:blank document may
+  // not match the partition key of the load which replaces it.
+  if (!VerifyPartitionedPrincipalMatchesDocumentPrincipal(
+          aNewDocumentPrincipal, aNewDocumentPartitionedPrincipal)) {
+    return IPC_FAIL(
+        this, "Invalid PartitionedPrincipal when re-using WindowGlobalParent");
+  }
 
-  if (NS_FAILED(SetDocumentStoragePrincipal(aNewDocumentStoragePrincipal))) {
-    return IPC_FAIL(this,
-                    "Trying to reuse WindowGlobalParent but the principal of "
-                    "the new document does not match the storage principal");
+  mDocumentPrincipal = aNewDocumentPrincipal;
+  if (mDocumentPrincipal->Equals(aNewDocumentPartitionedPrincipal)) {
+    // Keep only one copy of the principal around if we don't have a partition
+    // key.
+    mDocumentPartitionedPrincipal = mDocumentPrincipal;
+  } else {
+    mDocumentPartitionedPrincipal = aNewDocumentPartitionedPrincipal;
   }
 
   return IPC_OK();
 }
+
+mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdatePrincipalPartitioning(
+    bool aPartitionStoragePrincipal) {
+  mPartitionStoragePrincipal = aPartitionStoragePrincipal;
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateDocumentTitle(
     const nsString& aTitle) {
   if (mDocumentTitle.isSome() && mDocumentTitle.value() == aTitle) {
@@ -532,6 +564,42 @@ mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateHttpsOnlyStatus(
   return IPC_OK();
 }
 
+already_AddRefed<Promise> WindowGlobalParent::RequestDocumentLanguageMetadata(
+    const DocumentLanguageMetadataRequestOptions& aOptions, ErrorResult& aRv) {
+  nsIGlobalObject* global = GetParentObject();
+  RefPtr<Promise> domPromise = Promise::Create(global, aRv);
+  if (NS_WARN_IF(aRv.Failed())) {
+    return nullptr;
+  }
+
+  MOZ_ASSERT(aOptions.mTextSampleMinCodeUnits <=
+             aOptions.mTextSampleTargetCodeUnits);
+
+  if (!IsCurrentGlobal()) {
+    domPromise->MaybeResolve(JS::NullHandleValue);
+    return domPromise.forget();
+  }
+
+  auto ipcPromise = SendRequestDocumentLanguageMetadata(
+      aOptions.mTextSampleMinCodeUnits, aOptions.mTextSampleTargetCodeUnits);
+  ipcPromise->Then(
+      GetMainThreadSerialEventTarget(), __func__,
+      [domPromise,
+       self = RefPtr{this}](const Maybe<DocumentLanguageMetadata>& aMetadata) {
+        if (!self->IsCurrentGlobal() || aMetadata.isNothing()) {
+          domPromise->MaybeResolve(JS::NullHandleValue);
+          return;
+        }
+
+        domPromise->MaybeResolve(*aMetadata);
+      },
+      [domPromise](ResponseRejectReason&&) {
+        domPromise->MaybeResolve(JS::NullHandleValue);
+      });
+
+  return domPromise.forget();
+}
+
 IPCResult WindowGlobalParent::RecvUpdateDocumentHasLoaded(
     bool aDocumentHasLoaded) {
   mDocumentHasLoaded = aDocumentHasLoaded;
@@ -558,6 +626,11 @@ IPCResult WindowGlobalParent::RecvUpdateDocumentCspSettings(
 
 mozilla::ipc::IPCResult WindowGlobalParent::RecvSetClientInfo(
     const IPCClientInfo& aIPCClientInfo) {
+  if (!ClientIsValidPrincipalInfo(
+          aIPCClientInfo.principalInfo(),
+          GetContentParent() ? GetContentParent()->LoadedOrigins() : nullptr)) {
+    return IPC_FAIL(this, "SetClientInfo principal not valid for remote type");
+  }
   mClientInfo = Some(ClientInfo(aIPCClientInfo));
   return IPC_OK();
 }
@@ -746,10 +819,129 @@ mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateCookieJarSettings(
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateDocumentSecurityInfo(
-    nsITransportSecurityInfo* aSecurityInfo) {
-  mSecurityInfo = aSecurityInfo;
+mozilla::ipc::IPCResult WindowGlobalParent::RecvUpdateChannels(
+    ParentProcessChannelHandle* aDocumentHandle,
+    ParentProcessChannelHandle* aFailedHandle) {
+  nsCOMPtr<nsIChannel> documentChannel;
+  if (aDocumentHandle) {
+    auto result = aDocumentHandle->GetChannel(BrowsingContext());
+    if (result.isOk()) {
+      documentChannel = result.unwrap();
+    } else {
+      MOZ_CRASH_UNSAFE_PRINTF("Invalid aDocumentHandle: %s",
+                              result.unwrapErr().get());
+    }
+  }
+
+  nsCOMPtr<nsIChannel> failedChannel;
+  if (aFailedHandle) {
+    auto result = aFailedHandle->GetChannel(BrowsingContext());
+    if (result.isOk()) {
+      failedChannel = result.unwrap();
+    } else {
+      MOZ_CRASH_UNSAFE_PRINTF("Invalid aFailedHandle: %s",
+                              result.unwrapErr().get());
+    }
+  }
+
+  // NOTE: In the case where XSLT has performed a transformation on our
+  // document, it is possible for this method to be called multiple times. In
+  // that case, the channel should be identical to the channel which was
+  // previously loaded. Once XSLT is removed, we should be able to remove that
+  // part of this check.
+  if ((mDocumentChannel || mFailedChannel) &&
+      (mDocumentChannel != documentChannel ||
+       mFailedChannel != failedChannel)) {
+    return IPC_FAIL(this,
+                    "Conflicting attempts to set ParentProcessChannelHandle on "
+                    "WindowGlobalParent");
+  }
+
+  mDocumentChannel = documentChannel;
+  mFailedChannel = failedChannel;
+
   return IPC_OK();
+}
+
+already_AddRefed<nsIChannel> WindowGlobalParent::GetDocumentChannel() {
+  if (mDocumentChannel) {
+    return do_AddRef(mDocumentChannel);
+  }
+  if (Document* doc = GetExtantDoc()) {
+    return do_AddRef(doc->GetChannel());
+  }
+  return nullptr;
+}
+
+already_AddRefed<nsIChannel> WindowGlobalParent::GetFailedChannel() {
+  if (mFailedChannel) {
+    return do_AddRef(mFailedChannel);
+  }
+  if (Document* doc = GetExtantDoc()) {
+    return do_AddRef(doc->GetFailedChannel());
+  }
+  return nullptr;
+}
+
+dom::NoCorsMediaRequestState WindowGlobalParent::NoCorsMediaRequestState(
+    nsIURI* aURI) {
+  nsCString uri;
+  return (NS_SUCCEEDED(aURI->GetSpecIgnoringRef(uri)) &&
+          EnsureKnownAllowedSubsequentRequests()
+              ->mNoCorsMediaRequestURIs.Contains(uri))
+             ? dom::NoCorsMediaRequestState::Subsequent
+             : dom::NoCorsMediaRequestState::Initial;
+}
+
+StaticAutoPtr<WindowGlobalParent::AllKnownAllowedSubsequentRequests>
+    WindowGlobalParent::sAllKnownSubsequentRequests;
+
+/* static */ WindowGlobalParent::AllKnownAllowedSubsequentRequests&
+WindowGlobalParent::GetAllKnownAllowedSubsequentRequests() {
+  if (!sAllKnownSubsequentRequests) {
+    sAllKnownSubsequentRequests =
+        new nsTHashMap<PrincipalHashKey,
+                       WeakPtr<KnownAllowedSubsequentRequests>>;
+  }
+
+  return *sAllKnownSubsequentRequests;
+}
+
+WindowGlobalParent::KnownAllowedSubsequentRequests::
+    ~KnownAllowedSubsequentRequests() {
+  if (!sAllKnownSubsequentRequests) {
+    return;
+  }
+
+  auto& allKnownRequests = GetAllKnownAllowedSubsequentRequests();
+  allKnownRequests.Remove(mPrincipal);
+}
+
+WindowGlobalParent::KnownAllowedSubsequentRequests*
+WindowGlobalParent::EnsureKnownAllowedSubsequentRequests() {
+  if (!mKnownAllowedSubsequentRequests) {
+    auto& allKnownRequests = GetAllKnownAllowedSubsequentRequests();
+    RefPtr<KnownAllowedSubsequentRequests> knownAllowedSubsequentRequests;
+    mKnownAllowedSubsequentRequests = allKnownRequests.LookupOrInsertWith(
+        mDocumentPrincipal, [knownAllowedSubsequentRequests,
+                             principal = mDocumentPrincipal]() mutable {
+          knownAllowedSubsequentRequests =
+              MakeAndAddRef<KnownAllowedSubsequentRequests>();
+          knownAllowedSubsequentRequests->mPrincipal = principal;
+          return knownAllowedSubsequentRequests;
+        });
+  }
+
+  return mKnownAllowedSubsequentRequests;
+}
+
+void WindowGlobalParent::RecordSubsequentNoCorsRequestState(nsIURI* aURI) {
+  nsCString uri;
+  if (NS_FAILED(aURI->GetSpecIgnoringRef(uri)) || uri.IsEmpty()) {
+    return;
+  }
+
+  EnsureKnownAllowedSubsequentRequests()->mNoCorsMediaRequestURIs.PutEntry(uri);
 }
 
 mozilla::ipc::IPCResult WindowGlobalParent::RecvShare(
@@ -810,9 +1002,9 @@ class CheckPermitUnloadRequest final : public PromiseNativeHandler,
   // will _only_ run `DispatchBeforeUnloadToSubtree` for the content process of
   // the top level window. See further comments below in `Run` and in
   // `DispatchBeforeUnloadToSubtree`.
-  void RunTraversable(const SessionHistoryInfo& aInfo) {
+  void RunTraversable(nsDocShellLoadState* aDocShellLoadState) {
     MOZ_DIAGNOSTIC_ASSERT(mWGP->BrowsingContext()->IsTop());
-    Run(nullptr, 0, Some(aInfo));
+    Run(nullptr, 0, aDocShellLoadState);
   }
 
   // The complementing special case for `RunTraversable`, which is short hand
@@ -825,7 +1017,7 @@ class CheckPermitUnloadRequest final : public PromiseNativeHandler,
   }
 
   void Run(ContentParent* aIgnoreProcess = nullptr, uint32_t aTimeout = 0,
-           const Maybe<SessionHistoryInfo>& aInfo = Nothing()) {
+           nsDocShellLoadState* aDocShellLoadState = nullptr) {
     MOZ_ASSERT(mState == State::UNINITIALIZED);
     mState = State::WAITING;
 
@@ -846,17 +1038,20 @@ class CheckPermitUnloadRequest final : public PromiseNativeHandler,
     auto reject = [self](auto) { self->ResolveRequest(); };
     // If `aInfo` is passed, only dispatch to the content process of the top
     // level window.
-    if (aInfo) {
+    if (aDocShellLoadState) {
       MOZ_DIAGNOSTIC_ASSERT(Navigation::IsAPIEnabled());
       ContentParent* cp = mWGP->GetContentParent();
       mPendingRequests++;
       // Here eDontPromptAndUnload means that we ignore beforeunload handlers,
       // but we still need to handle the traversable navigate handler.
+      mozilla::NotNull<RefPtr<nsDocShellLoadState>> loadState =
+          WrapNotNull(aDocShellLoadState);
       if (mAction ==
           nsIDocumentViewer::PermitUnloadAction::eDontPromptAndUnload) {
-        cp->SendDispatchNavigateToTraversable(bc, aInfo, resolve, reject);
+        cp->SendDispatchNavigateToTraversable(bc, loadState, resolve, reject);
       } else {
-        cp->SendDispatchBeforeUnloadToSubtree(bc, aInfo, resolve, reject);
+        cp->SendDispatchBeforeUnloadToSubtree(bc, Some(loadState), resolve,
+                                              reject);
       }
     } else {
       bc->PreOrderWalk([&](dom::BrowsingContext* aBC) {
@@ -1076,8 +1271,12 @@ void WindowGlobalParent::PermitUnload(
   request->Run();
 }
 
-void WindowGlobalParent::PermitUnloadTraversable(
-    const SessionHistoryInfo& aInfo,
+// https://html.spec.whatwg.org/#checking-if-unloading-is-canceled
+// Implements the traversable-specific portion (step 4): fires beforeunload on
+// the traversable's active document (if needed) and fires the traverse
+// `navigate` event, which may intercept the load via `aDocShellLoadState`.
+void WindowGlobalParent::CheckIfUnloadingIsCanceledForTraversable(
+    nsDocShellLoadState* aDocShellLoadState,
     nsIDocumentViewer::PermitUnloadAction aAction,
     std::function<void(nsIDocumentViewer::PermitUnloadResult)>&& aResolver) {
   MOZ_DIAGNOSTIC_ASSERT(BrowsingContext()->IsTop());
@@ -1085,7 +1284,7 @@ void WindowGlobalParent::PermitUnloadTraversable(
       MakeRefPtr<CheckPermitUnloadRequest>(this,
                                            /* aHasInProcessBlocker */ false,
                                            aAction, std::move(aResolver));
-  request->RunTraversable(aInfo);
+  request->RunTraversable(aDocShellLoadState);
 }
 
 void WindowGlobalParent::PermitUnloadChildNavigables(
@@ -1100,7 +1299,7 @@ void WindowGlobalParent::PermitUnloadChildNavigables(
 
 already_AddRefed<mozilla::dom::Promise> WindowGlobalParent::DrawSnapshot(
     const DOMRect* aRect, double aScale, const nsACString& aBackgroundColor,
-    bool aResetScrollPosition, mozilla::ErrorResult& aRv) {
+    const DrawSnapshotOptions& aOptions, mozilla::ErrorResult& aRv) {
   nsIGlobalObject* global = GetParentObject();
   RefPtr<Promise> promise = Promise::Create(global, aRv);
   if (NS_WARN_IF(aRv.Failed())) {
@@ -1117,10 +1316,10 @@ already_AddRefed<mozilla::dom::Promise> WindowGlobalParent::DrawSnapshot(
 
   gfx::CrossProcessPaintFlags flags =
       gfx::CrossProcessPaintFlags::UseHighQualityScaling;
-  if (!aRect) {
+  if (!aRect || aOptions.mDrawView) {
     // If no explicit Rect was passed, we want the currently visible viewport.
     flags |= gfx::CrossProcessPaintFlags::DrawView;
-  } else if (aResetScrollPosition) {
+  } else if (aOptions.mResetScrollPosition) {
     flags |= gfx::CrossProcessPaintFlags::ResetScrollPosition;
   }
 
@@ -1490,6 +1689,50 @@ mozilla::ipc::IPCResult WindowGlobalParent::RecvSetSiteIntegrityProtected(
 
   (void)service->SetProtected(aSourceURI, originAttributes, aMaxAge);
 
+  return IPC_OK();
+}
+
+nsresult WindowGlobalParent::DoAddCertException(bool aTemporary) {
+  nsCOMPtr<nsIChannel> failedChannel(GetFailedChannel());
+  NS_ENSURE_TRUE(failedChannel, NS_ERROR_NOT_AVAILABLE);
+
+  nsCOMPtr<nsIURI> failedChannelURI;
+  nsresult rv =
+      NS_GetFinalChannelURI(failedChannel, getter_AddRefs(failedChannelURI));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIURI> innerURI(NS_GetInnermostURI(failedChannelURI));
+  NS_ENSURE_TRUE(innerURI, NS_ERROR_DOM_INVALID_STATE_ERR);
+
+  nsAutoCString host;
+  rv = innerURI->GetAsciiHost(host);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  int32_t port;
+  rv = innerURI->GetPort(&port);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsITransportSecurityInfo> failedSecurityInfo;
+  rv = failedChannel->GetSecurityInfo(getter_AddRefs(failedSecurityInfo));
+  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_TRUE(failedSecurityInfo, NS_ERROR_NOT_AVAILABLE);
+
+  nsCOMPtr<nsIX509Cert> cert;
+  rv = failedSecurityInfo->GetServerCert(getter_AddRefs(cert));
+  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_TRUE(cert, NS_ERROR_NOT_AVAILABLE);
+
+  nsCOMPtr<nsICertOverrideService> overrideService(
+      do_GetService(NS_CERTOVERRIDE_CONTRACTID));
+  NS_ENSURE_TRUE(overrideService, NS_ERROR_FAILURE);
+
+  return overrideService->RememberValidityOverride(
+      host, port, mDocumentPrincipal->OriginAttributesRef(), cert, aTemporary);
+}
+
+IPCResult WindowGlobalParent::RecvAddCertException(
+    bool aTemporary, AddCertExceptionResolver&& aResolver) {
+  aResolver(DoAddCertException(aTemporary));
   return IPC_OK();
 }
 
@@ -1876,6 +2119,27 @@ void WindowGlobalParent::SetShouldReportHasBlockedOpaqueResponse(
 IPCResult WindowGlobalParent::RecvSetCookies(
     const nsCString& aBaseDomain, const OriginAttributes& aOriginAttributes,
     nsIURI* aHost, bool aIsThirdParty, const nsTArray<CookieStruct>& aCookies) {
+  // Only content principals should be setting cookies via this path.
+  // Reject non-content principals (system, null, expanded) to prevent a
+  // compromised content process from bypassing the baseDomain check below.
+  nsIPrincipal* documentPrincipal = DocumentPrincipal();
+  if (!documentPrincipal || !documentPrincipal->GetIsContentPrincipal()) {
+    return IPC_FAIL(this,
+                    "SetCookies requires a content principal on the window");
+  }
+
+  // file:// principals have no meaningful baseDomain for cookie validation,
+  // skip the domain check.
+  if (!documentPrincipal->SchemeIs("file")) {
+    nsAutoCString principalBaseDomain;
+    if (NS_FAILED(net::CookieCommons::GetBaseDomain(documentPrincipal,
+                                                    principalBaseDomain)) ||
+        !principalBaseDomain.Equals(aBaseDomain)) {
+      return IPC_FAIL(
+          this, "SetCookies baseDomain does not match document principal");
+    }
+  }
+
   // Get CookieServiceParent via
   // ContentParent->NeckoParent->CookieServiceParent.
   ContentParent* contentParent = GetContentParent();
@@ -1888,6 +2152,21 @@ IPCResult WindowGlobalParent::RecvSetCookies(
       LoneManagedOrNullAsserts(neckoParent->ManagedPCookieServiceParent());
   NS_ENSURE_TRUE(csParent, IPC_OK());
   auto* cs = static_cast<net::CookieServiceParent*>(csParent);
+
+  if (!aHost) {
+    return IPC_FAIL(this, "aHost must not be null");
+  }
+
+  // Authorize the write if the process has already loaded this cookie key, or
+  // could legitimately load this principal. The latter covers documents with no
+  // channel registration (e.g. file://), which never populate the key set.
+  nsCOMPtr<nsIPrincipal> principal =
+      BasePrincipal::CreateContentPrincipal(aHost, aOriginAttributes);
+  if (!cs->ContentProcessHasCookie(aBaseDomain, aOriginAttributes) &&
+      !contentParent->ValidatePrincipal(principal)) {
+    return IPC_FAIL(this,
+                    "Content process not authorized for this cookie domain");
+  }
 
   return cs->SetCookies(aBaseDomain, aOriginAttributes, aHost, aIsThirdParty,
                         aCookies, GetBrowsingContext());
@@ -1929,6 +2208,20 @@ IPCResult WindowGlobalParent::RecvRecordUserInteractionForPermissions() {
   return IPC_OK();
 }
 
+IPCResult WindowGlobalParent::RecvNotifyAudioSessionTypeOverride(
+    const dom::AudioSessionType& aType) {
+  // The MediaController lives on the top-level BC, but the override is
+  // keyed by the sender's BC id (which may be an iframe). The setter must
+  // be honoured even before any controllable media has started, so call
+  // GetMediaController() which creates the controller on demand.
+  if (auto* top = BrowsingContext()->Top()) {
+    if (RefPtr<MediaController> controller = top->GetMediaController()) {
+      controller->SetAudioSessionTypeOverride(BrowsingContext()->Id(), aType);
+    }
+  }
+  return IPC_OK();
+}
+
 already_AddRefed<PSerialManagerParent>
 WindowGlobalParent::AllocPSerialManagerParent() {
   return MakeAndAddRef<SerialManagerParent>();
@@ -1956,17 +2249,243 @@ WindowGlobalParent::AllocPDigitalCredentialParent() {
   return MakeAndAddRef<DigitalCredentialParent>();
 }
 
+already_AddRefed<PPrefetchRecordParent>
+WindowGlobalParent::AllocPPrefetchRecordParent(
+    const SpeculativePrefetchArgs& aArgs) {
+  RefPtr<PrefetchRecordParent> actor = MakeRefPtr<PrefetchRecordParent>();
+  actor->Init(this, aArgs);
+  return actor.forget();
+}
+
+RefPtr<PrefetchMatchPromise> WindowGlobalParent::WaitForMatchingPrefetchRecord(
+    nsIURI* aURI, TimeDuration aTimeout) {
+  // Implements "wait for a matching prefetch record". The full algorithm
+  // runs "in parallel" and loops until a match completes, no ongoing record
+  // could still satisfy the navigation, or aTimeout elapses. Since a
+  // navigation can only be delayed by prefetches that are still ongoing
+  // *right now*, we only need to register a waiter (below) when such a
+  // record exists; otherwise the loop's first iteration already resolves
+  // synchronously.
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#wait-for-a-matching-prefetch-record
+
+  // Steps 5.1.1-5.1.2: "Let completeRecord be the result of finding a
+  // matching complete prefetch record ... If completeRecord is not null,
+  // return completeRecord."
+  if (PrefetchRecordParent* match = FindMatchingPrefetchRecord(aURI)) {
+    LOG_SPECRULES(
+        ("WindowGlobalParent::WaitForMatchingPrefetchRecord: "
+         "this=%p fast match rec=%p",
+         this, match));
+    return PrefetchMatchPromise::CreateAndResolve(RefPtr{match}, __func__);
+  }
+
+  // Steps 5.1.3-5.1.5: build potentialRecords (ongoing records that could
+  // still satisfy aURI) and, "if potentialRecords is empty, return null"
+  // without ever registering a waiter.
+  if (!HasPotentialPrefetchMatch(aURI)) {
+    LOG_SPECRULES(
+        ("WindowGlobalParent::WaitForMatchingPrefetchRecord: "
+         "this=%p no potential records, resolving nullptr",
+         this));
+    return PrefetchMatchPromise::CreateAndResolve(nullptr, __func__);
+  }
+
+  // Otherwise "wait until the state of any element of ... prefetch records
+  // changes" and re-run the loop: PrefetchMatchWaiter re-checks for a match
+  // (or gives up) each time NotifyPrefetchStateChanged fires, until aTimeout.
+  RefPtr<PrefetchMatchWaiter> waiter =
+      PrefetchMatchWaiter::Create(this, aURI, aTimeout);
+  mPrefetchWaiters.AppendElement(waiter);
+  LOG_SPECRULES(
+      ("WindowGlobalParent::WaitForMatchingPrefetchRecord: "
+       "this=%p registered waiter=%p",
+       this, waiter.get()));
+  return waiter->Promise();
+}
+
+bool WindowGlobalParent::HasPotentialPrefetchMatch(nsIURI* aURI) {
+  // Implements step 5.1.4 of "wait for a matching prefetch record": true if
+  // some ongoing record could still, once it completes, be a matching
+  // prefetch record for aURI.
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#wait-for-a-matching-prefetch-record
+  nsTArray<PPrefetchRecordParent*> managed;
+  ManagedPPrefetchRecordParent(managed);
+  for (auto* p : managed) {
+    auto* rec = static_cast<PrefetchRecordParent*>(p);
+    if (rec->State() == PrefetchState::Ongoing &&
+        rec->IsExpectedToMatch(aURI)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void WindowGlobalParent::RemoveWaiter(PrefetchMatchWaiter* aWaiter) {
+  mPrefetchWaiters.RemoveElement(aWaiter);
+  LOG_SPECRULES(
+      ("WindowGlobalParent::RemoveWaiter: this=%p waiter=%p "
+       "remaining=%zu",
+       this, aWaiter, mPrefetchWaiters.Length()));
+}
+
+void WindowGlobalParent::NotifyPrefetchStateChanged(
+    PrefetchRecordParent* aRec) {
+  // Drives "wait for a matching prefetch record" waiters when a record's state
+  // changes.
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#wait-for-a-matching-prefetch-record
+  for (RefPtr<PrefetchMatchWaiter>& waiter : mPrefetchWaiters.Clone()) {
+    waiter->OnRecordStateChanged(aRec);
+  }
+}
+
+// Cross-site privacy gate: whether conflicting credentials exist for an
+// exchange.
+// Spec:
+// https://wicg.github.io/nav-speculation/prefetch.html#conflicting-credentials-exist
+static bool ConflictingCredentialsExist(const ExchangeRecord& aExchange,
+                                        const nsString& aSourcePartitionKey) {
+  OriginAttributes attrs;
+  if (aExchange.mRequestURI) {
+    attrs.SetPartitionKey(aExchange.mRequestURI, false);
+  }
+  // Same-site: no conflict possible.
+  if (attrs.mPartitionKey == aSourcePartitionKey) {
+    return false;
+  }
+  // M1: same_origin_only gate prevents cross-site hops (see the cross-site
+  // redirect check in PrefetchRecordParent::AsyncOnChannelRedirect).
+  // M2: implement cookie presence check via nsICookieManager.
+  return false;
+}
+
+PrefetchRecordParent* WindowGlobalParent::FindMatchingPrefetchRecord(
+    nsIURI* aURI) {
+  // Implements "find a matching complete prefetch record".
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#find-a-matching-complete-prefetch-record
+  // Steps 1-2: "Let exactRecord be null. Let inexactRecord be null."
+  nsTArray<PPrefetchRecordParent*> managed;
+  ManagedPPrefetchRecordParent(managed);
+
+  PrefetchRecordParent* exact = nullptr;
+  PrefetchRecordParent* inexact = nullptr;
+
+  // Step 3: "For each record of sourceSnapshotParams's prefetch records:"
+  for (auto* p : managed) {
+    auto* rec = static_cast<PrefetchRecordParent*>(p);
+    // Step 3a: "If record's state is not "completed", then continue."
+    if (rec->State() != PrefetchState::Completed) {
+      continue;
+    }
+
+    bool urlEquals = false;
+    if (rec->URL()) {
+      rec->URL()->Equals(aURI, &urlEquals);
+    }
+    // Step 3b: "If record's URL is equal to url: Set exactRecord to record.
+    // Break."
+    if (urlEquals) {
+      exact = rec;
+      break;
+    }
+
+    // Step 3c: "If inexactRecord is null and record matches a URL given url:
+    // Set inexactRecord to record."
+    if (!inexact && rec->MatchesURL(aURI)) {
+      inexact = rec;
+    }
+  }
+
+  // Step 4: "Let recordToUse be exactRecord if exactRecord is not null,
+  // otherwise inexactRecord."
+  PrefetchRecordParent* toUse = exact ? exact : inexact;
+  // Step 6: "Return null." (reached when recordToUse is null, so step 5's
+  // "If recordToUse is not null" guard doesn't apply.)
+  if (!toUse) {
+    return nullptr;  // Step 6: no match
+  }
+
+  // Step 5b: "If recordToUse's expiry time is less than currentTime: Trigger
+  // a prefetch status updated event ... "failure" status. Return null."
+  if (toUse->ExpiryTime() < TimeStamp::Now()) {
+    LOG_SPECRULES(
+        ("WindowGlobalParent::FindMatchingPrefetchRecord: "
+         "this=%p rec=%p expired",
+         this, toUse));
+    toUse->FirePrefetchStatusUpdated(false);
+    return nullptr;
+  }
+
+  // Step 5c: "For each exchangeRecord of recordToUse's redirect chain: If
+  // conflicting credentials exist ...: Trigger a prefetch status updated
+  // event ... "failure" status. Return null."
+  for (const auto& xr : toUse->RedirectChain()) {
+    if (ConflictingCredentialsExist(xr, toUse->SourcePartitionKey())) {
+      LOG_SPECRULES(
+          ("WindowGlobalParent::FindMatchingPrefetchRecord: "
+           "this=%p rec=%p credential conflict",
+           this, toUse));
+      toUse->FirePrefetchStatusUpdated(false);
+      return nullptr;
+    }
+  }
+
+  // Step 5d: "Return recordToUse."
+  LOG_SPECRULES(
+      ("WindowGlobalParent::FindMatchingPrefetchRecord: this=%p found rec=%p",
+       this, toUse));
+  return toUse;
+}
+
+void WindowGlobalParent::DedupePrefetchRecords(
+    PrefetchRecordParent* aJustCompleted) {
+  // Implements "complete a prefetch record" step 4: remove all other completed
+  // records with the same URL.
+  // Spec:
+  // https://wicg.github.io/nav-speculation/prefetch.html#prefetch-record-complete
+  // Note: parent cannot send __delete__ (parent: async __delete__() is
+  // child-initiated). Old records are marked Canceled so navigation matching
+  // skips them; DOM GC handles actor cleanup.
+  nsTArray<PPrefetchRecordParent*> managed;
+  ManagedPPrefetchRecordParent(managed);
+  for (auto* p : managed) {
+    auto* rec = static_cast<PrefetchRecordParent*>(p);
+    if (rec == aJustCompleted) {
+      continue;
+    }
+    if (rec->State() != PrefetchState::Completed) {
+      continue;
+    }
+    bool urlEquals = false;
+    if (rec->URL() && aJustCompleted->URL()) {
+      rec->URL()->Equals(aJustCompleted->URL(), &urlEquals);
+    }
+    if (urlEquals) {
+      LOG_SPECRULES(
+          ("WindowGlobalParent::DedupePrefetchRecords: this=%p evicting "
+           "older rec=%p",
+           this, rec));
+      rec->MarkCanceled();
+    }
+  }
+}
+
 NS_IMPL_CYCLE_COLLECTION_CLASS(WindowGlobalParent)
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(WindowGlobalParent,
                                                 WindowContext)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mPageUseCountersWindow)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK(mStaticCloneOf)
   tmp->UnlinkManager();
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(WindowGlobalParent,
                                                   WindowContext)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPageUseCountersWindow)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mStaticCloneOf)
   if (!tmp->IsInProcess()) {
     CycleCollectionNoteChild(cb, static_cast<BrowserParent*>(tmp->Manager()),
                              "Manager()");

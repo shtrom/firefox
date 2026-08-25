@@ -126,26 +126,6 @@ using LocalDirection = MediaSessionConduitLocalDirection;
 const int kNullPayloadType = -1;
 const char kRtcpFbCcmParamTmmbr[] = "tmmbr";
 
-template <class t>
-void ConstrainPreservingAspectRatioExact(uint32_t max_fs, t* width, t* height) {
-  // We could try to pick a better starting divisor, but it won't make any real
-  // performance difference.
-  for (size_t d = 1; d < std::min(*width, *height); ++d) {
-    if ((*width % d) || (*height % d)) {
-      continue;  // Not divisible
-    }
-
-    if (((*width) * (*height)) / (d * d) <= max_fs) {
-      *width /= d;
-      *height /= d;
-      return;
-    }
-  }
-
-  *width = 0;
-  *height = 0;
-}
-
 /**
  * Perform validation on the codecConfig to be applied
  */
@@ -194,13 +174,13 @@ ConfigureVideoEncoderSettings(const VideoCodecConfig& aConfig,
   aConfig.mAv1Config.apply([&](const Av1Config& config) {
     MOZ_ASSERT(aConfig.mName == kAv1CodecName);
     config.mProfile.apply([&](uint8_t value) {
-      aParameters[kAv1FmtpProfile] = std::to_string(value);
+      aParameters[std::string(kAv1FmtpProfile)] = std::to_string(value);
     });
     config.mLevelIdx.apply([&](uint8_t value) {
-      aParameters[kAv1FmtpLevelIdx] = std::to_string(value);
+      aParameters[std::string(kAv1FmtpLevelIdx)] = std::to_string(value);
     });
     config.mTier.apply([&](uint8_t value) {
-      aParameters[kAv1FmtpTier] = std::to_string(value);
+      aParameters[std::string(kAv1FmtpTier)] = std::to_string(value);
     });
   });
 
@@ -218,10 +198,11 @@ ConfigureVideoEncoderSettings(const VideoCodecConfig& aConfig,
           webrtc::ParseH264ProfileLevelId(profileLevelId.c_str());
       MOZ_DIAGNOSTIC_ASSERT(parsedProfileLevelId);
       if (parsedProfileLevelId) {
-        aParameters[kH264FmtpProfileLevelId] = profileLevelId;
+        aParameters[kH264FmtpProfileLevelId] = std::move(profileLevelId);
       }
     }
-    aParameters[kH264FmtpSpropParameterSets] = aConfig.mSpropParameterSets;
+    aParameters[std::string(kH264FmtpSpropParameterSets)] =
+        aConfig.mSpropParameterSets;
   }
   if (aConfig.mName == kVp8CodecName) {
     webrtc::VideoCodecVP8 vp8_settings =
@@ -409,7 +390,7 @@ WebrtcVideoConduit::WebrtcVideoConduit(
       mFrameRecvThread(CreateWebrtcTaskQueueWrapper(
           GetMediaThreadPool(MediaThreadType::WEBRTC_WORKER),
           "WebrtcVideoConduit::mFrameRecvThread"_ns,
-          /* aSupportsTailDispatch= */ true)),
+          TailDispatchPolicy::ConsistentOrdering)),
       mControl(mCall->mCallThread),
       INIT_CANONICAL(mReceivingSize, mFrameRecvThread, {}),
       mWatchManager(this, mCall->mCallThread),
@@ -577,11 +558,11 @@ void WebrtcVideoConduit::OnControlConfigChange() {
 
       // Check for the keyframe request type: PLI is preferred over FIR, and FIR
       // is preferred over none.
-      if (codec_config.RtcpFbNackIsSet(kRtcpFbNackParamPli)) {
+      if (codec_config.RtcpFbNackIsSet(std::string(kRtcpFbNackParamPli))) {
         newRtp.keyframe_method = webrtc::KeyFrameReqMethod::kPliRtcp;
       } else if (newRtp.keyframe_method !=
                      webrtc::KeyFrameReqMethod::kPliRtcp &&
-                 codec_config.RtcpFbCcmIsSet(kRtcpFbCcmParamFir)) {
+                 codec_config.RtcpFbCcmIsSet(std::string(kRtcpFbCcmParamFir))) {
         newRtp.keyframe_method = webrtc::KeyFrameReqMethod::kFirRtcp;
       }
 
@@ -589,7 +570,7 @@ void WebrtcVideoConduit::OnControlConfigChange() {
       // has none? In practice, that's not a useful configuration, and
       // VideoReceiveStream::Config can't represent that, so simply union the
       // (boolean) settings
-      if (codec_config.RtcpFbNackIsSet(kParamValueEmpty)) {
+      if (codec_config.RtcpFbNackIsSet(std::string(kParamValueEmpty))) {
         newRtp.nack.rtp_history_ms = 1000;
       }
       newRtp.tmmbr |= codec_config.RtcpFbCcmIsSet(kRtcpFbCcmParamTmmbr);
@@ -841,7 +822,7 @@ void WebrtcVideoConduit::OnControlConfigChange() {
           const bool useFECDefaults =
               !codecConfig->RtcpFbFECIsSet() ||
               (codecConfig->mName == kH264CodecName &&
-               codecConfig->RtcpFbNackIsSet(kParamValueEmpty));
+               codecConfig->RtcpFbNackIsSet(std::string(kParamValueEmpty)));
           newRtp.ulpfec.ulpfec_payload_type =
               useFECDefaults ? kNullPayloadType
                              : codecConfig->mULPFECPayloadType;
@@ -853,7 +834,8 @@ void WebrtcVideoConduit::OnControlConfigChange() {
         }
 
         newRtp.nack.rtp_history_ms =
-            codecConfig->RtcpFbNackIsSet(kParamValueEmpty) ? 1000 : 0;
+            codecConfig->RtcpFbNackIsSet(std::string(kParamValueEmpty)) ? 1000
+                                                                        : 0;
 
         newRtp.rids.clear();
         if (!codecConfig->mEncodings.empty() &&
@@ -1014,6 +996,14 @@ Maybe<Ssrc> WebrtcVideoConduit::GetAssociatedLocalRtxSSRC(Ssrc aSsrc) const {
     if (mSendStreamConfig.rtp.ssrcs[i] == aSsrc) {
       return Some(mSendStreamConfig.rtp.rtx.ssrcs[i]);
     }
+  }
+  return Nothing();
+}
+
+Maybe<Ssrc> WebrtcVideoConduit::GetAssociatedRemoteRtxSSRC() const {
+  MOZ_ASSERT(mCallThread->IsOnCurrentThread());
+  if (mRecvStreamConfig.rtp.rtx_ssrc) {
+    return Some(mRecvStreamConfig.rtp.rtx_ssrc);
   }
   return Nothing();
 }
@@ -1288,7 +1278,31 @@ Maybe<webrtc::VideoSendStream::Stats> WebrtcVideoConduit::GetSenderStats()
     const {
   MOZ_ASSERT(mCallThread->IsOnCurrentThread());
   if (!mSendStream) {
-    return Nothing();
+    // Prefer transitional stats left over from a recently destroyed stream
+    // (e.g. during a codec change). These carry real cumulative counters and
+    // should take priority over the synthesised fallback below.
+    if (mTransitionalSendStreamStats) {
+      return mTransitionalSendStreamStats;
+    }
+    // The send stream is only created when mTransmitting is true, which
+    // requires a track to be bound (see RTCRtpSender::UpdateBaseConfig). For
+    // a trackless sender the stream never starts, yet the WebRTC stats spec
+    // requires RTCOutboundRtpStreamStats to exist as soon as the sender is
+    // configured by a completed offer/answer exchange. Synthesise minimal
+    // stats keyed by the SSRCs that were negotiated in SDP so that
+    // outbound-rtp entries appear in getStats() even before a track arrives.
+    const auto& ssrcs = mSendStreamConfig.rtp.ssrcs;
+    if (ssrcs.empty()) {
+      return Nothing();
+    }
+    webrtc::VideoSendStream::Stats synthStats;
+    for (uint32_t ssrc : ssrcs) {
+      webrtc::VideoSendStream::StreamStats streamStats;
+      streamStats.type =
+          webrtc::VideoSendStream::StreamStats::StreamType::kMedia;
+      synthStats.substreams[ssrc] = streamStats;
+    }
+    return Some(std::move(synthStats));
   }
   auto stats = mSendStream->GetStats();
   if (stats.substreams.empty()) {

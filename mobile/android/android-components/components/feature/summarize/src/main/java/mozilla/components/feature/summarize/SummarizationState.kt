@@ -4,15 +4,12 @@
 
 package mozilla.components.feature.summarize
 
-import mozilla.components.concept.llm.Llm
 import mozilla.components.concept.llm.LlmProvider
-import mozilla.components.feature.summarize.SummarizationState.Finished
+import mozilla.components.feature.summarize.settings.SummarizeSettingsState
 import mozilla.components.lib.state.State
 import mozilla.components.ui.richtext.ir.RichDocument
 
-/**
- * The [State] of the [SummarizationStore]
- */
+/** The [State] of the [SummarizationStore] */
 sealed class SummarizationState : State {
     /**
      * The feature is idle and not actively summarizing.
@@ -20,6 +17,9 @@ sealed class SummarizationState : State {
      * @param initializedWithShake Whether the feature was first triggered via a shake gesture.
      */
     data class Inert(val initializedWithShake: Boolean) : SummarizationState()
+
+    /** The user has requested summary but the feature is waiting for the browser page to load. */
+    data object PageLoading : SummarizationState()
 
     /** The user must consent to shake-to-summarize before proceeding. */
     data object ShakeConsentRequired : SummarizationState()
@@ -30,20 +30,21 @@ sealed class SummarizationState : State {
     /** The user must download an on-device model before continuing */
     data object DownloadConsentRequired : SummarizationState()
 
-    /** The on-device model is downloading  */
+    /** The on-device model is downloading */
     data class Downloading(val bytesToDownload: Float, val bytesDownloaded: Float) : SummarizationState() {
-        val downloadProgress: Float get() = bytesToDownload / bytesToDownload
+        val downloadProgress: Float
+            get() = bytesToDownload / bytesToDownload
     }
 
     /**
-     * We're waiting for a response from the [mozilla.components.concept.llm.Llm]
+     * We're waiting for an initial response from the [mozilla.components.concept.llm.Llm].
      *
      * @param info the information for the current [mozilla.components.concept.llm.Llm]
      */
     data class Loading(val info: LlmProvider.Info) : SummarizationState()
 
     /**
-     * Summarization is in progress.
+     * Summarization is in progress. The LLM has started to respond, but it has not finished yet.
      *
      * @param info metadata about the LLM that generated the summary
      * @param document the document we've generated so far.
@@ -76,8 +77,13 @@ sealed class SummarizationState : State {
      *
      * @param info metadata about the LLM that generated the summary
      * @param document The document to return to when navigating back.
+     * @param settingsState The state of the embedded summarize settings.
      */
-    data class Settings(val info: LlmProvider.Info, val document: RichDocument) : SummarizationState()
+    data class Settings(
+        val info: LlmProvider.Info,
+        val document: RichDocument,
+        val settingsState: SummarizeSettingsState,
+    ) : SummarizationState()
 
     /** User is finished with the Summarization Flow */
     sealed class Finished : SummarizationState() {
@@ -86,30 +92,40 @@ sealed class SummarizationState : State {
 
         /** User finished by dismissing the error screen. */
         data object ErrorDismissed : Finished()
+
+        /** User finished by navigating to the Mozilla account sign-in flow. */
+        data object NavigatedToSignIn : Finished()
     }
 
     /** User clicked Learn More in the shake consent screen. */
     data object LearnMoreAboutShakeConsent : SummarizationState()
 
+    /** User clicked Learn More to explore cloud-supported features. */
+    data object LearnMoreAboutCloudSupportedFeatures : SummarizationState()
+
+    /** The user must sign in before summarization can proceed. */
+    data object SignInRequired : SummarizationState()
+
     companion object {
-        val initial: SummarizationState get() = Inert(false)
+        val initial: SummarizationState
+            get() = Inert(false)
     }
 }
 
-/**
-* Describes the possible failure modes of the summarization feature.
-*/
+/** Describes the possible failure modes of the summarization feature. */
 sealed class SummarizationError {
-    /** The page content exceeds the maximum supported length. */
-    data object ContentTooLong : SummarizationError()
-
     /** The model download did not complete successfully. */
     data object DownloadFailed : SummarizationError()
 
     /** The summarization model failed to produce a result. */
-    data class SummarizationFailed(val exception: Llm.Exception) : SummarizationError()
+    data class SummarizationFailed(val exception: Throwable) : SummarizationError()
 }
 
-val SummarizationState.isLoading get() = this is SummarizationState.Loading
-val SummarizationState.isSummarizing get() = this is SummarizationState.Summarizing
-val SummarizationState.isSummarized get() = this is SummarizationState.Summarized
+val SummarizationState.isLoading
+    get() = this is SummarizationState.Loading
+val SummarizationState.isPageLoading
+    get() = this is SummarizationState.PageLoading
+val SummarizationState.isSummarizing
+    get() = this is SummarizationState.Summarizing
+val SummarizationState.isSummarized
+    get() = this is SummarizationState.Summarized

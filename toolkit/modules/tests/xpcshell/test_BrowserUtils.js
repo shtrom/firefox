@@ -135,38 +135,6 @@ add_task(async function test_sendToDeviceEmailsSupported() {
   Assert.ok(!BrowserUtils.sendToDeviceEmailsSupported());
 });
 
-add_task(async function test_shouldShowFocusPromo() {
-  const allowedRegion = "US";
-  const disallowedRegion = "CN";
-
-  // Show promo when neither region is disallowed
-  setupRegions(allowedRegion, allowedRegion);
-  Assert.ok(BrowserUtils.shouldShowPromo(BrowserUtils.PromoType.FOCUS));
-
-  // Don't show when home region is disallowed
-  setupRegions(disallowedRegion);
-  Assert.ok(!BrowserUtils.shouldShowPromo(BrowserUtils.PromoType.FOCUS));
-
-  setupRegions(allowedRegion, allowedRegion);
-
-  // Don't show when there is an enterprise policy active
-  if (AppConstants.platform !== "android") {
-    // Services.policies isn't shipped on Android
-    await setupEnterprisePolicy();
-
-    Assert.ok(!BrowserUtils.shouldShowPromo(BrowserUtils.PromoType.FOCUS));
-
-    // revert policy changes made earlier
-    await EnterprisePolicyTesting.setupPolicyEngineWithJson("");
-  }
-
-  // Don't show when promo disabled by pref
-  Preferences.set("browser.promo.focus.enabled", false);
-  Assert.ok(!BrowserUtils.shouldShowPromo(BrowserUtils.PromoType.FOCUS));
-
-  Preferences.resetBranch("browser.promo.focus");
-});
-
 add_task(async function test_shouldShowPinPromo() {
   Preferences.set("browser.promo.pin.enabled", true);
   // Show pin promo type by default when promo is enabled
@@ -187,7 +155,7 @@ add_task(async function test_shouldShowPinPromo() {
   Preferences.set("browser.promo.pin.enabled", false);
   Assert.ok(!BrowserUtils.shouldShowPromo(BrowserUtils.PromoType.PIN));
 
-  Preferences.resetBranch("browser.promo.pin");
+  Services.prefs.clearUserBranch("browser.promo.pin");
 });
 
 add_task(async function test_shouldShowRelayPromo() {
@@ -211,22 +179,6 @@ add_task(async function test_shouldShowRelayPromo() {
   Assert.ok(!BrowserUtils.shouldShowPromo(BrowserUtils.PromoType.RELAY));
 
   Preferences.reset("identity.fxaccounts.autoconfig.uri");
-});
-
-add_task(async function test_shouldShowCookieBannersPromo() {
-  Preferences.set("browser.promo.cookiebanners.enabled", true);
-  // Show cookie banners promo type by default when promo is enabled
-  Assert.ok(
-    BrowserUtils.shouldShowPromo(BrowserUtils.PromoType.COOKIE_BANNERS)
-  );
-
-  // Don't show when promo disabled by pref
-  Preferences.set("browser.promo.cookiebanners.enabled", false);
-  Assert.ok(
-    !BrowserUtils.shouldShowPromo(BrowserUtils.PromoType.COOKIE_BANNERS)
-  );
-
-  Preferences.resetBranch("browser.promo.cookiebanners");
 });
 
 add_task(function test_getShareableURL() {
@@ -603,4 +555,150 @@ add_task(async function test_callModulesFromCategory_jsGlobal_errors() {
   await consolePromise;
 
   Services.catMan.deleteCategory(CATEGORY);
+});
+
+add_task(async function test_willLoadInBackground() {
+  const TEST_DATA = [
+    // where: "tab" and loadInBackgroundPref is on.
+    {
+      loadInBackgroundPref: false,
+      where: "tab",
+      expected: false,
+    },
+    {
+      loadInBackgroundPref: false,
+      where: "tab",
+      params: { inBackground: true },
+      expected: true,
+    },
+    {
+      loadInBackgroundPref: false,
+      where: "tab",
+      params: { inBackground: false },
+      expected: false,
+    },
+    {
+      loadInBackgroundPref: false,
+      where: "tab",
+      params: { forceForeground: true },
+      expected: false,
+    },
+    {
+      loadInBackgroundPref: false,
+      where: "tab",
+      params: { forceForeground: false },
+      expected: false,
+    },
+    // where: "tab" and loadInBackgroundPref is off.
+    {
+      loadInBackgroundPref: true,
+      where: "tab",
+      expected: true,
+    },
+    {
+      loadInBackgroundPref: true,
+      where: "tab",
+      params: { inBackground: true },
+      expected: true,
+    },
+    {
+      loadInBackgroundPref: true,
+      where: "tab",
+      params: { inBackground: false },
+      expected: false,
+    },
+    {
+      loadInBackgroundPref: true,
+      where: "tab",
+      params: { forceForeground: true },
+      expected: false,
+    },
+    {
+      loadInBackgroundPref: true,
+      where: "tab",
+      params: { forceForeground: false },
+      expected: true,
+    },
+    // where: "tabshifted" and loadInBackgroundPref is on.
+    {
+      loadInBackgroundPref: false,
+      where: "tabshifted",
+      expected: true,
+    },
+    {
+      loadInBackgroundPref: false,
+      where: "tabshifted",
+      params: { inBackground: true },
+      expected: false,
+    },
+    {
+      loadInBackgroundPref: false,
+      where: "tabshifted",
+      params: { inBackground: false },
+      expected: true,
+    },
+    {
+      loadInBackgroundPref: false,
+      where: "tabshifted",
+      params: { forceForeground: true },
+      expected: true,
+    },
+    {
+      loadInBackgroundPref: false,
+      where: "tabshifted",
+      params: { forceForeground: false },
+      expected: true,
+    },
+    // where: "tabshifted" and loadInBackgroundPref is off.
+    {
+      loadInBackgroundPref: true,
+      where: "tabshifted",
+      expected: false,
+    },
+    {
+      loadInBackgroundPref: true,
+      where: "tabshifted",
+      params: { inBackground: true },
+      expected: false,
+    },
+    {
+      loadInBackgroundPref: true,
+      where: "tabshifted",
+      params: { inBackground: false },
+      expected: true,
+    },
+    {
+      loadInBackgroundPref: true,
+      where: "tabshifted",
+      params: { forceForeground: true },
+      expected: true,
+    },
+    {
+      loadInBackgroundPref: true,
+      where: "tabshifted",
+      params: { forceForeground: false },
+      expected: false,
+    },
+    // where: other,
+    {
+      loadInBackgroundPref: true,
+      where: "current",
+      params: { inBackground: true },
+      expected: false,
+    },
+  ];
+
+  for (const { loadInBackgroundPref, where, params, expected } of TEST_DATA) {
+    info(
+      `Test for ${JSON.stringify({ loadInBackgroundPref, where, params, expected })}`
+    );
+    Services.prefs.setBoolPref(
+      "browser.tabs.loadInBackground",
+      loadInBackgroundPref
+    );
+
+    Assert.equal(BrowserUtils.willLoadInBackground(where, params), expected);
+
+    Services.prefs.clearUserPref("browser.tabs.loadInBackground");
+  }
 });

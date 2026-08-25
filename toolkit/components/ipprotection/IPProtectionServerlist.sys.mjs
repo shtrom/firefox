@@ -7,6 +7,8 @@
  * Bucket for the IP Protection server list.
  */
 
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
+
 const lazy = {};
 
 ChromeUtils.defineLazyGetter(lazy, "logConsole", () =>
@@ -196,10 +198,16 @@ class Country {
    */
   cities;
 
+  /**
+   * If true this Location is locked behind a set of preconditions
+   */
+  locked = false;
+
   constructor(data) {
     this.name = data.name || "";
     this.code = data.code || "";
     this.cities = (data.cities || []).map(c => new City(c));
+    this.locked = !!data.locked;
   }
 }
 
@@ -207,6 +215,9 @@ class Country {
  * Base Class for the Serverlist
  */
 export class IPProtectionServerlistBase extends EventTarget {
+  /**
+   * @type {Country[] | null}
+   */
   __list = null;
 
   init() {}
@@ -236,10 +247,11 @@ export class IPProtectionServerlistBase extends EventTarget {
     return this.__list
       .filter(country => country.code !== RECOMMENDED_COUNTRY_CODE)
       .map(country => ({
-        code: country.code,
         available: country.cities.some(city =>
           city.servers.some(server => !server.quarantined)
         ),
+        code: country.code,
+        locked: country.locked,
       }));
   }
 
@@ -389,6 +401,7 @@ export class RemoteSettingsServerlist extends IPProtectionServerlistBase {
  */
 export class PrefServerList extends IPProtectionServerlistBase {
   #observer = null;
+  #previousList = null;
 
   constructor() {
     super();
@@ -401,19 +414,24 @@ export class PrefServerList extends IPProtectionServerlistBase {
   }
 
   async initOnStartupCompleted() {
-    Services.prefs.addObserver(
-      IPProtectionServerlist.PREF_NAME,
-      this.#observer
-    );
+    Services.prefs.addObserver(PrefServerList.PREF_NAME, this.#observer);
+    // If the pref changed between startup and registering the observer we have
+    // not handled it yet. If the value hasn't actually changed, this is a no-op.
+    this.maybeFetchList();
   }
 
   uninit() {
-    Services.prefs.removeObserver(
-      IPProtectionServerlist.PREF_NAME,
-      this.#observer
-    );
+    Services.prefs.removeObserver(PrefServerList.PREF_NAME, this.#observer);
   }
-  maybeFetchList(_forceUpdate = false) {
+
+  maybeFetchList(forceUpdate = false) {
+    const newList = Services.prefs.getStringPref(PrefServerList.PREF_NAME, "");
+
+    // If the list hasn't changed, we don't need to fetch it again.
+    if (!forceUpdate && newList === this.#previousList) {
+      return Promise.resolve();
+    }
+    this.#previousList = newList;
     this.__list = IPProtectionServerlistBase.dataToList(
       PrefServerList.prefValue
     );
@@ -451,6 +469,9 @@ export class PrefServerList extends IPProtectionServerlistBase {
  * @returns {IPProtectionServerlistBase} - The appropriate serverlist implementation.
  */
 export function IPProtectionServerlistFactory() {
+  if (AppConstants.MOZ_ENTERPRISE) {
+    return new PrefServerList();
+  }
   return PrefServerList.hasPrefValue
     ? new PrefServerList()
     : new RemoteSettingsServerlist();

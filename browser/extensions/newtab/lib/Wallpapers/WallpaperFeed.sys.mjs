@@ -33,8 +33,9 @@ const PREF_SELECTED_WALLPAPER =
 const PREF_WALLPAPERS_USER_ENABLED_MIGRATED =
   "browser.newtabpage.activity-stream.newtabWallpapers.user.enabled.migrated";
 
-const RS_FALLBACK_BASE_URL =
-  "https://firefox-settings-attachments.cdn.mozilla.net/";
+// Used by every operation that changes <profile>/wallpaper/ or the uuid pref,
+// so an upload and a reset can never overlap.
+const WALLPAPER_FILE_LOCK = "newtab-wallpaper-file";
 
 export class WallpaperFeed {
   constructor() {
@@ -64,6 +65,13 @@ export class WallpaperFeed {
     return lazy.RemoteSettings(...args);
   }
 
+  /**
+   * This thin wrapper around IOUtils.write lets tests simulate write failures.
+   */
+  writeFile(...args) {
+    return IOUtils.write(...args);
+  }
+
   async wallpaperSetup(isStartup = false) {
     const wallpapersEnabled = Services.prefs.getBoolPref(
       PREF_WALLPAPERS_ENABLED
@@ -79,10 +87,11 @@ export class WallpaperFeed {
       // startup and on Remote Settings sync) would re-run the check every time,
       // undoing any explicit toggle-off the user makes.
       //
-      // @backward-compat { version 152 }
-      // This migration block and PREF_WALLPAPERS_USER_ENABLED_MIGRATED can be
-      // removed once Firefox 152 is on Release, at which point all users will
-      // have run this migration.
+      // This is a one-time data migration, not a train-hop compatibility shim,
+      // so it is intentionally not gated on a release version: a profile can
+      // update directly from a pre-migration version to a much later one
+      // (Firefox updates may skip intermediate major versions), and must still
+      // run this check the first time the new code executes.
       if (
         !Services.prefs.getBoolPref(
           PREF_WALLPAPERS_USER_ENABLED_MIGRATED,
@@ -157,23 +166,25 @@ export class WallpaperFeed {
     }
 
     // retrieving all records in collection
-    const records = await this.wallpaperClient.get();
-    if (!records?.length) {
-      return;
+    let records;
+    try {
+      records = await this.wallpaperClient.get();
+    } catch (error) {
+      // Fall through so the custom-wallpaper upload entry is still surfaced.
+      console.error(
+        "Error fetching wallpaper records from remote settings",
+        error
+      );
+      records = [];
     }
 
     const customWallpaperEnabled = Services.prefs.getBoolPref(
       PREF_WALLPAPERS_CUSTOM_WALLPAPER_ENABLED
     );
 
-    let baseAttachmentURL = RS_FALLBACK_BASE_URL;
-    try {
+    let baseAttachmentURL = "";
+    if (records.length) {
       baseAttachmentURL = await lazy.Utils.baseAttachmentsURL();
-    } catch (error) {
-      console.error(
-        `Error fetching remote settings base url from CDN. Falling back to ${RS_FALLBACK_BASE_URL}`,
-        error
-      );
     }
 
     const wallpapers = [
@@ -288,21 +299,44 @@ export class WallpaperFeed {
       return null;
     }
     try {
+      return await locks.request(WALLPAPER_FILE_LOCK, () =>
+        this.#writeWallpaper(file, wallpaperTheme)
+      );
+    } catch (error) {
+      console.error("Could not take the wallpaper file lock:", error);
+      return null;
+    }
+  }
+
+  async #writeWallpaper(file, wallpaperTheme) {
+    try {
       const wallpaperDir = PathUtils.join(PathUtils.profileDir, "wallpaper");
 
       // create wallpaper directory if it does not exist
       await IOUtils.makeDirectory(wallpaperDir, { ignoreExisting: true });
 
-      let uuid = Services.uuid.generateUUID().toString().slice(1, -1);
-      Services.prefs.setStringPref(PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID, uuid);
+      // Clear out anything left by an earlier version or an interrupted write.
+      await this.#sweepWallpaperDirectory();
 
+      const previousUuid = Services.prefs.getStringPref(
+        PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID,
+        ""
+      );
+
+      const uuid = Services.uuid.generateUUID().toString().slice(1, -1);
       const filePath = PathUtils.join(wallpaperDir, uuid);
 
       // convert to Uint8Array for IOUtils
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
 
-      await IOUtils.write(filePath, uint8Array, { tmpPath: `${filePath}.tmp` });
+      await this.writeFile(filePath, uint8Array, {
+        tmpPath: `${filePath}.tmp`,
+      });
+
+      // Point the pref at the new file only once it exists, so a failed write
+      // leaves the previous upload referenced and on disk.
+      Services.prefs.setStringPref(PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID, uuid);
 
       const wallpaperURI = this.getWallpaperURL(uuid);
 
@@ -317,6 +351,18 @@ export class WallpaperFeed {
         ac.SetPref("newtabWallpapers.customWallpaper.theme", wallpaperTheme)
       );
 
+      // Delete the file this upload replaced. A failure only leaves it for the
+      // next sweep, and must not fail the upload that already succeeded.
+      if (previousUuid) {
+        try {
+          await IOUtils.remove(PathUtils.join(wallpaperDir, previousUuid), {
+            ignoreAbsent: true,
+          });
+        } catch (error) {
+          console.error("Failed to remove replaced wallpaper:", error);
+        }
+      }
+
       return filePath;
     } catch (error) {
       console.error("Error saving wallpaper:", error);
@@ -324,7 +370,54 @@ export class WallpaperFeed {
     }
   }
 
+  /**
+   * Deletes files in the wallpaper directory that the uuid pref does not name:
+   * wallpapers replaced before this cleanup existed, and .tmp files left by an
+   * interrupted write. Runs before each upload. Callers must already hold
+   * WALLPAPER_FILE_LOCK.
+   */
+  async #sweepWallpaperDirectory() {
+    try {
+      const wallpaperDir = PathUtils.join(PathUtils.profileDir, "wallpaper");
+      const children = await IOUtils.getChildren(wallpaperDir, {
+        ignoreAbsent: true,
+      });
+
+      const uuid = Services.prefs.getStringPref(
+        PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID,
+        ""
+      );
+
+      for (const path of children) {
+        if (uuid && PathUtils.filename(path) === uuid) {
+          continue;
+        }
+        // Per file, so one bad entry does not stop the rest of the sweep.
+        try {
+          const { type } = await IOUtils.stat(path);
+          if (type === "regular") {
+            await IOUtils.remove(path, { ignoreAbsent: true });
+          }
+        } catch (error) {
+          console.error("Failed to remove an orphaned wallpaper:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to clean up the wallpaper directory:", error);
+    }
+  }
+
   async removeCustomWallpaper() {
+    try {
+      await locks.request(WALLPAPER_FILE_LOCK, () =>
+        this.#deleteCustomWallpaper()
+      );
+    } catch (error) {
+      console.error("Could not take the wallpaper file lock:", error);
+    }
+  }
+
+  async #deleteCustomWallpaper() {
     try {
       let uuid = Services.prefs.getStringPref(
         PREF_WALLPAPERS_CUSTOM_WALLPAPER_UUID,
@@ -368,6 +461,8 @@ export class WallpaperFeed {
           action.data.name === "newtabWallpapers.customColor.enabled" ||
           action.data.name === "newtabWallpapers.customWallpaper.enabled" ||
           action.data.name === "newtabWallpapers.enabled" ||
+          // @nova-cleanup(remove-conditional): Drop this case; the wallpaper
+          // setup no longer depends on the pref.
           action.data.name === "nova.enabled"
         ) {
           this.wallpaperTeardown();

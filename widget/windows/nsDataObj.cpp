@@ -2,53 +2,53 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "mozilla/TextUtils.h"
+#include "nsDataObj.h"
 
 #include <ole2.h>
 #include <shlobj.h>
 
-#include "nsComponentManagerUtils.h"
-#include "nsDataObj.h"
-#include "nsArrayUtils.h"
-#include "nsClipboard.h"
-#include "nsReadableUtils.h"
-#include "nsICookieJarSettings.h"
-#include "nsIHttpChannel.h"
-#include "nsISupportsPrimitives.h"
-#include "nsITransferable.h"
+#include <algorithm>
+
 #include "IEnumFE.h"
-#include "nsPrimitiveHelpers.h"
-#include "nsString.h"
-#include "nsCRT.h"
-#include "nsPrintfCString.h"
-#include "nsIStringBundle.h"
-#include "nsEscape.h"
-#include "nsIURL.h"
-#include "nsNetUtil.h"
-#include "mozilla/Components.h"
-#include "mozilla/SpinEventLoopUntil.h"
-#include "mozilla/StaticPrefs_clipboard.h"
-#include "nsProxyRelease.h"
-#include "nsIObserverService.h"
-#include "nsIOutputStream.h"
-#include "nscore.h"
-#include "nsDirectoryServiceDefs.h"
-#include "nsITimer.h"
-#include "nsThreadUtils.h"
-#include "mozilla/Preferences.h"
-#include "nsContentUtils.h"
-#include "nsIPrincipal.h"
-#include "nsNativeCharsetUtils.h"
-#include "nsMimeTypes.h"
-#include "nsIMIMEService.h"
-#include "imgIEncoder.h"
-#include "imgITools.h"
 #include "WinOLELock.h"
 #include "WinUtils.h"
-#include "nsLocalFile.h"
-
+#include "imgIEncoder.h"
+#include "imgITools.h"
+#include "mozilla/Components.h"
 #include "mozilla/LazyIdleThread.h"
-#include <algorithm>
+#include "mozilla/Preferences.h"
+#include "mozilla/SpinEventLoopUntil.h"
+#include "mozilla/StaticPrefs_clipboard.h"
+#include "mozilla/TextUtils.h"
+#include "nsArrayUtils.h"
+#include "nsCRT.h"
+#include "nsClipboard.h"
+#include "nsComponentManagerUtils.h"
+#include "nsContentUtils.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsEscape.h"
+#include "nsICookieJarSettings.h"
+#include "nsIHttpChannel.h"
+#include "nsIMIMEService.h"
+#include "nsIObserverService.h"
+#include "nsIOutputStream.h"
+#include "nsIPrincipal.h"
+#include "nsIStringBundle.h"
+#include "nsISupportsPrimitives.h"
+#include "nsITimer.h"
+#include "nsITransferable.h"
+#include "nsIURL.h"
+#include "nsLocalFile.h"
+#include "nsMimeTypes.h"
+#include "nsNativeCharsetUtils.h"
+#include "nsNetUtil.h"
+#include "nsPrimitiveHelpers.h"
+#include "nsPrintfCString.h"
+#include "nsProxyRelease.h"
+#include "nsReadableUtils.h"
+#include "nsString.h"
+#include "nsThreadUtils.h"
+#include "nscore.h"
 
 using namespace mozilla;
 using namespace mozilla::glue;
@@ -57,21 +57,7 @@ using namespace mozilla::widget;
 #define BFH_LENGTH 14
 #define DEFAULT_THREAD_TIMEOUT_MS 30000
 
-//-----------------------------------------------------------------------------
-// CStreamBase implementation
-nsDataObj::CStreamBase::CStreamBase() : mStreamRead(0) {}
-
-//-----------------------------------------------------------------------------
-nsDataObj::CStreamBase::~CStreamBase() {}
-
 NS_IMPL_ISUPPORTS(nsDataObj::CStream, nsIStreamListener)
-
-//-----------------------------------------------------------------------------
-// CStream implementation
-nsDataObj::CStream::CStream() : mChannelRead(false) {}
-
-//-----------------------------------------------------------------------------
-nsDataObj::CStream::~CStream() {}
 
 //-----------------------------------------------------------------------------
 // helper - initializes the stream
@@ -415,9 +401,6 @@ nsDataObj::CMemStream::CMemStream(nsHGLOBAL aGlobalMem, uint32_t aTotalLength,
 }
 
 //-----------------------------------------------------------------------------
-nsDataObj::CMemStream::~CMemStream() {}
-
-//-----------------------------------------------------------------------------
 // IUnknown
 STDMETHODIMP nsDataObj::CMemStream::QueryInterface(REFIID refiid,
                                                    void** ppvResult) {
@@ -678,8 +661,7 @@ STDMETHODIMP_(ULONG) nsDataObj::Release() {
   // temp file. Addref a timer so it can delay deleting file and destroying
   // this object.
   if (mCachedTempFile) {
-    RefPtr<RemoveTempFileHelper> helper =
-        new RemoveTempFileHelper(mCachedTempFile);
+    auto helper = MakeRefPtr<RemoveTempFileHelper>(mCachedTempFile);
     mCachedTempFile = nullptr;
     helper->Attach();
   }
@@ -783,6 +765,8 @@ STDMETHODIMP nsDataObj::GetData(LPFORMATETC aFormat, LPSTGMEDIUM pSTM) {
       if (format == fileFlavor) return GetFileContents(*aFormat, *pSTM);
       if (format == PreferredDropEffect)
         return GetPreferredDropEffect(*aFormat, *pSTM);
+      if (format == nsClipboard::GetWebCustomFormatMapClipboardFormat())
+        return GetText(df, *aFormat, *pSTM);
       // MOZ_LOG(gWindowsLog, LogLevel::Info,
       //       ("***** nsDataObj::GetData - Unknown format %u\n", format));
       return GetText(df, *aFormat, *pSTM);
@@ -818,7 +802,7 @@ STDMETHODIMP nsDataObj::QueryGetData(LPFORMATETC pFE) {
       return S_OK;
     }
   }
-  return E_FAIL;
+  return DV_E_FORMATETC;
 }
 
 //-----------------------------------------------------
@@ -1176,9 +1160,9 @@ static bool CreateURLFilenameFromTextA(nsAutoString& aText, char* aFilename) {
   // an extra check to verify for the local code page that the converted text
   // doesn't go over MAX_PATH and just return false if it does.
   char defaultChar = '_';
-  int currLen = WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK | WC_DEFAULTCHAR,
-                                    aText.get(), -1, aFilename, MAX_PATH,
-                                    &defaultChar, nullptr);
+  int currLen = WideCharToMultiByte(
+      CP_ACP, WC_COMPOSITECHECK | WC_DEFAULTCHAR | WC_NO_BEST_FIT_CHARS,
+      aText.get(), -1, aFilename, MAX_PATH, &defaultChar, nullptr);
   return currLen != 0;
 }
 
@@ -1214,6 +1198,20 @@ static bool GetLocalizedString(const char* aName, nsAString& aString) {
   return NS_SUCCEEDED(rv);
 }
 
+static bool HasWebScheme(nsIURI* aUri) {
+  nsAutoCString scheme;
+  NS_ENSURE_SUCCESS(aUri->GetScheme(scheme), false);
+  return scheme.EqualsLiteral("http") || scheme.EqualsLiteral("https");
+}
+
+bool nsDataObj::ShortcutUrlHasWebScheme() {
+  nsAutoString urlString;
+  NS_ENSURE_SUCCESS(ExtractShortcutURL(urlString), false);
+  nsCOMPtr<nsIURI> uri;
+  NS_ENSURE_SUCCESS(NS_NewURI(getter_AddRefs(uri), urlString), false);
+  return HasWebScheme(uri);
+}
+
 //
 // GetFileDescriptorInternetShortcut
 //
@@ -1227,8 +1225,16 @@ nsDataObj ::GetFileDescriptorInternetShortcutA(FORMATETC& aFE,
   nsAutoString title;
   if (NS_FAILED(ExtractShortcutTitle(title))) return E_OUTOFMEMORY;
 
+  // For non-http schemes, allocate space for two FILEDESCRIPTOR entries:
+  // the .url file plus a ":Zone.Identifier" ADS so the dropped shortcut is
+  // marked Internet-zone (untrusted).
+  bool isWebScheme = ShortcutUrlHasWebScheme();
+  size_t allocSize = sizeof(FILEGROUPDESCRIPTORA);
+  if (!isWebScheme) {
+    allocSize += sizeof(FILEDESCRIPTORA);
+  }
   HGLOBAL fileGroupDescHandle =
-      ::GlobalAlloc(GMEM_ZEROINIT | GMEM_SHARE, sizeof(FILEGROUPDESCRIPTORA));
+      ::GlobalAlloc(GMEM_ZEROINIT | GMEM_SHARE, allocSize);
   if (!fileGroupDescHandle) return E_OUTOFMEMORY;
 
   LPFILEGROUPDESCRIPTORA fileGroupDescA =
@@ -1249,10 +1255,27 @@ nsDataObj ::GetFileDescriptorInternetShortcutA(FORMATETC& aFE,
       strcpy(fileGroupDescA->fgd[0].cFileName, "Untitled.url");
     }
   }
-
-  // one file in the file block
-  fileGroupDescA->cItems = 1;
   fileGroupDescA->fgd[0].dwFlags = FD_LINKUI;
+
+  size_t const mainLen = strnlen(fileGroupDescA->fgd[0].cFileName, MAX_PATH);
+  fileGroupDescA->cItems = 1;
+  if (!isWebScheme) {
+    // Build the ":Zone.Identifier" ADS entry.
+    // If appending the suffix would overflow, refuse the entire descriptor.
+    constexpr char kAdsSuffix[] = ":Zone.Identifier";
+    constexpr size_t kAdsSuffixSize =
+        sizeof(kAdsSuffix);  // includes terminator
+    if (mainLen + kAdsSuffixSize > MAX_PATH) {
+      ::GlobalUnlock(fileGroupDescHandle);
+      ::GlobalFree(fileGroupDescHandle);
+      return HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND);
+    }
+    memcpy(fileGroupDescA->fgd[1].cFileName, fileGroupDescA->fgd[0].cFileName,
+           mainLen);
+    memcpy(fileGroupDescA->fgd[1].cFileName + mainLen, kAdsSuffix,
+           kAdsSuffixSize);
+    fileGroupDescA->cItems++;
+  }
 
   ::GlobalUnlock(fileGroupDescHandle);
   aSTG.hGlobal = fileGroupDescHandle;
@@ -1268,8 +1291,16 @@ nsDataObj ::GetFileDescriptorInternetShortcutW(FORMATETC& aFE,
   nsAutoString title;
   if (NS_FAILED(ExtractShortcutTitle(title))) return E_OUTOFMEMORY;
 
+  // For non-http schemes, allocate space for two FILEDESCRIPTOR entries:
+  // the .url file plus a ":Zone.Identifier" ADS so the dropped shortcut is
+  // marked Internet-zone (untrusted).
+  bool isWebScheme = ShortcutUrlHasWebScheme();
+  size_t allocSize = sizeof(FILEGROUPDESCRIPTORW);
+  if (!isWebScheme) {
+    allocSize += sizeof(FILEDESCRIPTORW);
+  }
   HGLOBAL fileGroupDescHandle =
-      ::GlobalAlloc(GMEM_ZEROINIT | GMEM_SHARE, sizeof(FILEGROUPDESCRIPTORW));
+      ::GlobalAlloc(GMEM_ZEROINIT | GMEM_SHARE, allocSize);
   if (!fileGroupDescHandle) return E_OUTOFMEMORY;
 
   LPFILEGROUPDESCRIPTORW fileGroupDescW =
@@ -1290,10 +1321,27 @@ nsDataObj ::GetFileDescriptorInternetShortcutW(FORMATETC& aFE,
       wcscpy(fileGroupDescW->fgd[0].cFileName, L"Untitled.url");
     }
   }
-
-  // one file in the file block
-  fileGroupDescW->cItems = 1;
   fileGroupDescW->fgd[0].dwFlags = FD_LINKUI;
+
+  size_t const mainLen = wcsnlen(fileGroupDescW->fgd[0].cFileName, MAX_PATH);
+  fileGroupDescW->cItems = 1;
+  if (!isWebScheme) {
+    // Build the ":Zone.Identifier" ADS entry.
+    // If appending the suffix would overflow, refuse the entire descriptor.
+    constexpr WCHAR kAdsSuffix[] = L":Zone.Identifier";
+    constexpr size_t kAdsSuffixLen =
+        (sizeof(kAdsSuffix) / sizeof(WCHAR));  // includes terminator
+    if (mainLen + kAdsSuffixLen > MAX_PATH) {
+      ::GlobalUnlock(fileGroupDescHandle);
+      ::GlobalFree(fileGroupDescHandle);
+      return HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND);
+    }
+    wmemcpy(fileGroupDescW->fgd[1].cFileName, fileGroupDescW->fgd[0].cFileName,
+            mainLen);
+    wmemcpy(fileGroupDescW->fgd[1].cFileName + mainLen, kAdsSuffix,
+            kAdsSuffixLen);
+    fileGroupDescW->cItems++;
+  }
 
   ::GlobalUnlock(fileGroupDescHandle);
   aSTG.hGlobal = fileGroupDescHandle;
@@ -1310,18 +1358,58 @@ nsDataObj ::GetFileDescriptorInternetShortcutW(FORMATETC& aFE,
 //
 HRESULT
 nsDataObj ::GetFileContentsInternetShortcut(FORMATETC& aFE, STGMEDIUM& aSTG) {
-  static const char* kShellIconPref = "browser.shell.shortcutFavicons";
-  nsAutoString url;
-  if (NS_FAILED(ExtractShortcutURL(url))) return E_OUTOFMEMORY;
+  // Treat aFE.lindex = [-1,1] as requests for the URL file.  Anything else is
+  // invalid.
+  if (aFE.lindex < -1 || aFE.lindex > 1) {
+    return DV_E_LINDEX;
+  }
 
-  nsCOMPtr<nsIURI> aUri;
-  nsresult rv = NS_NewURI(getter_AddRefs(aUri), url);
+  nsAutoString urlString;
+  if (NS_FAILED(ExtractShortcutURL(urlString))) return E_OUTOFMEMORY;
+
+  nsCOMPtr<nsIURI> uri;
+  nsresult rv = NS_NewURI(getter_AddRefs(uri), urlString);
   if (NS_FAILED(rv)) {
     return E_FAIL;
   }
 
+  // The descriptor advertises two entries: the .url content (lindex 0) and
+  // the ":Zone.Identifier" ADS that marks it as Internet-zone (lindex 1).
+  if (aFE.lindex == 1) {
+    if (HasWebScheme(uri)) {
+      // Zone index is not valid for web urls.
+      return DV_E_LINDEX;
+    }
+    constexpr char kZoneIdContent[] = "[ZoneTransfer]\r\nZoneId=3\r\n";
+    constexpr size_t kZoneIdLen = sizeof(kZoneIdContent) - 1;
+
+    nsAutoGlobalMem globalMem(nsHGLOBAL(::GlobalAlloc(GMEM_SHARE, kZoneIdLen)));
+    if (!globalMem) {
+      return E_OUTOFMEMORY;
+    }
+    char* contents = reinterpret_cast<char*>(::GlobalLock(globalMem.get()));
+    if (!contents) {
+      return E_OUTOFMEMORY;
+    }
+    memcpy(contents, kZoneIdContent, kZoneIdLen);
+    ::GlobalUnlock(globalMem.get());
+
+    if (aFE.tymed & TYMED_ISTREAM) {
+      RefPtr<IStream> stream = new CMemStream(
+          globalMem.disown(), kZoneIdLen, already_AddRefed<AutoCloseEvent>());
+      stream.forget(&aSTG.pstm);
+      aSTG.tymed = TYMED_ISTREAM;
+    } else {
+      aSTG.hGlobal = globalMem.disown();
+      aSTG.tymed = TYMED_HGLOBAL;
+    }
+    return S_OK;
+  }
+
+  static const char* kShellIconPref = "browser.shell.shortcutFavicons";
+
   nsAutoCString asciiUrl;
-  rv = aUri->GetAsciiSpec(asciiUrl);
+  rv = uri->GetAsciiSpec(asciiUrl);
   if (NS_FAILED(rv)) {
     return E_FAIL;
   }
@@ -1338,16 +1426,16 @@ nsDataObj ::GetFileContentsInternetShortcut(FORMATETC& aFE, STGMEDIUM& aSTG) {
   } else {
     nsCOMPtr<nsIFile> icoFile;
 
-    nsAutoString aUriHash;
+    nsAutoString uriHash;
 
     event = new AutoCloseEvent();
     if (!event->IsInited()) {
       return E_FAIL;
     }
 
-    RefPtr<AutoSetEvent> e = new AutoSetEvent(WrapNotNull(event));
+    auto e = MakeRefPtr<AutoSetEvent>(WrapNotNull(event));
     mozilla::widget::FaviconHelper::ObtainCachedIconFile(
-        aUri, aUriHash, mIOThread, true,
+        uri, uriHash, mIOThread, true,
         NS_NewRunnableFunction(
             "FaviconHelper::RefreshDesktop", [e = std::move(e)] {
               if (e->IsWaiting()) {
@@ -1361,7 +1449,7 @@ nsDataObj ::GetFileContentsInternetShortcut(FORMATETC& aFE, STGMEDIUM& aSTG) {
               }
             }));
 
-    rv = mozilla::widget::FaviconHelper::GetOutputIconPath(aUri, icoFile, true);
+    rv = mozilla::widget::FaviconHelper::GetOutputIconPath(uri, icoFile, true);
     NS_ENSURE_SUCCESS(rv, E_FAIL);
     nsString path;
     rv = icoFile->GetPath(path);
@@ -1420,8 +1508,8 @@ nsDataObj ::GetFileContentsInternetShortcut(FORMATETC& aFE, STGMEDIUM& aSTG) {
       // We can't block CMemStream::Read.
       event = nullptr;
     }
-    RefPtr<IStream> stream =
-        new CMemStream(globalMem.disown(), totalLen, event.forget());
+    auto stream =
+        MakeRefPtr<CMemStream>(globalMem.disown(), totalLen, event.forget());
     stream.forget(&aSTG.pstm);
     aSTG.tymed = TYMED_ISTREAM;
   } else {
@@ -1499,6 +1587,15 @@ HRESULT nsDataObj::GetText(const nsACString& aDataFlavor, FORMATETC& aFE,
     return S_OK;
   };
 
+  // kWebCustomFormatMapType is synthetic: the JSON is held on the data object
+  // (set by nsClipboard::SetupNativeDataObject) rather than in the
+  // transferable. Serve it without the trailing UTF-16 null pad.
+  if (aDataFlavor.EqualsLiteral(kWebCustomFormatMapType)) {
+    MOZ_ASSERT(!mWebCustomFormatMapJson.IsEmpty());
+    return assignDataToStg(const_cast<char*>(mWebCustomFormatMapJson.get()),
+                           mWebCustomFormatMapJson.Length());
+  }
+
   const nsPromiseFlatCString& flavorStr = PromiseFlatCString(aDataFlavor);
 
   nsCOMPtr<nsISupports> genericDataWrapper;
@@ -1574,9 +1671,12 @@ HRESULT nsDataObj::GetText(const nsACString& aDataFlavor, FORMATETC& aFE,
 
   // We assume that any data-format that isn't caught above can be satisfied by
   // Unicode text. (This may be an erroneous assumption, but seems to have been
-  // true so far.)
+  // true so far.) Web custom formats are byte payloads (nsISupportsCString), so
+  // they must skip the trailing UTF-16 null pad just like the legacy custom
+  // clipboard format does.
   bool const excludeNull =
-      aFE.cfFormat == nsClipboard::GetCustomClipboardFormat();
+      aFE.cfFormat == nsClipboard::GetCustomClipboardFormat() ||
+      StringBeginsWith(aDataFlavor, nsLiteralCString(kWebCustomFormatPrefix));
 
   return assignDataToStg(data, len + (excludeNull ? 0 : sizeof(char16_t)));
 }
@@ -1848,7 +1948,7 @@ HRESULT nsDataObj::DropTempFile(FORMATETC& aFE, STGMEDIUM& aSTG) {
     char buffer[512];
     ULONG readCount = 0;
     uint32_t writeCount = 0;
-    while (1) {
+    while (true) {
       HRESULT hres = pStream->Read(buffer, sizeof(buffer), &readCount);
       if (FAILED(hres)) return E_FAIL;
       if (readCount == 0) break;

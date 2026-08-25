@@ -27,6 +27,7 @@
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/StaticPrefs_layers.h"
+#include "mozilla/dom/CSSUnitValue.h"
 #include "mozilla/dom/KeyframeEffectBinding.h"
 #include "mozilla/dom/MutationObservers.h"
 #include "mozilla/layers/AnimationInfo.h"
@@ -102,6 +103,7 @@ KeyframeEffect::KeyframeEffect(Document* aDocument,
       mEffectOptions{aOther.IterationComposite(), aOther.Composite(),
                      mTarget.mPseudoRequest},
       mKeyframes(aOther.mKeyframes.Clone()),
+      mKeyframeOffsetsHasRangeOffset(aOther.mKeyframeOffsetsHasRangeOffset),
       mProperties(aOther.mProperties.Clone()),
       mBaseValues(aOther.mBaseValues.Clone()) {}
 
@@ -241,20 +243,25 @@ void KeyframeEffect::SetKeyframes(JSContext* aContext,
     return;
   }
 
+  // This is from the JS API, so we use the associated animation's timeline and
+  // range if any.
   RefPtr<const ComputedStyle> style = GetTargetComputedStyle(Flush::None);
-  SetKeyframes(std::move(keyframes), style, nullptr /* AnimationTimeline */);
+  SetKeyframes(std::move(keyframes), style,
+               mAnimation ? mAnimation->GetTimeline() : nullptr,
+               mAnimation ? &mAnimation->GetTimelineRange() : nullptr);
 }
 
 void KeyframeEffect::SetKeyframes(nsTArray<Keyframe>&& aKeyframes,
                                   const ComputedStyle* aStyle,
-                                  const AnimationTimeline* aTimeline) {
+                                  const AnimationTimeline* aTimeline,
+                                  const AnimationRange* aRange) {
   if (KeyframesEqualIgnoringComputedOffsets(aKeyframes, mKeyframes)) {
     return;
   }
 
   mKeyframes = std::move(aKeyframes);
-  mKeyframesOffsetInfo =
-      KeyframeUtils::ComputeMissingKeyframeOffsets(mKeyframes, aTimeline);
+  mKeyframeOffsetsHasRangeOffset = KeyframeUtils::ComputeMissingKeyframeOffsets(
+      mKeyframes, aTimeline, aRange);
 
   if (mAnimation && mAnimation->IsRelevant()) {
     MutationObservers::NotifyAnimationChanged(mAnimation);
@@ -882,9 +889,20 @@ nsTArray<AnimationProperty> KeyframeEffect::BuildProperties(
   // make a copy of |mKeyframes| first and iterate over that instead.
   auto keyframesCopy(mKeyframes.Clone());
 
+  // We generate the missing 0%/100% keyframes and append the missing
+  // properties to 0%/100% only if the keyframes come from CSS Keyframes rule.
+  // Note: We probably can avoid an extra copy above if GetComputedKeyframes()
+  // return true. However, we use the same function in GetKeyframes() so for
+  // readibility we still keep it as it is. If this result in any performance
+  // impact, we should write a special version of GetComputedKeyframes() here.
+  nsTArray<Keyframe> computedKeyframes;
+  const nsTArray<Keyframe>& keyframes = GetComputedKeyframes(computedKeyframes)
+                                            ? computedKeyframes
+                                            : keyframesCopy;
+
   result = KeyframeUtils::GetAnimationPropertiesFromKeyframes(
-      keyframesCopy, mTarget.mElement, mTarget.mPseudoRequest, aStyle,
-      mEffectOptions.mComposite, aTimeline, mKeyframesOffsetInfo);
+      keyframes, mTarget.mElement, mTarget.mPseudoRequest, aStyle,
+      mEffectOptions.mComposite, aTimeline);
 
 #ifdef DEBUG
   MOZ_ASSERT(SpecifiedKeyframeArraysAreEqual(mKeyframes, keyframesCopy),
@@ -1222,7 +1240,7 @@ void KeyframeEffect::GetProperties(
 }
 
 void KeyframeEffect::GetKeyframes(JSContext* aCx, nsTArray<JSObject*>& aResult,
-                                  ErrorResult& aRv) const {
+                                  ErrorResult& aRv) {
   MOZ_ASSERT(aResult.IsEmpty());
   MOZ_ASSERT(!aRv.Failed());
 
@@ -1257,35 +1275,45 @@ void KeyframeEffect::GetKeyframes(JSContext* aCx, nsTArray<JSObject*>& aResult,
     computedStyle = GetTargetComputedStyle(Flush::Style);
   }
 
+  // Update computed offsets if needed. We do this after we flush the style.
+  if (mAnimation && mAnimation->GetTimeline()) {
+    MaybeUpdateKeyframeComputedOffsets(mAnimation->GetTimeline(),
+                                       mAnimation->GetTimelineRange());
+  }
+
   const StylePerDocumentStyleData* rawData =
       mDocument->EnsureStyleSet().RawData();
 
-  // If we don't have a timeline or the timeline is not a ViewTimeline, we
-  // shouldn't generate the missing keyframes if all keyframes are using
-  // TimelineRangeOffsets. Otherwise, we should generate the missing keyframes
-  // only if needed.
-  const auto& generatedKeyframesStatus =
-      KeyframeUtils::CheckSkippableGeneratedKeyframes(
-          mKeyframes, mAnimation ? mAnimation->GetTimeline() : nullptr,
-          mKeyframesOffsetInfo);
+  // We generate the missing 0%/100% keyframes and append the missing
+  // properties to 0%/100% only if the keyframes come from CSS Keyframes rule.
+  nsTArray<Keyframe> computedKeyframes;
+  const nsTArray<Keyframe>& keyframes =
+      GetComputedKeyframes(computedKeyframes) ? computedKeyframes : mKeyframes;
 
-  for (const Keyframe& keyframe : mKeyframes) {
-    if (generatedKeyframesStatus.ShouldSkip(keyframe)) {
-      // FIXME: Bug 2037642. This is not correct actually for getKeyframes(). We
-      // still have to generate the missing keyframes if there are properties
-      // which are not specified in the keyframes with computed offst <= 0.0 or
-      // >= 1.0.
-      // https://drafts.csswg.org/scroll-animations-1/#named-range-keyframes
-      continue;
-    }
-
+  for (const Keyframe& keyframe : keyframes) {
     // Set up a dictionary object for the explicit members
     BaseComputedKeyframe keyframeDict;
     if (keyframe.mOffset) {
-      // FIXME: Bug 2016574. Add range name to BaseKeyframe.
-      if (!keyframe.mOffset->IsTimelineRangeOffset()) {
-        keyframeDict.mOffset.SetValue(keyframe.mOffset->mPercentage);
-      }
+      if (keyframe.mOffset->IsPercentageOffset()) {
+        // The percentage offset, so we use double. We don't use CSSNumericValue
+        // for backwards compatibility.
+        keyframeDict.mOffset.SetValue().RawSetAsDouble() =
+            keyframe.mOffset->mPercentage;
+      } else if (StaticPrefs::layout_css_typed_om_enabled()) {
+        // The timeline range offset.
+        MOZ_ASSERT(keyframe.mOffset->IsTimelineRangeOffset());
+
+        nsAutoCString rangeName;
+        Servo_SerializeTimelineRangeName(keyframe.mOffset->mRangeName,
+                                         &rangeName);
+        auto& offset =
+            keyframeDict.mOffset.SetValue().RawSetAsTimelineRangeOffset();
+        offset.mRangeName.Construct(std::move(rangeName));
+        offset.mOffset.Construct(MakeCSSUnitValue(
+            GetParentObject(), StyleNumericType::Percent(),
+            keyframe.mOffset->mPercentage * 100.0, "percent"_ns));
+      }  // else: if we don't enable the CSS Typed OM preference, we leave it
+         // null.
     }
     if (std::isnan(keyframe.mComputedOffset)) {
       MOZ_ASSERT(keyframe.IsRangedKeyframe(), "Invalid computed offset");
@@ -1371,6 +1399,32 @@ KeyframeEffect::OverflowRegionRefreshInterval() {
   return kOverflowRegionRefreshInterval;
 }
 
+static bool OpacityAnimationsAreFinishedAndFilling(const nsIFrame* aFrame) {
+  EffectSet* effects =
+      EffectSet::GetForFrame(aFrame, nsCSSPropertyIDSet::OpacityProperties());
+  if (!effects) {
+    return false;
+  }
+
+  bool hasOpacityAnimation = false;
+  for (const KeyframeEffect* effect : *effects) {
+    const Animation* animation = effect->GetAnimation();
+    if (!animation || !animation->IsRelevant() || !effect->HasOpacityChange()) {
+      continue;
+    }
+    hasOpacityAnimation = true;
+
+    // If there's any animation that are not fill or not finished, we don't
+    // optimize.
+    if (animation->PlayState() != AnimationPlayState::Finished ||
+        effect->GetComputedTiming().mProgress.IsNull()) {
+      return false;
+    }
+  }
+
+  return hasOpacityAnimation;
+}
+
 static bool CanOptimizeAwayDueToOpacity(const KeyframeEffect& aEffect,
                                         const nsIFrame& aFrame) {
   if (!aFrame.Style()->IsInOpacityZeroSubtree()) {
@@ -1389,11 +1443,14 @@ static bool CanOptimizeAwayDueToOpacity(const KeyframeEffect& aEffect,
 
   MOZ_ASSERT(root && root->Style()->IsInOpacityZeroSubtree());
 
+  if (root == &aFrame && aEffect.HasOpacityChange()) {
+    return false;
+  }
   // Even if we're in an opacity: zero subtree, if the root of the subtree may
   // have an opacity animation, we can't optimize us away, as we may become
-  // visible ourselves.
-  return (root != &aFrame || !aEffect.HasOpacityChange()) &&
-         !root->HasAnimationOfOpacity();
+  // visible ourselves, but if the animation is fill:forwards we do optimize.
+  return !root->HasAnimationOfOpacity() ||
+         OpacityAnimationsAreFinishedAndFilling(root);
 }
 
 bool KeyframeEffect::CanThrottleIfNotVisible(nsIFrame& aFrame) const {
@@ -1462,9 +1519,10 @@ bool KeyframeEffect::CanThrottle() const {
     // a) No target element
     // b) The target element has no frame, e.g. because it is in a display:none
     //    subtree.
-    // In either case we can throttle the animation because there is no
-    // need to update on the main thread.
-    return true;
+    // Both normally throttle: a frameless element has nothing to restyle. The
+    // exception is a `display` animation, whose sample may return `display` to
+    // a visible value. Throttling it skips the restyle that rebuilds the frame.
+    return !mCumulativeChanges.mDisplay;
   }
 
   // Do not throttle any animations during print preview.
@@ -1602,6 +1660,12 @@ nsIFrame* KeyframeEffect::GetPrimaryFrame() const {
       break;
     case PseudoStyleType::Backdrop:
       frame = nsLayoutUtils::GetBackdropFrame(mTarget.mElement);
+      break;
+    case PseudoStyleType::Checkmark:
+      frame = nsLayoutUtils::GetCheckmarkFrame(mTarget.mElement);
+      break;
+    case PseudoStyleType::PickerIcon:
+      frame = nsLayoutUtils::GetPickerIconFrame(mTarget.mElement);
       break;
     case PseudoStyleType::ViewTransition:
     case PseudoStyleType::ViewTransitionGroup:
@@ -1837,6 +1901,9 @@ void KeyframeEffect::CalculateCumulativeChangesForProperty(
     return;
   }
 
+  if (aProperty.mProperty.mId == eCSSProperty_display) {
+    mCumulativeChanges.mDisplay = true;
+  }
   mCumulativeChanges.mOverflow |= bool(flags & CSSPropFlags::AffectsOverflow);
   mCumulativeChanges.mLayout |= bool(flags & CSSPropFlags::AffectsLayout);
 }
@@ -1852,6 +1919,14 @@ void KeyframeEffect::SetAnimation(Animation* aAnimation) {
   mAnimation = aAnimation;
 
   UpdateNormalizedTiming();
+
+  // The keyframe computed offsets may need to be updated because it is
+  // associated with a different animation (so the timeline and timeline ranges
+  // may be different), or we have to reset the offsets if it doens't have the
+  // associated animation.
+  MaybeUpdateKeyframeComputedOffsets(
+      mAnimation ? mAnimation->GetTimeline() : nullptr,
+      mAnimation ? mAnimation->GetTimelineRange() : AnimationRange());
 
   // The order of these function calls is important:
   // NotifyAnimationTimingUpdated() need the updated mIsRelevant flag to check
@@ -2015,13 +2090,17 @@ KeyframeEffect::MatchForCompositor KeyframeEffect::IsMatchForCompositor(
   if (mAnimation->UsingScrollTimeline()) {
     const ScrollTimeline* scrollTimeline =
         mAnimation->GetTimeline()->AsScrollTimeline();
-    const auto state = scrollTimeline->GetState();
-    // We don't send this animation to the compositor if
-    // 1. the APZ is disabled entirely or for the source, or
+    const auto state = scrollTimeline->GetSnapshot();
+    // We don't send this animation to the compositor if:
+    // 1. The timeline doesn't have a source, in which case we don't need to
+    //    run the compositor animations since we don't have its ViewID info for
+    //    APZ, or
     // 2. the associated scroll-timeline is inactive, or
-    // 3. the scrolling direction is not available (i.e. no scroll range).
-    // 4. the scroll style of the scroller is overflow:hidden.
-    if (!state.APZIsActiveForSource() || !state.IsActive() ||
+    // 3. the APZ is disabled entirely or for the source, or
+    // 4. the scrolling direction is not available (i.e. no scroll range).
+    // 5. the scroll style of the scroller is overflow:hidden.
+    if (!state.SourceElement() || !state.IsActive() ||
+        !state.APZIsActiveForSource() ||
         !state.ScrollingDirectionIsAvailable() ||
         state.SourceScrollStyle() == StyleOverflow::Hidden) {
       return KeyframeEffect::MatchForCompositor::No;
@@ -2086,8 +2165,8 @@ double KeyframeEffect::AnimationsPlayBackRateMultiplier() const {
 }
 
 void KeyframeEffect::MaybeUpdateKeyframeComputedOffsets(
-    const AnimationTimeline* aTimeline) {
-  if (!mKeyframesOffsetInfo.mRangeOffset) {
+    const AnimationTimeline* aTimeline, const AnimationRange& aRange) {
+  if (mKeyframeOffsetsHasRangeOffset == KeyframeOffsetsHasRangeOffset::No) {
     return;
   }
 
@@ -2100,7 +2179,7 @@ void KeyframeEffect::MaybeUpdateKeyframeComputedOffsets(
     const auto& offset = *keyframe.mOffset;
     const double oldComputedOffset = keyframe.mComputedOffset;
     keyframe.mComputedOffset =
-        KeyframeUtils::GetComputedOffset(offset, aTimeline);
+        KeyframeUtils::GetComputedOffset(offset, aTimeline, &aRange);
 
     if (Keyframe::ComputedOffsetsAreDifferent(oldComputedOffset,
                                               keyframe.mComputedOffset)) {

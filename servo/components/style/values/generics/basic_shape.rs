@@ -69,17 +69,18 @@ fn is_default_box_for_clip_path(b: &ShapeGeometryBox) -> bool {
 
 /// https://drafts.csswg.org/css-shapes-1/#typedef-shape-box
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Animate,
     Clone,
     Copy,
     ComputeSquaredDistance,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToAnimatedValue,
     ToComputedValue,
@@ -160,12 +161,12 @@ pub use self::GenericClipPath as ClipPath;
 )]
 #[animation(no_bound(I))]
 #[repr(u8)]
-#[typed(todo_derive_fields)]
 pub enum GenericShapeOutside<BasicShape, I> {
     #[animation(error)]
     None,
     #[animation(error)]
     Image(I),
+    #[typed(skip)]
     Shape(Box<BasicShape>, #[css(skip_if = "is_default")] ShapeBox),
     #[animation(error)]
     Box(ShapeBox),
@@ -336,6 +337,10 @@ pub enum GenericShapeRadius<LengthPercentage> {
     ClosestSide,
     #[animation(error)]
     FarthestSide,
+    #[animation(error)]
+    FarthestCorner,
+    #[animation(error)]
+    ClosestCorner,
 }
 
 pub use self::GenericShapeRadius as ShapeRadius;

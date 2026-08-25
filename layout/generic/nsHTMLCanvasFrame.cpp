@@ -11,6 +11,7 @@
 #include "mozilla/PresShell.h"
 #include "mozilla/ReflowInput.h"
 #include "mozilla/dom/HTMLCanvasElement.h"
+#include "mozilla/dom/PerformanceContainerTiming.h"
 #include "mozilla/layers/ImageDataSerializer.h"
 #include "mozilla/layers/RenderRootStateManager.h"
 #include "mozilla/layers/WebRenderBridgeChild.h"
@@ -161,6 +162,9 @@ class nsDisplayCanvas final : public nsPaintedDisplayItem {
             OpUpdateAsyncImagePipeline(data->GetPipelineId().value(), scBounds,
                                        wr::WrRotation::Degree0, filter,
                                        mixBlendMode));
+
+        ContainerTimingHelpers::MaybeProcessPaintForContainer(
+            element, canvasFrame, dest - ToReferenceFrame());
         break;
       }
       case CanvasContextType::ImageBitmap: {
@@ -190,6 +194,9 @@ class nsDisplayCanvas final : public nsPaintedDisplayItem {
         aManager->CommandBuilder().PushImage(
             this, canvasData->GetImageContainer(), aBuilder, aResources, aSc,
             bounds, bounds);
+
+        ContainerTimingHelpers::MaybeProcessPaintForContainer(
+            element, canvasFrame, dest - ToReferenceFrame());
         break;
       }
       case CanvasContextType::NoContext:
@@ -255,6 +262,9 @@ class nsDisplayCanvas final : public nsPaintedDisplayItem {
           Rect(0, 0, canvasSizeInPx.width, canvasSizeInPx.height),
           SurfacePattern(surface, ExtendMode::CLAMP, Matrix(),
                          nsLayoutUtils::GetSamplingFilterForFrame(f)));
+
+      ContainerTimingHelpers::MaybeProcessPaintForContainer(
+          canvas, f, dest - ToReferenceFrame());
       return;
     }
 
@@ -284,15 +294,20 @@ class nsDisplayCanvas final : public nsPaintedDisplayItem {
       aCtx->Multiply(transform);
     }
 
-    const auto& srcRect = surface->GetRect();
-    dt.DrawSurface(
-        surface, destRect,
-        Rect(float(srcRect.X()), float(srcRect.Y()), float(srcRect.Width()),
-             float(srcRect.Height())),
-        DrawSurfaceOptions(nsLayoutUtils::GetSamplingFilterForFrame(f)));
+    const Rect srcRect(surface->GetRect());
+    if (presContext->Type() != nsPresContext::eContext_Print ||
+        !canvas->GetMozPrintCallback() ||
+        !dt.TryToReplaySurface(surface, destRect, srcRect)) {
+      dt.DrawSurface(
+          surface, destRect, srcRect,
+          DrawSurfaceOptions(nsLayoutUtils::GetSamplingFilterForFrame(f)));
+    }
 
     renderer->FireDidTransactionCallback();
     renderer->ResetDirty();
+
+    ContainerTimingHelpers::MaybeProcessPaintForContainer(
+        canvas, f, dest - ToReferenceFrame());
   }
 };
 
@@ -444,13 +459,14 @@ void nsHTMLCanvasFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
   if (!clipAxes.isEmpty()) {
     nsRect clipRect;
     nsRectCornerRadii radii;
+    nsMargin inset;
     bool haveRadii =
-        ComputeOverflowClipRectRelativeToSelf(clipAxes, clipRect, radii);
+        ComputeOverflowClipRectRelativeToSelf(clipAxes, clipRect, radii, inset);
     if (haveRadii ||
         nsStyleUtil::ObjectPropsMightCauseOverflow(StylePosition())) {
       clipState.ClipContainingBlockDescendants(
           clipRect + aBuilder->ToReferenceFrame(this),
-          haveRadii ? &radii : nullptr);
+          haveRadii ? &radii : nullptr, haveRadii ? &inset : nullptr);
     }
   }
 

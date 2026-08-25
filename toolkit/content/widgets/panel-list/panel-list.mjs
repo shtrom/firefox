@@ -85,6 +85,21 @@ export class PanelList extends HTMLElement {
     this.toggleAttribute("stay-open", val);
   }
 
+  /**
+   * Whether an item is activated by a mouse release over it even when the press
+   * happened elsewhere, so that the panel can be opened and an item chosen with
+   * a single click. Suitable for panels that open on mousedown.
+   *
+   * @type {boolean}
+   */
+  get clickOnMouseup() {
+    return this.hasAttribute("click-on-mouseup");
+  }
+
+  set clickOnMouseup(val) {
+    this.toggleAttribute("click-on-mouseup", val);
+  }
+
   getTargetForEvent(event) {
     if (!event) {
       return null;
@@ -100,6 +115,12 @@ export class PanelList extends HTMLElement {
   }
 
   show(triggeringEvent, target) {
+    // Re-arming the triggeringEvent guard in handleEvent() on an open list
+    // would make it ignore the event currently being dispatched.
+    if (this.open) {
+      return;
+    }
+
     this.triggeringEvent = triggeringEvent;
     this.lastAnchorNode =
       target || this.getTargetForEvent(this.triggeringEvent);
@@ -114,7 +135,13 @@ export class PanelList extends HTMLElement {
       const autohideDisabled = this.hasServices()
         ? Services.prefs.getBoolPref("ui.popup.disable_autohide", false)
         : false;
-      this.setAttribute("popover", autohideDisabled ? "manual" : "auto");
+      // A contextmenu event is dispatched during the button press on most
+      // platforms, so the release that follows would light-dismiss an auto
+      // popover. Manual popovers are exempt from light dismiss; the listeners
+      // from addHideListeners() dismiss them.
+      const lightDismissable =
+        !autohideDisabled && triggeringEvent?.type != "contextmenu";
+      this.setAttribute("popover", lightDismissable ? "auto" : "manual");
     }
 
     // Bug 2010864 - We need to set `open` to true before calling this.onShow()
@@ -487,6 +514,8 @@ export class PanelList extends HTMLElement {
               [accesskey="${e.key.toUpperCase()}"]`
           );
           if (item) {
+            // Prevent the host from receiving input events for this keypress.
+            e.preventDefault();
             item.click();
           }
         }
@@ -555,7 +584,9 @@ export class PanelList extends HTMLElement {
     // from the user until alignment is set.
     this.setAttribute("showing", "true");
 
-    // Wait for a layout flush, then find the bounds.
+    // The rAF + setTimeout matches setAlign() so the submenu is laid out before
+    // its width is measured. Without the setTimeout the width can read as 0 and
+    // the overflow check picks the wrong side.
     let {
       anchorLeft,
       anchorWidth,
@@ -564,28 +595,30 @@ export class PanelList extends HTMLElement {
       panelWidth,
       clientWidth,
     } = await new Promise(resolve => {
-      requestAnimationFrame(() => {
-        // It's possible this is being used in a context where windowUtils is
-        // not available. In that case, fallback to using the element.
-        let getBounds = el =>
-          window.windowUtils
-            ? window.windowUtils.getBoundsWithoutFlushing(el)
-            : el.getBoundingClientRect();
-        // submenu item in the parent panel list
-        let anchorBounds = getBounds(this.lastAnchorNode);
-        let parentPanelBounds = getBounds(hostElement);
-        let panelBounds = getBounds(this);
-        let clientWidth = document.scrollingElement.clientWidth;
+      requestAnimationFrame(() =>
+        setTimeout(() => {
+          // It's possible this is being used in a context where windowUtils is
+          // not available. In that case, fallback to using the element.
+          let getBounds = el =>
+            window.windowUtils
+              ? window.windowUtils.getBoundsWithoutFlushing(el)
+              : el.getBoundingClientRect();
+          // submenu item in the parent panel list
+          let anchorBounds = getBounds(this.lastAnchorNode);
+          let parentPanelBounds = getBounds(hostElement);
+          let panelBounds = getBounds(this);
+          let clientWidth = document.scrollingElement.clientWidth;
 
-        resolve({
-          anchorLeft: anchorBounds.left,
-          anchorWidth: anchorBounds.width,
-          anchorTop: anchorBounds.top,
-          parentPanelTop: parentPanelBounds.top,
-          panelWidth: panelBounds.width,
-          clientWidth,
-        });
-      });
+          resolve({
+            anchorLeft: anchorBounds.left,
+            anchorWidth: anchorBounds.width,
+            anchorTop: anchorBounds.top,
+            parentPanelTop: parentPanelBounds.top,
+            panelWidth: panelBounds.width,
+            clientWidth,
+          });
+        }, 0)
+      );
     });
 
     let align = hostElement.getAttribute("align");
@@ -967,10 +1000,14 @@ export class PanelItem extends HTMLElement {
         let [arrowOpenKey, arrowCloseKey] = this.setArrowKeyRTL();
         if (e.key === arrowOpenKey) {
           this.submenuPanel.show(e, e.target);
+          // Don't let the arrow key scroll the page, which would trigger the
+          // panel's scroll-hide listener and immediately close the submenu.
+          e.preventDefault();
           e.stopPropagation();
         }
         if (e.key === arrowCloseKey) {
           this.submenuPanel.hide(e, { force: true }, e.target);
+          e.preventDefault();
           e.stopPropagation();
         }
         break;
@@ -980,7 +1017,7 @@ export class PanelItem extends HTMLElement {
         if (
           // preventClickEvent is undefined outside of chrome contexts.
           !event.preventClickEvent ||
-          this.panel?.lastAnchorNode?.role != "combobox" ||
+          !this.panel?.clickOnMouseup ||
           e.button != 0
         ) {
           break;

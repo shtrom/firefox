@@ -11,10 +11,10 @@
     "moz-src:///browser/components/tabbrowser/TabMetrics.sys.mjs"
   );
   const { TabStateFlusher } = ChromeUtils.importESModule(
-    "resource:///modules/sessionstore/TabStateFlusher.sys.mjs"
+    "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
   );
   const { ContentSharingUtils } = ChromeUtils.importESModule(
-    "resource:///modules/contentsharing/ContentSharingUtils.sys.mjs"
+    "moz-src:///browser/components/sharing/ContentSharingUtils.sys.mjs"
   );
 
   ChromeUtils.importESModule(
@@ -88,6 +88,15 @@
         </toolbarbutton>
         <toolbarbutton
           tabindex="0"
+          id="tabGroupEditor_shareTabGroup"
+          class="subviewbutton"
+          badged="true"
+          data-l10n-id="tab-group-editor-action-share-group"
+          hidden="">
+          <html:moz-badge type="new" move-after-stack="true"></html:moz-badge>
+        </toolbarbutton>
+        <toolbarbutton
+          tabindex="0"
           id="tabGroupEditor_copyAllLinks"
           class="subviewbutton">
         </toolbarbutton>
@@ -102,13 +111,6 @@
           id="tabGroupEditor_ungroupTabs"
           class="subviewbutton"
           data-l10n-id="tab-group-editor-action-ungroup">
-        </toolbarbutton>
-        <toolbarbutton
-          tabindex="0"
-          id="tabGroupEditor_shareTabGroup"
-          class="subviewbutton"
-          data-l10n-id="tab-group-editor-action-share-tab-group"
-          hidden="">
         </toolbarbutton>
         <toolbarseparator class="tab-group-edit-mode-only" />
         <toolbarbutton
@@ -311,6 +313,7 @@
     #createButton;
     #createMode;
     #keepNewlyCreatedGroup;
+    #nameContainer;
     #nameField;
     #panel;
     #swatches;
@@ -398,6 +401,7 @@
       );
       this.#panel = this.querySelector("panel");
       this.#nameField = this.querySelector("#tab-group-name");
+      this.#nameContainer = this.querySelector(".tab-group-editor-name");
       this.#panel.addEventListener("click", e => {
         if (e.target !== this.#nameField) {
           this.#nameField.blur();
@@ -476,7 +480,11 @@
       this.#commandButtons.moveGroupToNewWindow.addEventListener(
         "command",
         () => {
-          gBrowser.replaceGroupWithWindow(this.activeGroup);
+          gBrowser.replaceGroupWithWindow(this.activeGroup, {
+            metricsContext: gBrowser.TabMetrics.userTriggeredContext(
+              gBrowser.TabMetrics.METRIC_SOURCE.TAB_GROUP_MENU
+            ),
+          });
         }
       );
 
@@ -490,27 +498,32 @@
       });
 
       this.#commandButtons.ungroupTabs.addEventListener("command", () => {
-        this.activeGroup.ungroupTabs({
-          isUserTriggered: true,
-          telemetrySource: TabMetrics.METRIC_SOURCE.TAB_GROUP_MENU,
-        });
-      });
-
-      this.#commandButtons.saveAndCloseGroup.addEventListener("command", () => {
-        this.activeGroup.saveAndClose({ isUserTriggered: true });
-      });
-
-      this.#commandButtons.deleteGroup.addEventListener("command", () => {
-        gBrowser.removeTabGroup(
-          this.activeGroup,
+        this.activeGroup.ungroupTabs(
           TabMetrics.userTriggeredContext(
             TabMetrics.METRIC_SOURCE.TAB_GROUP_MENU
           )
         );
       });
 
+      this.#commandButtons.saveAndCloseGroup.addEventListener("command", () => {
+        this.activeGroup.saveAndClose(
+          TabMetrics.userTriggeredContext(
+            TabMetrics.METRIC_SOURCE.TAB_GROUP_MENU
+          )
+        );
+      });
+
+      this.#commandButtons.deleteGroup.addEventListener("command", () => {
+        gBrowser.removeTabGroup(this.activeGroup, {
+          metricsContext: TabMetrics.userTriggeredContext(
+            TabMetrics.METRIC_SOURCE.TAB_GROUP_MENU
+          ),
+        });
+      });
+
       this.#commandButtons.shareTabGroup.addEventListener("command", () => {
         ContentSharingUtils.handleShareTabGroup(this.activeGroup);
+        this.close();
       });
 
       this.panel.addEventListener("popupshown", this);
@@ -740,13 +753,11 @@
         label.htmlFor = input.id;
         label.style.setProperty(
           "--tabgroup-swatch-color",
-          Services.prefs.getBoolPref("browser.nova.enabled")
-            ? `var(--tab-group-${colorCode})`
-            : `var(--tab-group-color-${colorCode})`
+          `var(--tab-group-${colorCode})`
         );
         label.style.setProperty(
           "--tabgroup-swatch-color-invert",
-          `var(--tab-group-color-${colorCode}-invert)`
+          `var(--tab-group-${colorCode}-invert)`
         );
         this.#swatchesContainer.append(input, label);
         this.#swatches.push(input);
@@ -877,6 +888,8 @@
         ? MozTabbrowserTabGroupMenu.State.CREATE_AI_INITIAL
         : MozTabbrowserTabGroupMenu.State.CREATE_STANDARD_INITIAL;
 
+      this.#maybeUpdateLayoutForNova();
+
       this.#panel.openPopup(group.firstChild, {
         position: this.#panelPosition,
       });
@@ -920,6 +933,8 @@
         ? MozTabbrowserTabGroupMenu.State.EDIT_AI_INITIAL
         : MozTabbrowserTabGroupMenu.State.EDIT_STANDARD_INITIAL;
 
+      this.#maybeUpdateLayoutForNova();
+
       this.#panel.openPopup(group.firstChild, {
         position: this.#panelPosition,
       });
@@ -933,6 +948,18 @@
       );
       this.#commandButtons.copyAllLinks.disabled = !linkCount;
       this.#maybeDisableOrHideSaveButton();
+    }
+
+    #maybeUpdateLayoutForNova() {
+      const isNovaEnabled = Services.prefs.getBoolPref(
+        "browser.nova.enabled",
+        false
+      );
+      if (isNovaEnabled) {
+        this.#nameContainer.before(this.#swatchesContainer);
+      } else {
+        this.#tabGroupPropertiesActions.prepend(this.#swatchesContainer);
+      }
     }
 
     #maybeDisableOrHideSaveButton() {
@@ -995,10 +1022,11 @@
             this.#handleMlTelemetry("save-popup-hidden");
           }
         } else {
-          this.activeGroup.ungroupTabs({
-            isUserTriggered: true,
-            telemetrySource: TabMetrics.METRIC_SOURCE.CANCEL_TAB_GROUP_CREATION,
-          });
+          this.activeGroup.ungroupTabs(
+            TabMetrics.userTriggeredContext(
+              TabMetrics.METRIC_SOURCE.CANCEL_TAB_GROUP_CREATION
+            )
+          );
         }
       }
       if (this.#nameField.disabled) {
@@ -1055,6 +1083,12 @@
         window.removeEventListener("TabOpen", onTabOpened);
       };
       window.addEventListener("TabOpen", onTabOpened);
+      // The tab group menu can be invoked on a window that isn't the OS-level
+      // frontmost window (most reproducibly on macOS in a multi-monitor
+      // setup). Raise the window so the new tab's focusUrlBar request can
+      // actually land OS keyboard focus on the address bar. Bug 2039674
+      // tracks routing this through URILoadingHelper instead.
+      window.focus();
       gBrowser.addAdjacentNewTab(lastTab);
     }
 

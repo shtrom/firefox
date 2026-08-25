@@ -271,23 +271,6 @@ const URL_ROOT_MOCHI_8888 = CHROME_URL_ROOT.replace(
   "http://mochi.test:8888/"
 );
 
-try {
-  if (isMochitest) {
-    Services.scriptloader.loadSubScript(
-      "chrome://mochitests/content/browser/devtools/client/shared/test/telemetry-test-helpers.js",
-      this
-    );
-  }
-} catch (e) {
-  ok(
-    false,
-    "MISSING DEPENDENCY ON telemetry-test-helpers.js\n" +
-      "Please add the following line in browser.toml:\n" +
-      "  !/devtools/client/shared/test/telemetry-test-helpers.js\n"
-  );
-  throw e;
-}
-
 // Force devtools to be initialized so menu items and keyboard shortcuts get installed
 require("resource://devtools/client/framework/devtools-browser.js");
 
@@ -1172,7 +1155,7 @@ async function waitFor(
       : maxTries;
 
   try {
-    const value = await BrowserTestUtils.waitForCondition(
+    const value = await TestUtils.waitForCondition(
       condition,
       message,
       interval,
@@ -1615,14 +1598,6 @@ function createTestHTTPServer() {
  *        Arguments to be passed to DevToolsServer.registerModule
  */
 async function registerActorInContentProcess(url, options) {
-  function convertChromeToFile(uri) {
-    return Cc["@mozilla.org/chrome/chrome-registry;1"]
-      .getService(Ci.nsIChromeRegistry)
-      .convertChromeURL(Services.io.newURI(uri)).spec;
-  }
-  // chrome://mochitests URI is registered only in the parent process, so convert these
-  // URLs to file:// one in order to work in the content processes
-  url = url.startsWith("chrome://mochitests") ? convertChromeToFile(url) : url;
   return SpecialPowers.spawn(
     gBrowser.selectedBrowser,
     [{ url, options }],
@@ -2392,31 +2367,11 @@ function simulateLinkClick(element) {
 }
 
 /**
- * Since the MDN data is updated frequently, it might happen that the properties used in
- * this test are not in the dataset anymore/now have URLs.
- * This function will return properties in the dataset that don't have MDN url so you
- * can easily find a replacement.
+ * Use mocked MDN compat data. Should be called before the toolbox starts.
+ * See devtools/shared/compatibility/dataset/mock-css-properties.json.
  */
-function logCssCompatDataPropertiesWithoutMDNUrl() {
-  const cssPropertiesCompatData = require("resource://devtools/shared/compatibility/dataset/css-properties.json");
-
-  function walk(node) {
-    for (const propertyName in node) {
-      const property = node[propertyName];
-      if (property.__compat) {
-        if (!property.__compat.mdn_url) {
-          dump(
-            `"${propertyName}" - MDN URL: ${
-              property.__compat.mdn_url || "❌"
-            } - Spec URL: ${property.__compat.spec_url || "❌"}\n`
-          );
-        }
-      } else if (typeof property == "object") {
-        walk(property);
-      }
-    }
-  }
-  walk(cssPropertiesCompatData);
+async function setMockCompatibilityDataset() {
+  await pushPref("devtools.compatibility.use-mock-dataset", true);
 }
 
 /**

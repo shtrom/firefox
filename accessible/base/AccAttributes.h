@@ -5,12 +5,12 @@
 #ifndef AccAttributes_h_
 #define AccAttributes_h_
 
-#include "mozilla/a11y/AccGroupInfo.h"
 #include "mozilla/Variant.h"
-#include "nsTHashMap.h"
-#include "nsStringFwd.h"
-#include "mozilla/gfx/Matrix.h"
 #include "mozilla/WritingModes.h"
+#include "mozilla/a11y/AccGroupInfo.h"
+#include "mozilla/gfx/Matrix.h"
+#include "nsStringFwd.h"
+#include "nsTHashMap.h"
 
 class nsVariant;
 
@@ -30,21 +30,15 @@ namespace a11y {
 struct FontSize {
   int32_t mValue;
 
-  bool operator==(const FontSize& aOther) const {
-    return mValue == aOther.mValue;
-  }
-
-  bool operator!=(const FontSize& aOther) const {
-    return mValue != aOther.mValue;
-  }
+  bool operator==(const FontSize& aOther) const = default;
+  bool operator!=(const FontSize& aOther) const = default;
 };
 
 struct Color {
   nscolor mValue;
 
-  bool operator==(const Color& aOther) const { return mValue == aOther.mValue; }
-
-  bool operator!=(const Color& aOther) const { return mValue != aOther.mValue; }
+  bool operator==(const Color& aOther) const = default;
+  bool operator!=(const Color& aOther) const = default;
 };
 
 // A special type. If an entry has a value of this type, it instructs the
@@ -54,7 +48,6 @@ struct DeleteEntry {
   bool mValue;
 
   bool operator==(const DeleteEntry& aOther) const { return true; }
-
   bool operator!=(const DeleteEntry& aOther) const { return false; }
 };
 

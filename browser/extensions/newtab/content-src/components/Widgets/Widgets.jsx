@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import React, { useContext, useEffect, useRef } from "react";
+import React, { useContext, useEffect, useLayoutEffect, useRef } from "react";
 import { useDispatch, useSelector, batch } from "react-redux";
 import { BaseContext } from "content-src/lib/BaseContext";
 // Bug 2034542: these per-widget imports can be removed once the non-Nova render
@@ -14,34 +14,50 @@ import { Weather as WeatherWidget } from "./Weather/Weather";
 import { MessageWrapper } from "content-src/components/MessageWrapper/MessageWrapper";
 import { WidgetsFeatureHighlight } from "../DiscoveryStreamComponents/FeatureHighlight/WidgetsFeatureHighlight";
 import { WidgetsRowFeatureHighlight } from "../DiscoveryStreamComponents/FeatureHighlight/WidgetsRowFeatureHighlight";
+import { OMCHighlightSlot } from "../DiscoveryStreamComponents/FeatureHighlight/OMCHighlightSlot";
+import { SLOTS } from "../DiscoveryStreamComponents/FeatureHighlight/OMCHighlightSlots.mjs";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
 import {
   WIDGET_REGISTRY,
+  isWidgetAddable,
   isWidgetEnabled,
   resolveWidgetSize,
   resolveWidgetOrder,
   resolveWidgetHasSidebar,
   getHideAllTargets,
 } from "common/WidgetsRegistry.mjs";
+import {
+  isSideBySideActive,
+  isSpaceOverridden,
+  isSpacesActive,
+  SPACE_IDS,
+} from "common/PageLayoutVariants.mjs";
 import { WIDGET_ROW_COMPONENTS } from "./WidgetsComponentRegistry.jsx";
 import { WidgetWrapper } from "./WidgetWrapper";
+import { ErrorBoundary } from "content-src/components/ErrorBoundary/ErrorBoundary";
+import { useWidgetDnD } from "./useWidgetDnD.jsx";
+import { useReorderFlip } from "content-src/lib/useReorderFlip.jsx";
 
 const CONTAINER_ACTION_TYPES = {
   HIDE_ALL: "hide_all",
   CHANGE_SIZE_ALL: "change_size_all",
+  CHANGE_ROW_VISIBILITY: "change_row_visibility",
   FEEDBACK: "feedback",
 };
 
-const PREF_WIDGETS_ENABLED = "widgets.enabled";
 const PREF_NOVA_ENABLED = "nova.enabled";
 const PREF_WIDGETS_SYSTEM_WEATHER_FORECAST_ENABLED =
   "widgets.system.weatherForecast.enabled";
 const PREF_WIDGETS_MAXIMIZED = "widgets.maximized";
 const PREF_WIDGETS_SYSTEM_MAXIMIZED = "widgets.system.maximized";
+const PREF_WIDGETS_ROW_EXPANDED = "widgets.row.expanded";
 const PREF_WIDGETS_FEEDBACK_ENABLED = "widgets.feedback.enabled";
 const PREF_WIDGETS_HIDE_ALL_TOAST_ENABLED = "widgets.hideAllToast.enabled";
 const WIDGETS_FEEDBACK_URL =
   "https://support.mozilla.org/kb/firefox-new-tab-widgets";
+// Safety net in case transitionend never fires. Keep this above the CSS
+// height transition duration (--widget-size-transition-duration, 180ms).
+const ROW_TOGGLE_HEIGHT_ANIMATION_FALLBACK_MS = 300;
 
 // resets timer to default values (exported for testing)
 // In practice, this logic runs inside a useEffect when
@@ -112,11 +128,18 @@ function Widgets() {
   const { messageData } = useSelector(state => state.Messages);
   const timerType = useSelector(state => state.TimerWidget.timerType);
   const timerData = useSelector(state => state.TimerWidget);
+  const sportsWidgetState = useSelector(
+    state => state.SportsWidget?.widgetState
+  );
   const dispatch = useDispatch();
   const { openWidgetsPanel } = useContext(BaseContext);
 
   const novaEnabled = prefs[PREF_NOVA_ENABLED];
   const isMaximized = prefs[PREF_WIDGETS_MAXIMIZED];
+  const spacesActive = isSpacesActive(prefs);
+  // A space is a full page of its own, so there is nothing to be conservative
+  // about: widgets always show expanded and the row toggle is hidden.
+  const rowExpanded = spacesActive || !!prefs[PREF_WIDGETS_ROW_EXPANDED];
   const nimbusMaximizedTrainhopEnabled =
     prefs.trainhopConfig?.widgets?.maximized;
   const feedbackEnabled =
@@ -127,11 +150,21 @@ function Widgets() {
     prefs[PREF_WIDGETS_HIDE_ALL_TOAST_ENABLED];
   const feedbackUrl =
     prefs.trainhopConfig?.widgets?.feedbackUrl ?? WIDGETS_FEEDBACK_URL;
-  const showWidgetsSizeToggle =
+  const sideBySideActive = isSideBySideActive(prefs);
+  // Side-by-side and spaces both put an add button in the section header where
+  // the row size toggle would otherwise sit.
+  const addButtonInHeader = sideBySideActive || spacesActive;
+  const widgetsMayBeMaximized =
     nimbusMaximizedTrainhopEnabled || prefs[PREF_WIDGETS_SYSTEM_MAXIMIZED];
-  const widgetsMayBeMaximized = showWidgetsSizeToggle;
+  // The row toggle resizes every widget at once, which a one-card-wide column has
+  // no room for; that slot gets an add button instead. Per-widget "Change size"
+  // still applies -- size is a row span, so medium and large are both one card wide.
+  const showWidgetsSizeToggle = !addButtonInHeader && widgetsMayBeMaximized;
 
-  const widgetsEnabled = prefs[PREF_WIDGETS_ENABLED];
+  // The experiment can show the Widgets space to someone who had the master
+  // toggle off, and the panel must not then be empty.
+  const widgetsEnabled =
+    prefs["widgets.enabled"] || isSpaceOverridden(SPACE_IDS.WIDGETS, prefs);
 
   // Bug 2034542: these per-widget lookups and all the derived consts below
   // (listsEnabled, timerEnabled, weatherBase, weatherEnabled, weatherSize,
@@ -197,20 +230,142 @@ function Widgets() {
       prefs,
       widgetsEnabled
     ),
+    privacy: isWidgetEnabled(
+      WIDGET_REGISTRY.find(w => w.id === "privacy"),
+      prefs,
+      widgetsEnabled
+    ),
+    crossword: isWidgetEnabled(
+      WIDGET_REGISTRY.find(w => w.id === "crossword"),
+      prefs,
+      widgetsEnabled
+    ),
+    stocks: isWidgetEnabled(
+      WIDGET_REGISTRY.find(w => w.id === "stocks"),
+      prefs,
+      widgetsEnabled
+    ),
+    pictureOfTheDay: isWidgetEnabled(
+      WIDGET_REGISTRY.find(w => w.id === "pictureOfTheDay"),
+      prefs,
+      widgetsEnabled
+    ),
+    recentSearches: isWidgetEnabled(
+      WIDGET_REGISTRY.find(w => w.id === "recentSearches"),
+      prefs,
+      widgetsEnabled
+    ),
   };
 
   const widgetOrder = resolveWidgetOrder(prefs);
+
+  const {
+    effectiveOrder,
+    draggedId,
+    previewOrder,
+    previewOrderMap,
+    handleDragStart,
+    handleDragOver,
+    handleDrop,
+    handleDragEnd,
+    handleMouseDown,
+  } = useWidgetDnD({
+    widgetOrder,
+    prefs,
+    dispatch,
+  });
+
+  // Drives the FLIP reorder animation off the actual visual id sequence: the
+  // live preview order while dragging, otherwise the committed order. Keying
+  // off the sequence keeps the key stable across the drop/dragend re-renders so
+  // the last move's animation isn't cancelled. The dragged tile is excluded so
+  // it tracks the cursor instantly instead of being flung by its own (largest)
+  // inverse transform.
+  const flipKey = (previewOrder || effectiveOrder).join(",");
+  const widgetsContainerRef = useReorderFlip({
+    orderKey: flipKey,
+    resetKey: draggedId,
+    enabled: novaEnabled,
+    childSelector: "[data-widget-id]",
+    skipSelector: ".is-dragging",
+  });
 
   const anyWidgetInRow =
     WIDGET_REGISTRY.some(w => widgetEnabledMap[w.id]) ||
     (!novaEnabled && weatherForecastEnabled);
 
-  // Widget size is "small" only when maximize feature is enabled and widgets
-  // are currently minimized. Otherwise defaults to "medium".
-  const widgetSize = widgetsMayBeMaximized && !isMaximized ? "small" : "medium";
+  const allWidgetsAdded = WIDGET_REGISTRY.filter(w =>
+    isWidgetAddable(w, prefs)
+  ).every(w => prefs[w.enabledPref]);
+
+  const renderedWidgetSizes = WIDGET_REGISTRY.filter(
+    w => widgetEnabledMap[w.id]
+  ).map(w => resolveWidgetSize(w, prefs));
+  const addButtonSize = renderedWidgetSizes.includes("large")
+    ? "large"
+    : "medium";
+
+  // Widget size is "medium" only when maximize feature is enabled and widgets
+  // are currently minimized. Otherwise defaults to "large".
+  //
+  // This is a row-level approximation, not a per-widget truth. Users can resize
+  // widgets individually, so this single value will not reflect the real size of
+  // every widget in the row. For accurate per-widget sizing, rely on each
+  // widget's own change-size event (WIDGETS_USER_EVENT with user_action
+  // "change_size", which carries the widget's real widget_size) as the source of
+  // truth rather than this value.
+  const widgetSize = widgetsMayBeMaximized && !isMaximized ? "medium" : "large";
 
   // track previous timerEnabled state to detect when it becomes disabled
   const prevTimerEnabledRef = useRef(timerEnabled);
+
+  const rowToggleFromHeightRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const fromHeight = rowToggleFromHeightRef.current;
+    rowToggleFromHeightRef.current = null;
+    const container = widgetsContainerRef.current;
+    if (fromHeight === null || !container) {
+      return undefined;
+    }
+    const toHeight = container.getBoundingClientRect().height;
+    if (fromHeight === toHeight) {
+      return undefined;
+    }
+    container.style.height = `${fromHeight}px`;
+    container.classList.add("is-animating-height");
+    // Commit the start height before transitioning to the target.
+    void container.offsetHeight;
+    container.style.height = `${toHeight}px`;
+
+    let fallbackTimer;
+    // Invoked from transitionend/transitioncancel (with an event), from the
+    // fallback timer, or as the effect cleanup (no event). Ignore events
+    // bubbling up from child widgets; the container only transitions height,
+    // so its own events need no propertyName check.
+    const finishRowHeightAnimation = e => {
+      if (e && e.target !== container) {
+        return;
+      }
+      globalThis.clearTimeout(fallbackTimer);
+      container.style.height = "";
+      container.classList.remove("is-animating-height");
+      container.removeEventListener("transitionend", finishRowHeightAnimation);
+      container.removeEventListener(
+        "transitioncancel",
+        finishRowHeightAnimation
+      );
+    };
+    container.addEventListener("transitionend", finishRowHeightAnimation);
+    container.addEventListener("transitioncancel", finishRowHeightAnimation);
+    fallbackTimer = globalThis.setTimeout(
+      finishRowHeightAnimation,
+      ROW_TOGGLE_HEIGHT_ANIMATION_FALLBACK_MS
+    );
+    return finishRowHeightAnimation;
+    // widgetsContainerRef is a stable ref from useReorderFlip; listed to satisfy
+    // exhaustive-deps, its identity never changes so only rowExpanded reruns this.
+  }, [rowExpanded, widgetsContainerRef]);
 
   // Reset timer when it becomes disabled
   useEffect(() => {
@@ -287,40 +442,41 @@ function Widgets() {
   function toggleMaximize() {
     const newMaximizedState = !isMaximized;
     const newWidgetSize =
-      widgetsMayBeMaximized && !newMaximizedState ? "small" : "medium";
+      widgetsMayBeMaximized && !newMaximizedState ? "medium" : "large";
 
-    batch(() => {
-      dispatch(ac.SetPref(PREF_WIDGETS_MAXIMIZED, newMaximizedState));
+    // Batch into one SET_MULTIPLE_PREFS so the sizes return in a single broadcast,
+    // not one staggered round-trip per widget.
+    const prefUpdates = { [PREF_WIDGETS_MAXIMIZED]: newMaximizedState };
 
-      // When Nova is enabled, treat the shared header control as a toggle
-      // between the default/full widget presentation and the compact one.
-      // Widgets at "small" are skipped — they are either in the sidebar or
-      // user-pinned and should not be moved by the row toggle.
-      //
-      // Future: if we add a "small" in-row presentation for a widget, this
-      // loop will need to distinguish between "small-in-sidebar" and
-      // "small-in-row". One way to do that is to add a hasSidebar-aware
-      // helper (e.g. isWidgetInSidebar(widget, prefs)) and only skip widgets
-      // that are actually rendered in the sidebar, not all widgets at "small".
-      // The registry already carries hasSidebar and trainhopSidebarKey, so
-      // resolveWidgetHasSidebar(widget, prefs) provides that check today.
-      if (novaEnabled) {
-        const targetSize = newMaximizedState ? "large" : "medium";
-        for (const widget of WIDGET_REGISTRY) {
-          if (resolveWidgetSize(widget, prefs) !== "small") {
-            dispatch(ac.SetPref(widget.sizePref, targetSize));
-          }
+    // When Nova is enabled, treat the shared header control as a toggle
+    // between the default/full widget presentation and the compact one.
+    // Only widgets actually rendered in the sidebar are skipped — that is the
+    // same hasSidebar + size === "small" test used in WidgetsSidebar and by
+    // weatherGoesToSidebar above, not "any small widget". A "small" widget
+    // sitting in the row is resized along with the others so it isn't left
+    // behind by the row toggle. On minimize such a widget lands at "medium"
+    // rather than returning to "small", since the size pref holds the display
+    // state directly and the pre-maximize size isn't retained.
+    if (novaEnabled) {
+      const targetSize = newMaximizedState ? "large" : "medium";
+      for (const widget of WIDGET_REGISTRY) {
+        const inSidebar =
+          resolveWidgetHasSidebar(widget, prefs) &&
+          resolveWidgetSize(widget, prefs) === "small";
+        if (!inSidebar) {
+          prefUpdates[widget.sizePref] = targetSize;
         }
       }
+    }
 
-      const telemetryData = {
-        action_type: CONTAINER_ACTION_TYPES.CHANGE_SIZE_ALL,
-        action_value: newMaximizedState
-          ? "maximize_widgets"
-          : "minimize_widgets",
-        widget_size: newWidgetSize,
-      };
+    const telemetryData = {
+      action_type: CONTAINER_ACTION_TYPES.CHANGE_SIZE_ALL,
+      action_value: newMaximizedState ? "maximize_widgets" : "minimize_widgets",
+      widget_size: newWidgetSize,
+    };
 
+    batch(() => {
+      dispatch(ac.SetMultiplePrefs(prefUpdates));
       dispatch(
         ac.OnlyToMain({
           type: at.WIDGETS_CONTAINER_ACTION,
@@ -346,6 +502,35 @@ function Widgets() {
     e.preventDefault();
     openWidgetsPanel();
     dispatch(ac.UserEvent({ event: "SHOW_PERSONALIZE" }));
+  }
+
+  function toggleRowExpanded() {
+    const next = !rowExpanded;
+    const container = widgetsContainerRef.current;
+    const prefersReducedMotion = globalThis.matchMedia?.(
+      "(prefers-reduced-motion: reduce)"
+    )?.matches;
+    if (container && !prefersReducedMotion) {
+      rowToggleFromHeightRef.current = container.getBoundingClientRect().height;
+    }
+    batch(() => {
+      dispatch(ac.SetPref(PREF_WIDGETS_ROW_EXPANDED, next));
+      dispatch(
+        ac.OnlyToMain({
+          type: at.WIDGETS_CONTAINER_ACTION,
+          data: {
+            action_type: CONTAINER_ACTION_TYPES.CHANGE_ROW_VISIBILITY,
+            action_value: next ? "expand_row" : "collapse_row",
+            widget_size: widgetSize,
+          },
+        })
+      );
+    });
+  }
+
+  function handleToggleRowExpandedClick(e) {
+    e.preventDefault();
+    toggleRowExpanded();
   }
 
   function handleFeedbackClick(e) {
@@ -390,17 +575,27 @@ function Widgets() {
       <div className="widgets-title-heading">
         <h1 data-l10n-id="newtab-widget-section-title"></h1>
         {showWidgetsSizeToggle ? (
-          <button
+          <moz-button
             id="toggle-widgets-size-button"
-            type="button"
             className={`widgets-expand-button${isMaximized ? " is-maximized" : ""}`}
+            size="small"
             data-l10n-id={
               isMaximized
                 ? "newtab-widget-section-minimize"
                 : "newtab-widget-section-maximize"
             }
+            iconsrc="chrome://global/skin/icons/arrow-down.svg"
             onClick={handleToggleMaximizeClick}
             onKeyDown={handleToggleMaximizeKeyDown}
+          />
+        ) : null}
+        {addButtonInHeader ? (
+          <moz-button
+            id="add-widgets-button"
+            size="small"
+            data-l10n-id="newtab-widget-add-widgets-button"
+            iconsrc="chrome://global/skin/icons/plus.svg"
+            onClick={handleManageWidgetsClick}
           />
         ) : null}
       </div>
@@ -471,9 +666,53 @@ function Widgets() {
     return null;
   }
 
+  // CSS container queries on the widgets section decide whether the toggle
+  // button is shown — see _Widgets.scss. The collapsed row holds one widget
+  // per card-column slot regardless of size, so for each card-column count
+  // (1–5) anything past the first N positions overflows. This keeps mediums
+  // to a single (shorter) row rather than stacking them two-deep to fill a
+  // large-height band. The matching `data-overflow-N` attribute is read by
+  // the @container rules in CSS.
+  const enabledWidgetIds = [];
+  // Use effectiveOrder (matches the render loop) so optimistic reorders aren't briefly mis-hidden.
+  for (const id of effectiveOrder) {
+    if (!WIDGET_ROW_COMPONENTS[id] || !widgetEnabledMap[id]) {
+      continue;
+    }
+    enabledWidgetIds.push(id);
+  }
+  const widgetCount = enabledWidgetIds.length;
+  const overflowsAt = cols => widgetCount > cols;
+  // For each viewport (cols 1–4), returns the set of widget render indices
+  // that would be clipped when the row is collapsed: everything past the
+  // first `cols` slots. CSS keys off the matching `data-hidden-N` to make
+  // them tab-out and a11y-hide at that viewport.
+  const hiddenIndicesAt = cols => {
+    const set = new Set();
+    for (let i = cols; i < widgetCount; i++) {
+      set.add(i);
+    }
+    return set;
+  };
+  const hiddenAtCols = {
+    1: hiddenIndicesAt(1),
+    2: hiddenIndicesAt(2),
+    3: hiddenIndicesAt(3),
+    4: hiddenIndicesAt(4),
+    5: hiddenIndicesAt(5),
+  };
+  const overflowAttrs = {
+    "data-overflow-1": overflowsAt(1) ? "" : undefined,
+    "data-overflow-2": overflowsAt(2) ? "" : undefined,
+    "data-overflow-3": overflowsAt(3) ? "" : undefined,
+    "data-overflow-4": overflowsAt(4) ? "" : undefined,
+    "data-overflow-5": overflowsAt(5) ? "" : undefined,
+  };
+  const isCollapsed = novaEnabled && !rowExpanded;
+
   return (
     <div className="widgets-wrapper">
-      <div className="widgets-section-container">
+      <div className="widgets-section-container" {...overflowAttrs}>
         <div className="widgets-title-container">
           <div className="widgets-title-container-text">
             {renderWidgetsTitle()}
@@ -486,28 +725,86 @@ function Widgets() {
 
           <div className="widgets-title-actions">{renderWidgetsActions()}</div>
         </div>
+        {novaEnabled && (
+          <OMCHighlightSlot slot={SLOTS.WIDGETS_ROW} dispatch={dispatch} />
+        )}
         <div
+          id="widgets-container"
+          ref={widgetsContainerRef}
           className={`widgets-container${isMaximized ? " is-maximized" : ""}`}
+          data-row-collapsed={isCollapsed ? "" : undefined}
         >
-          {widgetOrder.map(id => {
+          {effectiveOrder.map(id => {
             if (novaEnabled) {
               const Component = WIDGET_ROW_COMPONENTS[id];
               if (!Component || !widgetEnabledMap[id]) {
                 return null;
               }
               const entry = WIDGET_REGISTRY.find(w => w.id === id);
-              const size = entry ? resolveWidgetSize(entry, prefs) : null;
+              let size = entry ? resolveWidgetSize(entry, prefs) : null;
+              // The follow-teams panel needs the larger grid cell to fit its content,
+              // so we override the user's size pref while that state is active.
+              if (
+                id === "sportsWidget" &&
+                sportsWidgetState === "sports-follow-state"
+              ) {
+                size = "large";
+              }
+              const renderIdx = enabledWidgetIds.indexOf(id);
+              const hiddenAttrs = {
+                "data-hidden-1": hiddenAtCols[1].has(renderIdx)
+                  ? ""
+                  : undefined,
+                "data-hidden-2": hiddenAtCols[2].has(renderIdx)
+                  ? ""
+                  : undefined,
+                "data-hidden-3": hiddenAtCols[3].has(renderIdx)
+                  ? ""
+                  : undefined,
+                "data-hidden-4": hiddenAtCols[4].has(renderIdx)
+                  ? ""
+                  : undefined,
+                "data-hidden-5": hiddenAtCols[5].has(renderIdx)
+                  ? ""
+                  : undefined,
+              };
+              const wrapperClassName = [
+                size && `${size}-widget`,
+                "widget-draggable",
+                draggedId === id && "is-dragging",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              const dragProps = {
+                style: previewOrderMap
+                  ? { order: previewOrderMap[id] }
+                  : undefined,
+                draggable: true,
+                onDragStart: e => handleDragStart(e, id),
+                onDragOverCapture: handleDragOver,
+                onDrop: handleDrop,
+                onDragEnd: handleDragEnd,
+                onMouseDown: handleMouseDown,
+              };
               return (
                 <WidgetWrapper
                   key={id}
-                  className={size ? `${size}-widget` : ""}
+                  className={wrapperClassName}
+                  data-widget-id={id}
+                  {...hiddenAttrs}
+                  {...dragProps}
                 >
-                  <Component
-                    dispatch={dispatch}
-                    handleUserInteraction={handleUserInteraction}
-                    isMaximized={isMaximized}
-                    widgetsMayBeMaximized={widgetsMayBeMaximized}
-                  />
+                  {/* Contain a crash to this widget's cell so one failing
+                      widget can't tear down the whole widgets section. */}
+                  <ErrorBoundary className="widget-error-fallback">
+                    <Component
+                      dispatch={dispatch}
+                      handleUserInteraction={handleUserInteraction}
+                      isMaximized={isMaximized}
+                      widgetsMayBeMaximized={widgetsMayBeMaximized}
+                      widgetEnabledMap={widgetEnabledMap}
+                    />
+                  </ErrorBoundary>
                 </WidgetWrapper>
               );
             }
@@ -515,36 +812,73 @@ function Widgets() {
             return (
               <React.Fragment key={id}>
                 {id === "lists" && listsEnabled && (
-                  <Lists
-                    dispatch={dispatch}
-                    handleUserInteraction={handleUserInteraction}
-                    isMaximized={isMaximized}
-                    widgetsMayBeMaximized={widgetsMayBeMaximized}
-                  />
+                  <ErrorBoundary className="widget-error-fallback">
+                    <Lists
+                      dispatch={dispatch}
+                      handleUserInteraction={handleUserInteraction}
+                      isMaximized={isMaximized}
+                      widgetsMayBeMaximized={widgetsMayBeMaximized}
+                    />
+                  </ErrorBoundary>
                 )}
                 {id === "focusTimer" && timerEnabled && (
-                  <FocusTimer
-                    dispatch={dispatch}
-                    handleUserInteraction={handleUserInteraction}
-                    isMaximized={isMaximized}
-                    widgetsMayBeMaximized={widgetsMayBeMaximized}
-                  />
+                  <ErrorBoundary className="widget-error-fallback">
+                    <FocusTimer
+                      dispatch={dispatch}
+                      handleUserInteraction={handleUserInteraction}
+                      isMaximized={isMaximized}
+                      widgetsMayBeMaximized={widgetsMayBeMaximized}
+                    />
+                  </ErrorBoundary>
                 )}
-                {id === "weather" &&
-                  renderWeather({
-                    novaEnabled,
-                    weatherEnabled,
-                    weatherForecastEnabled,
-                    weatherSize,
-                    dispatch,
-                    handleUserInteraction,
-                    isMaximized,
-                    widgetsMayBeMaximized,
-                  })}
+                {id === "weather" && weatherForecastEnabled && (
+                  <ErrorBoundary className="widget-error-fallback">
+                    {renderWeather({
+                      novaEnabled,
+                      weatherEnabled,
+                      weatherForecastEnabled,
+                      weatherSize,
+                      dispatch,
+                      handleUserInteraction,
+                      isMaximized,
+                      widgetsMayBeMaximized,
+                    })}
+                  </ErrorBoundary>
+                )}
               </React.Fragment>
             );
           })}
+          {/* Side-by-side has its own add button in the section header, and
+              this tile's at-content-cols() reveal rules resolve against the
+              band rather than the one-card-wide widgets column. */}
+          {novaEnabled && !sideBySideActive && !allWidgetsAdded && (
+            <button
+              type="button"
+              className={`widgets-add-button col-4 ${addButtonSize}-widget`}
+              style={{ order: WIDGET_REGISTRY.length + 1 }}
+              data-l10n-id="newtab-widget-add-widgets-button"
+              onClick={handleManageWidgetsClick}
+              tabIndex={-1}
+            >
+              <span className="widgets-add-button-icon" />
+            </button>
+          )}
         </div>
+        {novaEnabled && !spacesActive && (
+          <moz-button
+            className="widgets-row-toggle"
+            type="muted"
+            size="small"
+            aria-expanded={rowExpanded}
+            aria-controls="widgets-container"
+            onClick={handleToggleRowExpandedClick}
+            data-l10n-id={
+              rowExpanded
+                ? "newtab-widget-section-show-less"
+                : "newtab-widget-section-show-more"
+            }
+          />
+        )}
         {messageData?.content?.messageType === "NovaWidgetMessage" && (
           <div className="widgets-row-highlight-anchor">
             <MessageWrapper dispatch={dispatch}>

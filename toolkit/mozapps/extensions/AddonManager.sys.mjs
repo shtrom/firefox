@@ -2429,7 +2429,7 @@ var AddonManagerInternal = {
    * @param  aMimetype
    *         The mimetype of the add-on being installed
    * @param  aBrowser
-   *         The optional browser element that started the install
+   *         The browser element that started the install
    * @param  aInstallingPrincipal
    *         The nsIPrincipal that initiated the install
    * @param  aInstall
@@ -2461,9 +2461,9 @@ var AddonManagerInternal = {
       );
     }
 
-    if (aBrowser && !Element.isInstance(aBrowser)) {
+    if (!Element.isInstance(aBrowser)) {
       throw Components.Exception(
-        "aSource must be an Element, or null",
+        "aBrowser must be an Element",
         Cr.NS_ERROR_INVALID_ARG
       );
     }
@@ -2482,12 +2482,11 @@ var AddonManagerInternal = {
     // website we want to do our security checks on the inner-browser but
     // notify front-end that install events came from the top browser (the
     // main tab's browser).
-    // aBrowser is null in GeckoView.
-    let topBrowser = aBrowser?.browsingContext.top.embedderElement;
+    let topBrowser = aBrowser.browsingContext.top.embedderElement;
     try {
       // Use fullscreenElement to check for DOM fullscreen, while still allowing
       // macOS fullscreen, which still has a browser chrome.
-      if (topBrowser && topBrowser.ownerDocument.fullscreenElement) {
+      if (topBrowser.ownerDocument.fullscreenElement) {
         // Addon installation and the resulting notifications should be
         // blocked in DOM fullscreen for security and usability reasons.
         // Installation prompts in fullscreen can trick the user into
@@ -2535,20 +2534,8 @@ var AddonManagerInternal = {
         aDetails?.hasCrossOriginAncestor ||
         // Block the install if triggered by a null principal.
         aInstallingPrincipal.isNullPrincipal ||
-        (aBrowser &&
-          (!aBrowser.contentPrincipal ||
-            // When we attempt to handle an XPI load immediately after a
-            // process switch, the DocShell it's being loaded into will have
-            // a null principal, since it won't have been initialized yet.
-            // Allowing installs in this case is relatively safe, since
-            // there isn't much to gain by spoofing an install request from
-            // a null principal in any case. This exception can be removed
-            // once content handlers are triggered by DocumentChannel in the
-            // parent process.
-            !(
-              aBrowser.contentPrincipal.isNullPrincipal ||
-              aInstallingPrincipal.subsumes(aBrowser.contentPrincipal)
-            )))
+        !aBrowser.contentPrincipal ||
+        !aInstallingPrincipal.subsumes(aBrowser.contentPrincipal)
       ) {
         aInstall.cancel();
 
@@ -2561,12 +2548,10 @@ var AddonManagerInternal = {
         return;
       }
 
-      if (aBrowser) {
-        // The install may start now depending on the web install listener,
-        // listen for the browser navigating to a new origin and cancel the
-        // install in that case.
-        new BrowserListener(aBrowser, aInstallingPrincipal, aInstall);
-      }
+      // The install may start now depending on the web install listener,
+      // listen for the browser navigating to a new origin and cancel the
+      // install in that case.
+      new BrowserListener(aBrowser, aInstallingPrincipal, aInstall);
 
       let startInstall = source => {
         AddonManagerInternal.setupPromptHandler(
@@ -5554,6 +5539,8 @@ AMTelemetry = {
 
   /**
    * Get a trimmed version of the given string if it is longer than 80 chars.
+   * Used to bound the addon_id value included in the addonsManager telemetry
+   * events extra vars.
    *
    * @param {string} str
    *        The original string content.
@@ -5569,8 +5556,7 @@ AMTelemetry = {
 
     const length = str.length;
 
-    // Trim the string to prevent a flood of warnings messages logged internally by recordLegacyEvent,
-    // the trimmed version is going to be composed by the first 40 chars and the last 37 and 3 dots
+    // The trimmed version is going to be composed by the first 40 chars and the last 37 and 3 dots
     // that joins the two parts, to visually indicate that the string has been trimmed.
     return `${str.slice(0, 40)}...${str.slice(length - 37, length)}`;
   },
@@ -5602,7 +5588,7 @@ AMTelemetry = {
   },
 
   /**
-   * Retrieve the telemetry event's object property value for the given
+   * Retrieve the telemetry event addon_type string value for the given
    * AddonInstall instance.
    *
    * @param {AddonInstall} install
@@ -5611,7 +5597,7 @@ AMTelemetry = {
    * @returns {string}
    *          The object for the given AddonInstall instance.
    */
-  getEventObjectFromInstall(install) {
+  getInstallAddonTypeForTelemetry(install) {
     let addonType;
 
     if (install.type) {
@@ -5628,7 +5614,7 @@ AMTelemetry = {
       addonType = install.existingAddon.type;
     }
 
-    return this.getEventObjectFromAddonType(addonType);
+    return this.getAddonTypeForTelemetryEvent(addonType);
   },
 
   /**
@@ -5655,17 +5641,16 @@ AMTelemetry = {
   },
 
   /**
-   * Get the telemetry event's object property for the given addon type
+   * Translates the values got from addon.type into the string values expected for the
+   * addon_type included in the telemetry events.
    *
    * @param {string} addonType
-   *        The addon type to convert into the related telemetry event object.
+   *        The addon type to convert into the related telemetry event.
    *
    * @returns {string}
    *          The object for the given addon type.
    */
-  getEventObjectFromAddonType(addonType) {
-    // NOTE: Telemetry events' object maximum length is 20 chars (See https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/collection/events.html#limits)
-    // and the value needs to matching the "^[a-zA-Z][a-zA-Z0-9_.]*[a-zA-Z0-9]$" pattern.
+  getAddonTypeForTelemetryEvent(addonType) {
     switch (addonType) {
       case undefined:
         return "unknown";
@@ -5739,20 +5724,16 @@ AMTelemetry = {
       return;
     }
 
-    const method = "install_stats";
-    const object = this.getEventObjectFromInstall(install);
-    const addonId = this.getAddonIdFromInstall(install);
+    const addon_id = this.getAddonIdFromInstall(install);
 
-    if (!addonId) {
+    if (!addon_id) {
       Cu.reportError(
         "Missing addonId when trying to record an install_stats event"
       );
       return;
     }
 
-    let extra = {
-      addon_id: this.getTrimmedString(addonId),
-    };
+    let extra = {};
 
     if (
       telemetryInfo?.source === "amo" &&
@@ -5774,16 +5755,10 @@ AMTelemetry = {
       };
     }
 
-    this.recordLegacyEvent({
-      method,
-      object,
-      value: install.hashedAddonId,
-      extra,
-    });
     Glean.addonsManager.installStats.record(
       this.formatExtraVars({
-        addon_id: addonId,
-        addon_type: object,
+        addon_id,
+        addon_type: this.getInstallAddonTypeForTelemetry(install),
         hashed_addon_id: install.hashedAddonId,
         taar_based: extra.taar_based,
         utm_campaign: extra.utm_campaign,
@@ -5834,14 +5809,13 @@ AMTelemetry = {
       return;
     }
 
-    let extra = {};
-
+    let source;
     let telemetryInfo = this.getInstallTelemetryInfo(install);
     if (telemetryInfo && typeof telemetryInfo.source === "string") {
-      extra.source = telemetryInfo.source;
+      source = telemetryInfo.source;
     }
 
-    if (extra.source === "internal") {
+    if (source === "internal") {
       // Do not record the telemetry event for installation sources
       // that are marked as "internal".
       return;
@@ -5849,60 +5823,56 @@ AMTelemetry = {
 
     // Also include the install source's method when applicable (e.g. install events with
     // source "about:addons" may have "install-from-file" or "url" as their source method).
+    let source_method;
     if (telemetryInfo && typeof telemetryInfo.method === "string") {
-      extra.method = telemetryInfo.method;
+      source_method = telemetryInfo.method;
     }
 
-    let addonId = this.getAddonIdFromInstall(install);
-    let object = this.getEventObjectFromInstall(install);
+    let addon_id = this.getAddonIdFromInstall(install);
 
-    let installId = String(install.installId);
+    let install_id = String(install.installId);
     let eventMethod = install.existingAddon ? "update" : "install";
 
-    if (addonId) {
-      extra.addon_id = this.getTrimmedString(addonId);
+    if (addon_id) {
+      addon_id = this.getTrimmedString(addon_id);
     }
 
+    let error;
     if (install.error) {
-      extra.error = AddonManager.errorToString(install.error);
+      error = AddonManager.errorToString(install.error);
     }
 
+    let install_origins;
     if (
       eventMethod === "install" &&
       Services.prefs.getBoolPref("extensions.install_origins.enabled", true)
     ) {
       // This is converted to "1" / "0".
-      extra.install_origins = Array.isArray(install.addon?.installOrigins);
+      install_origins = Array.isArray(install.addon?.installOrigins);
     }
 
+    let updated_from;
     if (eventMethod === "update") {
       // For "update" telemetry events, also include an extra var which determine
       // if the update has been requested by the user.
-      extra.updated_from = install.isUserRequestedUpdate ? "user" : "app";
+      updated_from = install.isUserRequestedUpdate ? "user" : "app";
     }
 
-    // All the extra vars in a telemetry event have to be strings.
-    extra = this.formatExtraVars({ ...extraVars, ...extra });
-
-    this.recordLegacyEvent({
-      method: eventMethod,
-      object,
-      value: installId,
-      extra,
-    });
     Glean.addonsManager[eventMethod]?.record(
       this.formatExtraVars({
-        addon_id: extra.addon_id,
-        addon_type: object,
-        install_id: installId,
-        download_time: extra.download_time,
-        error: extra.error,
-        source: extra.source,
-        source_method: extra.method,
-        num_strings: extra.num_strings,
-        updated_from: extra.updated_from,
-        install_origins: extra.install_origins,
-        step: extra.step,
+        addon_id,
+        addon_type: this.getInstallAddonTypeForTelemetry(install),
+        install_id,
+        download_time: extraVars?.download_time,
+        error,
+        source,
+        source_method,
+        num_strings: extraVars?.num_strings,
+        updated_from,
+        install_origins,
+        step: extraVars?.step,
+        // will be undefined for non-site permission addons
+        site_permission: install.newSitePerm,
       })
     );
   },
@@ -5924,51 +5894,38 @@ AMTelemetry = {
       return;
     }
 
-    let extra = {};
-
+    let source;
+    let source_method;
     if (addon.installTelemetryInfo) {
       if ("source" in addon.installTelemetryInfo) {
-        extra.source = addon.installTelemetryInfo.source;
+        source = addon.installTelemetryInfo.source;
       }
 
       // Also include the install source's method when applicable (e.g. install events with
       // source "about:addons" may have "install-from-file" or "url" as their source method).
       if ("method" in addon.installTelemetryInfo) {
-        extra.method = addon.installTelemetryInfo.method;
+        source_method = addon.installTelemetryInfo.method;
       }
     }
 
-    extra.blocklist_state = `${addon.blocklistState}`;
-
-    if (extra.source === "internal") {
+    if (source === "internal") {
       // Do not record the telemetry event for installation sources
       // that are marked as "internal".
       return;
     }
 
-    let object = this.getEventObjectFromAddonType(addon.type);
-    let value = this.getTrimmedString(addon.id);
-
-    extra = { ...extraVars, ...extra };
-
-    let hasExtraVars = !!Object.keys(extra).length;
-    extra = this.formatExtraVars(extra);
-
-    this.recordLegacyEvent({
-      method,
-      object,
-      value,
-      extra: hasExtraVars ? extra : null,
-    });
     Glean.addonsManager.manage.record(
       this.formatExtraVars({
+        addon_id: this.getTrimmedString(addon.id),
+        addon_type: this.getAddonTypeForTelemetryEvent(addon.type),
+        // management method type (e.g. enable/disable/sideload_prompt/uninstall).
         method,
-        addon_id: value,
-        addon_type: object,
-        source: extra.source,
-        source_method: extra.method,
-        num_strings: extra.num_strings,
-        blocklist_state: extra.blocklist_state,
+        source,
+        // source_method is optional and represents how the add-on has been installed by
+        // install sources with more than one install method.
+        source_method,
+        num_strings: extraVars?.num_strings,
+        blocklist_state: `${addon.blocklistState}`,
       })
     );
   },
@@ -5986,19 +5943,6 @@ AMTelemetry = {
         permission_type: permissionType,
       })
     );
-  },
-
-  recordLegacyEvent({ method, object, value, extra }) {
-    if (typeof value == "string") {
-      if (!extra) {
-        extra = {};
-      }
-      extra.value = value;
-    }
-    const eventName = `${method}_${object}`.replace(/(_[a-z])/g, c =>
-      c[1].toUpperCase()
-    );
-    Glean.addonsManager[eventName].record(extra);
   },
 };
 

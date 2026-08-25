@@ -553,6 +553,7 @@ class PlacesViewBase {
       // TODO Bug 517701: This doesn't seem to handle the case of an empty
       // root.
       if (parentElt._startMarker.nextElementSibling == parentElt._endMarker) {
+        this._mayAddCommandsItems(parentElt);
         this._setEmptyPopupStatus(parentElt, true);
       }
     }
@@ -584,6 +585,7 @@ class PlacesViewBase {
       parentElt,
       parentElt.children[index] || parentElt._endMarker
     );
+    this._mayAddCommandsItems(parentElt);
     this._setEmptyPopupStatus(parentElt, false);
   }
 
@@ -766,11 +768,12 @@ class PlacesViewBase {
     ) {
       // Add the "Share Folder" menuitem.
       aPopup._endOptShareFolder = document.createXULElement("menuitem");
-      aPopup._endOptShareFolder.className = "openintabs-menuitem";
+      aPopup._endOptShareFolder.className = "openintabs-menuitem badge-new";
       aPopup._endOptShareFolder.setAttribute(
         "data-l10n-id",
-        "places-share-folder"
+        "places-share-folder2"
       );
+      aPopup._endOptShareFolder.setAttribute("data-l10n-attrs", "badge");
 
       aPopup._endOptShareFolder.addEventListener("command", event => {
         ContentSharingUtils.createShareableLinkFromBookmarkFolders([
@@ -1341,8 +1344,8 @@ class PlacesToolbar extends PlacesViewBase {
 
     let dwu = window.windowUtils;
 
-    let { visibleCount, scrollWidth } = await window.promiseDocumentFlushed(
-      () => {
+    let { visibleCount, measuredCount, scrollWidth } =
+      await window.promiseDocumentFlushed(() => {
         let scrollRect = dwu.getBoundsWithoutFlushing(this._rootElt);
         let count = 0;
         for (let child of this._rootElt.children) {
@@ -1356,9 +1359,12 @@ class PlacesToolbar extends PlacesViewBase {
           }
           count++;
         }
-        return { visibleCount: count, scrollWidth: scrollRect.width };
-      }
-    );
+        return {
+          visibleCount: count,
+          measuredCount: this._rootElt.children.length,
+          scrollWidth: scrollRect.width,
+        };
+      });
 
     this.#updatingNodesVisibility = false;
     if (!this._isAlive) {
@@ -1383,6 +1389,12 @@ class PlacesToolbar extends PlacesViewBase {
     this.#pendingVisibilityRetry = false;
     window.requestAnimationFrame(() => {
       if (!this._isAlive) {
+        return;
+      }
+      // If the length of the child list has changed, skip the update and
+      // re-queue a fresh measurement.
+      if (this._rootElt.children.length != measuredCount) {
+        this.updateNodesVisibility();
         return;
       }
       this._applyChildVisibility(visibleCount);

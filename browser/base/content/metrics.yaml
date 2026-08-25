@@ -250,30 +250,6 @@ security.ui.protectionspopup:
     expires: never
     telemetry_mirror: SecurityUiProtectionspopup_Click_MilestoneMessage
 
-  click_cookieb_toggle_on:
-    type: event
-    description: >
-      User interaction by click events in the protections panel.
-      This event was generated to correspond to the Legacy Telemetry event
-      security.ui.protectionspopup.click#cookieb_toggle_on.
-    bugs: *security_ui_protectionspopup_click_bugs
-    data_reviews: *security_ui_protectionspopup_click_data_reviews
-    notification_emails: *security_ui_protectionspopup_click_emails
-    expires: never
-    telemetry_mirror: SecurityUiProtectionspopup_Click_CookiebToggleOn
-
-  click_cookieb_toggle_off:
-    type: event
-    description: >
-      User interaction by click events in the protections panel.
-      This event was generated to correspond to the Legacy Telemetry event
-      security.ui.protectionspopup.click#cookieb_toggle_off.
-    bugs: *security_ui_protectionspopup_click_bugs
-    data_reviews: *security_ui_protectionspopup_click_data_reviews
-    notification_emails: *security_ui_protectionspopup_click_emails
-    expires: never
-    telemetry_mirror: SecurityUiProtectionspopup_Click_CookiebToggleOff
-
   click_protectionspopup_cfr:
     type: event
     description: >
@@ -486,7 +462,6 @@ browser.timings:
       - mconley@mozilla.com
       - perf-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: FX_NEW_WINDOW_MS
     metadata:
       monitor:
         alert: False
@@ -514,7 +489,6 @@ browser.timings:
       - perf-telemetry-alerts@mozilla.com
       - product-metrics-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: FX_PAGE_LOAD_MS_2
     metadata:
       monitor:
         alert: False
@@ -540,7 +514,6 @@ browser.timings:
       - perf-telemetry-alerts@mozilla.com
       - product-metrics-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: FX_PAGE_RELOAD_NORMAL_MS
 
   page_reload_skip_cache:
     type: timing_distribution
@@ -559,7 +532,6 @@ browser.timings:
       - perf-telemetry-alerts@mozilla.com
       - product-metrics-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: FX_PAGE_RELOAD_SKIP_CACHE_MS
 
   startup_timeline:
     type: labeled_quantity

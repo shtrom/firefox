@@ -10,6 +10,7 @@
 #include "js/GCAPI.h"
 #include "js/JSON.h"
 #include "js/PropertyAndElement.h"  // JS_GetElement
+#include "mozilla/BasePrincipal.h"
 #include "mozilla/OriginAttributes.h"
 #include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_dom.h"
@@ -28,6 +29,7 @@
 #include "nsIPrincipal.h"
 #include "nsIRandomGenerator.h"
 #include "nsIScriptError.h"
+#include "nsMixedContentBlocker.h"
 #include "nsNetUtil.h"
 #include "nsXULAppAPI.h"
 
@@ -160,7 +162,7 @@ void ReportingHeader::ReportingFromChannel(nsIHttpChannel* aChannel) {
     return;
   }
 
-  if (!IsSecureURI(uri)) {
+  if (!nsMixedContentBlocker::IsPotentiallyTrustworthyOrigin(uri)) {
     return;
   }
 
@@ -236,7 +238,7 @@ EndpointsList ReportingHeader::ProcessReportingEndpointsListFromResponse(
     return {};
   }
 
-  if (!IsSecureURI(uri)) {
+  if (!nsMixedContentBlocker::IsPotentiallyTrustworthyOrigin(uri)) {
     return {};
   }
 
@@ -285,7 +287,7 @@ size_t ReportingHeader::ParseReportingEndpointsHeader(
 
   size_t itemsParsed = 0;
 
-  if (!IsSecureURI(aURI)) {
+  if (!nsMixedContentBlocker::IsPotentiallyTrustworthyOrigin(aURI)) {
     return 0;
   }
 
@@ -321,7 +323,7 @@ size_t ReportingHeader::ParseReportingEndpointsHeader(
       continue;
     }
 
-    if (!IsSecureURI(endpointURL)) {
+    if (!nsMixedContentBlocker::IsPotentiallyTrustworthyOrigin(endpointURL)) {
       continue;
     }
 
@@ -491,20 +493,6 @@ ReportingHeader::ParseReportToHeader(nsIHttpChannel* aChannel, nsIURI* aURI,
   }
 
   return client;
-}
-
-/* static */
-bool ReportingHeader::IsSecureURI(nsIURI* aURI) {
-  MOZ_ASSERT(aURI);
-
-  bool prioriAuthenticated = false;
-  if (NS_WARN_IF(NS_FAILED(NS_URIChainHasFlags(
-          aURI, nsIProtocolHandler::URI_IS_POTENTIALLY_TRUSTWORTHY,
-          &prioriAuthenticated)))) {
-    return false;
-  }
-
-  return prioriAuthenticated;
 }
 
 /* static */
@@ -807,8 +795,21 @@ void ReportingHeader::RemoveOriginsFromHost(const nsAString& aHost) {
   NS_ConvertUTF16toUTF8 host(aHost);
 
   for (auto iter = mOrigins.Iter(); !iter.Done(); iter.Next()) {
+    // The key is an origin, but HasRootDomain() expects a host.
+    RefPtr<BasePrincipal> principal =
+        BasePrincipal::CreateContentPrincipal(iter.Key());
+    if (NS_WARN_IF(!principal)) {
+      continue;
+    }
+
+    nsAutoCString originHost;
+    nsresult rv = principal->GetHost(originHost);
+    if (NS_WARN_IF(NS_FAILED(rv))) {
+      continue;
+    }
+
     bool hasRootDomain = false;
-    nsresult rv = tldService->HasRootDomain(iter.Key(), host, &hasRootDomain);
+    rv = tldService->HasRootDomain(originHost, host, &hasRootDomain);
     if (NS_WARN_IF(NS_FAILED(rv)) || !hasRootDomain) {
       continue;
     }

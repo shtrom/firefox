@@ -36,9 +36,22 @@ export class ProxyPass extends EventTarget {
     exp: 0,
   };
   /**
-   * @param {string} token - The JWT to use for authentication.
+   * The instant from which the pass is valid. Defaults to the token's nbf,
+   * unless one is supplied.
+   *
+   * @type {Temporal.Instant}
    */
-  constructor(token) {
+  #from;
+  /** @type {Temporal.Duration} - The token's lifetime (exp - nbf). */
+  #duration;
+  /** @type {Temporal.Instant} - The instant at which the pass expires. */
+  #until;
+  /**
+   * @param {string} token - The JWT to use for authentication.
+   * @param {Temporal.Instant} [from] - Instant from which the pass is valid.
+   *   Defaults to the token's nbf.
+   */
+  constructor(token, from) {
     super();
     if (typeof token !== "string") {
       throw new TypeError(
@@ -62,6 +75,12 @@ export class ProxyPass extends EventTarget {
     } catch (error) {
       throw new TypeError("Invalid token format: " + error.message);
     }
+    this.#from =
+      from ?? Temporal.Instant.fromEpochMilliseconds(this.#body.nbf * 1000);
+    this.#duration = Temporal.Duration.from({
+      seconds: this.#body.exp - this.#body.nbf,
+    });
+    this.#until = this.#from.add(this.#duration);
   }
 
   isValid(now = Temporal.Now.instant()) {
@@ -79,14 +98,16 @@ export class ProxyPass extends EventTarget {
     return Temporal.Instant.compare(now, this.rotationTimePoint) >= 0;
   }
 
+  get duration() {
+    return this.#duration;
+  }
+
   get from() {
-    // nbf is in seconds since epoch
-    return Temporal.Instant.fromEpochMilliseconds(this.#body.nbf * 1000);
+    return this.#from;
   }
 
   get until() {
-    // exp is in seconds since epoch
-    return Temporal.Instant.fromEpochMilliseconds(this.#body.exp * 1000);
+    return this.#until;
   }
 
   /**
@@ -111,7 +132,10 @@ export class ProxyPass extends EventTarget {
         lazy.logConsole.error("Missing or invalid token in response");
         return null;
       }
-      return new ProxyPass(token);
+      // Anchor the pass to our clock at receipt: it is valid from now for the
+      // token's lifetime. This makes rotation scheduling immune to any drift
+      // between Guardian's clock (nbf/exp) and ours.
+      return new ProxyPass(token, Temporal.Now.instant());
     } catch (error) {
       lazy.logConsole.error("Error parsing proxy pass response:", error);
       return null;
@@ -183,17 +207,21 @@ export class Entitlement {
   uid = 0;
   /** The maximum number of bytes allowed for the user */
   maxBytes = BigInt(0);
+  /** True if the user has a bandwidth cap; false if the user has unlimited bandwidth */
+  limitedBandwidth = true;
 
   constructor(
     args = {
       subscribed: false,
       uid: 0,
       maxBytes: "0",
+      limited_bandwidth: true,
     }
   ) {
     this.subscribed = args.subscribed;
     this.uid = args.uid;
     this.maxBytes = BigInt(args.maxBytes);
+    this.limitedBandwidth = args.limited_bandwidth ?? true;
     Object.freeze(this);
   }
 
@@ -230,6 +258,11 @@ export class Entitlement {
           description:
             "A BigInt string representing the maximum number of bytes allowed for the user",
         },
+        limited_bandwidth: {
+          type: "boolean",
+          description:
+            "True if the user has a bandwidth cap; false if the user has unlimited bandwidth",
+        },
       },
       required: ["subscribed", "uid", "maxBytes"],
       additionalProperties: true,
@@ -238,8 +271,10 @@ export class Entitlement {
 
   toString() {
     return JSON.stringify({
-      ...this,
+      subscribed: this.subscribed,
+      uid: this.uid,
       maxBytes: this.maxBytes.toString(),
+      limited_bandwidth: this.limitedBandwidth,
     });
   }
 }
@@ -251,19 +286,33 @@ export class Entitlement {
  * Immutable after creation.
  */
 export class ProxyUsage {
-  /** @type {bigint} - Maximum bytes allowed */
-  max = BigInt(0);
-  /** @type {bigint} - Remaining bytes available */
-  remaining = BigInt(0);
-  /** @type {Temporal.Instant} - When the usage quota resets */
+  /** @type {bigint | null} - Maximum bytes allowed */
+  max = null;
+  /** @type {bigint | null} - Remaining bytes available */
+  remaining = null;
+  /** @type {Temporal.Instant | null} - When the usage quota resets */
   reset = null;
+  /** @type {boolean} - True if the user has unlimited bandwidth; false if the user has a bandwidth cap */
+  unlimited = false;
 
   /**
-   * @param {string} max - Maximum bytes allowed (as string for BigInt parsing)
-   * @param {string} remaining - Remaining bytes available (as string for BigInt parsing)
-   * @param {string} reset - ISO 8601 timestamp when quota resets
+   * @param {string | null} max - Maximum bytes allowed (as string for BigInt parsing)
+   * @param {string | null} remaining - Remaining bytes available (as string for BigInt parsing)
+   * @param {string | null} reset - ISO 8601 timestamp when quota resets
+   * @param {boolean} [unlimited] - Whether the user has unlimited bandwidth
    */
-  constructor(max, remaining, reset) {
+  constructor(max, remaining, reset, unlimited) {
+    this.unlimited = !!unlimited;
+
+    if (this.unlimited) {
+      Object.freeze(this);
+      return;
+    }
+
+    if (max === null || remaining === null || reset === null) {
+      throw new TypeError("invalid usage");
+    }
+
     this.max = BigInt(max);
     if (this.max < BigInt(0)) {
       throw new TypeError("max must be non-negative");
@@ -283,7 +332,36 @@ export class ProxyUsage {
     Object.freeze(this);
   }
 
+  /**
+   * Compares this usage against another for value equality.
+   *
+   * @param {ProxyUsage | null} other - The usage to compare against.
+   * @returns {boolean} True if both represent the same usage state.
+   */
+  equals(other) {
+    if (!(other instanceof ProxyUsage)) {
+      return false;
+    }
+    if (
+      this.unlimited !== other.unlimited ||
+      this.max !== other.max ||
+      this.remaining !== other.remaining
+    ) {
+      return false;
+    }
+    if (this.reset === null || other.reset === null) {
+      return this.reset === other.reset;
+    }
+    return Temporal.Instant.compare(this.reset, other.reset) === 0;
+  }
+
   static fromResponse(response) {
+    const unlimited = response.headers.get("X-Quota-Unlimited") === "true";
+
+    if (unlimited) {
+      return new ProxyUsage(null, null, null, true);
+    }
+
     const getOrThrow = headerName => {
       const value = response.headers.get(headerName);
       if (!value) {
@@ -297,5 +375,9 @@ export class ProxyUsage {
     const quotaReset = getOrThrow("X-Quota-Reset");
 
     return new ProxyUsage(quotaLimit, quotaRemaining, quotaReset);
+  }
+
+  get quotaExhausted() {
+    return !this.unlimited && this.remaining <= 0;
   }
 }

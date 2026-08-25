@@ -6,6 +6,7 @@
 
 use crate::derives::*;
 use crate::parser::{Parse, ParserContext};
+use crate::typed_om::{ToTyped, TypedValue};
 use crate::values::computed::border::BorderSideWidth as ComputedBorderSideWidth;
 use crate::values::computed::{Context, ToComputedValue};
 use crate::values::generics::border::{
@@ -21,17 +22,18 @@ use app_units::Au;
 use cssparser::Parser;
 use std::fmt::{self, Write};
 use style_traits::{CssWriter, ParseError, ToCss};
+use thin_vec::ThinVec;
 
 /// A specified value for a single side of a `border-style` property.
 ///
 /// The order here corresponds to the integer values from the border conflict
 /// resolution rules in CSS 2.1 § 17.6.2.1. Higher values override lower values.
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     FromPrimitive,
     MallocSizeOf,
@@ -39,6 +41,7 @@ use style_traits::{CssWriter, ParseError, ToCss};
     Parse,
     PartialEq,
     PartialOrd,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToCss,
@@ -71,12 +74,46 @@ impl BorderStyle {
 /// A specified value for the `border-image-width` property.
 pub type BorderImageWidth = Rect<BorderImageSideWidth>;
 
+impl ToTyped for BorderImageWidth {
+    // Note: The specification does not currently define how border image width
+    // should be reified into Typed OM. The current behavior follows existing
+    // WPT coverage (border-image-width.html). Syncing spec with UA/WPT
+    // behavior tracked in https://github.com/w3c/csswg-drafts/issues/13907
+    fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
+        if !self.all_sides_equal() {
+            return Err(());
+        }
+
+        self.0.to_typed(dest)
+    }
+}
+
 /// A specified value for a single side of a `border-image-width` property.
 pub type BorderImageSideWidth =
     GenericBorderImageSideWidth<NonNegativeLengthPercentage, NonNegativeNumber>;
 
 /// A specified value for the `border-image-slice` property.
 pub type BorderImageSlice = GenericBorderImageSlice<NonNegativeNumberOrPercentage>;
+
+impl ToTyped for BorderImageSlice {
+    // Note: The specification does not currently define how border image slice
+    // should be reified into Typed OM. The current behavior follows existing
+    // WPT coverage (border-image-slice.html). Syncing spec with UA/WPT
+    // behavior tracked in https://github.com/w3c/csswg-drafts/issues/13907
+    fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
+        if self.fill {
+            return Err(());
+        }
+
+        let offsets = &self.offsets;
+
+        if !offsets.all_sides_equal() {
+            return Err(());
+        }
+
+        offsets.0.to_typed(dest)
+    }
+}
 
 /// A specified value for the `border-radius` property.
 pub type BorderRadius = GenericBorderRadius<NonNegativeLengthPercentage>;
@@ -331,15 +368,16 @@ impl Parse for BorderSpacing {
 
 /// A single border-image-repeat keyword.
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     SpecifiedValueInfo,
     ToComputedValue,
     ToCss,

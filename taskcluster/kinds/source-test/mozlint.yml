@@ -97,7 +97,7 @@ rejected-words:
 dot-mozilla-reference:
     description: Give visibility to misuse of ".mozilla" being hardcoded and thus breaking XDG support
     treeherder:
-        symbol: text(dot-mozilla-reference)
+        symbol: misc(dot-mozilla-reference)
         # We don't want patches to be backed out because of this, a follow up bug will be
         # good enough
         tier: 2
@@ -253,6 +253,8 @@ typescript:
             - 'browser/components/search/**/*.ts'
             - 'browser/components/urlbar/**/*.*js'
             - 'browser/components/urlbar/**/*.ts'
+            - 'toolkit/components/extensions/**/*.*js'
+            - 'toolkit/components/extensions/**/*.ts'
             - 'toolkit/components/places/**/*.*js'
             - 'toolkit/components/places/**/*.ts'
             - 'toolkit/components/search/**/*.*js'
@@ -464,6 +466,19 @@ test-manifest:
             - 'tools/lint/test/test_manifest_toml.py'
             - 'tools/lint/test-manifest-toml/**'
 
+review-context-toml:
+    description: Validate review-context.toml against the review context schema
+    treeherder:
+        symbol: misc(review-context)
+    run:
+        mach: lint -v -l review-context-toml -f treeherder -f json:/builds/worker/mozlint.json .
+    when:
+        files-changed:
+            - 'review-context.toml'
+            - 'tools/lint/review-context-toml.yml'
+            - 'tools/lint/python/review_context_schema.py'
+            - 'tools/lint/python/review_context_toml.py'
+
 wptlint-gecko:
     description: web-platform-tests linter
     treeherder:
@@ -504,16 +519,20 @@ yaml:
             - '**/*.yaml'
             - '**/.ymllint'
 
-rst:
-    description: rst lint run over the gecko codebase
+md:
+    description: Markdown linters run over the gecko codebase
     treeherder:
-        symbol: doc(rst)
+        symbol: doc(md)
+        # Allow follow-ups for Markdown style issues rather than backing patches out.
+        tier: 2
     run:
-        mach: lint -v -l rst -f treeherder -f json:/builds/worker/mozlint.json .
+        mach: lint -v -l md -f treeherder -f json:/builds/worker/mozlint.json .
     when:
         files-changed:
-            - '**/*.rst'
-            - 'tools/lint/rst.yml'
+            - '**/*.md'
+            - 'tools/lint/md.yml'
+            - 'tools/lint/rumdl.toml'
+            - 'tools/lint/python/rumdl.py'
 
 shellcheck:
     description: shellcheck run over the gecko codebase

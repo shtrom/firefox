@@ -1,6 +1,10 @@
 ChromeUtils.defineESModuleGetters(this, {
   AddonTestUtils: "resource://testing-common/AddonTestUtils.sys.mjs",
+  AppProvidedConfigEngine:
+    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   clearTimeout: "resource://gre/modules/Timer.sys.mjs",
+  ConfigSearchEngine:
+    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   EnterprisePolicyTesting:
     "resource://testing-common/EnterprisePolicyTesting.sys.mjs",
   ExtensionTestUtils:
@@ -250,34 +254,6 @@ function useHttpServer() {
     });
   });
   return httpServer;
-}
-
-// This "enum" from nsSearchService.js
-const TELEMETRY_RESULT_ENUM = {
-  SUCCESS: 0,
-  SUCCESS_WITHOUT_DATA: 1,
-  TIMEOUT: 2,
-  ERROR: 3,
-};
-
-/**
- * Checks the value of the SEARCH_SERVICE_COUNTRY_FETCH_RESULT probe.
- *
- * @param {string|null} aExpectedValue
- *   If a value from TELEMETRY_RESULT_ENUM, we expect to see this value
- *   recorded exactly once in the probe.  If |null|, we expect to see
- *   nothing recorded in the probe at all.
- */
-function checkCountryResultTelemetry(aExpectedValue) {
-  let histogram = Services.telemetry.getHistogramById(
-    "SEARCH_SERVICE_COUNTRY_FETCH_RESULT"
-  );
-  let snapshot = histogram.snapshot();
-  if (aExpectedValue != null) {
-    equal(snapshot.values[aExpectedValue], 1);
-  } else {
-    deepEqual(snapshot.values, {});
-  }
 }
 
 /**

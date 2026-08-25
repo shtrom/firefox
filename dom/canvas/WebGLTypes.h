@@ -439,8 +439,8 @@ struct avec2 {
   avec2() = default;
   avec2(const T _x, const T _y) : x(_x), y(_y) {}
 
-  bool operator==(const avec2& rhs) const { return x == rhs.x && y == rhs.y; }
-  bool operator!=(const avec2& rhs) const { return !(*this == rhs); }
+  bool operator==(const avec2& rhs) const = default;
+  bool operator!=(const avec2& rhs) const = default;
 
 #define _(OP)                                 \
   avec2 operator OP(const avec2& rhs) const { \
@@ -504,10 +504,8 @@ struct avec3 {
   avec3() = default;
   avec3(const T _x, const T _y, const T _z) : x(_x), y(_y), z(_z) {}
 
-  bool operator==(const avec3& rhs) const {
-    return x == rhs.x && y == rhs.y && z == rhs.z;
-  }
-  bool operator!=(const avec3& rhs) const { return !(*this == rhs); }
+  bool operator==(const avec3& rhs) const = default;
+  bool operator!=(const avec3& rhs) const = default;
 };
 
 using ivec2 = avec2<int32_t>;
@@ -736,13 +734,12 @@ using GetShaderPrecisionFormatArgs = std::tuple<GLenum, GLenum>;
 template <class Tuple>
 struct TupleStdHash {
   size_t operator()(const Tuple& t) const {
-    size_t ret = 0;
-    mozilla::MapTuple(t, [&](const auto& field) {
-      using FieldT = std::remove_cv_t<std::remove_reference_t<decltype(field)>>;
-      ret ^= std::hash<FieldT>{}(field);
-      return true;  // ignored
-    });
-    return ret;
+    return std::apply(
+        [](const auto&... field) {
+          return (std::hash<std::remove_cvref_t<decltype(field)>>{}(field) ^
+                  ...);
+        },
+        t);
   }
 };
 
@@ -901,7 +898,7 @@ struct TypedQuad final {
 
 /// [1-16]x32-bit primitives, with a type tag.
 struct GetUniformData final {
-  alignas(alignof(float)) uint8_t data[4 * 4 * sizeof(float)] = {};
+  alignas(alignof(float)) std::array<uint8_t, 4 * 4 * sizeof(float)> data = {};
   GLenum type = 0;
 };
 

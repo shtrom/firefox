@@ -4,6 +4,12 @@
 
 #include "TSFTextStore.h"
 
+#include <comutil.h>  // for _bstr_t
+#include <oleauto.h>  // for SysAllocString
+#include <olectl.h>
+
+#include <algorithm>
+
 #include "IMMHandler.h"
 #include "KeyboardLayout.h"
 #include "TSFStaticSink.h"
@@ -15,17 +21,12 @@
 #include "mozilla/AutoRestore.h"
 #include "mozilla/Logging.h"
 #include "mozilla/StaticPrefs_intl.h"
-#include "mozilla/glean/WidgetWindowsMetrics.h"
 #include "mozilla/TextEventDispatcher.h"
 #include "mozilla/TextEvents.h"
 #include "mozilla/ToString.h"
 #include "mozilla/WindowsVersion.h"
+#include "mozilla/glean/WidgetWindowsMetrics.h"
 #include "nsWindow.h"
-
-#include <algorithm>
-#include <comutil.h>  // for _bstr_t
-#include <oleauto.h>  // for SysAllocString
-#include <olectl.h>
 
 // For collecting other people's log, tell `MOZ_LOG=IMEHandler:4,sync`
 // rather than `MOZ_LOG=IMEHandler:5,sync` since using `5` may create too
@@ -1806,8 +1807,7 @@ STDMETHODIMP TSFTextStore::RequestSupportedAttrs(
            "cFilterAttrs=%lu)",
            this, AutoFindFlagsCString(dwFlags).get(), cFilterAttrs));
 
-  return HandleRequestAttrs(dwFlags, cFilterAttrs, paFilterAttrs,
-                            TSFUtils::NUM_OF_SUPPORTED_ATTRS);
+  return HandleRequestAttrs(dwFlags, cFilterAttrs, paFilterAttrs);
 }
 
 STDMETHODIMP TSFTextStore::RequestAttrsAtPosition(
@@ -1819,14 +1819,13 @@ STDMETHODIMP TSFTextStore::RequestAttrsAtPosition(
            this, acpPos, cFilterAttrs, AutoFindFlagsCString(dwFlags).get()));
 
   return HandleRequestAttrs(dwFlags | TS_ATTR_FIND_WANT_VALUE, cFilterAttrs,
-                            paFilterAttrs, TSFUtils::NUM_OF_SUPPORTED_ATTRS);
+                            paFilterAttrs);
 }
 
 STDMETHODIMP TSFTextStore::RetrieveRequestedAttrs(ULONG ulCount,
                                                   TS_ATTRVAL* paAttrVals,
                                                   ULONG* pcFetched) {
-  HRESULT hr = RetrieveRequestedAttrsInternal(ulCount, paAttrVals, pcFetched,
-                                              TSFUtils::NUM_OF_SUPPORTED_ATTRS);
+  HRESULT hr = RetrieveRequestedAttrsInternal(ulCount, paAttrVals, pcFetched);
   if (FAILED(hr)) {
     return hr;
   }
@@ -2013,8 +2012,10 @@ STDMETHODIMP TSFTextStore::GetTextExt(TsViewCookie vcView, LONG acpStart,
   // returned E_FAIL to TIP).  However, until we drop to support older Windows
   // and all TIPs are aware of TS_E_NOLAYOUT result, we need to keep returning
   // S_OK and available rectangle only for them.
-  if (!MaybeHackNoErrorLayoutBugs(acpStart, acpEnd) &&
-      mContentForTSF.isSome() && mContentForTSF->IsLayoutChangedAt(acpEnd)) {
+  const bool hackedNoErrorLayoutBugs =
+      MaybeHackNoErrorLayoutBugs(acpStart, acpEnd);
+  if (!hackedNoErrorLayoutBugs && mContentForTSF.isSome() &&
+      mContentForTSF->IsLayoutChangedAt(acpEnd)) {
     MOZ_LOG(gIMELog, LogLevel::Error,
             ("0x%p   TSFTextStore::GetTextExt() returned TS_E_NOLAYOUT "
              "(acpEnd=%ld)",
@@ -2067,7 +2068,32 @@ STDMETHODIMP TSFTextStore::GetTextExt(TsViewCookie vcView, LONG acpStart,
   // layout) may be different from actual font height of the line.  In such
   // case, users see "dancing" of candidate or suggest window of TIP.
   // For preventing it, we should query text rect with at least 1 length.
-  uint32_t length = std::max(static_cast<int32_t>(acpEnd - acpStart), 1);
+  const uint32_t length = [&]() -> uint32_t {
+    // However, if the the range contains a linefeed in the original content
+    // during composition and we're hacking the no layout bugs of the active
+    // IME, we don't want to return rect containing the next line. Therefore, we
+    // should exclude it.
+    const uint32_t diff = acpEnd - acpStart;
+    if (!hackedNoErrorLayoutBugs || !mComposition || !mContentForTSF ||
+        mComposition->StartOffset() > acpStart ||
+        mComposition->EndOffset() < acpEnd) {
+      return std::max(diff, 1u);
+    }
+    // FIXME: We should convert acpStart and acpEnd in the origin content, i.e.,
+    // if mComposition has new text, it should be computed as 0-length. However,
+    // this should be enough safe because only the first character rect is
+    // important for the most IMEs.
+    for (const size_t i : IntegerRange(
+             std::min<uint32_t>(acpStart,
+                                mContentForTSF->TextInContentRef().Length()),
+             std::min<uint32_t>(std::max(acpEnd, acpStart + 1),
+                                mContentForTSF->TextInContentRef().Length()))) {
+      if (mContentForTSF->TextInContentRef()[i] == '\n') {
+        return i - acpStart;  // may be 0
+      }
+    }
+    return std::max(diff, 1u);
+  }();
   queryTextRectEvent.InitForQueryTextRect(startOffset, length, options);
 
   DispatchEvent(queryTextRectEvent);
@@ -2169,8 +2195,7 @@ bool TSFTextStore::MaybeHackNoErrorLayoutBugs(LONG& aACPStart, LONG& aACPEnd) {
   // TS_E_NOLAYOUT correctly in this case. See:
   // https://github.com/google/mozc/blob/6b878e31fb6ac4347dc9dfd8ccc1080fe718479f/src/win32/tip/tip_range_util.cc#L237-L257
 
-  if (!IsHandlingCompositionInContent() || mContentForTSF.isNothing() ||
-      !mContentForTSF->HasOrHadComposition() ||
+  if (mContentForTSF.isNothing() || !mContentForTSF->HasOrHadComposition() ||
       !mContentForTSF->IsLayoutChangedAt(aACPEnd)) {
     return false;
   }
@@ -2376,6 +2401,18 @@ bool TSFTextStore::MaybeHackNoErrorLayoutBugs(LONG& aACPStart, LONG& aACPEnd) {
               intl_tsf_hack_ms_simplified_chinese_do_not_return_no_layout_error()) {
         return false;
       }
+      aACPEnd = mContentForTSF->LatestCompositionRange()->StartOffset();
+      aACPStart = std::min(aACPStart, aACPEnd);
+      break;
+    // WeChat Input Method moves the candidate window to top-left corner of
+    // the screen on Win10/Win11 if we return TS_E_NOLAYOUT.
+    case TextInputProcessorID::WeChat:
+      if (!StaticPrefs::
+              intl_tsf_hack_we_chat_input_method_do_not_return_no_layout_error()) {
+        return false;
+      }
+      // WeChat Input Method queries text rect for entire the composition string
+      // or caret rect at end of the composition string.
       aACPEnd = mContentForTSF->LatestCompositionRange()->StartOffset();
       aACPStart = std::min(aACPStart, aACPEnd);
       break;
@@ -4112,7 +4149,7 @@ bool TSFTextStore::IsATOKActive() { return TSFStaticSink::IsATOKActive(); }
  *  TSFTextStore::Content
  *****************************************************************************/
 
-const nsDependentSubstring TSFTextStore::Content::GetSelectedText() const {
+nsDependentSubstring TSFTextStore::Content::GetSelectedText() const {
   if (NS_WARN_IF(mSelection.isNothing())) {
     return nsDependentSubstring();
   }
@@ -4120,7 +4157,7 @@ const nsDependentSubstring TSFTextStore::Content::GetSelectedText() const {
                       static_cast<uint32_t>(mSelection->Length()));
 }
 
-const nsDependentSubstring TSFTextStore::Content::GetSubstring(
+nsDependentSubstring TSFTextStore::Content::GetSubstring(
     uint32_t aStart, uint32_t aLength) const {
   return nsDependentSubstring(mText, aStart, aLength);
 }
@@ -4275,8 +4312,6 @@ void TSFTextStore::Content::EndComposition(const PendingAction& aCompEnd) {
 /******************************************************************************
  *  TSFTextStore::MouseTracker
  *****************************************************************************/
-
-TSFTextStore::MouseTracker::MouseTracker() : mCookie(kInvalidCookie) {}
 
 HRESULT TSFTextStore::MouseTracker::Init(TSFTextStore* aTextStore) {
   MOZ_LOG(gIMELog, LogLevel::Debug,

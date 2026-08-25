@@ -12,7 +12,7 @@
 // on tabs where a shim using a given logo happens to be active).
 const LogosBaseURL = "https://smartblock.firefox.etp/";
 
-const releaseBranch = browser.appConstants.getReleaseBranch();
+const releaseBranch = browser.appConstants.getEffectiveUpdateChannel();
 
 const platform =
   browser.appConstants.getPlatform() === "android" ? "android" : "desktop";
@@ -450,20 +450,29 @@ class Shim {
   }
 
   async clearUserOptIns(forPrivateMode) {
-    const optIns = await this.getApplicableOptIns();
+    // This method is called whenever any private browsing window is closed.
+    // Avoid performing unnecessary works, in order to keep the resource cache
+    // as much as possible.
     const activeHostOptIns = forPrivateMode
       ? this._pBModeHostOptIns
       : this._hostOptIns;
-    if (optIns.length) {
-      activeHostOptIns.clear();
-      await browser.trackingProtection.allow(
-        this.id,
-        optIns,
-        forPrivateMode,
-        Array.from(activeHostOptIns)
-      );
-      this.clearResourceCache();
+    if (!activeHostOptIns.length) {
+      return;
     }
+
+    const optIns = await this.getApplicableOptIns();
+    if (!optIns.length) {
+      return;
+    }
+
+    activeHostOptIns.clear();
+    await browser.trackingProtection.allow(
+      this.id,
+      optIns,
+      forPrivateMode,
+      Array.from(activeHostOptIns)
+    );
+    this.clearResourceCache();
   }
 
   clearResourceCache() {

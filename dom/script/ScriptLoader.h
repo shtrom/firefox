@@ -5,16 +5,15 @@
 #ifndef mozilla_dom_ScriptLoader_h
 #define mozilla_dom_ScriptLoader_h
 
-#include "ModuleLoader.h"
 #include "SharedScriptCache.h"
 #include "js/TypeDecls.h"
 #include "js/Utility.h"                     // JS::FreePolicy
 #include "js/experimental/CompileScript.h"  // JS::FrontendContext
 #include "js/loader/LoadedScript.h"
-#include "js/loader/ModuleLoaderBase.h"
 #include "js/loader/ScriptKind.h"
 #include "js/loader/ScriptLoadRequest.h"
 #include "js/loader/ScriptLoadRequestList.h"
+#include "js/loader/ScriptLoaderInterface.h"
 #include "mozilla/CORSMode.h"
 #include "mozilla/MaybeOneOf.h"
 #include "mozilla/MozPromise.h"
@@ -583,6 +582,9 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
   nsresult StartClassicLoad(ScriptLoadRequest* aRequest,
                             const Maybe<nsAutoString>& aCharsetForPreload);
 
+  void OnDelayedReady(ScriptLoadRequest* aRequest,
+                      const Maybe<nsAutoString>& aCharsetForPreload);
+
   static void PrepareCacheInfoChannel(nsIChannel* aChannel,
                                       ScriptLoadRequest* aRequest);
 
@@ -607,6 +609,15 @@ class ScriptLoader final : public JS::loader::ScriptLoaderInterface {
   nsresult StartLoadInternal(ScriptLoadRequest* aRequest,
                              nsSecurityFlags securityFlags,
                              const Maybe<nsAutoString>& aCharsetForPreload);
+
+  /**
+   * Register a <link rel=modulepreload> request that opened no channel with the
+   * PreloadService, so that the element with the same URL coalesces onto it and
+   * gets its load/error event dispatched. A request that did open a channel is
+   * registered by StartLoadInternal instead, and its event is fired by
+   * ScriptLoadHandler once that channel stops.
+   */
+  void NotifyPreloadCoalescing(ModuleLoadRequest* aRequest);
 
   /**
    * Abort the current stream, and re-start with a new load request from scratch

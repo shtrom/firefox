@@ -5,7 +5,7 @@
 use anyhow::{bail, Result};
 use crash_helper_common::{
     messages::{self},
-    BreakpadString, GeckoChildId, IPCClientChannel, IPCConnector, ProcessHandle, RawIPCConnector,
+    ApplicationInfo, BreakpadString, GeckoChildId, IPCClientChannel, IPCConnector, RawIPCConnector,
 };
 #[cfg(any(target_os = "android", target_os = "linux"))]
 use minidump_writer::minidump_writer::{AuxvType, DirectAuxvDumpInfo};
@@ -16,12 +16,12 @@ use std::os::windows::io::{BorrowedHandle, OwnedHandle, RawHandle};
 use std::{
     ffi::{c_char, CString, OsString},
     hint::spin_loop,
+    path::PathBuf,
     ptr::null_mut,
     sync::{
         atomic::{AtomicBool, Ordering},
         OnceLock,
     },
-    thread::JoinHandle,
 };
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::{
@@ -37,7 +37,6 @@ mod platform;
 
 pub struct CrashHelperClient {
     connector: IPCConnector,
-    spawner_thread: Option<JoinHandle<Result<ProcessHandle>>>,
     #[allow(unused)]
     pid: Pid,
 }
@@ -52,19 +51,6 @@ impl CrashHelperClient {
     fn register_child_process(&mut self, id: GeckoChildId) -> Result<IPCConnector> {
         let ipc_channel = IPCClientChannel::new()?;
         let (server_endpoint, client_endpoint) = ipc_channel.deconstruct();
-
-        if let Some(join_handle) = self.spawner_thread.take() {
-            let Ok(process_handle) = join_handle.join() else {
-                bail!("The spawner thread failed to execute");
-            };
-
-            let Ok(process_handle) = process_handle else {
-                bail!("The crash helper process failed to launch");
-            };
-
-            self.connector.set_process(process_handle);
-        }
-
         let message = messages::RegisterChildProcess::new(id, server_endpoint.into_ancillary());
         self.connector.send_message(message)?;
 
@@ -140,12 +126,15 @@ pub unsafe extern "C" fn crash_helper_launch(
     helper_name: *const BreakpadChar,
     breakpad_raw_data: BreakpadRawData,
     minidump_path: *const BreakpadChar,
+    build_id: *const c_char,
 ) -> *mut CrashHelperClient {
     use crash_helper_common::BreakpadData;
 
     let breakpad_data = BreakpadData::new(breakpad_raw_data);
 
-    if let Ok(crash_helper) = CrashHelperClient::new(helper_name, breakpad_data, minidump_path) {
+    if let Ok(crash_helper) =
+        CrashHelperClient::new(helper_name, breakpad_data, minidump_path, build_id)
+    {
         let crash_helper_box = Box::new(crash_helper);
 
         // The object will be owned by the C++ code from now on, until it is
@@ -428,6 +417,27 @@ pub unsafe extern "C" fn unregister_child_auxv_info(
 ) -> bool {
     let client = client.as_mut().unwrap();
     client.unregister_auxv_info(id).is_ok()
+}
+
+/// Return the installation time of the folder/file specified in `path` or the
+/// current running executable if `path` is null. Note that this will not be an
+/// exact value, but rather a somewhat unique value for each installation and
+/// for each different user of said installation. We use it to approximate user
+/// counts without resorting to identifiable information, as such it is not
+/// meant to provide an accurate result. A return value of 0 indicates an error.
+///
+/// # Safety
+///
+/// The `path` argument must point to a nul-terminated C string or be null.
+#[no_mangle]
+pub unsafe extern "C" fn get_install_time(path: *const BreakpadChar) -> u64 {
+    let path = if path.is_null() {
+        None
+    } else {
+        let path = <OsString as BreakpadString>::from_ptr(path);
+        Some(PathBuf::from(path))
+    };
+    ApplicationInfo::compute_install_time(path).unwrap_or(0)
 }
 
 /******************************************************************************

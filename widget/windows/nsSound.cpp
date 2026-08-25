@@ -3,28 +3,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nscore.h"
 #include <stdio.h>
-#include "nsString.h"
 #include <windows.h>
+
+#include "nsString.h"
+#include "nscore.h"
 
 // mmsystem.h is needed to build with WIN32_LEAN_AND_MEAN
 #include <mmsystem.h>
 
 #include "HeadlessSound.h"
-#include "nsSound.h"
-#include "nsCRT.h"
-#include "nsIObserverService.h"
-
+#include "gfxPlatform.h"
+#include "mozilla/ClearOnShutdown.h"
 #include "mozilla/Logging.h"
 #include "mozilla/Services.h"
-#include "prtime.h"
-
-#include "nsNativeCharsetUtils.h"
+#include "nsCRT.h"
+#include "nsIObserverService.h"
 #include "nsIThread.h"
+#include "nsNativeCharsetUtils.h"
+#include "nsSound.h"
 #include "nsThreadUtils.h"
-#include "mozilla/ClearOnShutdown.h"
-#include "gfxPlatform.h"
+#include "prtime.h"
 
 using mozilla::LogLevel;
 
@@ -107,9 +106,9 @@ mozilla::StaticRefPtr<nsISound> nsSound::sInstance;
 already_AddRefed<nsISound> nsSound::GetInstance() {
   if (!sInstance) {
     if (gfxPlatform::IsHeadless()) {
-      sInstance = new mozilla::widget::HeadlessSound();
+      sInstance = mozilla::MakeRefPtr<mozilla::widget::HeadlessSound>();
     } else {
-      RefPtr<nsSound> sound = new nsSound();
+      auto sound = mozilla::MakeRefPtr<nsSound>();
       nsresult rv = sound->CreatePlayerThread();
       if (NS_WARN_IF(NS_FAILED(rv))) {
         return nullptr;
@@ -130,10 +129,6 @@ already_AddRefed<nsISound> nsSound::GetInstance() {
 #endif
 
 NS_IMPL_ISUPPORTS(nsSound, nsISound, nsIObserver)
-
-nsSound::nsSound() : mInited(false) {}
-
-nsSound::~nsSound() {}
 
 void nsSound::PurgeLastSound() {
   // Halt any currently playing sound.
@@ -256,7 +251,7 @@ NS_IMETHODIMP nsSound::PlayEventSound(uint32_t aEventId) {
   }
   NS_ASSERTION(sound, "sound is null");
   MOZ_ASSERT(!mSoundPlayer, "mSoundPlayer should be null");
-  mSoundPlayer = new nsSoundPlayer(nsDependentString(sound));
+  mSoundPlayer = mozilla::MakeRefPtr<nsSoundPlayer>(nsDependentString(sound));
   MOZ_ASSERT(mSoundPlayer, "Could not create player");
   nsresult rv = mPlayerThread->Dispatch(mSoundPlayer, NS_DISPATCH_NORMAL);
   if (NS_WARN_IF(NS_FAILED(rv))) {

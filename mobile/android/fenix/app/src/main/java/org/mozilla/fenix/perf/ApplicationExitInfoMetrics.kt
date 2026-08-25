@@ -14,13 +14,13 @@ import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.core.content.edit
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import org.mozilla.fenix.GleanMetrics.AppExitInfo
 import org.mozilla.fenix.R
 import org.mozilla.fenix.ext.getPreferenceKey
 import org.mozilla.fenix.perf.ApplicationExitInfoMetrics.recordProcessExits
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Contains logic for recording the processes that exited in the previous sessions, i.e historical
@@ -30,25 +30,30 @@ object ApplicationExitInfoMetrics {
 
     private const val KILOBYTES_TO_MEGABYTES_CONVERSION = 1024.0
 
+    // User-triggered reasons (USER_REQUESTED, USER_STOPPED, PERMISSION_CHANGE, PACKAGE_*) are excluded.
     @RequiresApi(Build.VERSION_CODES.R)
     @VisibleForTesting(otherwise = PRIVATE)
-    internal val TRACKED_REASONS = listOf(
-        ApplicationExitInfo.REASON_ANR,
-        ApplicationExitInfo.REASON_CRASH,
-        ApplicationExitInfo.REASON_CRASH_NATIVE,
-        ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE,
-        ApplicationExitInfo.REASON_LOW_MEMORY,
-        ApplicationExitInfo.REASON_SIGNALED,
-        ApplicationExitInfo.REASON_OTHER,
-    )
+    internal val TRACKED_REASONS = buildList {
+        add(ApplicationExitInfo.REASON_ANR)
+        add(ApplicationExitInfo.REASON_CRASH)
+        add(ApplicationExitInfo.REASON_CRASH_NATIVE)
+        add(ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE)
+        add(ApplicationExitInfo.REASON_LOW_MEMORY)
+        add(ApplicationExitInfo.REASON_SIGNALED)
+        add(ApplicationExitInfo.REASON_OTHER)
+        add(ApplicationExitInfo.REASON_DEPENDENCY_DIED)
+        add(ApplicationExitInfo.REASON_INITIALIZATION_FAILURE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(ApplicationExitInfo.REASON_FREEZER)
+        }
+    }
 
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal const val PREFERENCE_NAME = "app_exit_info"
+    @VisibleForTesting(otherwise = PRIVATE) internal const val PREFERENCE_NAME = "app_exit_info"
 
     /**
-     * Returns all historical process exits mapped to [ProcessExitRecord] for display purposes.
-     * Unlike [recordProcessExits], this does not apply timestamp deduplication and returns the
-     * full contents of the ring buffer.
+     * Returns all historical process exits mapped to [ProcessExitRecord] for display purposes. Unlike
+     * [recordProcessExits], this does not apply timestamp deduplication and returns the full contents of the ring
+     * buffer.
      *
      * @param context Application [Context]
      */
@@ -90,8 +95,7 @@ object ApplicationExitInfoMetrics {
     @RequiresApi(Build.VERSION_CODES.R)
     private fun getHistoricalProcessExits(context: Context): List<ApplicationExitInfo> {
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val applicationExitInfoList =
-            activityManager.getHistoricalProcessExitReasons(null, 0, 0)
+        val applicationExitInfoList = activityManager.getHistoricalProcessExitReasons(null, 0, 0)
         applicationExitInfoList.retainAll {
             shouldRetainApplicationExitInfo(it)
         }
@@ -124,7 +128,7 @@ object ApplicationExitInfoMetrics {
                         pss = historicalExit.pss.toValueInMB(),
                         rss = historicalExit.rss.toValueInMB(),
                         reason = historicalExit.toProcessExitReason(),
-                    ),
+                    )
                 )
             }
         }
@@ -144,9 +148,7 @@ object ApplicationExitInfoMetrics {
         return mostRecentProcessExitTimestamp > lastTimeHandled
     }
 
-    private fun shouldRetainApplicationExitInfo(
-        appExitInfo: ApplicationExitInfo?,
-    ): Boolean {
+    private fun shouldRetainApplicationExitInfo(appExitInfo: ApplicationExitInfo?): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             TRACKED_REASONS.contains(appExitInfo?.reason)
         } else {
@@ -191,6 +193,9 @@ object ApplicationExitInfoMetrics {
 
     @RequiresApi(Build.VERSION_CODES.R)
     private fun ApplicationExitInfo.toProcessExitReason(): String? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && reason == ApplicationExitInfo.REASON_FREEZER) {
+            return "freezer"
+        }
         return when (reason) {
             ApplicationExitInfo.REASON_ANR -> "anr"
             ApplicationExitInfo.REASON_CRASH -> "crash"
@@ -198,6 +203,8 @@ object ApplicationExitInfoMetrics {
             ApplicationExitInfo.REASON_LOW_MEMORY -> "low_memory"
             ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "excessive_resource"
             ApplicationExitInfo.REASON_SIGNALED -> "signaled"
+            ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "dependency_died"
+            ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "initialization_failure"
             ApplicationExitInfo.REASON_OTHER ->
                 if (description?.contains("MemoryLimiter:AnonSwap") == true) {
                     "memory_limiter"

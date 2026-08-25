@@ -2,7 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const { openAIEngine, resolveChatModelChoice } = ChromeUtils.importESModule(
+const {
+  resolveChatModelChoice,
+  _setRemoteClientForTesting,
+  _clearRemoteClientForTesting,
+  FEATURE_MAJOR_VERSIONS,
+  MODEL_FEATURES,
+} = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs"
 );
 
@@ -10,22 +16,26 @@ const { sinon } = ChromeUtils.importESModule(
   "resource://testing-common/Sinon.sys.mjs"
 );
 
+registerCleanupFunction(() => _clearRemoteClientForTesting());
+
 add_task(async function test_resolveChatModelChoice_found() {
   const sb = sinon.createSandbox();
   try {
     // Mock Remote Settings data with model_choice_id
     const fakeRecords = [
       {
+        kind: "params",
         feature: "chat",
-        version: "4.1",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.1`,
         model: "qwen3-235b-a22b-instruct-2507-maas",
         model_choice_id: "2",
         owner_name: "Alibaba",
         is_default: true,
       },
       {
+        kind: "params",
         feature: "chat",
-        version: "4.1",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.1`,
         model: "gemini-2.5-flash-lite",
         model_choice_id: "1",
         owner_name: "Google",
@@ -40,7 +50,7 @@ add_task(async function test_resolveChatModelChoice_found() {
       },
     ];
 
-    sb.stub(openAIEngine, "getRemoteClient").returns({
+    _setRemoteClientForTesting({
       get: sb.stub().resolves(fakeRecords),
     });
 
@@ -74,12 +84,14 @@ add_task(async function test_resolveChatModelChoice_version_filtering() {
     // Test that higher version records are filtered out
     const fakeRecords = [
       {
+        kind: "params",
         feature: "chat",
         version: "3.0", // Should be filtered out with maxMajorVersion=2
         model: "future-model",
         model_choice_id: "1",
       },
       {
+        kind: "params",
         feature: "chat",
         version: "2.5",
         model: "current-model",
@@ -87,7 +99,7 @@ add_task(async function test_resolveChatModelChoice_version_filtering() {
       },
     ];
 
-    sb.stub(openAIEngine, "getRemoteClient").returns({
+    _setRemoteClientForTesting({
       get: sb.stub().resolves(fakeRecords),
     });
 
@@ -110,14 +122,15 @@ add_task(async function test_resolveChatModelChoice_not_found() {
     // No matching records
     const fakeRecords = [
       {
+        kind: "params",
         feature: "chat",
-        version: "4.0",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.0`,
         model: "some-model",
         model_choice_id: "2", // Different choice ID
       },
     ];
 
-    sb.stub(openAIEngine, "getRemoteClient").returns({
+    _setRemoteClientForTesting({
       get: sb.stub().resolves(fakeRecords),
     });
 

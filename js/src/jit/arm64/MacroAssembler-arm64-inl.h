@@ -112,8 +112,7 @@ void MacroAssembler::move32ZeroExtendToPtr(Register src, Register dest) {
 // Load instructions
 
 void MacroAssembler::load32SignExtendToPtr(const Address& src, Register dest) {
-  load32(src, dest);
-  move32To64SignExtend(dest, Register64(dest));
+  Ldrsw(ARMRegister(dest, 64), toMemOperand(src));
 }
 
 void MacroAssembler::loadAbiReturnAddress(Register dest) { movePtr(lr, dest); }
@@ -170,6 +169,15 @@ void MacroAssembler::andPtr(Imm32 imm, Register src, Register dest) {
   And(ARMRegister(dest, 64), ARMRegister(src, 64), Operand(imm.value));
 }
 
+void MacroAssembler::andPtr(Imm32 imm, const Address& dest) {
+  vixl::UseScratchRegisterScope temps(this);
+  const ARMRegister scratch64 = temps.AcquireX();
+  MOZ_ASSERT(scratch64.asUnsized() != dest.base);
+  loadPtr(dest, scratch64.asUnsized());
+  And(scratch64, scratch64, Operand(imm.value));
+  storePtr(scratch64.asUnsized(), dest);
+}
+
 void MacroAssembler::and64(Imm64 imm, Register64 dest) {
   And(ARMRegister(dest.reg, 64), ARMRegister(dest.reg, 64), Operand(imm.value));
 }
@@ -223,8 +231,14 @@ void MacroAssembler::xor64(Register64 src, Register64 dest) {
 }
 
 void MacroAssembler::xor32(Register src, Register dest) {
-  Eor(ARMRegister(dest, 32), ARMRegister(dest, 32),
-      Operand(ARMRegister(src, 32)));
+  // Unlike on x86, eor r,r,r is not a recognized zeroing idiom: it carries a
+  // dependency on the old value. Zero through wzr instead.
+  if (src == dest) {
+    Mov(ARMRegister(dest, 32), vixl::wzr);
+  } else {
+    Eor(ARMRegister(dest, 32), ARMRegister(dest, 32),
+        Operand(ARMRegister(src, 32)));
+  }
 }
 
 void MacroAssembler::xor32(Imm32 imm, Register dest) { xor32(imm, dest, dest); }
@@ -251,8 +265,12 @@ void MacroAssembler::xor32(const Address& src, Register dest) {
 }
 
 void MacroAssembler::xorPtr(Register src, Register dest) {
-  Eor(ARMRegister(dest, 64), ARMRegister(dest, 64),
-      Operand(ARMRegister(src, 64)));
+  if (src == dest) {
+    Mov(ARMRegister(dest, 64), vixl::xzr);
+  } else {
+    Eor(ARMRegister(dest, 64), ARMRegister(dest, 64),
+        Operand(ARMRegister(src, 64)));
+  }
 }
 
 void MacroAssembler::xorPtr(Imm32 imm, Register dest) {
@@ -782,6 +800,11 @@ void MacroAssembler::lshift64(Imm32 imm, Register64 dest) {
   lshiftPtr(imm, dest.reg);
 }
 
+void MacroAssembler::lshift64(Imm32 imm, Register64 src, Register64 dest) {
+  MOZ_ASSERT(0 <= imm.value && imm.value < 64);
+  lshiftPtr(imm, src.reg, dest.reg);
+}
+
 void MacroAssembler::lshift64(Register shift, Register64 srcDest) {
   Lsl(ARMRegister(srcDest.reg, 64), ARMRegister(srcDest.reg, 64),
       ARMRegister(shift, 64));
@@ -880,6 +903,11 @@ void MacroAssembler::rshift64(Imm32 imm, Register64 dest) {
   rshiftPtr(imm, dest.reg);
 }
 
+void MacroAssembler::rshift64(Imm32 imm, Register64 src, Register64 dest) {
+  MOZ_ASSERT(0 <= imm.value && imm.value < 64);
+  rshiftPtr(imm, src.reg, dest.reg);
+}
+
 void MacroAssembler::rshift64(Register shift, Register64 srcDest) {
   Lsr(ARMRegister(srcDest.reg, 64), ARMRegister(srcDest.reg, 64),
       ARMRegister(shift, 64));
@@ -887,6 +915,12 @@ void MacroAssembler::rshift64(Register shift, Register64 srcDest) {
 
 void MacroAssembler::rshift64Arithmetic(Imm32 imm, Register64 dest) {
   Asr(ARMRegister(dest.reg, 64), ARMRegister(dest.reg, 64), imm.value);
+}
+
+void MacroAssembler::rshift64Arithmetic(Imm32 imm, Register64 src,
+                                        Register64 dest) {
+  MOZ_ASSERT(0 <= imm.value && imm.value < 64);
+  rshiftPtrArithmetic(imm, src.reg, dest.reg);
 }
 
 void MacroAssembler::rshift64Arithmetic(Register shift, Register64 srcDest) {
@@ -1947,8 +1981,12 @@ void MacroAssembler::branchTestInt32Impl(Condition cond, const T& t,
 void MacroAssembler::branchTestInt32Truthy(bool truthy,
                                            const ValueOperand& value,
                                            Label* label) {
-  Condition c = testInt32Truthy(truthy, value);
-  B(label, c);
+  ARMRegister payload32(value.valueReg(), 32);
+  if (truthy) {
+    Cbnz(payload32, label);
+  } else {
+    Cbz(payload32, label);
+  }
 }
 
 void MacroAssembler::branchTestDouble(Condition cond, Register tag,
@@ -2044,8 +2082,12 @@ void MacroAssembler::branchTestBooleanImpl(Condition cond, const T& tag,
 void MacroAssembler::branchTestBooleanTruthy(bool truthy,
                                              const ValueOperand& value,
                                              Label* label) {
-  Condition c = testBooleanTruthy(truthy, value);
-  B(label, c);
+  ARMRegister payload32(value.valueReg(), 32);
+  if (truthy) {
+    Cbnz(payload32, label);
+  } else {
+    Cbz(payload32, label);
+  }
 }
 
 void MacroAssembler::branchTestString(Condition cond, Register tag,
@@ -2536,31 +2578,31 @@ void MacroAssembler::spectreBoundsCheckPtr(Register index,
 
 // ========================================================================
 // Memory access primitives.
-FaultingCodeOffset MacroAssembler::storeDouble(FloatRegister src,
-                                               const Address& dest) {
+FaultingCodeRange MacroAssembler::storeDouble(FloatRegister src,
+                                              const Address& dest) {
   return Str(ARMFPRegister(src, 64), toMemOperand(dest));
 }
-FaultingCodeOffset MacroAssembler::storeDouble(FloatRegister src,
-                                               const BaseIndex& dest) {
+FaultingCodeRange MacroAssembler::storeDouble(FloatRegister src,
+                                              const BaseIndex& dest) {
   return doBaseIndex(ARMFPRegister(src, 64), dest, vixl::STR_d);
 }
 
-FaultingCodeOffset MacroAssembler::storeFloat32(FloatRegister src,
-                                                const Address& addr) {
+FaultingCodeRange MacroAssembler::storeFloat32(FloatRegister src,
+                                               const Address& addr) {
   return Str(ARMFPRegister(src, 32), toMemOperand(addr));
 }
-FaultingCodeOffset MacroAssembler::storeFloat32(FloatRegister src,
-                                                const BaseIndex& addr) {
+FaultingCodeRange MacroAssembler::storeFloat32(FloatRegister src,
+                                               const BaseIndex& addr) {
   return doBaseIndex(ARMFPRegister(src, 32), addr, vixl::STR_s);
 }
 
-FaultingCodeOffset MacroAssembler::storeFloat16(FloatRegister src,
-                                                const Address& dest, Register) {
+FaultingCodeRange MacroAssembler::storeFloat16(FloatRegister src,
+                                               const Address& dest, Register) {
   return Str(ARMFPRegister(src, 16), toMemOperand(dest));
 }
-FaultingCodeOffset MacroAssembler::storeFloat16(FloatRegister src,
-                                                const BaseIndex& dest,
-                                                Register) {
+FaultingCodeRange MacroAssembler::storeFloat16(FloatRegister src,
+                                               const BaseIndex& dest,
+                                               Register) {
   return doBaseIndex(ARMFPRegister(src, 16), dest, vixl::STR_h);
 }
 
@@ -3597,10 +3639,9 @@ void MacroAssembler::popcntInt8x16(FloatRegister src, FloatRegister dest) {
 
 void MacroAssembler::anyTrueSimd128(FloatRegister src, Register dest_) {
   ScratchSimd128Scope scratch_(*this);
-  ARMFPRegister scratch(Simd1D(scratch_));
   ARMRegister dest(dest_, 64);
-  Addp(scratch, Simd2D(src));
-  Umov(dest, scratch, 0);
+  Umaxv(SimdReg(scratch_).S(), Simd4S(src));
+  Umov(ARMRegister(dest_, 32), SimdReg(scratch_).S(), 0);
   Cmp(dest, Operand(0));
   Cset(dest, Assembler::NonZero);
 }
@@ -3772,25 +3813,25 @@ void MacroAssembler::compareFloat64x2(Assembler::Condition cond,
 
 // Load
 
-FaultingCodeOffset MacroAssembler::loadUnalignedSimd128(const Address& src,
-                                                        FloatRegister dest) {
+FaultingCodeRange MacroAssembler::loadUnalignedSimd128(const Address& src,
+                                                       FloatRegister dest) {
   return Ldr(ARMFPRegister(dest, 128), toMemOperand(src));
 }
 
-FaultingCodeOffset MacroAssembler::loadUnalignedSimd128(
-    const BaseIndex& address, FloatRegister dest) {
+FaultingCodeRange MacroAssembler::loadUnalignedSimd128(const BaseIndex& address,
+                                                       FloatRegister dest) {
   return doBaseIndex(ARMFPRegister(dest, 128), address, vixl::LDR_q);
 }
 
 // Store
 
-FaultingCodeOffset MacroAssembler::storeUnalignedSimd128(FloatRegister src,
-                                                         const Address& dest) {
+FaultingCodeRange MacroAssembler::storeUnalignedSimd128(FloatRegister src,
+                                                        const Address& dest) {
   return Str(ARMFPRegister(src, 128), toMemOperand(dest));
 }
 
-FaultingCodeOffset MacroAssembler::storeUnalignedSimd128(
-    FloatRegister src, const BaseIndex& dest) {
+FaultingCodeRange MacroAssembler::storeUnalignedSimd128(FloatRegister src,
+                                                        const BaseIndex& dest) {
   return doBaseIndex(ARMFPRegister(src, 128), dest, vixl::STR_q);
 }
 

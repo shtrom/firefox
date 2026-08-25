@@ -11,14 +11,15 @@
 namespace mozilla {
 
 /*
-This provides a stable set of codec preferences for unit tests. In order to
-change a preference, you can set the member variable to the desired value.
-*/
+ * This provides a stable set of codec preferences for unit tests. In order to
+ * change a preference, you can set the member variable to the desired value.
+ */
 struct MockJsepCodecPreferences : public JsepCodecPreferences {
   bool AV1Enabled() const override { return mAv1Enabled; }
   bool AV1Preferred() const override { return mAv1Preferred; }
   bool H264Enabled() const override { return mH264Enabled; }
   bool SoftwareH264Enabled() const override { return mSoftwareH264Enabled; }
+  bool HardwareH264Enabled() const override { return mHardwareH264Enabled; }
   bool SendingH264PacketizationModeZeroSupported() const override {
     return mH264PacketizationModeZeroSupported;
   }
@@ -34,6 +35,7 @@ struct MockJsepCodecPreferences : public JsepCodecPreferences {
   bool UseRemb() const override { return mUseRemb; }
   bool UseRtx() const override { return mUseRtx; }
   bool UseTransportCC() const override { return mUseTransportCC; }
+  bool UseAudioTransportCC() const override { return mUseAudioTransportCC; }
   bool UseAudioFec() const override { return mUseAudioFec; }
   bool RedUlpfecEnabled() const override { return mRedUlpfecEnabled; }
 
@@ -41,6 +43,7 @@ struct MockJsepCodecPreferences : public JsepCodecPreferences {
   bool mAv1Preferred = false;
   bool mH264Enabled = true;
   bool mSoftwareH264Enabled = true;
+  bool mHardwareH264Enabled = false;
   bool mH264PacketizationModeZeroSupported = true;
   bool mH264BaselineDisabled =
       StaticPrefs::GetPrefDefault_media_navigator_video_disable_h264_baseline();
@@ -65,6 +68,8 @@ struct MockJsepCodecPreferences : public JsepCodecPreferences {
       StaticPrefs::GetPrefDefault_media_peerconnection_video_use_rtx();
   bool mUseTransportCC =
       StaticPrefs::GetPrefDefault_media_navigator_video_use_transport_cc();
+  bool mUseAudioTransportCC =
+      StaticPrefs::GetPrefDefault_media_navigator_audio_use_transport_cc();
   bool mUseAudioFec =
       StaticPrefs::GetPrefDefault_media_navigator_audio_use_fec();
   bool mRedUlpfecEnabled =

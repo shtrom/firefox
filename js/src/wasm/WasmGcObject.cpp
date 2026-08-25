@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "wasm/WasmGcObject-inl.h"
-
 #include "mozilla/DebugOnly.h"
 
 #include "gc/Tracer.h"
@@ -28,6 +26,7 @@
 #include "gc/GCContext-inl.h"  // GCContext::removeCellMemory
 #include "gc/ObjectKind-inl.h"
 #include "vm/JSContext-inl.h"
+#include "wasm/WasmGcObject-inl.h"
 
 using namespace js;
 using namespace wasm;
@@ -177,13 +176,18 @@ bool WasmGcObject::loadValue(JSContext* cx, Handle<WasmGcObject*> obj, jsid id,
     return false;
   }
 
-  // Temporary hack, (ref T) is not exposable to JS yet but some tests would
-  // like to access it so we erase (ref T) with eqref when loading. This is
-  // safe as (ref T) <: eqref and we're not in the writing case where we
-  // would need to perform a type check.
-  if (type.isTypeRef()) {
-    type = RefType::fromTypeCode(TypeCode::EqRef, true);
+#ifdef ENABLE_WASM_JSPI
+  // Temporary hack: We don't reject continuations in ValType::isExposable()
+  // because that is also used on the JSPI-internal paths that legitimately move
+  // continuations across the boundary. But we do want to generally disallow
+  // them from JS otherwise.
+  if (type.isTypeRef() &&
+      type.refType().hierarchy() == RefTypeHierarchy::Cont) {
+    JS_ReportErrorNumberUTF8(cx, GetErrorMessage, nullptr,
+                             JSMSG_WASM_BAD_VAL_TYPE);
+    return false;
   }
+#endif
 
   if (!type.isExposable()) {
     JS_ReportErrorNumberUTF8(cx, GetErrorMessage, nullptr,
@@ -266,12 +270,10 @@ size_t js::WasmArrayObject::sizeOfExcludingThis() const {
 /* static */
 void WasmArrayObject::obj_trace(JSTracer* trc, JSObject* object) {
   WasmArrayObject& arrayObj = object->as<WasmArrayObject>();
-  uint8_t* data = arrayObj.data_;
-
   if (!arrayObj.isDataInline()) {
     OOLDataHeader* oolHeader = oolDataHeaderFromDataPointer(arrayObj.data_);
     OOLDataHeader* prior = oolHeader;
-    TraceBufferEdge(trc, &arrayObj, &oolHeader, "WasmArrayObject storage");
+    TraceBufferEdge(trc, &oolHeader, "WasmArrayObject storage");
     if (oolHeader != prior) {
       arrayObj.data_ = oolDataHeaderToDataPointer(oolHeader);
     }
@@ -286,7 +288,8 @@ void WasmArrayObject::obj_trace(JSTracer* trc, JSObject* object) {
   uint32_t numElements = arrayObj.numElements_;
   uint32_t elemSize = arrayType.elementType().size();
   for (uint32_t i = 0; i < numElements; i++) {
-    AnyRef* elementPtr = reinterpret_cast<AnyRef*>(data + i * elemSize);
+    AnyRef* elementPtr =
+        reinterpret_cast<AnyRef*>(arrayObj.data_ + i * elemSize);
     TraceManuallyBarrieredEdge(trc, elementPtr, "wasm-array-element");
   }
 }
@@ -477,8 +480,7 @@ void WasmStructObject::obj_trace(JSTracer* trc, JSObject* object) {
     // *addressOfOOLPtr may be null if the struct was only partially initialized
     // due to OOM during createStructOOL.
     if (MOZ_LIKELY(*addressOfOOLPtr)) {
-      TraceBufferEdge(trc, &structObj, addressOfOOLPtr,
-                      "WasmStructObject outline data");
+      TraceBufferEdge(trc, addressOfOOLPtr, "WasmStructObject outline data");
       uint8_t* oolBase = *addressOfOOLPtr;
       for (uint32_t offset : structType.outlineTraceOffsets_) {
         AnyRef* fieldPtr = reinterpret_cast<AnyRef*>(oolBase + offset);

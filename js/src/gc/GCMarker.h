@@ -10,6 +10,7 @@
 
 #include "gc/Barrier.h"
 #include "gc/Cell.h"
+#include "gc/WeakMap.h"
 #include "js/HashTable.h"
 #include "js/TracingAPI.h"
 #include "js/TypeDecls.h"
@@ -194,6 +195,13 @@ class MarkStack {
   [[nodiscard]] bool init();
   [[nodiscard]] bool resetStackCapacity();
 
+  // The maximum capacity reached since the last call to resetHighWaterMark().
+  size_t highWaterMark() const;
+
+  // Reset the high-water mark to the current capacity, ready to track the
+  // next GC.
+  void resetHighWaterMark();
+
   template <typename T>
   [[nodiscard]] bool push(T* ptr);
   void infalliblePush(const SlotsOrElementsRange& range);
@@ -256,6 +264,9 @@ class MarkStack {
 
   // Size of the stack in words.
   MainThreadOrGCTaskData<size_t> capacity_;
+
+  // The maximum value of capacity_ seen since the last reset.
+  MainThreadOrGCTaskData<size_t> highWaterMark_;
 
   // Index of the top of the stack.
   MainThreadOrGCTaskData<size_t> topIndex_;
@@ -341,7 +352,7 @@ class MarkingTracerT
   virtual ~MarkingTracerT() = default;
 
   template <typename T>
-  void onEdge(T** thingp, const char* name);
+  bool onEdge(T** thingp, const char* name);
   friend class GenericTracerImpl<MarkingTracerT<markingOptions>>;
 
   GCMarker* gcMarker();
@@ -426,7 +437,7 @@ class MarkingTracerT
   void pushThing(T* thing);
 
   void eagerlyMarkChildren(JSString* str);
-  void eagerlyMarkChildren(JSLinearString* str);
+  void eagerlyMarkChildren(JSLinearString* str, uint32_t flags);
   void eagerlyMarkChildren(JSRope* rope);
   void eagerlyMarkChildren(Shape* shape);
   void eagerlyMarkChildren(BaseShape* shape);
@@ -462,6 +473,10 @@ class GCMarker {
 
     // Like RegularMarking but with multiple threads running in parallel.
     ParallelMarking,
+
+    // Same as above, but there is a single thread running (possibly not the
+    // main marker thread).
+    ParallelMarkingSingleThread,
 
     // Like RegularMarking but with a single thread running in the background.
     ConcurrentMarking,
@@ -512,7 +527,12 @@ class GCMarker {
 
   bool isActive() const { return state != NotActive; }
   bool isRegularMarking() const { return state == RegularMarking; }
-  bool isParallelMarking() const { return state == ParallelMarking; }
+  bool isParallelMarking() const {
+    return state == ParallelMarking || state == ParallelMarkingSingleThread;
+  }
+  bool isParallelMarkingMultipleThreads() const {
+    return state == ParallelMarking;
+  }
   bool isWeakMarking() const { return state == WeakMarking; }
   bool isConcurrentMarking() const { return state == ConcurrentMarking; }
 
@@ -550,6 +570,11 @@ class GCMarker {
   void enterConcurrentMarkingMode();
   void leaveConcurrentMarkingMode();
 
+  // Only relevant when parallel marking: transition to a mode where it is known
+  // that a single thread is running.
+  void enterSingleThreadedMode();
+  void leaveSingleThreadedMode();
+
   // Do not use linear-time weak marking for the rest of this collection.
   // Currently, this will only be triggered by an OOM when updating needed data
   // structures.
@@ -562,13 +587,17 @@ class GCMarker {
 
   bool shouldCheckCompartments() { return strictCompartmentChecking; }
 
-  bool markOneObjectForTest(JSObject* obj);
+  void markOneObjectForTest(JSObject* obj);
 
   bool isRootMarking() const { return state == RootMarking; }
 #endif
 
   bool markCurrentColorInParallel(gc::ParallelMarkTask* task,
                                   JS::SliceBudget& budget);
+
+  // Trace the children of WeakMaps that were marked while draining the mark
+  // stack (on any thread).
+  void markDeferredWeakMapChildren(WeakMapList& deferred);
 
   static void moveAllWork(GCMarker* dst, GCMarker* src);
   static size_t moveSomeWork(GCMarker* dst, GCMarker* src,
@@ -577,6 +606,9 @@ class GCMarker {
   [[nodiscard]] bool initStack();
   void resetStackCapacity();
   void freeStack();
+
+  size_t stackHighWaterMark() const;
+  void resetStackHighWaterMark();
 
   size_t sizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf) const;
 
@@ -648,6 +680,9 @@ class GCMarker {
 
   void delayMarkingChildrenOnOOM(gc::Cell* cell);
 
+  // Called by stop() and reset().
+  void deactivate();
+
   /*
    * The JSTracer used for marking. This can change depending on the current
    * state.
@@ -685,9 +720,6 @@ class GCMarker {
   /* Track the state of marking. */
   MainThreadOrGCTaskData<MarkingState> state;
 
-  /* Whether we successfully added all edges to the implicit edges table. */
-  MainThreadOrGCTaskData<bool> haveAllImplicitEdges;
-
  public:
   /*
    * Whether weakmaps can be marked incrementally.
@@ -701,12 +733,12 @@ class GCMarker {
   MainThreadOrGCTaskData<mozilla::non_crypto::XorShift128PlusRNG> random;
 
   /*
-   * The zone of the object whose trace hook is currently being
-   * called, if any. Set with AutoSetTracingSource.
+   * The zone of the object whose trace hook is currently being called, if any.
+   * Set with AutoSetTracingSource.
    *
    * This is required so that MarkingTracerT::onEdge can keep the source zone's
-   * atom-marking bitmap entry for Symbol edges in sync. It's also used in debug
-   * builds to catch cross-compartment edges traced without
+   * atom reference bitmap entry for Symbol edges in sync. It's also used in
+   * debug builds to catch cross-compartment edges traced without
    * TraceCrossCompartmentEdge.
    */
   MainThreadOrGCTaskData<Zone*> tracingZone;
@@ -717,7 +749,7 @@ class GCMarker {
   MainThreadOrGCTaskData<bool> started;
 
   /*
-   * Whether to check that atoms traversed are present in atom marking
+   * Whether to check that atoms traversed are present in the atom reference
    * bitmap.
    */
   MainThreadOrGCTaskData<bool> checkAtomMarking;
@@ -742,6 +774,24 @@ inline bool IsConcurrentMarkingTracer(JSTracer* trc) {
   return trc->isMarkingTracer() &&
          GCMarker::fromTracer(trc)->isConcurrentMarking();
 }
+
+// Records the source zone for marking in situations where it might not
+// otherwise bet set, for example root marking.
+//
+// See also AutoSetTracingSource.
+class MOZ_RAII AutoSetMarkingZone {
+  GCMarker* marker = nullptr;
+  Zone* prevZone = nullptr;
+
+ public:
+  AutoSetMarkingZone(GCMarker* marker, Zone* zone)
+      : marker(marker), prevZone(marker->tracingZone) {
+    MOZ_ASSERT_IF(prevZone, prevZone == zone);
+    marker->tracingZone = zone;
+  }
+
+  ~AutoSetMarkingZone() { marker->tracingZone = prevZone; }
+};
 
 namespace gc {
 
@@ -777,8 +827,7 @@ class MOZ_RAII AutoSetMarkColor {
   ~AutoSetMarkColor() { marker_.setMarkColor(initialColor_); }
 };
 
-inline AutoMarkingLock::AutoMarkingLock(JSTracer* trc,
-                                        MarkingLock& markingLock) {
+inline AutoMarkingLock::AutoMarkingLock(JSTracer* trc, LightLock& markingLock) {
 #ifdef JS_GC_CONCURRENT_MARKING
   if (IsConcurrentMarkingTracer(trc)) {
     lock = &markingLock;

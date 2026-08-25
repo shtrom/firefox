@@ -69,13 +69,10 @@
   }
 
   // @nova-cleanup(remove-conditional): Remove .nova-enabled wrapper, make default
-  .nova-enabled .content & {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, calc(4 * var(--col-width) + 3 * var(--space-medium)));
-    justify-content: center;
+  .nova-enabled :is(.content, .content-full-width) & {
+    @include nova-centering-grid(4);
+
     padding-block-end: var(--space-xxlarge);
-    gap: var(--space-medium);
 
     .ds-navigation-privacy {
       grid-column: 1 / -1;

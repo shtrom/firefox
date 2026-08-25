@@ -69,8 +69,7 @@ void MediaTransportHandlerIPC::Initialize() {
               [this, self = RefPtr<MediaTransportHandlerIPC>(this)](
                   mozilla::ipc::Endpoint<mozilla::dom::PMediaTransportChild>&&
                       aEndpoint) {
-                RefPtr<MediaTransportChild> child =
-                    new MediaTransportChild(this);
+                RefPtr child = MakeRefPtr<MediaTransportChild>(this);
                 aEndpoint.Bind(child);
                 mChild = child;
 
@@ -422,10 +421,11 @@ mozilla::ipc::IPCResult MediaTransportChild::RecvOnGatheringStateChange(
 }
 
 mozilla::ipc::IPCResult MediaTransportChild::RecvOnConnectionStateChange(
-    const string& transportId, const RTCIceTransportState& state) {
+    const string& transportId, const RTCIceTransportState& state,
+    const Maybe<IceCandidateAttributePair>& selectedPair) {
   MutexAutoLock lock(mMutex);
   if (mUser) {
-    mUser->OnConnectionStateChange(transportId, state);
+    mUser->OnConnectionStateChange(transportId, state, selectedPair);
   }
   return ipc::IPCResult::Ok();
 }
@@ -450,19 +450,23 @@ mozilla::ipc::IPCResult MediaTransportChild::RecvOnEncryptedSending(
 }
 
 mozilla::ipc::IPCResult MediaTransportChild::RecvOnStateChange(
-    const string& transportId, const TransportLayer::State& state) {
+    const string& transportId, const TransportLayer::State& state,
+    nsTArray<nsTArray<uint8_t>>&& remoteCerts,
+    Maybe<dom::RTCErrorParams> error) {
   MutexAutoLock lock(mMutex);
   if (mUser) {
-    mUser->OnStateChange(transportId, state);
+    mUser->OnStateChange(transportId, state, std::move(remoteCerts),
+                         std::move(error));
   }
   return ipc::IPCResult::Ok();
 }
 
 mozilla::ipc::IPCResult MediaTransportChild::RecvOnRtcpStateChange(
-    const string& transportId, const TransportLayer::State& state) {
+    const string& transportId, const TransportLayer::State& state,
+    Maybe<dom::RTCErrorParams> error) {
   MutexAutoLock lock(mMutex);
   if (mUser) {
-    mUser->OnRtcpStateChange(transportId, state);
+    mUser->OnRtcpStateChange(transportId, state, std::move(error));
   }
   return ipc::IPCResult::Ok();
 }

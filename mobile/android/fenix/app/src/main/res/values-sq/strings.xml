@@ -70,7 +70,7 @@
   <!-- Text for the menu button to remove a recently saved bookmark from the user's home screen -->
   <string name="home_bookmarks_menu_item_remove">Hiqe</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">%1$s prodhohet nga Mozilla.</string>
+  <string name="about_content" tools:ignore="BrandUsage">%1$s prodhohet nga Mozilla.</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">Mite të rëndomtë mbi shfletimin privat</string>
   <!-- Text to be announced by the accessibility service to inform the user that the private browsing mode is currently active. -->
@@ -104,12 +104,6 @@
   <string name="open_in_app_cfr_negative_button_text">Hidhe tej</string>
   <!-- Private browsing erase action "contextual feature recommendation" (CFR) -->
 
-  <!--
-    Address bar swipe "contextual feature recommendation" (CFR)
-
-    Text for the message displayed in the contextual feature recommendation popup promoting swipe of address bar.
-  -->
-  <string name="address_bar_swipe_cfr_message_2">Që të ndërroni skeda, fërkoni panelin për majtas ose djathtas.</string>
   <!-- Text for the info dialog when camera permissions have been denied but user tries to access a camera feature. -->
   <string name="camera_permissions_needed_message">Lypset hyrje në kamera. Kaloni te rregullimet e Android-it, prekni mbi Leje dhe prekni Lejoje.</string>
   <!-- Text for the positive action button to go to Android Settings to grant permissions. -->
@@ -312,14 +306,6 @@
   <!-- Content description (not visible, for screen readers etc.) for recommended extensions in main menu -->
   <string name="browser_menu_recommended_extensions_content_description">Më tepër hollësi</string>
   <!--
-    Menu "contextual feature recommendation" (CFR)
-
-    Text for the title in the contextual feature recommendation popup promoting the menu feature.
-  -->
-  <string name="menu_cfr_title">E re: menu e hajthme</string>
-  <!-- Text for the message in the contextual feature recommendation popup promoting the menu feature. -->
-  <string name="menu_cfr_body">Gjeni më shpejt ç’kërkoni, nga shfletim privat e deri te veprime ruajtjeje.</string>
-  <!--
     Extensions management fragment
 
     Text displayed when there are no extensions to be shown
@@ -328,21 +314,9 @@
   <!--
     Browser Toolbar
 
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">Skena e kreut</string>
-  <!--
-    Browser Toolbar
-
     Content description for the translate page toolbar button that opens the translations dialog when no translation has occurred.
   -->
   <string name="browser_toolbar_translate">Përktheje faqen</string>
-  <!--
-    Content description (not visible, for screen readers etc.) for the translate page toolbar button that opens the translations dialog when the page is translated successfully.
-    %1$s is the name of the language that is displayed in the original page. (For example: English)
-    %2$s is the name of the language which the page was translated to. (For example: French)
-  -->
-  <string name="browser_toolbar_translated_successfully">Faqe e përkthyer nga %1$s në %2$s.</string>
   <!-- CFR description for the browser toolbar describing the "Shake to summarize feature" -->
   <string name="browser_toolbar_summarize_cfr_description">Që të bëhet një përmbledhje e faqes brenda sekondash, tundeni pajisjen tuaj. ⚡️</string>
   <!--
@@ -367,12 +341,6 @@
   <string name="default_locale_text">Ndiq gjuhën e pajisjes</string>
   <!-- Placeholder text shown in the search bar before a user enters text -->
   <string name="locale_search_hint">Kërkoni gjuhë</string>
-  <!--
-    Search Fragment
-
-    Button in the search view that lets a user search by scanning a QR code
-  -->
-  <string name="search_scan_button_2">Skanonin kodin QR</string>
   <!--
     Search Fragment
 
@@ -416,62 +384,6 @@
     Content description (not visible, for screen readers etc.): Close button for the home onboarding dialog
   -->
   <string name="onboarding_home_content_description_close_button">Mbylle</string>
-  <!--
-    Juno first user onboarding flow experiment, strings are marked unused as they are only referenced by Nimbus experiments.
-
-    Description for learning more about our privacy notice.
-  -->
-  <string name="juno_onboarding_privacy_notice_text" tools:ignore="BrandUsage">Shënim mbi privatësinë në Firefox</string>
-  <!-- Title for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_title_nimbus_2">Duam fort t’ju mbajmë të parrezik</string>
-  <!-- Description for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_description_nimbus_3">Shfletuesi ynë, me entin jofitimprurës nga pas, ndihmon të ndalen shoqëri t’ju ndjekin fshehtazi nëpër internet.</string>
-  <!-- Text for the button to set firefox as default browser on the device -->
-  <string name="juno_onboarding_default_browser_positive_button" tools:ignore="UnusedResources">Vëre si shfletuesin parazgjedhje</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_default_browser_negative_button" tools:ignore="UnusedResources">Jo tani</string>
-  <!-- Title for sign in to sync screen. -->
-  <string name="juno_onboarding_sign_in_title_2">Jini i fshehtëzuar, kur hidheni nga një pajisje në tjetrën</string>
-  <!--
-    Description for sign in to sync screen. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_sign_in_description_3" tools:ignore="BrandUsage">Firefox-i fshehtëzon fjalëkalimet tuaja, faqerojtësit, etj, kur bëni njëkohësimin.</string>
-  <!-- Text for the button to sign in to sync on the device -->
-  <string name="juno_onboarding_sign_in_positive_button" tools:ignore="UnusedResources">Hyni</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_sign_in_negative_button" tools:ignore="UnusedResources">Jo tani</string>
-  <!--
-    Title for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_title_nimbus_2" tools:ignore="BrandUsage">Njoftimet ju ndihmojnë të jini më të parrezik në Firefox</string>
-  <!--
-    Description for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_description_nimbus_2" tools:ignore="BrandUsage">Dërgoni në mënyrë të siguruar skeda mes pajisjeve tuaja dhe zbuloni veçori të reja privatësie në Firefox.</string>
-  <!-- Text for the button to request notification permission on the device -->
-  <string name="juno_onboarding_enable_notifications_positive_button" tools:ignore="UnusedResources">Aktivizoni njoftimet</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_enable_notifications_negative_button" tools:ignore="UnusedResources">Jo tani</string>
-  <!--
-    Title for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_title" tools:ignore="BrandUsage,UnusedResources">Provoni widget-in e kërkimeve të Firefox-it</string>
-  <!--
-    Description for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_description" tools:ignore="BrandUsage,UnusedResources">Me Firefox-in te skena juaj e kreut do të mund të përdorni kollaj shfletuesin që vë privatësinë së pari, që bllokon gjurmues të llojit “nga sajte në sajte”.</string>
-  <!--
-    Text for the button to add search widget on the device used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_positive_button" tools:ignore="BrandUsage,UnusedResources">Shtoni “widget” Firefox-i</string>
-  <!-- Text for the button to dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_add_search_widget_negative_button" tools:ignore="UnusedResources">Jo tani</string>
   <!-- Title for the privacy preferences dialog shown during onboarding. Note: The word "Firefox" should NOT be translated. -->
   <string name="onboarding_preferences_dialog_title" tools:ignore="BrandUsage">Ndihmonani ta bëjmë Firefox-in më të mirë</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
@@ -491,17 +403,13 @@
   <!-- Button text to reopen firefox after the crash is processed %s is the name of the app (for example "Firefox") -->
   <string name="startup_crash_restart">Rihape %s</string>
   <!-- Title for the usage data option in the privacy preferences dialog shown during onboarding. Note: The word "Mozilla" should NOT be translated. -->
-  <string name="onboarding_preferences_dialog_usage_data_title">Dërgo të dhëna teknike dhe ndërveprimesh te Mozilla</string>
+  <string name="onboarding_preferences_dialog_usage_data_title" tools:ignore="BrandUsage">Dërgo të dhëna teknike dhe ndërveprimesh te Mozilla</string>
   <string name="onboarding_preferences_dialog_usage_data_description_2" tools:ignore="BrandUsage">Të dhënat rreth pajisjes tuaj, formësimit hardware dhe se si e përdorni Firefox-in ndihmojnë të përmirësohen veçori, funksionimi dhe qëndrueshmëria për këdo.</string>
   <string name="onboarding_preferences_dialog_usage_data_learn_more_2">Mësoni më tepër</string>
   <!-- Positive button label for the privacy preferences dialog shown during onboarding. -->
   <string name="onboarding_preferences_dialog_positive_button">U bë</string>
   <!-- Terms of service onboarding title card label. 'Firefox' intentionally hardcoded here -->
   <string name="onboarding_welcome_to_firefox" tools:ignore="BrandUsage">Mirë se vini në Firefox</string>
-  <!-- Terms of service sub header label. -->
-  <string name="onboarding_terms_of_service_sub_header_2">Shfletim i shpejtë dhe siguruar</string>
-  <!-- Terms of service onboarding page continue button label. -->
-  <string name="onboarding_term_of_service_agree_and_continue_button_label_2">Vazhdo</string>
   <!-- Line one of the terms of service onboarding page. %1$s is replaced by an active link, using onboarding_term_of_service_line_one_link_text_2 as text (“Firefox Terms of Use”). -->
   <string name="onboarding_term_of_service_line_one_2">Duke vazhduar, pajtoheni me %1$s.</string>
   <!-- Used as text for the link in onboarding_term_of_service_line_one_2. -->
@@ -569,16 +477,6 @@
   <string name="onboarding_redesign_sync_positive_button" tools:ignore="UnusedResources">Fillo njëkohësim</string>
   <!-- Sync onboarding redesign negative button text. -->
   <string name="onboarding_redesign_sync_negative_button" tools:ignore="UnusedResources">Jo tani</string>
-  <!-- Marketing onboarding page title. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_title" tools:ignore="BrandUsage,UnusedResources">Ndihmonani të fuqizojmë Firefox-in</string>
-  <!-- Marketing onboarding page body. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_body" tools:ignore="BrandUsage,UnusedResources">Kur na tregoni se si e zbuluat Firefox-in dhe se e përdorni, na ndihmoni ta paraqesim shfletuesin tonë te më tepër njerëz.</string>
-  <!-- Marketing onboarding page opt-out checkbox. Unchecking the box does not increase data collection. Our data practices remain the same. 'Mozilla' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_opt_out_checkbox">Ndani të dhëna me partnerë teknologjish marketingu të Mozilla-s. Këto të dhëna nuk shiten kurrë, apo të përdoren për t’ju shfaqur reklama.</string>
-  <!-- Marketing onboarding page clickable link text to "learn more" on how data is used. -->
-  <string name="onboarding_marketing_learn_more" tools:ignore="UnusedResources">Si i përdorim të dhënat</string>
-  <!-- Marketing onboarding page button label. Button to confirm choice and start browsing. -->
-  <string name="onboarding_marketing_positive_button" tools:ignore="UnusedResources">Ripohojeni dhe filloni të shfletoni</string>
   <!-- Marketing onboarding page title variant. “One last thing” refers to the final step or action in the onboarding process that we’re asking users to take before they can start using the browser. -->
   <string name="onboarding_marketing_title_1" tools:ignore="UnusedResources">Një gjë të fundit</string>
   <!-- Marketing onboarding page body variant. 'Firefox' is intentionally hardcoded. -->
@@ -690,41 +588,6 @@
   <string name="nova_onboarding_app_icon_prompt_body" tools:ignore="UnusedResources">Jepini skenës tuaj të kreut një ton personal.</string>
   <!-- ==== End of Project "Nova" onboarding strings ==== -->
 
-  <!-- Onboarding header for the toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_title" tools:ignore="UnusedResources">Zgjidhni një vendosje të panelit</string>
-  <!-- Onboarding sub header for toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_description" tools:ignore="UnusedResources">Mbajini kërkimet një hap larg.</string>
-  <!-- Onboarding label for 'Save and continue' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_continue_button">Ruaje dhe vazhdo</string>
-  <!-- Onboarding toolbar selection card label for 'top' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_top_option">Sipër</string>
-  <!-- Onboarding toolbar selection card label for 'bottom' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_bottom_option">Poshtë</string>
-  <!-- Onboarding toolbar selection card content description for the main image. -->
-  <string name="onboarding_customize_toolbar_main_image_content_description">Figurë e madhe kryesh e pamjes së përzgjedhjes së paneli, që shfaq ilustrim paneli.</string>
-  <!-- Onboarding toolbar selection card content description for the toolbar placement image. -->
-  <string name="onboarding_customize_toolbar_placement_bottom_content_description">Figurë e panelit të poshtëm</string>
-  <string name="onboarding_customize_toolbar_placement_top_content_description">Figurë e panelit të sipërm</string>
-  <!-- Action label for toolbar options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_toolbar_a11y_action_label_select">përzgjidhni</string>
-  <!-- Onboarding header for the theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_title" tools:ignore="UnusedResources">Zgjidhni një temë</string>
-  <!-- Onboarding sub header for theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_description" tools:ignore="UnusedResources">Shiheni web-in nën dritën më të mirë.</string>
-  <!-- Onboarding label for 'Save and start browsing' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_start_button">Ruajeni dhe filloni shfletimin</string>
-  <!-- Onboarding theme selection card label for 'dark' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_dark_option">E errët</string>
-  <!-- Onboarding theme selection card label for 'light' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_light_option">E çelët</string>
-  <!-- Onboarding theme selection card label for 'System auto' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_system_option">Automatike, prej sistemit</string>
-  <!-- Onboarding theme selection card content description for the main image. -->
-  <string name="onboarding_customize_theme_main_image_content_description">Figurë e madhe kryesh e pamjes së përzgjedhjes së temës, që shfaqin ilustrim mjetesh artistësh dhe ndërtuesisht.</string>
-  <!-- Onboarding theme selection card content description for the theme selection image. %1$s is placeholder for either 'system', 'light' or 'dark'. -->
-  <string name="onboarding_customize_theme_content_description">Figurë e temës %1$s</string>
-  <!-- Action label for options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_theme_a11y_action_label_select">përzgjidhni</string>
   <!--
     Widget Picker
 
@@ -806,40 +669,8 @@
   <string name="preferences_pbm_lock_screen_title">Përdor kyçje ekrani për fshehje skedash në shfletim privat</string>
   <!-- Informs the user how to access the tabs when "Use screen lock to hide tabs in private browsing" is enabled -->
   <string name="preferences_pbm_lock_screen_summary_3">Shihni skeda përmes shkyçjeje me shenjave tuajat të gishtave, PIN, ose fytyrë. Aktivizimi i kësaj pengon gjithashtu fotografim dhe ndarje të ekranit me të tjerë.</string>
-  <!-- Label for cookie banner section in quick settings panel. -->
-  <string name="cookie_banner_blocker">Bllokues Banderolash Cookie-sh</string>
   <!-- Preference for removing cookie/consent banners from sites automatically in private mode. See reduce_cookie_banner_summary for additional context. -->
   <string name="preferences_cookie_banner_reduction_private_mode">Bllokues Banderolash Cooki-esh në shfletim privat</string>
-  <!-- Text for indicating cookie banner handling is off this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_off_for_site">Çaktivizuar për këtë sajt</string>
-  <!-- Text for cancel button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_cancel_button">Anuloje</string>
-  <!-- Text for request support button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_request_support_button_2">Dërgo kërkesë</string>
-  <!-- Text for title indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_title_2">Të kërkohet asistencë për këtë sajt?</string>
-  <!-- Label for the snackBar, after the user reports with success a website where cookie banner reducer did not work -->
-  <string name="cookie_banner_handling_report_site_snack_bar_text_2">Kërkesa u dërgua</string>
-  <!-- Text for indicating cookie banner handling is on this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_on_for_site">Aktivizuar për këtë sajt</string>
-  <!-- Text for indicating that a request for unsupported site was sent to Nimbus (it's a Mozilla library for experiments), this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site_request_submitted_2">Kërkesa për asistencë u dërgua</string>
-  <!-- Text for indicating cookie banner handling is currently not supported for this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site">Sajt aktualisht i pambuluar</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is on this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_on_for_site_1">Të aktivizohet Bllokim Banderolash Cookie-sh për %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is off this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_off_for_site_1">Të çaktivizohet Bllokim Banderolash Cookie-sh për %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner reducer didn't work for the current site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_title_unsupported_site_request_2">%1$s s’mund të hedhë poshtë automatikisht kërkesa për “cookie” në këtë sajt. Mund të dërgoni një kërkesë për mbulimin e këtij sajti në të ardhmen.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is off for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_off_for_site_1">Çaktivizojeni dhe %1$s do të spastrojë cookie-t dhe do të ringarkojë këtë sajt. Kjo mund sjellë nxjerrjen tuaj nga llogaria, ose zbrazjen e shportave tuaja të blerjes.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is on for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_on_for_site_3">Aktivizojeni dhe %1$s do të provojë të hedhë poshtë automatikisht banderola cookie-sh në këtë sajt.</string>
-  <!-- Title for the cookie banner re-engagement CFR, the placeholder is replaced with app name. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="cookie_banner_cfr_title">%1$s sapo hodhi poshtë “cookies” për ju</string>
-  <!-- Message for the cookie banner re-engagement CFR -->
-  <string name="cookie_banner_cfr_message">Më pak shpërqendrim, më pak “cookies” që ju ndjekin në këtë sajt.</string>
   <!-- Description of the preference to enable "HTTPS-Only" mode. -->
   <string name="preferences_https_only_summary">Përpiqet automatikisht të lidhet me sajtet duke përdorur protokollin HTTPS të fshehtëzimit, për më tepër siguri.</string>
   <!-- Summary of https only preference if https only is set to off -->
@@ -863,7 +694,7 @@
   <!-- Preference for accessibility -->
   <string name="preferences_accessibility">Përdorim nga persona me aftësi të kufizuara</string>
   <!-- Preference to override the Mozilla account server -->
-  <string name="preferences_override_account_server">Shërbyes vetjak llogarish Mozilla</string>
+  <string name="preferences_override_account_server" tools:ignore="BrandUsage">Shërbyes vetjak llogarish Mozilla</string>
   <!-- Preference to override the Sync token server -->
   <string name="preferences_override_sync_tokenserver">Shërbyes vetjak Sync</string>
   <!-- Preference category for account information -->
@@ -891,7 +722,7 @@
   <!-- Preference description shown in the banner prompting the user to sign in for sync features -->
   <string name="preferences_sign_in_description">Njëkohësoni skeda, faqerojtës, fjalëkalime, etj.</string>
   <!-- Preference shown instead of account display name while account profile information isn't available yet. -->
-  <string name="preferences_account_default_name_2">Llogari Mozilla</string>
+  <string name="preferences_account_default_name_2" tools:ignore="BrandUsage">Llogari Mozilla</string>
   <!-- Preference text for account title when there was an error syncing FxA -->
   <string name="preferences_account_sync_error">Rilidhuni për të vazhduar njëkohësimin</string>
   <!-- Preference for language -->
@@ -939,7 +770,7 @@
   <!-- Summary for preference to show Firefox Suggest search suggestions for web content -->
   <string name="preferences_show_nonsponsored_suggestions_summary">Merrni nga interneti sugjerime të lidhura me kërkimin tuaj</string>
   <!-- Preference title for switch preference to show search optimization cards -->
-  <string name="preferences_show_search_optimization_cards">Merrni sugjerime nga Mozilla, teksa shtypni</string>
+  <string name="preferences_show_search_optimization_cards" tools:ignore="BrandUsage">Merrni sugjerime nga Mozilla, teksa shtypni</string>
   <!-- Preference for link sharing -->
   <string name="preferences_link_sharing">Ndarje lidhjesh</string>
   <!-- Title for the link sharing toggle. %1$s is replaced by the brand name (e.g. Firefox). -->
@@ -1254,7 +1085,7 @@
   <string name="preferences_usage_data_description_1" tools:ignore="BrandUsage">Të dhënat rreth pajisjes tuaj, formësimit “hardware” dhe përdorimit na ndihmojnë të përmirësohen veçori, funksionimi dhe qëndrueshmëria e Firefox-it.</string>
   <!-- Preference switch for daily usage ping data collection -->
   <string name="preferences_daily_usage_ping_title">Ping i përditshëm përdorimi</string>
-  <string name="preferences_daily_usage_ping_description">Kjo e ndihmon Mozilla-n të hamendësojë numrin e përdoruesve aktivë.</string>
+  <string name="preferences_daily_usage_ping_description" tools:ignore="BrandUsage">Kjo e ndihmon Mozilla-n të hamendësojë numrin e përdoruesve aktivë.</string>
   <string name="preferences_daily_usage_ping_learn_more">Mësoni më tepër ping të përditshëm përdorimi</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
   <string name="crash_reporting_snack_bar_message">Njoftimi u dërgua</string>
@@ -1280,7 +1111,7 @@
   <!-- Title for studies preferences -->
   <string name="preference_experiments_2">Studime</string>
   <!-- Summary for studies preferences -->
-  <string name="preference_experiments_summary_2">E lejon Mozilla-n të instalojë dhe xhirojë studime</string>
+  <string name="preference_experiments_summary_2" tools:ignore="BrandUsage">E lejon Mozilla-n të instalojë dhe xhirojë studime</string>
   <!--
     Turn On Sync Preferences
 
@@ -1375,8 +1206,6 @@
   <string name="library_desktop_bookmarks_unfiled">Faqerojtës të Tjerë</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">Historik</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">Skedë e re</string>
   <!-- Settings Page Title -->
   <string name="settings_title">Rregullime</string>
   <!-- Content description (not visible, for screen readers etc.): "Close button for library settings" -->
@@ -1630,8 +1459,6 @@
   <string name="history_search_1">Jepni terma kërkimi</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">Fshije historikun</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">Historiku u Fshi</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">%1$s u fshi</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -1842,28 +1669,10 @@
   <string name="webcompat_reporter_label_url">URL</string>
   <!-- The error message of the URL text field when an invalid URL has been entered. -->
   <string name="webcompat_reporter_url_error_invalid">Ju lutemi, jepni një URL të vlefshme</string>
-  <!-- The label/title of a field in the Web Compat Reporter feature for explaining a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_label_whats_broken_2">Ç’është dëmtuar?</string>
-  <!-- The placeholder text for the dropdown where a user selects a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_2">Zgjidhni arsye</string>
-  <!-- The error message of the dropdown, prompting the user to select a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_error">Ju lutemi, zgjidhni një arsye</string>
-  <!-- The label/title of an optional field in the Web Compat Reporter feature for adding additional information. -->
-  <string name="webcompat_reporter_label_description">Përshkruani problemin (në daçi)</string>
-  <!-- The button text for navigating away from the feature to provide more information on the broken site's bug report. -->
-  <string name="webcompat_reporter_add_more_info">Shtoni më tepër hollësi</string>
   <!-- The button text for the cancel button to leave the Web Compat Reporter feature. -->
   <string name="webcompat_reporter_cancel">Anuloje</string>
-  <!-- The button text for the send button to submit the provided form data. -->
-  <string name="webcompat_reporter_send">Dërgoje</string>
   <!-- Text for a snackbar to confirm the successful submission of a WebCompat report. -->
   <string name="webcompat_reporter_success_snackbar_text_2">Njoftimi u dërgua</string>
-  <!-- Placeholder text for the description field to prompt the user on what they should type. -->
-  <string name="webcompat_reporter_problem_description_placeholder_text">Ç’ndodhi? Ç’duhet të ndodhte?</string>
-  <!-- Label of the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. -->
-  <string name="webcompat_reporter_etp_checkbox_text">Dërgo URL-ra të bllokuara nga mbrojtja nga gjurmimet</string>
-  <!-- Description text for the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. It informs the user when checked, the report will include the list of URLs that were blocked by Enhanced Tracking Protection on the current page. -->
-  <string name="webcompat_reporter_etp_checkbox_description">Mbrojtja e Thelluar Nga Gjurmimi mund të bllokojë gjurmues dhe programthe të cilët disa sajti i kanë të nevojshëm për të punuar si duhet.</string>
   <!-- The button text for the preview report button to view a preview of the report. -->
   <string name="webcompat_reporter_preview_report">Bëni Paraparje të Raportimit</string>
   <!-- The title shown at the top of the WebCompat Report preview panel. This appears after the user taps the “Preview” button before sending a report. -->
@@ -1888,8 +1697,6 @@
   <string name="webcompat_reporter_reason_account2">S’bëj dot hyrjen, ose regjistrimin</string>
   <!-- Broken site reason text for site asked to turn off ad blocker -->
   <string name="webcompat_reporter_reason_turn_off_adblocker">Sajti kërkoi të aktivizohet bllokuesi i reklamave</string>
-  <!-- Broken site reason text for browser isn’t supported or blocked -->
-  <string name="webcompat_reporter_reason_notsupported">Shfletuesi s’mbulohet, ose bllokohet</string>
   <!-- Broken site reason text for something else -->
   <string name="webcompat_reporter_reason_other">Diçka tjetër</string>
   <!--
@@ -1899,7 +1706,7 @@
   -->
   <string name="tab_crash_title_2">Na ndjeni. %1$s s’mund ta ngarkojë atë faqe.</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">Dërgoni raport vithisjeje te Mozilla</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">Dërgoni raport vithisjeje te Mozilla</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">Mbylle skedën</string>
   <!-- Restore tab button text on the tab crash page -->
@@ -1992,12 +1799,8 @@
   <string name="edit_bookmark_folder_fragment_title">Përpunoni dosjen</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">URL</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">DOSJE</string>
   <!-- Text indicating which folder a bookmark or folder will be saved in -->
   <string name="bookmark_save_in_label">Ruaje te</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">EMËR</string>
   <!-- Label for a text input field for a bookmark or folder name -->
   <string name="bookmark_name_label_normal_case">Emër</string>
   <!-- Bookmark select folder screen title -->
@@ -2037,12 +1840,8 @@
   <string name="bookmark_empty_list_title">Ende pa faqerojtës</string>
   <!-- Bookmark screen folder description. %s is the count of bookmark folder children -->
   <string name="bookmarks_folder_description">Faqerojtës në dosje: %s</string>
-  <!-- Description for the bookmark list empty state when you're not signed into sync. -->
-  <string name="bookmark_empty_list_guest_description">Ruani sajte teksa shfletoni. Bëni hyrjen, që të merrni faqerojtës nga pajisje të tjera të njëkohësuara.</string>
   <!-- Text for the button to navigate to sync authentication -->
   <string name="bookmark_empty_list_guest_cta">Për njëkohësim, bëni hyrjen</string>
-  <!-- Description for the bookmark list empty state when you're signed into sync. -->
-  <string name="bookmark_empty_list_authenticated_description">Ruani sajte teksa shfletoni. Do të marrim gjithashtu faqerojtës nga pajisje të tjera të njëkohësuara.</string>
   <!-- Description for the bookmark list empty state when you're in an empty folder. -->
   <string name="bookmark_empty_list_folder_description">Shtoni faqerojtës teksa shfletoni, që të mund të gjeni më vonë sajtet tuaj të parapëlqyer.</string>
   <!-- Description for the add new folder button when selecting a folder. -->
@@ -2055,12 +1854,6 @@
     Button label that take the user to the Android App setting
   -->
   <string name="phone_feature_go_to_settings">Shkoni te Rregullimet</string>
-  <!--
-    Content description (not visible, for screen readers etc.): Quick settings sheet
-    to give users access to site specific information / settings. For example:
-    Secure settings status and a button to modify site permissions
-  -->
-  <string name="quick_settings_sheet">Fletë rregullimesh të shpejta</string>
   <!-- Label that indicates that this option it the recommended one -->
   <string name="phone_feature_recommended">E këshilluar</string>
   <!-- Button label for clearing all the information of site permissions -->
@@ -2157,8 +1950,6 @@
   <string name="collections_header">Koleksione</string>
   <!-- Content description (not visible, for screen readers etc.): Opens the collection menu when pressed -->
   <string name="collection_menu_button_content_description">Menu koleksionesh</string>
-  <!-- Label to describe what collections are to a new user without any collections -->
-  <string name="no_collections_description2">Koleksiononi gjërat që kanë rëndësi për ju.\nGruponi tok kërkime të ngjashme, sajte dhe skeda, për përdorim më të shpejtë më pas.</string>
   <!-- Title for the "select tabs" step of the collection creator -->
   <string name="create_collection_select_tabs">Përzgjidhni Skeda</string>
   <!-- Title for the "select collection" step of the collection creator -->
@@ -2435,10 +2226,8 @@
   <!--
     Enhanced Tracking Protection
 
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
+    Preference title for enhanced tracking protection settings
   -->
-  <string name="etp_settings">Rregullime për Mbrojtje</string>
-  <!-- Preference title for enhanced tracking protection settings -->
   <string name="preference_enhanced_tracking_protection">Mbrojtje e Thelluar Nga Gjurmimi</string>
   <!-- Preference summary for enhanced tracking protection settings on/off switch -->
   <string name="preference_enhanced_tracking_protection_summary">Tashmë me Mbrojtje Tërësore Nga Cookie-t, barriera jonë më e fuqishme deri më sot kundër gjurmuesve nga sajte në sajte.</string>
@@ -2446,15 +2235,6 @@
   <string name="preference_enhanced_tracking_protection_explanation_2">%s ju mbron nga shumë prej gjurmuesve më të rëndomtë që ndjekin ç’bëni në internet.</string>
   <!-- Text displayed that links to website about enhanced tracking protection -->
   <string name="preference_enhanced_tracking_protection_explanation_learn_more">Mësoni më tepër</string>
-  <plurals name="trackers_blocked_count">
-    <!--
-      Trackers blocked card on homepage
-
-      Text shown on the trackers blocked card. %d is the number of trackers blocked.
-    -->
-    <item quantity="one">U bllokua %d Gjurmues</item>
-    <item quantity="other">U bllokuan %d Gjurmues</item>
-  </plurals>
   <!-- Text shown on the trackers blocked card when no trackers have been blocked yet -->
   <string name="trackers_blocked_empty">Jeni i mbrojtur</string>
   <!-- Preference for enhanced tracking protection for the standard protection settings -->
@@ -2525,12 +2305,8 @@
   <string name="preference_enhanced_tracking_protection_custom_cryptominers">Nxjerrës kriptomonedhash</string>
   <!-- Preference for enhanced tracking protection for the custom protection settings -->
   <string name="preference_enhanced_tracking_protection_custom_known_fingerprinters">Krijues Shenjash Gishtash të Ditur</string>
-  <!-- Button label for navigating to the Enhanced Tracking Protection details -->
-  <string name="enhanced_tracking_protection_details">Hollësi</string>
   <!-- Header for categories that are being being blocked by current Enhanced Tracking Protection settings -->
   <string name="enhanced_tracking_protection_blocked">Të bllokuar</string>
-  <!-- Header for categories that are being not being blocked by current Enhanced Tracking Protection settings -->
-  <string name="enhanced_tracking_protection_allowed">Të lejuara</string>
   <!-- Category of trackers (social media trackers) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_social_media_trackers_title">Gjurmues Prej Mediash Shoqërore</string>
   <!-- Description of social media trackers that can be blocked by Enhanced Tracking Protection -->
@@ -2553,10 +2329,6 @@
   <string name="etp_tracking_content_title">Lëndë Gjurmimi</string>
   <!-- Description of tracking content that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_tracking_content_description">Ndal ngarkim reklamash, videosh dhe lënde tjetër të jashtme që përmban kod gjurmimi. Mund të prekë punimin e disa sajteve.</string>
-  <!-- Enhanced Tracking Protection message that protection is currently on for this site -->
-  <string name="etp_panel_on">Për këtë sajt, mbrojtjet janë ON</string>
-  <!-- Enhanced Tracking Protection message that protection is currently off for this site -->
-  <string name="etp_panel_off">Për këtë sajt, mbrojtjet janë OFF</string>
   <!-- Header for exceptions list for which sites enhanced tracking protection is always off -->
   <string name="enhanced_tracking_protection_exceptions">Mbrojtja e Thelluar Nga Gjurmimet është e çaktivizuar për këto sajte</string>
   <!--
@@ -2581,13 +2353,6 @@
   <string name="etp_suspected_fingerprinters_description">Aktivizon mbrojtje nga shenja gishtash, për të ndalur krijues të dyshuar shenjash gishtash.</string>
   <!-- Category of trackers (fingerprinters) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_known_fingerprinters_title">Krijues Shenjash Gishtash të Ditur</string>
-  <!--
-    Description of the SmartBlock Enhanced Tracking Protection feature. The * symbol is intentionally hardcoded here,
-    as we use it on the UI to indicate which trackers have been partially unblocked.
-  -->
-  <string name="preference_etp_smartblock_description">Disa gjurmues të treguar më poshtë janë zhbllokuar pjesërisht në këtë faqe, ngaqë keni ndërvepruar me ta *.</string>
-  <!-- Text displayed that links to website about enhanced tracking protection SmartBlock -->
-  <string name="preference_etp_smartblock_learn_more">Mësoni më tepër</string>
   <!--
     Content description (not visible, for screen readers etc.):
     Enhanced tracking protection exception preference icon for ETP settings.
@@ -3003,8 +2768,6 @@
   <string name="addresses_save_button">Ruaje</string>
   <!-- The text for the "Cancel" button for cancelling adding, updating or deleting an address -->
   <string name="addresses_cancel_button">Anuloje</string>
-  <!-- The text for the "Delete address" button for deleting an address -->
-  <string name="addressess_delete_address_button">Përzgjidhni adresë</string>
   <!-- The title for the "Delete address" confirmation dialog -->
   <string name="addressess_confirm_dialog_message_2">Të fshihet kjo adresë?</string>
   <!-- The text for the positive button on "Delete address" dialog -->
@@ -3059,16 +2822,8 @@
   <string name="phone_feature_blocked_step_permissions"><![CDATA[2. Prekni <b>Permissions</b>]]></string>
   <!-- Third step for the allowing a permission (%1$s is the permission name, for example "Camera"). -->
   <string name="phone_feature_blocked_step_feature"><![CDATA[3. Kalojeni <b>%1$s</b> si ON]]></string>
-  <!-- Label that indicates a site is using a secure connection -->
-  <string name="quick_settings_sheet_secure_connection_2">Lidhja është e siguruar</string>
-  <!-- Label that indicates a site is using a insecure connection -->
-  <string name="quick_settings_sheet_insecure_connection_2">Lidhja s’është e siguruar</string>
-  <!-- Label that indicates a site is displaying a local document -->
-  <string name="quick_settings_sheet_local_page">Kjo është faqe e depozituar në pajisjen tuaj.</string>
   <!-- Label to clear site data -->
   <string name="clear_site_data">Spastro cookie-t dhe të dhëna sajti</string>
-  <!-- Confirmation message for a dialog confirming if the user wants to delete all data for current site. %s is the domain of the site. -->
-  <string name="confirm_clear_site_data"><![CDATA[Jeni i sigurt se doni të spastrohen krejt cookie-t dhe të dhënat për sajtin <b>%s</b>?]]></string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for all sites -->
   <string name="confirm_clear_permissions_on_all_sites">Jeni i sigurt se doni të spastrohen krejt lejet në krejt sajtet?</string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for a site -->
@@ -3081,11 +2836,6 @@
   <string name="browser_menu_add_to_shortcuts">Shtoje te shkurtore</string>
   <!-- Browser menu button that removes a shortcut from the home fragment -->
   <string name="browser_menu_remove_from_shortcuts">Hiqe prej shkurtoresh</string>
-  <!--
-    text shown before the issuer name to indicate who its verified by, %1$s is the name of
-    the certificate authority that verified the ticket
-  -->
-  <string name="certificate_info_verified_by">Verifikuar Nga: %1$s</string>
   <!-- Message in delete confirmation dialog for password -->
   <string name="login_deletion_confirmation_2">Jeni i sigurt se doni të fshihet ky fjalëkalim?</string>
   <!-- Positive action of a dialog asking to delete -->
@@ -3235,8 +2985,6 @@
   <string name="default_browser_experiment_card_title">Ndërroni shfletuesin tuaj parazgjedhje</string>
   <!-- Default browser card text -->
   <string name="default_browser_experiment_card_text" tools:ignore="BrandUsage">Caktoni lidhje prej sajtesh, email-esh dhe mesazhezh për hapje të automatizuar në Firefox.</string>
-  <!-- Content description for close button in collection placeholder. -->
-  <string name="remove_home_collection_placeholder_content_description">Hiqe</string>
   <!-- Content description radio buttons with a link to more information -->
   <string name="radio_preference_info_content_description">Klikoni për më tepër hollësi</string>
   <!-- Content description for the action bar "up" button -->
@@ -3268,20 +3016,10 @@
     Action label for elements that can be collapsed if interacting with them. Talkback will append this to say "Double tap to collapse".
   -->
   <string name="a11y_action_label_collapse">tkurre</string>
-  <!-- Current state for elements that can be collapsed if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_collapsed">të tkurrur</string>
   <!-- Action label for elements that can be expanded if interacting with them. Talkback will append this to say "Double tap to expand". -->
   <string name="a11y_action_label_expand">zgjeroje</string>
-  <!-- Current state for elements that can be expanded if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_expanded">të zgjeruar</string>
   <!-- Action label for links to a website containing documentation about a wallpaper collection. Talkback will append this to say "Double tap to open link to learn more about this collection". -->
   <string name="a11y_action_label_wallpaper_collection_learn_more">që të mësoni më tepër mbi këtë koleksion, hapni lidhjen</string>
-  <!-- Content description for headings announced by accessibility service. %s is the text of the heading. Talkback will announce the text and then speak the word "Heading" indicating to the user that this text is a heading for a section. -->
-  <string name="a11y_heading">%s, Krye</string>
-  <!-- Title for dialog displayed when trying to access links present in a text. -->
-  <string name="a11y_links_title">Lidhje</string>
-  <!-- Additional content description for text bodies that contain urls. -->
-  <string name="a11y_links_available">Ka lidhje</string>
   <!-- Translations feature -->
 
   <!--
@@ -3540,8 +3278,6 @@
     %s is the name of the app (for example "Firefox").
   -->
   <string name="protection_panel_banner_protected_title">%s është në punë</string>
-  <!-- Description text for the protection panel banner when tracking protection is enabled. -->
-  <string name="protection_panel_banner_protected_description">Jeni i mbrojtur. Nëse vërejmë gjë, do t’ua bëjmë të ditur.</string>
   <!-- Label text for the Enhanced Tracking Protection toggle. -->
   <string name="protection_panel_etp_toggle_label">Mbrojtje e Thelluar Nga Gjurmimi</string>
   <!-- Toggle if Enhanced Tracking Protection is turned on -->
@@ -3557,25 +3293,12 @@
     %d is a placeholder for the number of trackers blocked.
   -->
   <string name="protection_panel_num_trackers_blocked">Gjurmues të bllokuar: %d</string>
-  <!-- Text for when no trackers have been blocked. -->
-  <string name="protection_panel_no_trackers_blocked">S’u gjetën gjurmues</string>
   <!-- Text for when tracking protection is disabled and no trackers are blocked. -->
   <string name="protection_panel_etp_disabled_no_trackers_blocked">Gjurmuesit s’janë të bllokuar</string>
   <!-- Link text to navigate to privacy and security settings from the protection panel. -->
   <string name="protection_panel_privacy_and_security_settings_2">Rregullime Privatësie</string>
   <!-- Title text for the protection panel permissions section. -->
   <string name="protection_panel_permissions_title">Leje</string>
-  <!--
-    Text for displaying the total number of trackers blocked in the trackers blocked panel.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_total_num_trackers_blocked">Gjurmues të bllokuar: %d</string>
-  <!--
-    Text for displaying the number of trackers blocked for a specific tracker category in the trackers blocked panel.
-    %s is a placeholder for the name of the tracker category.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_categorical_num_trackers_blocked">%s: %d</string>
   <!--
     Description text for a dialog confirming whether the user wants to delete all data for current site.
     %s is a placeholder for the base domain of website.

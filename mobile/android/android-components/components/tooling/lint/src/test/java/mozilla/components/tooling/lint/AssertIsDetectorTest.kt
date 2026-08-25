@@ -18,32 +18,25 @@ class AssertIsDetectorTest : LintDetectorTest() {
 
     override fun getIssues(): List<Issue> = listOf(AssertIsDetector.ISSUE_USE_ASSERT_IS)
 
-    private val junitAssertStub = TestFiles.java(
-        """
+    private val junitAssertStub =
+        TestFiles.java(
+                """
         package org.junit;
         public class Assert {
             public static void assertTrue(boolean condition) {}
             public static void assertTrue(String message, boolean condition) {}
         }
-        """,
-    ).indented()
-
-    private val kotlinTestStub = TestFiles.kotlin(
         """
-        package kotlin.test
-        fun assertTrue(actual: Boolean, message: String? = null) {}
-        inline fun <reified T> assertIs(value: Any?, message: String? = null): T = value as T
-        """,
-    ).indented()
+            )
+            .indented()
 
     @Test
     fun `assertTrue with is check reports warning`() {
         lint()
-            .allowMissingSdk()
             .files(
                 junitAssertStub,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import org.junit.Assert.assertTrue
 
@@ -53,8 +46,9 @@ class AssertIsDetectorTest : LintDetectorTest() {
                             assertTrue(result is ArrayList)
                         }
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectWarningCount(1)
@@ -64,19 +58,19 @@ class AssertIsDetectorTest : LintDetectorTest() {
                 Fix for src/com/example/test/MyTest.kt line 7: Replace with assertIs<ArrayList>(result):
                 @@ -7 +7 @@
                 -        assertTrue(result is ArrayList)
-                +        assertIs<ArrayList>(result)
-                """.trimIndent(),
+                +        kotlin.test.assertIs<ArrayList>(result)
+                """
+                    .trimIndent()
             )
     }
 
     @Test
     fun `JUnit message-first assertTrue with is check reports warning`() {
         lint()
-            .allowMissingSdk()
             .files(
                 junitAssertStub,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import org.junit.Assert
 
@@ -86,8 +80,9 @@ class AssertIsDetectorTest : LintDetectorTest() {
                             Assert.assertTrue("should be array list", result is ArrayList)
                         }
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectWarningCount(1)
@@ -97,21 +92,22 @@ class AssertIsDetectorTest : LintDetectorTest() {
                 Fix for src/com/example/test/MyTest.kt line 7: Replace with assertIs<ArrayList>(result, "should be array list"):
                 @@ -7 +7 @@
                 -        Assert.assertTrue("should be array list", result is ArrayList)
-                +        assertIs<ArrayList>(result, "should be array list")
-                """.trimIndent(),
+                +        kotlin.test.assertIs<ArrayList>(result, "should be array list")
+                """
+                    .trimIndent()
             )
     }
 
     @Test
-    fun `kotlin test assertTrue with message second reports warning`() {
+    fun `assertTrue with message as second argument reports warning`() {
         lint()
-            .allowMissingSdk()
             .files(
-                kotlinTestStub,
+                // lint won't resolve source stubs declared in kotlin.* packages, so the
+                // kotlin.test-style assertTrue(value, message) is stubbed in the test package.
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
-                    import kotlin.test.assertTrue
+                    fun assertTrue(actual: Boolean, message: String? = null) {}
 
                     class MyTest {
                         fun test() {
@@ -119,8 +115,9 @@ class AssertIsDetectorTest : LintDetectorTest() {
                             assertTrue(result is ArrayList, "should be array list")
                         }
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented()
             )
             .run()
             .expectWarningCount(1)
@@ -130,19 +127,19 @@ class AssertIsDetectorTest : LintDetectorTest() {
                 Fix for src/com/example/test/MyTest.kt line 7: Replace with assertIs<ArrayList>(result, "should be array list"):
                 @@ -7 +7 @@
                 -        assertTrue(result is ArrayList, "should be array list")
-                +        assertIs<ArrayList>(result, "should be array list")
-                """.trimIndent(),
+                +        kotlin.test.assertIs<ArrayList>(result, "should be array list")
+                """
+                    .trimIndent()
             )
     }
 
     @Test
     fun `method call result in is check reports warning`() {
         lint()
-            .allowMissingSdk()
             .files(
                 junitAssertStub,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import org.junit.Assert.assertTrue
 
@@ -151,8 +148,9 @@ class AssertIsDetectorTest : LintDetectorTest() {
                             assertTrue(listOf("1") is ArrayList)
                         }
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectWarningCount(1)
@@ -162,19 +160,19 @@ class AssertIsDetectorTest : LintDetectorTest() {
                 Fix for src/com/example/test/MyTest.kt line 6: Replace with assertIs<ArrayList>(listOf("1")):
                 @@ -6 +6 @@
                 -        assertTrue(listOf("1") is ArrayList)
-                +        assertIs<ArrayList>(listOf("1"))
-                """.trimIndent(),
+                +        kotlin.test.assertIs<ArrayList>(listOf("1"))
+                """
+                    .trimIndent()
             )
     }
 
     @Test
     fun `assertTrue with simple boolean is clean`() {
         lint()
-            .allowMissingSdk()
             .files(
                 junitAssertStub,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import org.junit.Assert.assertTrue
 
@@ -183,8 +181,9 @@ class AssertIsDetectorTest : LintDetectorTest() {
                             assertTrue(true)
                         }
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectClean()
@@ -193,11 +192,10 @@ class AssertIsDetectorTest : LintDetectorTest() {
     @Test
     fun `assertTrue with equality check is clean`() {
         lint()
-            .allowMissingSdk()
             .files(
                 junitAssertStub,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import org.junit.Assert.assertTrue
 
@@ -206,8 +204,9 @@ class AssertIsDetectorTest : LintDetectorTest() {
                             assertTrue(listOf("1").size == 1)
                         }
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectClean()

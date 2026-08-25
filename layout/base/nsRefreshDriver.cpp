@@ -38,6 +38,7 @@
 #include "mozilla/AnimationEventDispatcher.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/AutoRestore.h"
+#include "mozilla/BackgroundHangMonitor.h"
 #include "mozilla/BasePrincipal.h"
 #include "mozilla/CycleCollectedJSContext.h"
 #include "mozilla/DisplayPortUtils.h"
@@ -559,7 +560,7 @@ class VsyncRefreshDriverTimer : public RefreshDriverTimer {
               }),
           useVsyncPriority ? nsIRunnablePriority::PRIORITY_VSYNC
                            : nsIRunnablePriority::PRIORITY_NORMAL);
-      NS_DispatchToMainThread(vsyncEvent);
+      NS_DispatchToMainThread(vsyncEvent, NS_DISPATCH_FALLIBLE);
     }
 
     void NotifyVsyncTimerOnMainThread() {
@@ -1408,6 +1409,31 @@ static nsDocShell* GetDocShell(nsPresContext* aPresContext) {
   return static_cast<nsDocShell*>(aPresContext->GetDocShell());
 }
 
+namespace mozilla {
+
+class PaintPendingHangAnnotator final : public BackgroundHangAnnotator {
+ public:
+  explicit PaintPendingHangAnnotator(nsRefreshDriver& aDriver)
+      : mDriver(aDriver) {
+    BackgroundHangMonitor::RegisterAnnotator(*this);
+  }
+
+  ~PaintPendingHangAnnotator() {
+    BackgroundHangMonitor::UnregisterAnnotator(*this);
+  }
+
+  void AnnotateHang(BackgroundHangAnnotations& aAnnotations) override {
+    if (mDriver.IsPaintPending()) {
+      aAnnotations.AddAnnotation(u"PaintPending"_ns, true);
+    }
+  }
+
+ private:
+  nsRefreshDriver& mDriver;
+};
+
+}  // namespace mozilla
+
 nsRefreshDriver::nsRefreshDriver(nsPresContext* aPresContext)
     : mActiveTimer(nullptr),
       mOwnTimer(nullptr),
@@ -1417,19 +1443,7 @@ nsRefreshDriver::nsRefreshDriver(nsPresContext* aPresContext)
       mFreezeCount(0),
       mThrottledFrameRequestInterval(
           TimeDuration::FromMilliseconds(GetThrottledTimerInterval())),
-      mMinRecomputeVisibilityInterval(GetMinRecomputeVisibilityInterval()),
-      mThrottled(false),
-      mNeedToRecomputeVisibility(false),
-      mTestControllingRefreshes(false),
-      mInRefresh(false),
-      mWaitingForTransaction(false),
-      mSkippedPaints(false),
-      mResizeSuppressed(false),
-      mInNormalTick(false),
-      mAttemptedExtraTickSinceLastVsync(false),
-      mHasExceededAfterLoadTickPeriod(false),
-      mHasImageAnimations(false),
-      mHasStartedTimerAtLeastOnce(false) {
+      mMinRecomputeVisibilityInterval(GetMinRecomputeVisibilityInterval()) {
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(mPresContext,
              "Need a pres context to tell us to call Disconnect() later "
@@ -1442,6 +1456,10 @@ nsRefreshDriver::nsRefreshDriver(nsPresContext* aPresContext)
     sRegularRateTimerList = new nsTArray<RefreshDriverTimer*>();
   }
   ++sRefreshDriverCount;
+
+  if (aPresContext->IsRoot()) {
+    mHangAnnotator = MakeUnique<PaintPendingHangAnnotator>(*this);
+  }
 }
 
 nsRefreshDriver::~nsRefreshDriver() {

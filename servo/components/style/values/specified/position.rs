@@ -749,7 +749,6 @@ pub struct PositionTryFallbacksList(
     pub crate::ArcSlice<PositionTryFallbacksItem>,
 );
 
-
 impl IsTreeScoped for PositionTryFallbacksList {
     fn is_tree_scoped(&self) -> bool {
         !self.is_none()
@@ -832,12 +831,12 @@ pub enum PositionTryOrder {
 
 impl PositionTryOrder {
     #[inline]
-    /// Return the `auto` value.
+    /// Return the `normal` value.
     pub fn normal() -> Self {
         Self::Normal
     }
 
-    /// Returns whether this is the `auto` value.
+    /// Returns whether this is the `normal` value.
     pub fn is_normal(&self) -> bool {
         *self == Self::Normal
     }
@@ -1783,6 +1782,71 @@ impl Parse for MasonryAutoFlow {
     }
 }
 
+/// Whether the `balance` value of `flex-wrap` is enabled.
+#[inline]
+fn flex_wrap_balance_enabled() -> bool {
+    #[cfg(feature = "servo")]
+    return static_prefs::pref!("layout.flexbox.balance");
+    #[cfg(not(feature = "servo"))]
+    return false;
+}
+
+/// The specified and computed value of the `flex-wrap` property:
+/// `nowrap | [ wrap | wrap-reverse ] || balance`
+///
+/// <https://drafts.csswg.org/css-flexbox-2/#flex-wrap-property>
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    MallocSizeOf,
+    Parse,
+    PartialEq,
+    SpecifiedValueInfo,
+    ToComputedValue,
+    ToCss,
+    ToResolvedValue,
+    ToShmem,
+    ToTyped,
+)]
+#[css(bitflags(
+    single = "nowrap",
+    mixed = "wrap,wrap-reverse,balance",
+    validate_mixed = "Self::validate_and_simplify"
+))]
+#[repr(C)]
+pub struct FlexWrap(u8);
+bitflags! {
+    impl FlexWrap: u8 {
+        /// `nowrap`
+        const NOWRAP = 0;
+        /// `wrap` - mutually exclusive with `wrap-reverse`
+        const WRAP = 1 << 0;
+        /// `wrap-reverse` - mutually exclusive with `wrap`
+        const WRAP_REVERSE = 1 << 1;
+        /// `balance`
+        const BALANCE = 1 << 2;
+    }
+}
+
+impl FlexWrap {
+    /// `nowrap | [ wrap | wrap-reverse ] || balance`
+    fn validate_and_simplify(&mut self) -> bool {
+        if self.contains(Self::WRAP | Self::WRAP_REVERSE) {
+            return false;
+        }
+        if self.contains(Self::BALANCE) {
+            if !flex_wrap_balance_enabled() {
+                return false;
+            }
+            // `wrap balance` computes to `balance`.
+            self.remove(Self::WRAP);
+        }
+        true
+    }
+}
+
 #[derive(
     Clone,
     Debug,
@@ -2152,13 +2216,9 @@ impl Inset {
         {
             return Ok(Self::LengthPercentage(l));
         }
-        match input.try_parse(|i| i.expect_ident_matching("auto")) {
-            Ok(_) => return Ok(Self::Auto),
-            Err(e) if !static_prefs::pref!("layout.css.anchor-positioning.enabled") => {
-                return Err(e.into());
-            },
-            Err(_) => (),
-        };
+        if input.try_parse(|i| i.expect_ident_matching("auto")).is_ok() {
+            return Ok(Self::Auto);
+        }
         Self::parse_anchor_functions_quirky(context, input, allow_quirks)
     }
 
@@ -2179,10 +2239,6 @@ impl Inset {
         input: &mut Parser<'i, 't>,
         allow_quirks: AllowQuirks,
     ) -> Result<Self, ParseError<'i>> {
-        debug_assert!(
-            static_prefs::pref!("layout.css.anchor-positioning.enabled"),
-            "How are we parsing with pref off?"
-        );
         if let Ok(inner) = input.try_parse(|i| AnchorFunction::parse(context, i)) {
             return Ok(Self::AnchorFunction(Box::new(inner)));
         }
@@ -2214,9 +2270,6 @@ impl Parse for AnchorFunction {
         context: &ParserContext,
         input: &mut Parser<'i, 't>,
     ) -> Result<Self, ParseError<'i>> {
-        if !static_prefs::pref!("layout.css.anchor-positioning.enabled") {
-            return Err(input.new_custom_error(StyleParseErrorKind::UnspecifiedError));
-        }
         input.expect_function_matching("anchor")?;
         input.parse_nested_block(|i| {
             let target_element = i.try_parse(|i| DashedIdent::parse(context, i)).ok();

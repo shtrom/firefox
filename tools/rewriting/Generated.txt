@@ -197,6 +197,7 @@ mobile/android/android-components/components/support/test/lint-baseline.xml
 mobile/android/android-components/components/support/utils/lint-baseline.xml
 mobile/android/android-components/components/support/webextensions/lint-baseline.xml
 mobile/android/android-components/components/tooling/fetch-tests/lint-baseline.xml
+mobile/android/android-components/components/ui/animation/lint-baseline.xml
 mobile/android/android-components/components/ui/autocomplete/lint-baseline.xml
 mobile/android/android-components/components/ui/colors/lint-baseline.xml
 mobile/android/android-components/components/ui/fonts/lint-baseline.xml
@@ -235,6 +236,7 @@ toolkit/components/nimbus/schemas/NimbusExperiment.schema.json
 toolkit/components/pdfjs/PdfJsDefaultPrefs.js
 toolkit/components/pdfjs/PdfJsOverridePrefs.js
 toolkit/components/uniffi-js/GeneratedScaffolding.cpp
+toolkit/components/uniffi-bindgen-gecko-js/android
 toolkit/components/uniffi-bindgen-gecko-js/tests/generated
 tools/@types/generated/
 tools/@types/subs/

@@ -76,7 +76,6 @@ const backgroundtaskPhases = {
         "@mozilla.org/observer-service;1",
         "@mozilla.org/power/powermanagerservice;1",
         "@mozilla.org/preferences-service;1",
-        "@mozilla.org/process/environment;1",
         "@mozilla.org/storage/service;1",
         "@mozilla.org/thirdpartyutil;1",
         "@mozilla.org/toolkit/app-startup;1",
@@ -112,7 +111,10 @@ const backgroundtaskPhases = {
 
         "resource://testing-common/backgroundtasks/BackgroundTask_wait.sys.mjs",
       ],
-      services: ["@mozilla.org/consoleAPI-storage;1"],
+      services: [
+        "@mozilla.org/consoleAPI-storage;1",
+        "@mozilla.org/process/environment;1",
+      ],
     },
   },
   AfterAwaitRunBackgroundTask: {
@@ -239,7 +241,9 @@ add_task(async function test_xpcom_graph_wait() {
       markerName == "ChromeUtils.importESModule" ||
       markerName == "ChromeUtils.importESModule static import"
     ) {
-      let module = markerData.name;
+      // The Text marker's "name" field is a unique string, so the payload
+      // holds an index into the thread's string table.
+      let module = profile.stringTable[markerData.name];
       if (!markersForAllPhases.modules.includes(module)) {
         markersForAllPhases.modules.push(module);
         markersForCurrentPhase.modules.push(module);
@@ -257,7 +261,9 @@ add_task(async function test_xpcom_graph_wait() {
       // between `--backgroundtask` and `xpcshell`, but that's not an issue
       // right at this moment.  It's worth noting that one CID can (and
       // sometimes does) correspond to more than one contract ID.
-      let cid = markerData.name;
+      // The Text marker's "name" field is a unique string, so the payload
+      // holds an index into the thread's string table.
+      let cid = profile.stringTable[markerData.name];
 
       if (!markersForAllPhases.services.includes(cid)) {
         markersForAllPhases.services.push(cid);

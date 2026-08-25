@@ -2,12 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "gfxPlatform.h"
+#include "TextureClientRecycleAllocator.h"
+
 #include "ImageContainer.h"
+#include "gfxPlatform.h"
 #include "mozilla/layers/BufferTexture.h"
 #include "mozilla/layers/ISurfaceAllocator.h"
 #include "mozilla/layers/TextureForwarder.h"
-#include "TextureClientRecycleAllocator.h"
 
 namespace mozilla {
 namespace layers {
@@ -169,8 +170,8 @@ TextureClientRecycleAllocator::CreateOrRecycle(
       if (!textureHolder->GetTextureClient()->GetAllocator()->IPCOpen() ||
           !aHelper.IsCompatible(textureHolder->GetTextureClient())) {
         // Release TextureClient.
-        RefPtr<Runnable> task =
-            new TextureClientReleaseTask(textureHolder->GetTextureClient());
+        RefPtr task = MakeRefPtr<TextureClientReleaseTask>(
+            textureHolder->GetTextureClient());
         textureHolder->ClearTextureClient();
         textureHolder = nullptr;
         mKnowsCompositor->GetTextureForwarder()->GetThread()->Dispatch(

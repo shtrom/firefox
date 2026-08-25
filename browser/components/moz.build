@@ -33,7 +33,6 @@ DIRS += [
     "attribution",
     "backup",
     "contentanalysis",
-    "contentsharing",
     "contextualidentity",
     "controlcenter",
     "customizableui",
@@ -49,10 +48,11 @@ DIRS += [
     "mozcachedohttp",
     "multilineeditor",
     "newtab",
-    "nova",
     "originattributes",
     "pagedata",
+    "passwordmgr",
     "permissions",
+    "pictureinpicture",
     "places",
     "preferences",
     "privatebrowsing",
@@ -60,12 +60,14 @@ DIRS += [
     "protections",
     "protocolhandler",
     "qrcode",
+    "referrals",
+    "remotecontrol",
     "reportbrokensite",
     "resistfingerprinting",
     "screenshots",
     "search",
-    "security",
     "sessionstore",
+    "sharing",
     "shell",
     "sidebar",
     "syncedtabs",
@@ -87,10 +89,10 @@ if CONFIG["MOZ_SELECTABLE_PROFILES"]:
     DIRS += ["profiles"]
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
-    DIRS += ["touchbar"]
+    DIRS += ["defaultlaunchonlogin", "touchbar"]
 elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
     DIRS += [
-        "defaultwindowslaunchonlogin",
+        "defaultlaunchonlogin",
         "installerprefs",
     ]
 

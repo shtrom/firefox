@@ -12,7 +12,7 @@ const UNKNOWN_ISSUER = "https://self-signed.example.com";
 const BAD_STS_CERT =
   "https://badchain.include-subdomains.pinning.example.com:443";
 const { TabStateFlusher } = ChromeUtils.importESModule(
-  "resource:///modules/sessionstore/TabStateFlusher.sys.mjs"
+  "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
 );
 
 // Security CertError Felt Privacy set to false & true
@@ -919,11 +919,12 @@ async function assertNetErrorPage({
         );
 
         certErrorCodeLink.scrollIntoView(true);
-        await EventUtils.synthesizeMouse(certErrorCodeLink, 2, 2, {}, content);
+        EventUtils.synthesizeMouse(certErrorCodeLink, 2, 2, {}, content);
         Assert.ok(
           netErrorCard.certErrorDebugInfoShowing,
           "The 'certErrorDebugInfoShowing' boolean should be toggled (to true) after Advance button click on assertAdvancedButton."
         );
+        await content.document.l10n.translateRoots();
         Assert.ok(netErrorCard.certErrorText, "Error Code Detail should exist");
 
         // Assert Site Certificate

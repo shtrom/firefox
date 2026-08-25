@@ -78,6 +78,8 @@ A Feature Callout displaying a user feedback survey
 
 You can also test Feature Callouts by adding them to the [local provider](https://searchfox.org/firefox-main/source/browser/components/asrouter/modules/FeatureCalloutMessages.sys.mjs). While slower than using the devtools, this is useful when you want to test the trigger or targeting, or when your callout's anchor is an element that is not visible while on `about:asrouter` (such as a urlbar button).
 
+PropTypes are defined for the `content` prop in the screen renderer component in [`MultiStageProtonScreen.jsx`](https://searchfox.org/firefox-main/source/browser/components/asrouter/content-src/components/MultiStageProtonScreen.jsx). In order to check your Feature Callout message against the defined PropTypes, you can ensure that the PropTypes validation test passes inside the unit tests in [`MultiStageAWProton.test.jsx`](https://searchfox.org/firefox-main/source/browser/components/asrouter/tests/unit/content-src/components/MultiStageAWProton.test.jsx). See [here](https://firefox-source-docs.mozilla.org/browser/components/asrouter/docs/building-and-testing.html#running-unit-tests) for more on running unit tests.
+
 ### Via Experiments:
 
 You can test Feature Callouts by creating an experiment or landing message in tree. [Messaging Journey](https://experimenter.info/messaging/desktop-messaging-journey) captures creating and testing experiments via Nimbus. This is the most time-consuming method, but if your callout will be launched as an experiment, then it also provides the most accurate preview.
@@ -221,15 +223,39 @@ interface FeatureCallout {
           // "hbox.deck-selected browser::%document%
           //  ai-window::%shadow%context-icon-button"
           selector: string;
-          // An object representing how the callout should be positioned
-          // relative to the anchor element.
+          // panel_position is an object representing how the callout should be
+          // positioned relative to the anchor element.
+          //
+          // Note that the arrow position depends on the *combination* of both
+          // anchor_attachment and callout_attachment. For example, if the
+          // anchor_attachment is bottomcenter and the callout_attachment is
+          // topright, the arrow will be attached to the top edge of the
+          // callout, but towards the right side of that edge. But if
+          // anchor_attachment is changed to leftcenter, then the same
+          // callout_attachment of topright would put the arrow on the right
+          // edge of the callout, towards the top. It's easy to make a
+          // mistake, so you should always test your anchors.
+          //
+          // Note that horizontal attachment points are reversed in RTL mode
+          // (right-to-left scripts like Arabic). "leftcenter rightcenter"
+          // would put the callout to the left of the anchor in LTR, but to
+          // the right of the anchor in RTL. "bottomcenter topright" would put
+          // the callout under the anchor and flowing to the left in LTR, but
+          // under the anchor and flowing to the right in RTL.
           panel_position: {
             // The point on the anchor that the callout should be tied to. See
-            // PopupAttachmentPoint below for the possible values. These are
-            // the same values used by XULPopupElements.
+            // PopupAttachmentPoint below for the possible values. These are the
+            // same values used by XULPopupElement.
             anchor_attachment: PopupAttachmentPoint;
             // The point on the callout that should be tied to the anchor.
             callout_attachment: PopupAttachmentPoint;
+            // The flip behavior to apply to the panel when it would overflow
+            // the screen. "slide" makes the panel slide in the direction it's
+            // overflowing, to keep it on screen. If it overflows in the same
+            // direction it's aligned relative to the anchor, it will flip in
+            // that direction. This is the default behavior. "none" just allows
+            // the panel to bleed out of bounds, without flipping or sliding.
+            flip?: "slide" | "none";
             // Offsets in pixels to apply to the callout position in the
             // horizontal and vertical directions. Generally not needed.
             offset_x?: number;
@@ -277,6 +303,17 @@ interface FeatureCallout {
         // you want a single row with a more inline layout, you can use this
         // property, which works well in tandem with title_logo.
         layout?: "inline";
+        // Adds a colorful gradient border to the callout. This is only
+        // supported for callouts with `hide_arrow`, due to technical issues
+        // with the arrow and callout sharing a border. No effect if HCM or a
+        // custom theme add-on is enabled.
+        zap_border?: boolean;
+        // Adds a colorful gradient shadow to the callout. This is only
+        // supported for callouts with `hide_arrow` and either
+        // `absolute_position` or `arrow_position` (i.e. <div> callouts). This
+        // is because panel callouts have a bounding box that would clip the
+        // shadow. No effect if HCM or a custom theme add-on is enabled.
+        zap_shadow?: boolean;
         // An optional object representing a large illustration to show above
         // other content. See Logo below for the possible properties.
         logo?: Logo;
@@ -484,6 +521,14 @@ interface FeatureCallout {
   };
 }
 
+// Each attachment point corresponds to an attachment point on the edge of a
+// frame. For example, "topleft" corresponds to the frame's top left corner, and
+// "rightcenter" corresponds to the center of the right edge of the frame.
+//
+// @see nsMenuPopupFrame for the canonical alignment points. We also add some
+// aliases based on cardinal directions (like on a compass) to make it easier to
+// reason about. So north is equivalent to topcenter, southwest is equivalent to
+// bottomleft, etc.
 type PopupAttachmentPoint =
   | "topleft"
   | "topright"
@@ -492,7 +537,15 @@ type PopupAttachmentPoint =
   | "leftcenter"
   | "rightcenter"
   | "topcenter"
-  | "bottomcenter";
+  | "bottomcenter"
+  | "north"
+  | "south"
+  | "west"
+  | "east"
+  | "northwest"
+  | "northeast"
+  | "southwest"
+  | "southeast";
 
 interface AutoFocusOptions {
   // A preferred CSS selector, if you want a specific element to be focused. If
@@ -532,6 +585,19 @@ interface LocalizableThing {
   paddingBlock?: string;
   paddingInline?: string;
   whiteSpace?: string;
+  // Inline icons to slot into a localized string. Only effective when
+  // `string_id` is set; Fluent uses the `<img data-l10n-name="…"/>` markers in
+  // the translated string to position each icon. Each key must match a
+  // `data-l10n-name` value on an `<img>` element in the Fluent string. Set
+  // `alt` directly on that `<img>` element in the Fluent string.
+  inline_icons?: {
+    [name: string]: {
+      // URL of the icon image.
+      imageURL: string;
+      // Optional alternative URL used in RTL locales.
+      rtlImageURL?: string;
+    };
+  };
 }
 
 interface Logo {
@@ -598,23 +664,88 @@ interface Action {
   needsAwait?: boolean;
 }
 
-// Either an image or a paragraph that supports inline links. Currently requires
-// Fluent strings. Raw strings are not supported.
+// Either an image or a paragraph that supports inline links and images.
+// Inline links can be expressed in two ways:
+//   1. A single Fluent-localized string paired with `link_keys`. Each key
+//      corresponds to an `<a data-l10n-name="…">` marker inside the Fluent
+//      string. This is the original mode and requires Fluent.
+//   2. An array of text/link/image segments assigned to `text`. Segments can
+//      be raw strings, embedded URLs (`href`), inline `link_key` references
+//      that look up actions on `screen.content`, or inline images. This mode
+//      supports raw strings (no Fluent required) and is the recommended
+//      shape for paragraphs that mix prose with one or more inline links or
+//      images.
 interface LinkParagraphOrImage extends Logo {
   // Which type of content this is.
   type: "image" | "text";
 
-  // Each of these is only used if `type` is "text".
-  // The `text` object contains the Fluent string id. Doesn't support raw text.
-  text: LocalizableThing;
-  // An array of key names. Each link key must exist in screen.content. For
+  // Each of the following is only used if `type` is "text".
+
+  // The paragraph text. One of:
+  //
+  // - A `LocalizableThing` for mode (1). Combine with `link_keys` to attach
+  //   actions to the `<a data-l10n-name="…">` markers in the Fluent string.
+  //
+  // - An array of segments for mode (2). Each segment is either:
+  //     * a raw string (rendered as plain text), or
+  //     * a `LocalizableThing` with `href` (and optional `where`), rendered
+  //       as a real link that, when clicked, calls `preventDefault()` and
+  //       dispatches the OPEN_URL special message action with
+  //       `{ args: href, where: where ?? "tab" }`. `where` accepts the same
+  //       values as OPEN_URL (e.g. "tab", "tabshifted", "window").
+  //     * a `LocalizableThing` with `link_key`, rendered as an inline link
+  //       whose action is looked up from `screen.content[link_key].action`
+  //       (the same mechanism that mode (1)'s `link_keys` uses, but
+  //       anchored to an explicit segment — so it works with raw text and
+  //       does not need a `<a data-l10n-name>` marker in a Fluent string).
+  //     * an object with `imageURL` (and optional `rtlImageURL`), rendered as
+  //       an `<img class="inline-icon">`. Unlike `inline_icons` on
+  //       `LocalizableThing` (mode 1), this segment isn't backed by Fluent,
+  //       so `alt` must be set directly on the segment (defaults to "").
+  //     * a `LocalizableThing` with neither `href`, `link_key`, nor
+  //       `imageURL`, rendered as a localized span.
+  //   Because each segment can itself be a `LocalizableThing`, segments
+  //   carry their own per-segment CSS overrides and `aria_label`. CSS
+  //   overrides set on `LinkParagraphOrImage` itself (e.g. `textAlign`,
+  //   `fontSize`, `marginBlock`) are applied to the surrounding `<p>`.
+  text: LocalizableThing | Array<
+    | string
+    | (LocalizableThing & {
+        // Embedded URL link. Dispatches OPEN_URL with `args: href`.
+        href?: string;
+        // OPEN_URL `where` argument. Defaults to "tab". Only meaningful
+        // alongside `href`.
+        where?: string;
+        // Inline link key. Resolved against `screen.content[link_key].action`.
+        // Mutually exclusive with `href`; if both are set, `href` wins.
+        link_key?: string;
+      })
+    | {
+        // URL of the inline image.
+        imageURL: string;
+        // Optional alternative URL used in RTL locales.
+        rtlImageURL?: string;
+        // <img> alt text. Defaults to "". Not backed by Fluent, so set it
+        // here rather than in a Fluent string.
+        alt?: string;
+        // CSS overrides for the <img> itself (e.g. width, height,
+        // marginInline), separate from the paragraph-level overrides above.
+      }
+  >;
+  // Only used in mode (1). Each link key must exist in screen.content. For
   // example, if link_keys is ["learn_more"], then there must be a key named
   // "learn_more" in screen.content. The value of that key must be an object
   // with an `action` property (which is an Action). Moreover, the string_id in
   // the `text` object (see the property above) must refer to a Fluent string
   // that contains an anchor element with `data-l10n-name="learn_more"`, e.g.:
   //   my-string = Do the thing! <a data-l10n-name="learn_more">Learn more</a>
-  link_keys: string[];
+  // Ignored when `text` is an array — in that mode, link keys are specified
+  // per-segment via `link_key` on individual segment objects.
+  link_keys?: string[];
+  // Optional paragraph style. If "legal", the paragraph is rendered with a
+  // smaller, secondary-text style (`.legal-paragraph`). Otherwise it uses the
+  // default style (`.link-paragraph`).
+  font_styles?: "legal";
 }
 
 interface MultiSelectItem {

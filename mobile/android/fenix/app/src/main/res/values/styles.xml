@@ -4,7 +4,7 @@
    - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="SplashScreenThemeBase" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
         <item name="windowSplashScreenBackground">@color/fx_mobile_splashscreen_background</item>
         <item name="postSplashScreenTheme">@style/NormalTheme</item>
         <item name="windowSplashScreenAnimationDuration">12000</item>
@@ -16,6 +16,8 @@
         <item name="materialTimePickerTheme">@style/Normal.MaterialTimePicker</item>
         <item name="materialCalendarTheme">@style/MaterialCalendar</item>
         <item name="materialSwitchStyle">@style/MaterialSwitchStyle</item>
+        <item name="checkboxStyle">@style/CheckBoxStyle</item>
+        <item name="radioButtonStyle">@style/RadioButtonStyle</item>
         <!-- Android system styling -->
         <item name="searchViewStyle">@style/SearchViewStyle</item>
         <item name="autoCompleteTextViewStyle">@style/AutoCompleteTextViewStyle</item>
@@ -44,16 +46,11 @@
         <item name="mozacSelectCreditCardHeaderTextStyle" tools:ignore="UnusedResources">@style/SelectPromptHeaderTextStyle</item>
         <item name="mozacSelectAddressHeaderTextStyle" tools:ignore="UnusedResources">@style/SelectPromptHeaderTextStyle</item>
 
-        <item name="mozacProtectionsDashboardBackground" tools:ignore="UnusedResources">@color/protections_dashboard_background</item>
-        <item name="mozacProtectionsDashboardTextPrimary" tools:ignore="UnusedResources">@color/protections_dashboard_text_primary</item>
-        <item name="mozacProtectionsDashboardTextAccent" tools:ignore="UnusedResources">@color/protections_dashboard_text_accent</item>
         <item name="mozacProtectionsDashboardChipBackground" tools:ignore="UnusedResources">@color/protections_dashboard_chip_background</item>
         <item name="mozacProtectionsDashboardChipText" tools:ignore="UnusedResources">@color/protections_dashboard_chip_text</item>
-        <item name="mozacProtectionsDashboardWaveGradient1" tools:ignore="UnusedResources">@color/protections_dashboard_wave_gradient1</item>
-        <item name="mozacProtectionsDashboardWaveGradient2" tools:ignore="UnusedResources">@color/protections_dashboard_wave_gradient2</item>
-        <item name="mozacProtectionsDashboardWaveGradient3" tools:ignore="UnusedResources">@color/protections_dashboard_wave_gradient3</item>
-        <item name="mozacProtectionsDashboardWaveGradient4" tools:ignore="UnusedResources">@color/protections_dashboard_wave_gradient4</item>
         <item name="mozacProtectionsDashboardProgressBar" tools:ignore="UnusedResources">@color/protections_dashboard_progress_bar</item>
+        <item name="mozacProtectionsDashboardGradientStart" tools:ignore="UnusedResources">@color/protections_dashboard_gradient_start</item>
+        <item name="mozacProtectionsDashboardGradientEnd" tools:ignore="UnusedResources">@color/protections_dashboard_gradient_end</item>
 
         <!-- Material3 -->
         <item name="colorPrimary">@color/fx_mobile_primary</item>
@@ -81,6 +78,18 @@
         <item name="colorOnError">@color/fx_mobile_on_error</item>
         <item name="colorErrorContainer">@color/fx_mobile_error_container</item>
         <item name="colorOnErrorContainer">@color/fx_mobile_on_error_container</item>
+        <item name="colorInformation">@color/fx_mobile_information</item>
+        <item name="colorOnInformation">@color/fx_mobile_on_information</item>
+        <item name="colorInformationContainer">@color/fx_mobile_information_container</item>
+        <item name="colorOnInformationContainer">@color/fx_mobile_on_information_container</item>
+        <item name="colorSuccess">@color/fx_mobile_success</item>
+        <item name="colorOnSuccess">@color/fx_mobile_on_success</item>
+        <item name="colorSuccessContainer">@color/fx_mobile_success_container</item>
+        <item name="colorOnSuccessContainer">@color/fx_mobile_on_success_container</item>
+        <item name="colorWarning">@color/fx_mobile_warning</item>
+        <item name="colorOnWarning">@color/fx_mobile_on_warning</item>
+        <item name="colorWarningContainer">@color/fx_mobile_warning_container</item>
+        <item name="colorOnWarningContainer">@color/fx_mobile_on_warning_container</item>
         <item name="colorOutline">@color/fx_mobile_outline</item>
         <item name="colorOutlineVariant">@color/fx_mobile_outline_variant</item>
         <item name="colorSurfaceBright">@color/fx_mobile_surface_bright</item>
@@ -90,18 +99,12 @@
         <item name="colorSurfaceContainerHighest">@color/fx_mobile_surface_container_highest</item>
         <item name="colorSurfaceContainerLow">@color/fx_mobile_surface_container_low</item>
         <item name="colorSurfaceContainerLowest">@color/fx_mobile_surface_container_lowest</item>
-        <item name="colorPrimaryFixed">@color/photonViolet05</item>
-        <item name="colorPrimaryFixedDim">@color/fx_mobile_primary_fixed_dim</item>
-        <item name="colorOnPrimaryFixed">@color/photonDarkGrey90</item>
-        <item name="colorOnPrimaryFixedVariant">@color/fx_mobile_on_primary_fixed_variant</item>
-        <item name="colorSecondaryFixed">@color/fx_mobile_secondary_fixed</item>
-        <item name="colorSecondaryFixedDim">@color/fx_mobile_secondary_fixed_dim</item>
-        <item name="colorOnSecondaryFixed">@color/fx_mobile_on_secondary_fixed</item>
-        <item name="colorOnSecondaryFixedVariant">@color/fx_mobile_on_secondary_fixed_variant</item>
-        <item name="colorTertiaryFixed">@color/fx_mobile_tertiary_fixed</item>
-        <item name="colorTertiaryFixedDim">@color/fx_mobile_tertiary_fixed_dim</item>
-        <item name="colorOnTertiaryFixed">@color/fx_mobile_on_tertiary_fixed</item>
-        <item name="colorOnTertiaryFixedVariant">@color/fx_mobile_on_tertiary_fixed_variant</item>
+        <item name="colorSurfaceContainerSelected">@color/fx_mobile_surface_container_selected</item>
+        <item name="colorAutofillText">@color/fx_mobile_autofill_text</item>
+        <item name="colorSelectedText">@color/fx_mobile_selected_text</item>
+        <item name="colorIconPrivate">@color/fx_mobile_icon_private</item>
+        <item name="colorSheetOutline">@color/fx_mobile_sheet_outline</item>
+        <item name="scrim">@color/fx_mobile_scrim</item>
 
         <!-- Design system color attributes -->
 
@@ -110,7 +113,6 @@
         <item name="layer2">@color/fx_mobile_layer_color_2</item>
         <!-- Search -->
         <item name="layer3">@color/fx_mobile_layer_color_3</item>
-        <item name="scrim">@color/fx_mobile_layer_color_scrim</item>
 
         <!-- Action -->
         <!-- Primary button in a disabled state -->
@@ -126,14 +128,16 @@
         <!-- Icon inverted (on color) -->
         <item name="iconOnColor">@color/fx_mobile_icon_color_oncolor</item>
 
-        <!-- Active thumb color & Active track color (30% transparency) -->
-        <item name="colorControlActivated">@color/accent_high_contrast_normal_theme</item>
+        <!-- Tint for activated controls (selected radio button, checked checkbox, switch thumb, seek bar, progress bar) -->
+        <item name="colorControlActivated">@color/fx_mobile_primary</item>
+        <item name="android:colorControlActivated">@color/fx_mobile_primary</item>
         <!-- Inactive thumb color -->
         <item name="colorSwitchThumbNormal">@color/toggle_off_knob_normal_theme</item>
         <!-- Inactive track color(30% transparency) -->
         <item name="android:colorForeground">@color/toggle_off_track_normal_theme</item>
         <!-- sets the toolbar back button color, radio buttons / unselected checkboxes -->
         <item name="colorControlNormal">@color/fx_mobile_on_surface</item>
+        <item name="android:colorControlNormal">@color/fx_mobile_on_surface</item>
 
         <!-- Updated color attributes -->
         <item name="accent">@color/accent_normal_theme</item>
@@ -162,13 +166,18 @@
         <item name="fenixLogo">@drawable/ic_logo_wordmark_normal</item>
         <item name="fenixWordmarkText">@drawable/ic_wordmark_text_normal</item>
         <item name="fenixWordmarkLogo">@drawable/ic_wordmark_logo</item>
-        <item name="fenixWordmarkSportLogo">@drawable/ic_wordmark_sport_logo</item>
         <item name="bottomBarBackground">@drawable/home_bottom_bar_background</item>
         <item name="bottomBarBackgroundTop">@drawable/home_bottom_bar_background_top</item>
         <item name="mozac_ic_private_mode_circle_fill_background_color">@android:color/transparent</item>
         <item name="mozac_ic_private_mode_circle_fill_icon_color">@color/fx_mobile_on_surface</item>
-        <item name="mozac_ic_shield_slash_bg_fill_critical">@color/fx_mobile_icon_color_primary</item>
-        <item name="mozac_ic_shield_slash_fill_critical">@color/fx_mobile_icon_color_critical</item>
+        <item name="mozac_ic_shield_slash_bg_fill_critical">?attr/colorOnSurface</item>
+        <item name="mozac_ic_shield_slash_fill_critical">?attr/colorError</item>
+        <item name="mozac_ic_extensions_warning_bg_fill_critical">?attr/colorOnSurfaceVariant</item>
+        <item name="mozac_ic_extensions_warning_fill_critical">?attr/colorError</item>
+        <item name="mozac_ic_avatar_warning_bg_fill_critical">?attr/colorOnSurfaceVariant</item>
+        <item name="mozac_ic_avatar_warning_fill_critical">?attr/colorError</item>
+        <item name="mozac_ic_lock_slash_bg_fill_critical">?attr/colorOnSurfaceVariant</item>
+        <item name="mozac_ic_lock_slash_fill_critical">?attr/colorError</item>
 
         <item name="tabCounterTintColor">?attr/colorOnSurface</item>
     </style>
@@ -301,10 +310,11 @@
         <item name="materialTimePickerTheme">@style/Private.MaterialTimePicker</item>
         <item name="materialCalendarTheme">@style/MaterialCalendar</item>
         <item name="materialSwitchStyle">@style/MaterialSwitchStyle</item>
+        <item name="checkboxStyle">@style/CheckBoxStyle</item>
+        <item name="radioButtonStyle">@style/RadioButtonStyle</item>
         <item name="searchViewStyle">@style/SearchViewStyle</item>
         <item name="android:textColorLink">@color/fx_mobile_private_tertiary</item>
         <item name="preferenceTheme">@style/PreferenceTheme</item>
-        <item name="checkboxStyle">@style/App.Widget.CompoundButton.CheckBox</item>
         <item name="autoCompleteTextViewStyle">@style/AutoCompleteTextViewStyle</item>
         <item name="android:windowContentTransitions">true</item>
         <item name="android:windowAnimationStyle">@style/WindowAnimationTransition</item>
@@ -313,7 +323,8 @@
         <item name="android:windowBackground">@color/fx_mobile_private_surface</item>
         <item name="android:colorEdgeEffect">@color/accent_private_theme</item>
         <item name="android:colorAccent">@color/fx_mobile_private_on_surface</item>
-        <item name="colorControlActivated">@color/accent_high_contrast_private_theme</item>
+        <item name="colorControlActivated">@color/fx_mobile_private_primary</item>
+        <item name="android:colorControlActivated">@color/fx_mobile_private_primary</item>
         <item name="android:textColorPrimary">@color/state_list_text_color</item>
         <item name="android:textColorSecondary">@color/secondary_state_list_text_color</item>
         <item name="materialAlertDialogTheme">@style/BaseDialogStyle.Private</item>
@@ -329,16 +340,11 @@
         <item name="mozacSelectCreditCardHeaderTextStyle" tools:ignore="UnusedResources">@style/SelectPromptHeaderTextStyle</item>
         <item name="mozacSelectAddressHeaderTextStyle" tools:ignore="UnusedResources">@style/SelectPromptHeaderTextStyle</item>
 
-        <item name="mozacProtectionsDashboardBackground" tools:ignore="UnusedResources">@color/protections_dashboard_background_private</item>
-        <item name="mozacProtectionsDashboardTextPrimary" tools:ignore="UnusedResources">@color/protections_dashboard_text_primary_private</item>
-        <item name="mozacProtectionsDashboardTextAccent" tools:ignore="UnusedResources">@color/protections_dashboard_text_accent_private</item>
         <item name="mozacProtectionsDashboardChipBackground" tools:ignore="UnusedResources">@color/protections_dashboard_chip_background_private</item>
         <item name="mozacProtectionsDashboardChipText" tools:ignore="UnusedResources">@color/protections_dashboard_chip_text_private</item>
-        <item name="mozacProtectionsDashboardWaveGradient1" tools:ignore="UnusedResources">@color/protections_dashboard_wave_gradient1_private</item>
-        <item name="mozacProtectionsDashboardWaveGradient2" tools:ignore="UnusedResources">@color/protections_dashboard_wave_gradient2_private</item>
-        <item name="mozacProtectionsDashboardWaveGradient3" tools:ignore="UnusedResources">@color/protections_dashboard_wave_gradient3_private</item>
-        <item name="mozacProtectionsDashboardWaveGradient4" tools:ignore="UnusedResources">@color/protections_dashboard_wave_gradient4_private</item>
         <item name="mozacProtectionsDashboardProgressBar" tools:ignore="UnusedResources">@color/protections_dashboard_progress_bar_private</item>
+        <item name="mozacProtectionsDashboardGradientStart" tools:ignore="UnusedResources">@color/protections_dashboard_gradient_start_private</item>
+        <item name="mozacProtectionsDashboardGradientEnd" tools:ignore="UnusedResources">@color/protections_dashboard_gradient_end_private</item>
 
         <!-- Material3 -->
         <item name="colorPrimary">@color/fx_mobile_private_primary</item>
@@ -366,6 +372,18 @@
         <item name="colorOnError">@color/fx_mobile_private_on_error</item>
         <item name="colorErrorContainer">@color/fx_mobile_private_error_container</item>
         <item name="colorOnErrorContainer">@color/fx_mobile_private_on_error_container</item>
+        <item name="colorInformation">@color/fx_mobile_private_information</item>
+        <item name="colorOnInformation">@color/fx_mobile_private_on_information</item>
+        <item name="colorInformationContainer">@color/fx_mobile_private_information_container</item>
+        <item name="colorOnInformationContainer">@color/fx_mobile_private_on_information_container</item>
+        <item name="colorSuccess">@color/fx_mobile_private_success</item>
+        <item name="colorOnSuccess">@color/fx_mobile_private_on_success</item>
+        <item name="colorSuccessContainer">@color/fx_mobile_private_success_container</item>
+        <item name="colorOnSuccessContainer">@color/fx_mobile_private_on_success_container</item>
+        <item name="colorWarning">@color/fx_mobile_private_warning</item>
+        <item name="colorOnWarning">@color/fx_mobile_private_on_warning</item>
+        <item name="colorWarningContainer">@color/fx_mobile_private_warning_container</item>
+        <item name="colorOnWarningContainer">@color/fx_mobile_private_on_warning_container</item>
         <item name="colorOutline">@color/fx_mobile_private_outline</item>
         <item name="colorOutlineVariant">@color/fx_mobile_private_outline_variant</item>
         <item name="colorSurfaceBright">@color/fx_mobile_private_surface_bright</item>
@@ -375,18 +393,12 @@
         <item name="colorSurfaceContainerHighest">@color/fx_mobile_private_surface_container_highest</item>
         <item name="colorSurfaceContainerLow">@color/fx_mobile_private_surface_container_low</item>
         <item name="colorSurfaceContainerLowest">@color/fx_mobile_private_surface_container_lowest</item>
-        <item name="colorPrimaryFixed">@color/photonViolet05</item>
-        <item name="colorPrimaryFixedDim">@color/fx_mobile_private_primary_fixed_dim</item>
-        <item name="colorOnPrimaryFixed">@color/photonDarkGrey90</item>
-        <item name="colorOnPrimaryFixedVariant">@color/fx_mobile_private_on_primary_fixed_variant</item>
-        <item name="colorSecondaryFixed">@color/fx_mobile_private_secondary_fixed</item>
-        <item name="colorSecondaryFixedDim">@color/fx_mobile_private_secondary_fixed_dim</item>
-        <item name="colorOnSecondaryFixed">@color/fx_mobile_private_on_secondary_fixed</item>
-        <item name="colorOnSecondaryFixedVariant">@color/fx_mobile_private_on_secondary_fixed_variant</item>
-        <item name="colorTertiaryFixed">@color/fx_mobile_private_tertiary_fixed</item>
-        <item name="colorTertiaryFixedDim">@color/fx_mobile_private_tertiary_fixed_dim</item>
-        <item name="colorOnTertiaryFixed">@color/fx_mobile_private_on_tertiary_fixed</item>
-        <item name="colorOnTertiaryFixedVariant">@color/fx_mobile_private_on_tertiary_fixed_variant</item>
+        <item name="colorSurfaceContainerSelected">@color/fx_mobile_private_surface_container_selected</item>
+        <item name="colorAutofillText">@color/fx_mobile_private_autofill_text</item>
+        <item name="colorSelectedText">@color/fx_mobile_private_selected_text</item>
+        <item name="colorIconPrivate">@color/fx_mobile_private_icon_private</item>
+        <item name="colorSheetOutline">@color/fx_mobile_private_sheet_outline</item>
+        <item name="scrim">@color/fx_mobile_private_scrim</item>
 
         <!-- Design system color attributes -->
 
@@ -395,7 +407,6 @@
         <item name="layer2">@color/fx_mobile_private_layer_color_2</item>
         <!-- Search -->
         <item name="layer3">@color/fx_mobile_private_layer_color_3</item>
-        <item name="scrim">@color/fx_mobile_private_layer_color_scrim</item>
 
         <!-- Action -->
         <!-- Primary button in a disabled state -->
@@ -417,6 +428,7 @@
         <item name="android:colorForeground">@color/toggle_off_track_dark_theme</item>
         <!-- sets the toolbar back button color, radio buttons/ unselected checkboxes -->
         <item name="colorControlNormal">@color/fx_mobile_private_on_surface</item>
+        <item name="android:colorControlNormal">@color/fx_mobile_private_on_surface</item>
 
         <!-- Updated color attributes -->
         <item name="accent">@color/accent_private_theme</item>
@@ -445,19 +457,20 @@
         <item name="fenixLogo">@drawable/ic_logo_wordmark_private</item>
         <item name="fenixWordmarkText">@drawable/ic_wordmark_text_private</item>
         <item name="fenixWordmarkLogo">@drawable/ic_wordmark_logo</item>
-        <item name="fenixWordmarkSportLogo">@drawable/ic_wordmark_sport_logo</item>
         <item name="bottomBarBackground">@drawable/private_home_bottom_bar_background_gradient</item>
         <item name="bottomBarBackgroundTop">@drawable/private_home_bottom_bar_background_gradient_top</item>
-        <item name="mozac_ic_private_mode_circle_fill_background_color">@color/photonWhite</item>
+        <item name="mozac_ic_private_mode_circle_fill_background_color">@color/novaWhite</item>
         <item name="mozac_ic_private_mode_circle_fill_icon_color">@color/fx_mobile_private_layer_color_2</item>
-        <item name="mozac_ic_shield_slash_bg_fill_critical">@color/fx_mobile_private_icon_color_primary</item>
-        <item name="mozac_ic_shield_slash_fill_critical">@color/fx_mobile_private_icon_color_critical</item>
+        <item name="mozac_ic_shield_slash_bg_fill_critical">?attr/colorOnSurface</item>
+        <item name="mozac_ic_shield_slash_fill_critical">?attr/colorError</item>
+        <item name="mozac_ic_extensions_warning_bg_fill_critical">?attr/colorOnSurfaceVariant</item>
+        <item name="mozac_ic_extensions_warning_fill_critical">?attr/colorError</item>
+        <item name="mozac_ic_avatar_warning_bg_fill_critical">?attr/colorOnSurfaceVariant</item>
+        <item name="mozac_ic_avatar_warning_fill_critical">?attr/colorError</item>
+        <item name="mozac_ic_lock_slash_bg_fill_critical">?attr/colorOnSurfaceVariant</item>
+        <item name="mozac_ic_lock_slash_fill_critical">?attr/colorError</item>
 
         <item name="tabCounterTintColor">?attr/colorOnSurface</item>
-    </style>
-
-    <style name="App.Widget.CompoundButton.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox">
-        <item name="buttonTint">@color/checkbox_tint</item>
     </style>
 
     <style name="Mozac.Browser.Menu" parent="" tools:ignore="UnusedResources">
@@ -481,31 +494,41 @@
     </style>
 
     <!-- UI button styling -->
-    <style name="NeutralButton" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="iconTint">@color/fx_mobile_icon_color_action_secondary</item>
+    <style name="NeutralButton" parent="Widget.Material3.Button.OutlinedButton">
         <item name="iconPadding">8dp</item>
         <item name="iconGravity">textStart</item>
         <item name="android:textAlignment">center</item>
         <item name="android:layout_width">match_parent</item>
-        <item name="android:radius">4dp</item>
         <item name="android:layout_height">48dp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="backgroundTint">@color/fx_mobile_action_color_secondary</item>
-        <item name="android:textColor">@color/fx_mobile_text_color_action_secondary</item>
-        <item name="rippleColor">?attr/colorOnSurfaceVariant</item>
-        <item name="android:letterSpacing">0</item>
         <item name="android:textFontWeight" tools:ignore="NewApi">@integer/font_weight_medium</item>
         <item name="android:fontWeight">@integer/font_weight_medium</item>
     </style>
 
-    <style name="DestructiveButton" parent="NeutralButton">
+    <style name="DestructiveButton" parent="Widget.Material3.Button.OutlinedButton">
         <item name="iconTint">?attr/colorError</item>
+        <item name="strokeColor">?attr/colorError</item>
+        <item name="iconPadding">8dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="android:textAlignment">center</item>
         <item name="android:textColor">?attr/colorError</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textFontWeight" tools:ignore="NewApi">@integer/font_weight_medium</item>
+        <item name="android:fontWeight">@integer/font_weight_medium</item>
     </style>
 
-    <style name="PositiveButton" parent="NeutralButton">
-        <item name="backgroundTint">?attr/colorPrimary</item>
+    <style name="PositiveButton" parent="Widget.Material3.Button">
+        <item name="iconPadding">8dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="android:textAlignment">center</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textFontWeight" tools:ignore="NewApi">@integer/font_weight_medium</item>
+        <item name="android:fontWeight">@integer/font_weight_medium</item>
+        <item name="backgroundTint">?attr/colorTertiary</item>
         <item name="iconTint">?attr/colorOnPrimary</item>
         <item name="android:textColor">?attr/colorOnPrimary</item>
     </style>
@@ -529,8 +552,7 @@
     </style>
 
     <style name="PreferenceTheme" parent="PreferenceThemeOverlay.v14.Material">
-        <item name="android:textFontWeight" tools:ignore="NewApi">@integer/font_weight_light</item>
-        <item name="android:fontWeight">@integer/font_weight_light</item>
+        <item name="android:fontFamily">sans-serif</item>
         <item name="switchPreferenceCompatStyle">@style/SwitchCompatPreferenceMaterialStyle</item>
     </style>
 
@@ -618,38 +640,8 @@
         <item name="android:layout_alignParentStart">true</item>
     </style>
 
-    <style name="QuickSettingsSmallText">
-        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
-        <item name="android:textSize">12sp</item>
-        <item name="android:paddingEnd">16dp</item>
-        <item name="android:gravity">top</item>
-        <item name="android:layout_alignParentStart">true</item>
-    </style>
-
-    <style name="QuickSettingsLargeText">
-        <item name="android:textColor">@color/state_list_text_color</item>
-        <item name="android:textSize">16sp</item>
-        <item name="android:paddingStart">16dp</item>
-        <item name="android:paddingEnd">16dp</item>
-        <item name="android:gravity">center_vertical</item>
-        <item name="android:layout_alignParentStart">true</item>
-    </style>
-
-    <style name="QuickSettingsLargeText.Icon">
-        <item name="android:drawablePadding">8dp</item>
-        <item name="drawableEndCompat">@drawable/mozac_ic_chevron_right_24</item>
-    </style>
-
     <style name="QuickSettingsText.Icon">
         <item name="android:drawablePadding">8dp</item>
-    </style>
-
-    <style name="QuickSettingsText.PermissionItemEnd">
-        <item name="android:layout_alignParentEnd">true</item>
-        <item name="android:paddingEnd">24dp</item>
-        <item name="android:gravity">end|center_vertical</item>
-        <item name="android:background">?android:attr/selectableItemBackground</item>
-        <item name="android:textColor">?accentUsedOnDarkBackground</item>
     </style>
 
     <style name="CreateCollectionDialogStyle" parent="DialogStyleBase"/>
@@ -713,18 +705,21 @@
     </style>
 
     <style name="PreferenceSectionHeader" parent="AcornHeadline8">
-        <item name="android:textColor">?colorOnSurfaceVariant</item>
+        <item name="android:textColor">?colorOnSurface</item>
     </style>
 
     <style name="EngineTextField" parent="TextAppearance.AppCompat">
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="Theme.LensCamera" parent="Theme.AppCompat.NoActionBar">
+    <!-- Material DayNight parent so bottom sheets hosted here resolve the same day/night dialog
+       - theme as the rest of the app; the camera surface itself stays black via the items below. -->
+    <style name="Theme.LensCamera" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:navigationBarColor">@android:color/black</item>
         <item name="android:statusBarColor">@android:color/black</item>
+        <item name="bottomSheetDialogTheme">@style/BottomSheet</item>
     </style>
 
     <style name="Theme.Transparent" parent="android:Theme">
@@ -782,4 +777,11 @@
         <item name="trackTint">@color/material_switch_track_tint</item>
     </style>
 
+    <style name="CheckBoxStyle" parent="Widget.Material3.CompoundButton.CheckBox">
+        <item name="buttonTint">@color/compound_button_tint</item>
+    </style>
+
+    <style name="RadioButtonStyle" parent="Widget.Material3.CompoundButton.RadioButton">
+        <item name="buttonTint">@color/compound_button_tint</item>
+    </style>
 </resources>

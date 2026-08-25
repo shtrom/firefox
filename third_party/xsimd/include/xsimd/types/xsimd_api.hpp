@@ -12,14 +12,16 @@
 #ifndef XSIMD_API_HPP
 #define XSIMD_API_HPP
 
+#include "../arch/xsimd_isa.hpp"
+#include "../types/xsimd_batch.hpp"
+#include "../types/xsimd_traits.hpp"
+#include "../utils/xsimd_type_traits.hpp"
+
 #include <complex>
 #include <cstddef>
 #include <limits>
 #include <ostream>
-
-#include "../arch/xsimd_isa.hpp"
-#include "../types/xsimd_batch.hpp"
-#include "../types/xsimd_traits.hpp"
+#include <utility>
 
 namespace xsimd
 {
@@ -1110,6 +1112,37 @@ namespace xsimd
     }
 
     /**
+     * @ingroup batch_data_transfer
+     *
+     * Extract the scalar element at compile-time index \c I from batch \c b.
+     * @param b the batch to extract from.
+     * @return the scalar element at index \c I.
+     */
+    template <size_t I, class T, class A>
+    XSIMD_INLINE T get(batch<T, A> const& b) noexcept
+    {
+        static_assert(I < batch<T, A>::size, "index out of bounds");
+        detail::static_check_supported_config<T, A>();
+        return kernel::get(b, index<I> {}, A {});
+    }
+
+    template <size_t I, class T, class A>
+    XSIMD_INLINE bool get(batch_bool<T, A> const& b) noexcept
+    {
+        static_assert(I < batch_bool<T, A>::size, "index out of bounds");
+        detail::static_check_supported_config<T, A>();
+        return kernel::get(b, index<I> {}, A {});
+    }
+
+    template <size_t I, class T, class A>
+    XSIMD_INLINE typename batch<std::complex<T>, A>::value_type get(batch<std::complex<T>, A> const& b) noexcept
+    {
+        static_assert(I < batch<std::complex<T>, A>::size, "index out of bounds");
+        detail::static_check_supported_config<T, A>();
+        return kernel::get(b, index<I> {}, A {});
+    }
+
+    /**
      * @ingroup batch_reducers
      *
      * Parallel horizontal addition: adds the scalars of each batch
@@ -1349,7 +1382,7 @@ namespace xsimd
     /**
      * @ingroup batch_data_transfer
      *
-     * Creates a batch from the buffer \c ptr and the specifed
+     * Creates a batch from the buffer \c ptr and the specified
      * batch value type \c To. The memory needs to be aligned.
      * @param ptr the memory buffer to read
      * @return a new batch instance
@@ -1423,7 +1456,7 @@ namespace xsimd
     /**
      * @ingroup batch_data_transfer
      *
-     * Creates a batch from the buffer \c ptr and the specifed
+     * Creates a batch from the buffer \c ptr and the specified
      * batch value type \c To. The memory does not need to be aligned.
      * @param ptr the memory buffer to read
      * @return a new batch instance
@@ -1521,6 +1554,27 @@ namespace xsimd
     /**
      * @ingroup batch_data_transfer
      *
+     * Creates a batch from the buffer \c ptr using a runtime mask. Elements
+     * corresponding to \c false in the mask are not accessed in memory and are
+     * zero-initialized in the resulting batch. No type conversion is performed:
+     * \c ptr must point to \c T. Prefer the \c batch_bool_constant overload
+     * whenever the mask is known at compile time.
+     * @param ptr the memory buffer to read
+     * @param mask runtime selection mask for the elements to load
+     * @return a new batch instance
+     */
+    template <class T, class A = default_arch>
+    XSIMD_INLINE batch<T, A> load(T const* ptr,
+                                  batch_bool<T, A> mask,
+                                  aligned_mode = {}) noexcept
+    {
+        detail::static_check_supported_config<T, A>();
+        return batch<T, A>::load(ptr, mask, aligned_mode {});
+    }
+
+    /**
+     * @ingroup batch_data_transfer
+     *
      * Creates a batch from the buffer \c ptr using a mask. Elements
      * corresponding to \c false in the mask are not accessed in memory and are
      * zero-initialized in the resulting batch.
@@ -1532,6 +1586,16 @@ namespace xsimd
     template <class T, class A = default_arch, bool... Values, class From>
     XSIMD_INLINE batch<T, A> load(From const* ptr,
                                   batch_bool_constant<T, A, Values...> const& mask,
+                                  unaligned_mode) noexcept
+    {
+        detail::static_check_supported_config<T, A>();
+        return batch<T, A>::load(ptr, mask, unaligned_mode {});
+    }
+
+    /// \overload
+    template <class T, class A = default_arch>
+    XSIMD_INLINE batch<T, A> load(T const* ptr,
+                                  batch_bool<T, A> mask,
                                   unaligned_mode) noexcept
     {
         detail::static_check_supported_config<T, A>();
@@ -1710,6 +1774,54 @@ namespace xsimd
     {
         detail::static_check_supported_config<T, A>();
         return x * y;
+    }
+
+    /**
+     * @ingroup batch_arithmetic
+     *
+     * Computes the low N bits of the 2N-bit lane-wise product of \c x and \c y.
+     * Equivalent to ``mul(x, y)``; the low half is identical for signed and unsigned.
+     * @param x batch involved in the product.
+     * @param y batch involved in the product.
+     * @return the low N bits of the product, lane-wise.
+     */
+    template <class T, class A, class = std::enable_if_t<std::is_integral<T>::value>>
+    XSIMD_INLINE batch<T, A> mul_lo(batch<T, A> const& x, batch<T, A> const& y) noexcept
+    {
+        detail::static_check_supported_config<T, A>();
+        return x * y;
+    }
+
+    /**
+     * @ingroup batch_arithmetic
+     *
+     * Computes the high N bits of the 2N-bit lane-wise product of \c x and \c y.
+     * The signedness of \c T selects the signed or unsigned high half.
+     * @param x batch involved in the product.
+     * @param y batch involved in the product.
+     * @return the high N bits of the product, lane-wise.
+     */
+    template <class T, class A, class = std::enable_if_t<std::is_integral<T>::value>>
+    XSIMD_INLINE batch<T, A> mul_hi(batch<T, A> const& x, batch<T, A> const& y) noexcept
+    {
+        detail::static_check_supported_config<T, A>();
+        return kernel::mul_hi<A>(x, y, A {});
+    }
+
+    /**
+     * @ingroup batch_arithmetic
+     *
+     * Computes the full 2N-bit lane-wise product of \c x and \c y as ``{hi, lo}``.
+     * @param x batch involved in the product.
+     * @param y batch involved in the product.
+     * @return pair of batches ``{hi, lo}``.
+     */
+    template <class T, class A, class = std::enable_if_t<std::is_integral<T>::value>>
+    XSIMD_INLINE std::pair<batch<T, A>, batch<T, A>>
+    mul_hilo(batch<T, A> const& x, batch<T, A> const& y) noexcept
+    {
+        detail::static_check_supported_config<T, A>();
+        return kernel::mul_hilo<A>(x, y, A {});
     }
 
     /**
@@ -2155,7 +2267,7 @@ namespace xsimd
      * Computes the batch of nearest integer values to scalars in \c x (in
      * floating point format), rounding halfway cases away from zero, regardless
      * of the current rounding mode.
-     * @param x batch of flaoting point values.
+     * @param x batch of floating point values.
      * @return the batch of nearest integer values.
      */
     template <class T, class A>
@@ -2634,6 +2746,28 @@ namespace xsimd
     /**
      * @ingroup batch_data_transfer
      *
+     * Copy selected elements of batch \c val to the buffer \c mem using a
+     * runtime mask. Elements corresponding to \c false in the mask are not
+     * written and leave the contents of \c mem untouched. No type conversion
+     * is performed: \c mem must point to \c T. Prefer the \c
+     * batch_bool_constant overload whenever the mask is known at compile time.
+     * @param mem the memory buffer to write to
+     * @param val the batch to copy from
+     * @param mask runtime selection mask for the elements to store
+     */
+    template <class T, class A = default_arch>
+    XSIMD_INLINE void store(T* mem,
+                            batch<T, A> const& val,
+                            batch_bool<T, A> mask,
+                            aligned_mode = {}) noexcept
+    {
+        detail::static_check_supported_config<T, A>();
+        val.store(mem, mask, aligned_mode {});
+    }
+
+    /**
+     * @ingroup batch_data_transfer
+     *
      * Copy selected elements of batch \c val to the buffer \c mem using a mask.
      * Elements corresponding to \c false in the mask are not written to memory.
      * @param mem the memory buffer to write to. The buffer does not need to be
@@ -2645,6 +2779,17 @@ namespace xsimd
     XSIMD_INLINE void store(T* mem,
                             batch<T, A> const& val,
                             batch_bool_constant<T, A, Values...> const& mask,
+                            unaligned_mode) noexcept
+    {
+        detail::static_check_supported_config<T, A>();
+        val.store(mem, mask, unaligned_mode {});
+    }
+
+    /// \overload
+    template <class T, class A = default_arch>
+    XSIMD_INLINE void store(T* mem,
+                            batch<T, A> const& val,
+                            batch_bool<T, A> mask,
                             unaligned_mode) noexcept
     {
         detail::static_check_supported_config<T, A>();

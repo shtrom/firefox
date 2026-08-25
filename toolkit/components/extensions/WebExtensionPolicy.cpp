@@ -23,6 +23,7 @@
 #include "nsISubstitutingProtocolHandler.h"
 #include "nsLiteralString.h"
 #include "nsNetUtil.h"
+#include "nsPIDOMWindowInlines.h"
 #include "nsPrintfCString.h"
 
 namespace mozilla {
@@ -67,6 +68,8 @@ static const char kBackgroundPageHTMLEnd[] =
   "script-src 'self' 'wasm-unsafe-eval' http://localhost:* " \
   "http://127.0.0.1:*;"
 
+#define DEFAULT_SANDBOX_CSP "sandbox allow-scripts; script-src 'self';"
+
 static inline ExtensionPolicyService& EPS() {
   return ExtensionPolicyService::GetSingleton();
 }
@@ -92,13 +95,14 @@ static nsISubstitutingProtocolHandler* Proto() {
 
 bool ParseGlobs(GlobalObject& aGlobal,
                 Sequence<OwningMatchGlobOrUTF8String> aGlobs,
-                nsTArray<RefPtr<MatchGlobCore>>& aResult, ErrorResult& aRv) {
+                nsTArray<RefPtr<MatchGlobCore>>& aResult, ErrorResult& aRv,
+                bool aAllowQuestion = true) {
   for (auto& elem : aGlobs) {
     if (elem.IsMatchGlob()) {
       aResult.AppendElement(elem.GetAsMatchGlob()->Core());
     } else {
       RefPtr<MatchGlobCore> glob =
-          new MatchGlobCore(elem.GetAsUTF8String(), true, false, aRv);
+          new MatchGlobCore(elem.GetAsUTF8String(), aAllowQuestion, false, aRv);
       if (aRv.Failed()) {
         return false;
       }
@@ -212,6 +216,7 @@ WebExtensionPolicyCore::WebExtensionPolicyCore(GlobalObject& aGlobal,
       mType(NS_AtomizeMainThread(aInit.mType)),
       mManifestVersion(aInit.mManifestVersion),
       mExtensionPageCSP(aInit.mExtensionPageCSP),
+      mSandboxPageCSP(aInit.mSandboxPageCSP),
       mIsPrivileged(aInit.mIsPrivileged),
       mTemporarilyInstalled(aInit.mTemporarilyInstalled),
       mBackgroundWorkerScript(aInit.mBackgroundWorkerScript),
@@ -242,6 +247,17 @@ WebExtensionPolicyCore::WebExtensionPolicyCore(GlobalObject& aGlobal,
     }
   }
 
+  if (!aInit.mSandboxPages.IsNull()) {
+    if (!ParseGlobs(aGlobal, aInit.mSandboxPages.Value(),
+                    mSandboxPages.SetValue(), aRv, false)) {
+      return;
+    }
+  }
+
+  if (mSandboxPageCSP.IsVoid()) {
+    mSandboxPageCSP.AssignLiteral(DEFAULT_SANDBOX_CSP);
+  }
+
   if (mExtensionPageCSP.IsVoid()) {
     if (mManifestVersion < 3) {
       EPS().GetDefaultCSP(mExtensionPageCSP);
@@ -264,6 +280,14 @@ WebExtensionPolicyCore::WebExtensionPolicyCore(GlobalObject& aGlobal,
   if (NS_FAILED(rv)) {
     aRv.Throw(rv);
   }
+}
+
+bool WebExtensionPolicyCore::IsSandboxPage(nsIURI* aURI) const {
+  extensions::URLInfo urlInfo(aURI);
+  return aURI && !mSandboxPages.IsNull() &&
+         urlInfo.Scheme() == nsGkAtoms::moz_extension &&
+         MozExtensionHostname().Equals(urlInfo.Host()) &&
+         mSandboxPages.Value().Matches(urlInfo.FilePath());
 }
 
 bool WebExtensionPolicyCore::SourceMayAccessPath(
@@ -291,6 +315,17 @@ bool WebExtensionPolicyCore::SourceMayAccessPath(
   return false;
 }
 
+bool WebExtensionPolicyCore::FileSchemeAllowed() const {
+  if (!StaticPrefs::extensions_webextensions_fileSchemeAccess_requireOptIn()) {
+    // Before we required an opt-in to "internal:fileSchemeAccess", file access
+    // was automatically allowed if the host permissions allowed it.
+    return true;
+  }
+  // Only "internal:fileSchemeAccess" is checked here; most callers should also
+  // check for the presence of file: or <all_urls> host permissions as needed.
+  return HasPermission(nsGkAtoms::fileSchemeAllowedPermission);
+}
+
 bool WebExtensionPolicyCore::CanAccessURI(const URLInfo& aURI, bool aExplicit,
                                           bool aCheckRestricted,
                                           bool aAllowFilePermission) const {
@@ -301,6 +336,8 @@ bool WebExtensionPolicyCore::CanAccessURI(const URLInfo& aURI, bool aExplicit,
     return false;
   }
   if (!aAllowFilePermission && aURI.Scheme() == nsGkAtoms::file) {
+    // aAllowFilePermission defaults to false. If you call CanAccessURI with
+    // it set to true, make sure to check FileSchemeAllowed() if needed.
     return false;
   }
   if (CheckGuarded(aURI).isSome()) {
@@ -715,6 +752,7 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(WebExtensionPolicy)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mHostPermissions)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mGuardSets)
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mContentScripts)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK(mReadyPromise)
   NS_IMPL_CYCLE_COLLECTION_UNLINK_PRESERVED_WRAPPER
   AssertIsOnMainThread();
   tmp->mCore->ClearPolicyWeakRef();
@@ -726,6 +764,7 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(WebExtensionPolicy)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mHostPermissions)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mGuardSets)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mContentScripts)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mReadyPromise)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(WebExtensionPolicy)
@@ -1002,8 +1041,21 @@ bool MozDocumentMatcher::MatchesURI(const URLInfo& aURL,
     return false;
   }
 
-  if (mCheckPermissions && !aIgnorePermissions &&
-      !mExtension->CanAccessURI(aURL, false, false, true)) {
+  if (mCheckPermissions && !aIgnorePermissions) {
+    // CanAccessURI() also calls CheckGuarded() internally.
+    if (!mExtension->CanAccessURI(aURL, false, false, true)) {
+      return false;
+    }
+  } else if (mExtension && !mExtension->CheckGuarded(aURL).IsNull()) {
+    // Guards must be enforced regardless of mCheckPermissions.
+    return false;
+  }
+
+  if (aURL.Scheme() == nsGkAtoms::file && mExtension &&
+      !mExtension->FileSchemeAllowed()) {
+    // Although CanAccessURI above accepts an aAllowFilePermission parameter,
+    // the logic is conditional on mCheckPermissions. We want the file access
+    // to be enforced unconditionally, so check it here instead.
     return false;
   }
 

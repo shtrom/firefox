@@ -47,6 +47,14 @@ skip-if = [
   "debug", # This test triggers Bug 1578794 due to opening many popups.
 ]
 
+["browser_popup_blocker_parent_target.js"]
+https_first_disabled = true
+support-files = [
+  "popup_blocker_a.html",
+  "popup_blocker_b.html",
+  "popup_blocker_parent_target.html",
+]
+
 ["browser_popup_close_main_window.js"]
 
 ["browser_popup_frames.js"]
@@ -93,6 +101,8 @@ skip-if = [
   "os == 'linux' && os_version == '22.04' && arch == 'x86_64' && display == 'wayland' && !headless", # outdated current sizes
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && !headless", # outdated current sizes
 ]
+
+["browser_popup_resize_clamp.js"]
 
 ["browser_popup_resize_instant.js"]
 skip-if = [

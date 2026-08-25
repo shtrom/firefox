@@ -10,8 +10,10 @@
 "use strict";
 
 ChromeUtils.defineESModuleGetters(this, {
-  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
-  TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.sys.mjs",
+  SessionStore:
+    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
+  TabStateFlusher:
+    "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs",
 });
 
 // This test takes a long time on the OS X 10.14 machines, so request a longer
@@ -162,7 +164,7 @@ async function doTest({
       fireInputEvent: true,
     });
     await UrlbarTestUtils.enterSearchMode(win, {
-      source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+      source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
     });
 
     if (exitSearchMode) {
@@ -211,7 +213,7 @@ async function doTest({
       "Waiting for search mode to be restored"
     );
     await UrlbarTestUtils.assertSearchMode(win, {
-      source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+      source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
       entry: "oneoff",
     });
     Assert.equal(
@@ -253,7 +255,7 @@ add_task(async function duplicateTabs() {
     fireInputEvent: true,
   });
   await UrlbarTestUtils.enterSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+    source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
   });
 
   // Now duplicate the current tab using the context menu item.
@@ -276,7 +278,7 @@ add_task(async function duplicateTabs() {
     "Waiting for search mode to be duplicated/restored"
   );
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+    source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
     entry: "oneoff",
   });
   Assert.equal(

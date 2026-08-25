@@ -1662,6 +1662,33 @@ class StyleRuleActor extends Actor {
       this.emit("rule-updated", this);
     }
   }
+
+  /**
+   * Get the computation steps from a given expression to its final "computed" value.
+   * e.g. `max(0, min(20, 100))` should return:
+   * [
+   *   `max(0, min(20, 100))`,
+   *   `max(0, 20)`,
+   *   `20`,
+   * ]
+   *
+   * @param {string} expression: The CSS expression to be explained
+   * @param {string} pseudo: An optional pseudo-element type in cases when the CSS
+   *        rule applies to a pseudo-element.
+   * @param {NodeActor} inheritedNode: An optional node the expression is applied to.
+   *        If not passed, this.currentlySelectedElement will be used instead.
+   * @returns Array<string>
+   */
+  getCssExplainersData(expression, pseudo, inheritedNode) {
+    let element = inheritedNode?.rawNode || this.currentlySelectedElement;
+    // If we have a pseudo element, we want to pass its binding element
+    // to the InspectorUtils method
+    if (element.implementedPseudoElement) {
+      element =
+        SharedCssLogic.getBindingElementAndPseudo(element).bindingElement;
+    }
+    return InspectorUtils.getComputationSteps(expression, element, pseudo);
+  }
 }
 exports.StyleRuleActor = StyleRuleActor;
 

@@ -136,6 +136,8 @@ static wasm::RefType WasmRefTestOrCastDestType(MDefinition* refTestOrCast) {
 static void TryOptimizeWasmCast(MDefinition* cast, MIRGraph& graph) {
   MDefinition* ref = WasmRefCastOrTestSourceRef(cast);
 
+  // Don't optimize casts involving uninhabitable types. See ReplaceAllUsesWith
+  // in ValueNumbering.cpp.
   if (ref->wasmRefType().isSome() &&
       !ref->wasmRefType().value().isInhabitable()) {
     return;
@@ -300,6 +302,9 @@ static void TryOptimizeWasmTest(MDefinition* refTest, MIRGraph& graph) {
         if (wasm::RefType::isSubTypeOf(dominatingDestType, currentDestType)) {
           // Then the ref.test is redundant because it is dominated by a
           // tighter ref.cast. Replace with a constant 1.
+          if (!graph.alloc().ensureBallast()) {
+            return;
+          }
           auto* replacement = MConstant::NewInt32(graph.alloc(), 1);
           refTest->block()->insertBefore(refTest->toInstruction(), replacement);
           refTest->replaceAllUsesWith(replacement);

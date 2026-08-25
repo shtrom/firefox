@@ -10,6 +10,8 @@
 !define DESKTOP_LAUNCHER_STATUS_REINSTALLED 5
 !define DESKTOP_LAUNCHER_STATUS_REMOVED 6
 
+!include "control_utils.nsh"
+
 !ifndef GenerateUUID ; mock out when testing
 !define GenerateUUID "Call GenerateUUID_dontcall"
 !endif
@@ -93,6 +95,7 @@ Function PrepareTelemetryPing
     nsJSON::Set /tree ping "Data" "distribution_version" /value '"0"'
   ${EndIf}
 
+  ClearErrors
   ReadRegDWORD $0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" "UBR"
   ${If} ${Errors}
     StrCpy $0 "-1" ; Assign -1 if an error occured during registry read
@@ -100,6 +103,7 @@ Function PrepareTelemetryPing
 
   nsJSON::Set /tree ping "Data" "windows_ubr" /value '$0'
 
+  ClearErrors
   ${GetParameters} $0
   ${GetOptions} $0 "/LaunchedFromMSI" $0
   ${IfNot} ${Errors}
@@ -343,6 +347,8 @@ Function PrepareStubInstallPing
   ${Select} "$ExitCode"
     ${Case} ${ERR_SUCCESS}
       nsJSON::Set /tree ping "Data" "succeeded" /value true
+    ${Case} ${ERR_USER_CANCELLED_BEFORE_DOWNLOAD}
+      nsJSON::Set /tree ping "Data" "user_cancelled_before_download" /value true
     ${Case} ${ERR_DOWNLOAD_CANCEL}
       nsJSON::Set /tree ping "Data" "user_cancelled" /value true
     ${Case} ${ERR_DOWNLOAD_TOO_MANY_RETRIES}
@@ -366,6 +372,8 @@ Function PrepareStubInstallPing
       nsJSON::Set /tree ping "Data" "disk_space_req_not_met" /value true
     ${Case} ${ERR_PREINSTALL_NOT_WRITABLE}
       nsJSON::Set /tree ping "Data" "writeable_req_not_met" /value true
+    ${Case} ${ERR_INSTALL_TIMEOUT}
+      nsJSON::Set /tree ping "Data" "install_timeout" /value true
     ${Default} ; including ERR_UNKNOWN
       nsJSON::Set /tree ping "Data" "unknown_error" /value true
   ${EndSelect}
@@ -518,11 +526,21 @@ Function WasDesktopLauncherPreviouslyInstalled
 FunctionEnd
 
 Function IsDesktopLauncherInstalled
+  ; TODO Use $USERDESKTOP once we've updated to NSIS 3.08:
+  ;   https://nsis.sourceforge.io/Docs/AppendixF.html#v3.08-c
+  ; This would allow avoiding SetShellVarContextToValue/SwapShellVarContext.
+  Push $0
+  ${SwapShellVarContext} current $0
+
   ${If} ${FileExists} "$DESKTOP\${BrandShortName}.exe"
     Push 1
   ${Else}
     Push 0
   ${EndIf}
+
+  ${SetShellVarContextToValue} $0
+  Exch
+  Pop $0
 FunctionEnd
 
 Function IsDesktopLauncherEnabled

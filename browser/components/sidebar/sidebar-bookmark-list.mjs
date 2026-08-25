@@ -21,21 +21,33 @@ const DROP_BEFORE = -1;
 const DROP_ON = 0;
 const DROP_AFTER = 1;
 
+// Matches the legacy bookmarks sidebar tree's drag-hover-to-expand delay,
+// which uses LookAndFeel::IntID::TreeOpenDelay (1000ms on all platforms).
+const DRAG_HOVER_EXPAND_DELAY_MS = 1000;
+
 let activeDropList = null;
 
 export class SidebarBookmarkList extends SidebarTabList {
   static properties = {
     ...SidebarTabList.properties,
     expandedFolderGuids: { type: Object },
+    readOnly: { type: Boolean },
   };
 
   #draggedGuid = null;
   #dropTarget = null;
+  #hoverFolderGuid = null;
+  #hoverFolderTimer = null;
 
   constructor() {
     super();
     this.bookmarksContext = true;
     this.expandedFolderGuids = new Set();
+    // True when this list shows the contents of a fixed-sort query folder
+    // (e.g. Recently Bookmarked or a tag under Recent Tags). Items in such a
+    // folder can't be reordered, so dragging from or dropping into the list is
+    // disabled, matching the legacy bookmarks sidebar.
+    this.readOnly = false;
     this.getItemHeight = (item, h) => this.#itemHeightGetter(item, h);
   }
 
@@ -70,6 +82,7 @@ export class SidebarBookmarkList extends SidebarTabList {
       this.#onContainingDetailsToggle
     );
     this.#containingDetails = null;
+    this.#clearHoverFolderExpand();
   }
 
   /**
@@ -81,12 +94,10 @@ export class SidebarBookmarkList extends SidebarTabList {
    * @returns {SidebarBookmarkList}
    */
   findSublistForGuid(guid) {
-    for (const details of this.shadowRoot.querySelectorAll("details")) {
-      if (details.guid === guid) {
-        return details.querySelector("sidebar-bookmark-list");
-      }
-    }
-    return null;
+    const folder = this.shadowRoot.querySelector(
+      `summary[data-guid="${CSS.escape(guid)}"]`
+    );
+    return folder?.parentElement?.querySelector("sidebar-bookmark-list");
   }
 
   willUpdate(changes) {
@@ -115,231 +126,38 @@ export class SidebarBookmarkList extends SidebarTabList {
     folderLabelEl: ".bookmark-folder-label",
   };
 
-  static #getFocusableItemsInList(listEl) {
-    const container = listEl.shadowRoot?.querySelector("#fxview-tab-list");
-    if (!container) {
-      return [];
-    }
-    const items = [];
-    const walker = document.createTreeWalker(
-      container,
-      NodeFilter.SHOW_ELEMENT
-    );
-    let node = walker.nextNode();
-    while (node) {
-      if (
-        node.localName === "summary" ||
-        node.localName === "sidebar-bookmark-row" ||
-        node.classList.contains("bookmark-separator") ||
-        node.classList.contains("bookmark-folder-label")
-      ) {
-        items.push(node);
-      }
-      node = walker.nextNode();
-    }
-    return items;
-  }
-
-  #focusParentSummary() {
-    this.closest("details")?.querySelector("summary")?.focus();
-  }
-
-  #focusLastVisibleItem(item) {
-    if (item.localName !== "summary" || !item.parentElement?.open) {
-      item.focus();
-      return;
-    }
-    const nestedList = item.parentElement.querySelector(
-      "sidebar-bookmark-list"
-    );
-    if (!nestedList) {
-      item.focus();
-      return;
-    }
-    const nestedItems =
-      SidebarBookmarkList.#getFocusableItemsInList(nestedList);
-    if (!nestedItems.length) {
-      item.focus();
-      return;
-    }
-    this.#focusLastVisibleItem(nestedItems[nestedItems.length - 1]);
-  }
-
-  #focusNextItemAfterFolder() {
-    const parentDetails = this.closest("details");
-    if (!parentDetails) {
-      return;
-    }
-    const parentList = parentDetails.getRootNode().host;
-    if (parentList?.localName !== "sidebar-bookmark-list") {
-      return;
-    }
-    const parentItems =
-      SidebarBookmarkList.#getFocusableItemsInList(parentList);
-    const idx = parentItems.indexOf(parentDetails.querySelector("summary"));
-    if (idx >= 0 && idx < parentItems.length - 1) {
-      parentItems[idx + 1].focus();
-    } else {
-      parentList.#focusNextItemAfterFolder();
-    }
-  }
-
-  handleFocusElementInRow(e) {
-    if (
-      e.getModifierState("Accel") &&
-      e.key.toUpperCase() === this.selectAllShortcut
-    ) {
-      e.preventDefault();
-      this.selectAll();
-      return;
-    }
-    if (
-      e.code !== "ArrowUp" &&
-      e.code !== "ArrowDown" &&
-      e.code !== "ArrowLeft" &&
-      e.code !== "ArrowRight"
-    ) {
-      return;
-    }
-    // Events from nested lists are retargeted to the nested list element; ignore them.
-    if (e.target.localName === "sidebar-bookmark-list") {
-      return;
-    }
-    e.preventDefault();
-    const { target } = e;
-    const isSummary = target.localName === "summary";
-    let nextFocusedRow = null;
-    switch (e.code) {
-      case "ArrowLeft":
-        if (isSummary && target.parentElement?.open) {
-          target.parentElement.open = false;
-        } else {
-          this.#focusParentSummary();
-        }
-        break;
-      case "ArrowRight":
-        if (isSummary) {
-          const details = target.parentElement;
-          if (!details.open) {
-            details.open = true;
-            const nestedList = details.querySelector("sidebar-bookmark-list");
-            if (nestedList) {
-              nestedList.updateComplete.then(() => {
-                SidebarBookmarkList.#getFocusableItemsInList(
-                  nestedList
-                )[0]?.focus();
-              });
-            }
-          } else {
-            const nestedList = details.querySelector("sidebar-bookmark-list");
-            if (nestedList) {
-              SidebarBookmarkList.#getFocusableItemsInList(
-                nestedList
-              )[0]?.focus();
-            }
-          }
-        }
-        break;
-      case "ArrowDown": {
-        if (isSummary && target.parentElement?.open) {
-          const nestedList = target.parentElement.querySelector(
-            "sidebar-bookmark-list"
-          );
-          if (nestedList) {
-            const nestedItems =
-              SidebarBookmarkList.#getFocusableItemsInList(nestedList);
-            if (nestedItems.length) {
-              nestedItems[0].focus();
-              break;
-            }
-          }
-        }
-        const items = SidebarBookmarkList.#getFocusableItemsInList(this);
-        const idx = items.indexOf(target);
-        if (idx < items.length - 1) {
-          items[idx + 1].focus();
-          if (
-            !isSummary &&
-            items[idx + 1].localName === "sidebar-bookmark-row"
-          ) {
-            nextFocusedRow = items[idx + 1];
-          }
-        } else {
-          this.#focusNextItemAfterFolder();
-        }
-        break;
-      }
-      case "ArrowUp": {
-        const items = SidebarBookmarkList.#getFocusableItemsInList(this);
-        const idx = items.indexOf(target);
-        if (idx > 0) {
-          this.#focusLastVisibleItem(items[idx - 1]);
-          if (
-            !isSummary &&
-            items[idx - 1].localName === "sidebar-bookmark-row"
-          ) {
-            nextFocusedRow = items[idx - 1];
-          }
-        } else {
-          this.#focusParentSummary();
-        }
-        break;
-      }
-    }
-    if (
-      (e.code === "ArrowDown" || e.code === "ArrowUp") &&
-      !e.getModifierState("Accel") &&
-      nextFocusedRow
-    ) {
-      if (e.shiftKey) {
-        this.dispatchEvent(
-          new CustomEvent("shift-select", {
-            bubbles: true,
-            composed: true,
-            detail: { row: nextFocusedRow },
-          })
-        );
-      } else {
-        this.clearSelection();
-        this.dispatchEvent(
-          new CustomEvent("clear-selection", {
-            bubbles: true,
-            composed: true,
-          })
-        );
-        this.dispatchEvent(
-          new CustomEvent("set-anchor", {
-            bubbles: true,
-            composed: true,
-            detail: { guid: nextFocusedRow.guid },
-          })
-        );
-      }
-    }
-  }
-
   itemTemplate = (tabItem, i) => {
-    let tabIndex = -1;
-    if ((this.searchQuery || this.sortOption == "lastvisited") && i == 0) {
-      tabIndex = 0;
-    } else if (!this.searchQuery) {
-      tabIndex = 0;
-    }
+    const tabIndex = this.treeView?.isActiveNode(this, tabItem.guid) ? 0 : -1;
     if (!tabItem.url && !tabItem.children) {
       return html`<div
         class="bookmark-separator"
         draggable="true"
         role="separator"
-        tabindex="0"
+        tabindex=${tabIndex}
+        data-guid=${tabItem.guid}
         .guid=${tabItem.guid}
       ></div>`;
     }
     if (tabItem.children !== undefined) {
+      let folderKind = null;
+      if (tabItem.isTagsRoot) {
+        folderKind = "tags-root";
+      } else if (tabItem.isTagContainer) {
+        folderKind = "tag-container";
+      } else if (tabItem.isPlaceContainer) {
+        folderKind = "place-container";
+      }
       if (!tabItem.children.length) {
         return html`<div
           class="bookmark-folder-label"
-          tabindex="0"
+          role="listitem"
+          aria-label=${tabItem.title}
+          data-folder-kind=${ifDefined(folderKind)}
+          tabindex=${tabIndex}
           draggable="true"
+          data-guid=${tabItem.guid}
+          @auxclick=${e => this.#onFolderAuxClick(e, tabItem.guid)}
+          @mouseenter=${e => this.#updateFolderTooltip(e, tabItem.title)}
           .guid=${tabItem.guid}
         >
           ${tabItem.title}
@@ -349,15 +167,26 @@ export class SidebarBookmarkList extends SidebarTabList {
         <details
           ?open=${this.expandedFolderGuids.has(tabItem.guid)}
           @toggle=${e => this.#onFolderToggle(e, tabItem.guid)}
+          data-folder-kind=${ifDefined(folderKind)}
           .guid=${tabItem.guid}
         >
-          <summary draggable="true" part="summary">${tabItem.title}</summary>
+          <summary
+            draggable="true"
+            part="summary"
+            tabindex=${tabIndex}
+            data-guid=${tabItem.guid}
+            @auxclick=${e => this.#onFolderAuxClick(e, tabItem.guid)}
+            @mouseenter=${e => this.#updateFolderTooltip(e, tabItem.title)}
+          >
+            ${tabItem.title}
+          </summary>
           <div id="content">
             <sidebar-bookmark-list
               maxTabsLength="-1"
               secondaryActionClass="delete-button"
               .tabItems=${tabItem.children}
               .expandedFolderGuids=${this.expandedFolderGuids}
+              .readOnly=${this.readOnly || !!tabItem.isPlaceContainer}
               @fxview-tab-list-primary-action=${this.onPrimaryAction}
               @fxview-tab-list-secondary-action=${this.onSecondaryAction}
             >
@@ -439,12 +268,35 @@ export class SidebarBookmarkList extends SidebarTabList {
 
   #onFolderToggle(e, guid) {
     this.dispatchEvent(
-      new CustomEvent("bookmark-folder-toggle", {
+      new CustomEvent("folder-toggle", {
         bubbles: true,
         composed: true,
         detail: { guid, open: e.target.open },
       })
     );
+  }
+
+  #onFolderAuxClick(e, guid) {
+    if (e.button !== 1) {
+      return;
+    }
+    e.preventDefault();
+    this.dispatchEvent(
+      new CustomEvent("bookmark-folder-middleclick", {
+        bubbles: true,
+        composed: true,
+        detail: { guid, isFolder: true },
+      })
+    );
+  }
+
+  #updateFolderTooltip(e, title) {
+    let el = e.currentTarget;
+    if (el.scrollWidth > el.clientWidth) {
+      el.title = title;
+    } else {
+      el.removeAttribute("title");
+    }
   }
 
   #findBookmarkElement(composedPath) {
@@ -545,8 +397,9 @@ export class SidebarBookmarkList extends SidebarTabList {
 
   #showDropIndicator(target) {
     if (activeDropList && activeDropList !== this) {
-      activeDropList.#cleanupIndicator();
-      activeDropList.#dropTarget = null;
+      const previousList = activeDropList;
+      previousList.#cleanupIndicator();
+      previousList.#dropTarget = null;
     }
     activeDropList = this;
     const listEl = this.shadowRoot?.querySelector("#fxview-tab-list");
@@ -581,9 +434,51 @@ export class SidebarBookmarkList extends SidebarTabList {
     if (activeDropList === this) {
       activeDropList = null;
     }
+    this.#clearHoverFolderExpand();
+  }
+
+  // Arms a timer that expands a collapsed folder when the user dwells over it
+  // during a drag, so they can drop into nested folders without first opening
+  // them by hand. Only non-empty folders (rendered as <details>) participate.
+  #scheduleHoverFolderExpand(target) {
+    const shouldArm =
+      target?.isFolder &&
+      target.orientation === DROP_ON &&
+      target.element.localName === "details" &&
+      !target.element.open;
+    if (!shouldArm) {
+      this.#clearHoverFolderExpand();
+      return;
+    }
+    if (this.#hoverFolderGuid === target.guid) {
+      return;
+    }
+    this.#clearHoverFolderExpand();
+    this.#hoverFolderGuid = target.guid;
+    const detailsEl = target.element;
+    this.#hoverFolderTimer = setTimeout(() => {
+      this.#hoverFolderTimer = null;
+      this.#hoverFolderGuid = null;
+      if (detailsEl.isConnected && !detailsEl.open) {
+        detailsEl.open = true;
+      }
+    }, DRAG_HOVER_EXPAND_DELAY_MS);
+  }
+
+  #clearHoverFolderExpand() {
+    if (this.#hoverFolderTimer) {
+      clearTimeout(this.#hoverFolderTimer);
+      this.#hoverFolderTimer = null;
+    }
+    this.#hoverFolderGuid = null;
   }
 
   #onDragStart(e) {
+    if (this.readOnly) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const item = this.#findBookmarkElement(e.composedPath());
     if (!item) {
       e.preventDefault();
@@ -591,6 +486,7 @@ export class SidebarBookmarkList extends SidebarTabList {
     }
     this.#draggedGuid = item.guid;
     let data;
+    let url = item.url;
     if (item.isSeparator) {
       data = JSON.stringify({
         type: lazy.PlacesUtils.TYPE_X_MOZ_PLACE_SEPARATOR,
@@ -598,13 +494,20 @@ export class SidebarBookmarkList extends SidebarTabList {
         instanceId: lazy.PlacesUtils.instanceId,
       });
     } else if (item.isFolder) {
-      data = JSON.stringify({
-        type: lazy.PlacesUtils.TYPE_X_MOZ_PLACE_CONTAINER,
-        itemGuid: item.guid,
-        guid: item.guid,
-        instanceId: lazy.PlacesUtils.instanceId,
-        title: item.title,
-      });
+      if (lazy.PlacesUtils.isRootItem(item.guid)) {
+        const payload =
+          lazy.PlacesUtils.bookmarks.createVirtualLinkToRoot(item);
+        data = JSON.stringify(payload);
+        url = payload.uri;
+      } else {
+        data = JSON.stringify({
+          type: lazy.PlacesUtils.TYPE_X_MOZ_PLACE_CONTAINER,
+          itemGuid: item.guid,
+          guid: item.guid,
+          instanceId: lazy.PlacesUtils.instanceId,
+          title: item.title,
+        });
+      }
     } else {
       data = JSON.stringify({
         type: lazy.PlacesUtils.TYPE_X_MOZ_PLACE,
@@ -617,12 +520,12 @@ export class SidebarBookmarkList extends SidebarTabList {
     }
     e.dataTransfer.clearData();
     e.dataTransfer.setData(lazy.PlacesUtils.TYPE_X_MOZ_PLACE, data);
-    if (item.url) {
+    if (url) {
       e.dataTransfer.setData(
         lazy.PlacesUtils.TYPE_X_MOZ_URL,
-        item.url + "\n" + item.title
+        url + "\n" + item.title
       );
-      e.dataTransfer.setData(lazy.PlacesUtils.TYPE_PLAINTEXT, item.url);
+      e.dataTransfer.setData(lazy.PlacesUtils.TYPE_PLAINTEXT, url);
     }
     e.dataTransfer.effectAllowed = "copyMove";
     e.stopPropagation();
@@ -630,6 +533,11 @@ export class SidebarBookmarkList extends SidebarTabList {
 
   #onDragOver(e) {
     e.stopPropagation();
+    if (this.readOnly) {
+      this.#cleanupIndicator();
+      this.#dropTarget = null;
+      return;
+    }
     const flavor = this.#getSupportedFlavor(e.dataTransfer);
     if (!flavor) {
       return;
@@ -638,8 +546,13 @@ export class SidebarBookmarkList extends SidebarTabList {
     if (!target) {
       target = this.#getFolderDropTarget();
     }
-    if (!target || target.guid === this.#draggedGuid) {
+    if (
+      !target ||
+      target.guid === this.#draggedGuid ||
+      this.#isFixedSortFolderTarget(target)
+    ) {
       this.#cleanupIndicator();
+      this.#dropTarget = null;
       return;
     }
     e.preventDefault();
@@ -652,6 +565,7 @@ export class SidebarBookmarkList extends SidebarTabList {
     }
     this.#showDropIndicator(target);
     this.#dropTarget = target;
+    this.#scheduleHoverFolderExpand(target);
     e.dataTransfer.dropEffect = lazy.PlacesUIUtils.PLACES_FLAVORS.includes(
       flavor
     )
@@ -670,6 +584,17 @@ export class SidebarBookmarkList extends SidebarTabList {
       };
     }
     return null;
+  }
+
+  // A query folder (Recently Bookmarked, Recent Tags, or a tag container) has
+  // a forced sort order, so we can't drop into it. Such folders are the only
+  // ones tagged with `data-folder-kind`.
+  #isFixedSortFolderTarget(target) {
+    return (
+      target.isFolder &&
+      target.orientation === DROP_ON &&
+      !!target.element?.dataset?.folderKind
+    );
   }
 
   #onDragLeave(e) {
@@ -692,6 +617,11 @@ export class SidebarBookmarkList extends SidebarTabList {
   #onDrop(e) {
     e.preventDefault();
     e.stopPropagation();
+    if (this.readOnly) {
+      this.#cleanupIndicator();
+      this.#dropTarget = null;
+      return;
+    }
     const target = this.#dropTarget;
     this.#cleanupIndicator();
     this.#dropTarget = null;

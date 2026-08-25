@@ -7,14 +7,12 @@ const { AIWindowUI } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/ui/modules/AIWindowUI.sys.mjs"
 );
 
-const FIRSTRUN_URL = "chrome://browser/content/aiwindow/firstrun.html";
-
 async function navigateAndWait(win, url) {
   await BrowserTestUtils.loadURIString({
     browser: win.gBrowser.selectedTab.linkedBrowser,
     uriString: url,
   });
-  await BrowserTestUtils.waitForCondition(
+  await TestUtils.waitForCondition(
     () => win.gBrowser.selectedBrowser.currentURI.spec === url,
     `Should navigate to ${url}`
   );
@@ -51,7 +49,7 @@ add_task(async function test_firstrun_immersive_view() {
     ],
   });
 
-  const win = await openAIWindow({ waitForTabURL: false });
+  const win = await openAIWindow({ waitForTabURL: "" });
   const chromeRoot = win.document.documentElement;
 
   await navigateAndWait(win, FIRSTRUN_URL);
@@ -93,7 +91,7 @@ add_task(async function test_open_sidebar_immersive_view() {
     ],
   });
 
-  const win = await openAIWindow({ waitForTabURL: false });
+  const win = await openAIWindow({ waitForTabURL: "" });
   const chromeRoot = win.document.documentElement;
   await navigateAndWait(win, FIRSTRUN_URL);
 
@@ -130,60 +128,108 @@ add_task(async function test_open_sidebar_immersive_view() {
   await SpecialPowers.popPrefEnv();
 });
 
-add_task(
-  async function test_back_forward_buttons_visible_after_back_navigation() {
-    const win = await openAIWindow();
-    try {
-      const chromeRoot = win.document.documentElement;
-      const browser = win.gBrowser.selectedBrowser;
+add_task(async function test_first_run_hides_urlbar() {
+  await SpecialPowers.pushPrefEnv({
+    set: [
+      ["browser.smartwindow.enabled", true],
+      ["browser.smartwindow.firstrun.hasCompleted", false],
+    ],
+  });
 
-      await navigateAndWait(win, AIWINDOW_URL);
+  const win = await openAIWindow({ waitForTabURL: "" });
+  const chromeRoot = win.document.documentElement;
+  await navigateAndWait(win, FIRSTRUN_URL);
 
-      Assert.ok(
-        !chromeRoot.hasAttribute("aiwindow-has-nav-forward"),
-        "No aiwindow-has-nav-forward on initial load with no history"
-      );
+  await BrowserTestUtils.waitForMutationCondition(
+    chromeRoot,
+    { attributes: true },
+    () => chromeRoot.hasAttribute("aiwindow-first-run")
+  );
 
-      await promiseNavigateAndLoad(browser, "https://example.com/");
+  const urlbarContainer = win.document.getElementById("urlbar-container");
+  Assert.equal(
+    win.getComputedStyle(urlbarContainer).visibility,
+    "hidden",
+    "Address bar is hidden during first run"
+  );
 
-      let loaded = BrowserTestUtils.browserLoaded(browser, {
-        wantLoad: AIWINDOW_URL,
-      });
-      win.gBrowser.goBack();
-      await loaded;
+  // Leaving first run reveals the address bar again.
+  await navigateAndWait(win, "https://example.com/");
+  await BrowserTestUtils.waitForMutationCondition(
+    chromeRoot,
+    { attributes: true },
+    () => !chromeRoot.hasAttribute("aiwindow-first-run")
+  );
 
-      await BrowserTestUtils.waitForMutationCondition(
-        chromeRoot,
-        { attributes: true },
-        () => chromeRoot.hasAttribute("aiwindow-has-nav-forward")
-      );
+  Assert.equal(
+    win.getComputedStyle(urlbarContainer).visibility,
+    "visible",
+    "Address bar is visible again after leaving first run"
+  );
 
-      const backButton = win.document.getElementById("back-button");
-      const forwardButton = win.document.getElementById("forward-button");
+  // The address bar also stays visible on the immersive Smart Window new tab,
+  // which is the immersive-but-not-first-run case the patch fixes.
+  await navigateAndWait(win, AIWINDOW_URL);
+  await BrowserTestUtils.waitForMutationCondition(
+    chromeRoot,
+    { attributes: true },
+    () => chromeRoot.hasAttribute("aiwindow-immersive-view")
+  );
 
-      Assert.equal(
-        win.getComputedStyle(backButton).visibility,
-        "visible",
-        "Back button is visible after navigating back to AI window"
-      );
-      Assert.equal(
-        win.getComputedStyle(forwardButton).visibility,
-        "visible",
-        "Forward button is visible after navigating back to AI window"
-      );
+  Assert.equal(
+    win.getComputedStyle(urlbarContainer).visibility,
+    "visible",
+    "Address bar is visible on the immersive Smart Window new tab"
+  );
 
-      loaded = BrowserTestUtils.browserLoaded(browser, {
-        wantLoad: "https://example.com/",
-      });
-      win.gBrowser.goForward();
-      await loaded;
+  await BrowserTestUtils.closeWindow(win);
+  await SpecialPowers.popPrefEnv();
+});
 
-      Assert.ok(
-        !chromeRoot.hasAttribute("aiwindow-has-nav-forward"),
-        "aiwindow-has-nav-forward is removed after navigating forward to a page"
-      );
-    } finally {
-      await BrowserTestUtils.closeWindow(win);
-    }
-  }
-);
+add_task(async function test_propbag_only_stamps_immersive_view() {
+  // handleAIWindowOptions stamps the propBag browser-init reads pre-paint. It
+  // marks the immersive view; first-run hiding is driven solely by
+  // updateImmersiveView on location change.
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.smartwindow.enabled", true]],
+  });
+
+  const args = AIWindow.handleAIWindowOptions({ aiWindow: true });
+  Assert.ok(args, "handleAIWindowOptions returns args for an AI window");
+
+  const propBag = args.queryElementAt(1, Ci.nsIPropertyBag2);
+  Assert.ok(
+    propBag.hasKey("aiwindow-immersive-view"),
+    "propBag carries aiwindow-immersive-view for an immersive open"
+  );
+
+  await SpecialPowers.popPrefEnv();
+});
+
+add_task(async function test_ask_button_hidden_in_fullpage_mode() {
+  const win = await openAIWindow();
+
+  // Wait for immersive view to be active (aiWindow.html loaded)
+  await BrowserTestUtils.waitForMutationCondition(
+    win.document.documentElement,
+    { attributes: true },
+    () => win.document.documentElement.hasAttribute("aiwindow-immersive-view")
+  );
+
+  const askButton = win.document.getElementById("smartwindow-ask-button");
+
+  Assert.ok(
+    askButton.hidden,
+    "Ask button is hidden in fullpage mode (aiwindow-immersive-view)"
+  );
+
+  // Navigate away from the fullpage AI window URL — button should reappear
+  await navigateAndWait(win, "https://example.com/");
+
+  Assert.ok(
+    !askButton.hidden,
+    "Ask button is visible after navigating away from fullpage mode"
+  );
+
+  await BrowserTestUtils.closeWindow(win);
+});

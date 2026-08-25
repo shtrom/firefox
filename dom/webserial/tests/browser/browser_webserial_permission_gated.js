@@ -29,13 +29,18 @@ ChromeUtils.defineESModuleGetters(this, {
   AddonTestUtils: "resource://testing-common/AddonTestUtils.sys.mjs",
 });
 
+/* import-globals-from ../../../../toolkit/mozapps/extensions/test/xpinstall/helpers_addons_install_dialogs.js */
+Services.scriptloader.loadSubScript(
+  "chrome://mochitests/content/browser/dom/webserial/tests/browser/helpers_addons_install_dialogs.js",
+  this
+);
+
 add_setup(async function () {
   await SpecialPowers.pushPrefEnv({
     set: [["dom.webserial.gated", true]],
   });
 
   AddonTestUtils.initMochitest(this);
-  AddonTestUtils.hookAMTelemetryEvents();
 
   alwaysAcceptAddonPostInstallDialogs();
 
@@ -60,6 +65,12 @@ add_task(async function testRequestPort() {
   await BrowserTestUtils.openNewForegroundTab(gBrowser, EXAMPLE_COM_URL);
   const testPageHost = gBrowser.selectedTab.linkedBrowser.documentURI.host;
   Services.fog.testResetFOG();
+
+  // Track the site_permission values observed across this test task
+  // and assert the unique values collected at the end.
+  const sitePermissionsSeen = new Set();
+  const trackSitePermission = evt =>
+    sitePermissionsSeen.add(evt.site_permission);
 
   ok(
     await SpecialPowers.testPermission(
@@ -116,7 +127,11 @@ add_task(async function testRequestPort() {
   );
   is(rejectionMessage, "NotFoundError: No port selected");
 
-  assertSitePermissionInstallTelemetryEvents(["site_warning", "cancelled"]);
+  AddonTestUtils.assertSitePermissionInstallSteps({
+    expectedSteps: ["site_warning", "cancelled"],
+    resetFOG: true,
+    onEvent: trackSitePermission,
+  });
 
   info("Deny site permission addon install in second popup");
   onAddonInstallBlockedNotification = waitForNotification(
@@ -168,11 +183,11 @@ add_task(async function testRequestPort() {
     "got expected error when rejecting add-on"
   );
 
-  assertSitePermissionInstallTelemetryEvents([
-    "site_warning",
-    "permissions_prompt",
-    "cancelled",
-  ]);
+  AddonTestUtils.assertSitePermissionInstallSteps({
+    expectedSteps: ["site_warning", "permissions_prompt", "cancelled"],
+    resetFOG: true,
+    onEvent: trackSitePermission,
+  });
 
   info("Request serial port access again");
   onAddonInstallBlockedNotification = waitForNotification(
@@ -240,11 +255,11 @@ add_task(async function testRequestPort() {
     "requestPort resolved without user prompt"
   );
 
-  assertSitePermissionInstallTelemetryEvents([
-    "site_warning",
-    "permissions_prompt",
-    "completed",
-  ]);
+  AddonTestUtils.assertSitePermissionInstallSteps({
+    expectedSteps: ["site_warning", "permissions_prompt", "completed"],
+    resetFOG: true,
+    onEvent: trackSitePermission,
+  });
 
   info("Check that we don't prompt user again when they perm denied");
   await SpecialPowers.removePermission("serial", {
@@ -317,7 +332,17 @@ add_task(async function testRequestPort() {
     "Expected Glean event recorded."
   );
 
-  assertSitePermissionInstallTelemetryEvents(["site_warning", "cancelled"]);
+  AddonTestUtils.assertSitePermissionInstallSteps({
+    expectedSteps: ["site_warning", "cancelled"],
+    resetFOG: true,
+    onEvent: trackSitePermission,
+  });
+
+  Assert.deepEqual(
+    Array.from(sitePermissionsSeen),
+    ["serial"],
+    "Each install telemetry event records the serial site permission"
+  );
 });
 
 add_task(async function testIframeRequestPort() {
@@ -403,11 +428,10 @@ add_task(async function testIframeRequestPort() {
     "requestPort resolved without user prompt"
   );
 
-  assertSitePermissionInstallTelemetryEvents([
-    "site_warning",
-    "permissions_prompt",
-    "completed",
-  ]);
+  AddonTestUtils.assertSitePermissionInstallSteps({
+    expectedSteps: ["site_warning", "permissions_prompt", "completed"],
+    resetFOG: true,
+  });
 
   info("Check that request is rejected when done from a cross-origin iframe");
   const crossOriginIframeBrowsingContext = await SpecialPowers.spawn(
@@ -458,7 +482,10 @@ add_task(async function testIframeRequestPort() {
     ),
     "an error message is sent to the console"
   );
-  assertSitePermissionInstallTelemetryEvents([]);
+  AddonTestUtils.assertSitePermissionInstallSteps({
+    expectedSteps: [],
+    resetFOG: true,
+  });
 });
 
 add_task(async function testRequestPortLocalhost() {
@@ -609,7 +636,10 @@ add_task(async function testRequestPortLocalhost() {
   is(errorInfo.name, "NotFoundError", "Rejection is NotFoundError");
   is(errorInfo.message, "No port selected", "Error message is correct");
 
-  assertSitePermissionInstallTelemetryEvents([]);
+  AddonTestUtils.assertSitePermissionInstallSteps({
+    expectedSteps: [],
+    resetFOG: true,
+  });
 });
 
 add_task(async function testRequestPortFile() {
@@ -748,113 +778,11 @@ add_task(async function testRequestPortFile() {
   is(errorInfo.name, "NotFoundError", "Rejection is NotFoundError");
   is(errorInfo.message, "No port selected", "Error message is correct");
 
-  assertSitePermissionInstallTelemetryEvents([]);
+  AddonTestUtils.assertSitePermissionInstallSteps({
+    expectedSteps: [],
+    resetFOG: true,
+  });
 });
 
-add_task(function teardown_telemetry_events() {
-  AddonTestUtils.getAMTelemetryEvents();
-});
-
-function assertSitePermissionInstallTelemetryEvents(expectedSteps) {
-  let amInstallEvents = AddonTestUtils.getAMTelemetryEvents()
-    .filter(evt => evt.method === "install" && evt.object === "sitepermission")
-    .map(evt => evt.extra.step);
-
-  Assert.deepEqual(
-    amInstallEvents,
-    expectedSteps,
-    "got expected site permission install telemetry events"
-  );
-}
-
-async function waitForInstallDialog(id = "addon-webext-permissions") {
-  let panel = await waitForNotification(id);
-  return panel.childNodes[0];
-}
-
-function alwaysAcceptAddonPostInstallDialogs() {
-  const abortController = new AbortController();
-
-  const { AppMenuNotifications } = ChromeUtils.importESModule(
-    "resource://gre/modules/AppMenuNotifications.sys.mjs"
-  );
-  info("Start listening and accept addon post-install notifications");
-  PanelUI.notificationPanel.addEventListener(
-    "popupshown",
-    async function popupshown() {
-      let notification = AppMenuNotifications.activeNotification;
-      if (!notification || notification.id !== "addon-installed") {
-        return;
-      }
-
-      let popupnotificationID = PanelUI._getPopupId(notification);
-      if (popupnotificationID) {
-        info("Accept post-install dialog");
-        let popupnotification = document.getElementById(popupnotificationID);
-        popupnotification?.button.click();
-      }
-    },
-    {
-      signal: abortController.signal,
-    }
-  );
-
-  registerCleanupFunction(async () => {
-    abortController.abort();
-  });
-}
-
-async function waitForNotification(notificationId) {
-  info(`Waiting for ${notificationId} notification`);
-
-  let topic = getObserverTopic(notificationId);
-  let observerPromise;
-  if (notificationId !== "addon-webext-permissions") {
-    observerPromise = new Promise(resolve => {
-      Services.obs.addObserver(function observer(_aSubject, _aTopic) {
-        Services.obs.removeObserver(observer, topic);
-        resolve();
-      }, topic);
-    });
-  }
-
-  let panelEventPromise = new Promise(resolve => {
-    window.PopupNotifications.panel.addEventListener(
-      "PanelUpdated",
-      function eventListener(e) {
-        if (!e.detail.includes(notificationId)) {
-          return;
-        }
-        window.PopupNotifications.panel.removeEventListener(
-          "PanelUpdated",
-          eventListener
-        );
-        resolve();
-      }
-    );
-  });
-
-  await observerPromise;
-  await panelEventPromise;
-  await waitForTick();
-
-  info(`Saw a ${notificationId} notification`);
-  await SimpleTest.promiseFocus(window.PopupNotifications.window);
-  return window.PopupNotifications.panel;
-}
-
-function getObserverTopic(aNotificationId) {
-  let topic = aNotificationId;
-  if (topic == "xpinstall-disabled") {
-    topic = "addon-install-disabled";
-  } else if (topic == "addon-progress") {
-    topic = "addon-install-started";
-  } else if (topic == "addon-installed") {
-    topic = "webextension-install-notify";
-  }
-  return topic;
-}
-
-function waitForTick() {
-  return new Promise(resolve => executeSoon(resolve));
-}
+// See helpers_addons_install_dialogs.js for shared helpers. If needed, update the shared
+// helpers defined there instead of re-introducing local copies.

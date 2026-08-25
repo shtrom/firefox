@@ -1,23 +1,52 @@
-From: Michael Froman <mfroman@mozilla.com>
-Date: Fri, 7 Mar 2025 17:43:00 -0600
-Subject: Bug 1952339 - (fix-68e7b00928) add default param to emplace() to fix
- compile issue
+From: Michael Froman <mjfroman@mac.com>
+Date: Mon, 15 Sep 2025 14:53:58 -0500
+Subject: Bug 1973648 - move applicable libwebrtc changes to our new
+ libwebrtc_overrides location. r=ng
 
-Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/26c916591791b13a3d8888066c22c5ba49c86c47
+Differential Revision: https://phabricator.services.mozilla.com/D258499
+Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/19164e58323d59c1f66f7fcf671b8d0b6366f708
 ---
- call/rtp_config.cc | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ call/call.h                      | 5 +++--
+ modules/desktop_capture/BUILD.gn | 5 +++++
+ 2 files changed, 8 insertions(+), 2 deletions(-)
 
-diff --git a/call/rtp_config.cc b/call/rtp_config.cc
-index f48ae30462..4f81e2a705 100644
---- a/call/rtp_config.cc
-+++ b/call/rtp_config.cc
-@@ -257,7 +257,7 @@ RtpStreamConfig RtpConfig::GetStreamConfig(size_t index) const {
-   stream_config.raw_payload = raw_payload;
-   if (!rtx.ssrcs.empty()) {
-     RTC_DCHECK_EQ(ssrcs.size(), rtx.ssrcs.size());
--    auto& stream_config_rtx = stream_config.rtx.emplace();
-+    auto& stream_config_rtx = stream_config.rtx.emplace(RtpStreamConfig::Rtx());
-     stream_config_rtx.ssrc = rtx.ssrcs[index];
-     stream_config_rtx.payload_type = rtx.payload_type;
+diff --git a/call/call.h b/call/call.h
+index 31768f9782..84aaa82cd2 100644
+--- a/call/call.h
++++ b/call/call.h
+@@ -27,6 +27,7 @@
+ #include "api/video/video_stream_encoder_settings.h"
+ #include "call/audio_receive_stream.h"
+ #include "call/audio_send_stream.h"
++#include "call/call_basic_stats.h"
+ #include "call/call_config.h"
+ #include "call/flexfec_receive_stream.h"
+ #include "call/packet_receiver.h"
+@@ -65,9 +66,9 @@ class Call {
+     int64_t rtt_ms = -1;
+     std::optional<int64_t> ccfb_messages_received = std::nullopt;
+     flat_map<uint32_t, SentCongestionControllerFeedbackStats>
+-        sent_ccfb_stats_per_ssrc;
++      sent_ccfb_stats_per_ssrc;
+     flat_map<uint32_t, ReceivedCongestionControlFeedbackStats>
+-        received_ccfb_stats_per_ssrc;
++      received_ccfb_stats_per_ssrc;
+   };
+ 
+   static std::unique_ptr<Call> Create(CallConfig config);
+diff --git a/modules/desktop_capture/BUILD.gn b/modules/desktop_capture/BUILD.gn
+index b38a144fc2..9708a47cbc 100644
+--- a/modules/desktop_capture/BUILD.gn
++++ b/modules/desktop_capture/BUILD.gn
+@@ -709,6 +709,11 @@ rtc_library("desktop_capture") {
+     ]
+     if (build_with_mozilla) {
+       libs -= [ "Xtst" ]
++      # Mozilla provides custom impl of x_error_trap.*
++      sources -= [
++        "linux/x11/x_error_trap.cc",
++        "linux/x11/x_error_trap.h",
++      ]
+     }
    }
+ 

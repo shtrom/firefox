@@ -24,6 +24,7 @@ function imageBufferFromDataURI(encodedImageData) {
 const SIDEBAR_VISIBILITY_PREF = "sidebar.visibility";
 const POSITION_SETTING_PREF = "sidebar.position_start";
 const VERTICAL_TABS_PREF = "sidebar.verticalTabs";
+const HOVER_PREVIEW_PREF = "sidebar.openTabsPanel.hoverPreview.enabled";
 const kPrefCustomizationState = "browser.uiCustomization.state";
 const kPrefCustomizationHorizontalTabstrip =
   "browser.uiCustomization.horizontalTabstrip";
@@ -219,7 +220,7 @@ async function showHistorySidebar({ waitForPendingHistory = true } = {}) {
   const { contentDocument, contentWindow } = SidebarController.browser;
   const component = contentDocument.querySelector("sidebar-history");
   if (waitForPendingHistory) {
-    await BrowserTestUtils.waitForCondition(
+    await TestUtils.waitForCondition(
       () => !component.controller.isHistoryPending
     );
   }
@@ -263,6 +264,37 @@ async function populateHistory() {
   return { URLs, dates };
 }
 
+async function showBookmarksSidebar() {
+  if (SidebarController.currentID !== "viewBookmarksSidebar") {
+    await SidebarTestUtils.showPanel(window, "viewBookmarksSidebar");
+  }
+  const { contentDocument, contentWindow } = SidebarController.browser;
+  const component = contentDocument.querySelector("sidebar-bookmarks");
+  await component.updateComplete;
+  return { component, contentWindow };
+}
+
+async function expandToolbarFolder(tabList) {
+  await BrowserTestUtils.waitForMutationCondition(
+    tabList.shadowRoot,
+    { childList: true, subtree: true },
+    () => tabList.folderEls[0]
+  );
+  const toolbarFolder = [...tabList.folderEls].find(
+    ({ guid }) => guid === PlacesUtils.bookmarks.toolbarGuid
+  );
+  Assert.ok(toolbarFolder, "Toolbar folder is rendered.");
+  if (!toolbarFolder.open) {
+    toolbarFolder.querySelector("summary").click();
+    await BrowserTestUtils.waitForMutationCondition(
+      toolbarFolder,
+      { attributes: true },
+      () => toolbarFolder.open
+    );
+  }
+  return toolbarFolder.querySelector("sidebar-bookmark-list");
+}
+
 /**
  * Synthesize a key press and wait for an element to be focused.
  *
@@ -287,7 +319,7 @@ async function waitForElementHidden(elem, hidden = true) {
     elem,
     { attributes: true, attributeFilter: ["hidden"] },
     () => elem.hidden === hidden,
-    `Element hidden should be ${hidden}`
+    { msg: `Element hidden should be ${hidden}` }
   );
 }
 

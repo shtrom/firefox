@@ -50,7 +50,7 @@ function assertSearchModeScalars(entry, engineOrSource) {
     1
   );
 
-  for (let e of UrlbarUtils.SEARCH_MODE_ENTRY) {
+  for (let e of UrlbarShared.SEARCH_MODE_ENTRY) {
     if (e == entry) {
       Assert.equal(
         Object.keys(scalars[ENTRY_SCALAR_PREFIX + entry]).length,
@@ -78,7 +78,7 @@ function assertSearchModeScalars(entry, engineOrSource) {
  *   An engine name or a search mode source.
  */
 function assertSearchModeTelemetry(entry, engineOrSource) {
-  for (let e of UrlbarUtils.SEARCH_MODE_ENTRY) {
+  for (let e of UrlbarShared.SEARCH_MODE_ENTRY) {
     // Convert snake_case to CamelCase to check Glean searchmode entry labels.
     // Glean labels are in CamelCase.
     let camelCaseEntry = e
@@ -183,7 +183,7 @@ add_task(async function test_oneoff_local() {
   });
   // Enters search mode by clicking a one-off.
   await UrlbarTestUtils.enterSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.HISTORY,
+    source: UrlbarShared.RESULT_SOURCE.HISTORY,
   });
   let loadPromise = BrowserTestUtils.browserLoaded(tab.linkedBrowser);
   EventUtils.synthesizeKey("KEY_ArrowDown");
@@ -257,7 +257,7 @@ add_task(async function test_shortcut() {
 
   await UrlbarTestUtils.assertSearchMode(window, {
     engineName,
-    source: UrlbarUtils.RESULT_SOURCE.SEARCH,
+    source: UrlbarShared.RESULT_SOURCE.SEARCH,
     entry: "shortcut",
   });
   assertSearchModeScalars("shortcut", "other");
@@ -392,7 +392,7 @@ add_task(async function test_typed_restrict_symbol() {
   await UrlbarTestUtils.promiseSearchComplete(window);
 
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+    source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
     entry: "typed",
     restrictType: "symbol",
   });
@@ -416,7 +416,7 @@ add_task(async function test_typed_restrict_keyword() {
   await UrlbarTestUtils.promiseSearchComplete(window);
 
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+    source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
     entry: "typed",
     restrictType: "keyword",
   });
@@ -452,7 +452,7 @@ add_task(async function test_keywordoffer_restrict_keyword() {
   await searchPromise;
 
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+    source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
     entry: "keywordoffer",
     restrictType: "keyword",
   });
@@ -472,7 +472,7 @@ add_task(async function test_bookmarkmenu() {
   await searchPromise;
 
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+    source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
     entry: "bookmarkmenu",
   });
   assertSearchModeScalars("bookmarkmenu", "bookmarks");
@@ -487,7 +487,7 @@ add_task(async function test_historymenu() {
   await searchPromise;
 
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.HISTORY,
+    source: UrlbarShared.RESULT_SOURCE.HISTORY,
     entry: "historymenu",
   });
   assertSearchModeScalars("historymenu", "history");
@@ -501,7 +501,7 @@ add_task(async function test_tabmenu() {
   await searchPromise;
 
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.TABS,
+    source: UrlbarShared.RESULT_SOURCE.TABS,
     entry: "tabmenu",
   });
   assertSearchModeScalars("tabmenu", "tabs");
@@ -567,9 +567,11 @@ add_task(async function test_touchbar() {
   });
   // We have to fake the tap on the Touch Bar since mochitests have no way of
   // interacting with the Touch Bar.
-  TouchBarHelper.insertRestrictionInUrlbar(UrlbarTokenizer.RESTRICT.HISTORY);
+  TouchBarHelper.insertRestrictionInUrlbar(
+    UrlbarShared.RESTRICT_TOKENS.HISTORY
+  );
   await UrlbarTestUtils.assertSearchMode(window, {
-    source: UrlbarUtils.RESULT_SOURCE.HISTORY,
+    source: UrlbarShared.RESULT_SOURCE.HISTORY,
     entry: "touchbar",
   });
   let loadPromise = BrowserTestUtils.browserLoaded(tab.linkedBrowser);
@@ -742,7 +744,7 @@ add_task(async function test_messaging_system() {
   let searchMode = {
     engineName: "Bing",
     isGeneralPurposeEngine: true,
-    source: UrlbarUtils.RESULT_SOURCE.SEARCH,
+    source: UrlbarShared.RESULT_SOURCE.SEARCH,
     isPreview: false,
     entry: "messagingSystem",
   };
@@ -757,7 +759,7 @@ add_task(async function test_messaging_system() {
   await UrlbarTestUtils.assertSearchMode(window, {
     engineName: "Bing",
     isGeneralPurposeEngine: true,
-    source: UrlbarUtils.RESULT_SOURCE.SEARCH,
+    source: UrlbarShared.RESULT_SOURCE.SEARCH,
     isPreview: false,
     entry: "messagingSystem",
   });

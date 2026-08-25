@@ -5,8 +5,8 @@
 #ifndef mozilla_net_AutoClose_h
 #define mozilla_net_AutoClose_h
 
-#include "nsCOMPtr.h"
 #include "mozilla/Mutex.h"
+#include "nsCOMPtr.h"
 
 namespace mozilla {
 namespace net {
@@ -35,7 +35,7 @@ class AutoClose {
   void CloseAndRelease() { TakeOverInternal(nullptr); }
 
  private:
-  void TakeOverInternal(already_AddRefed<T>&& aOther) {
+  void TakeOverInternal(already_AddRefed<T> aOther) {
     nsCOMPtr<T> ptr(std::move(aOther));
     {
       MutexAutoLock lock(mMutex);

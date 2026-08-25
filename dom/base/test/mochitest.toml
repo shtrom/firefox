@@ -433,6 +433,8 @@ skip-if = [
   "http3",
 ]
 
+["test_focus_move_during_composition.html"]
+
 ["test_focus_radio.html"]
 
 ["test_focus_scroll_padding_tab.html"]
@@ -641,6 +643,9 @@ support-files = ["file_sandbox_and_document_uri.html"]
 ["test_screen_orientation.html"]
 
 ["test_script_loader_crossorigin_data_url.html"]
+
+["test_selection_change_null_presshell.html"]
+support-files = ["file_selection_change_null_presshell.html"]
 
 ["test_setInterval_from_start.html"]
 

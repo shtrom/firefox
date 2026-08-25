@@ -8,11 +8,6 @@ Services.scriptloader.loadSubScript(
   this
 );
 
-const lazy = XPCOMUtils.declareLazy({
-  FALLBACK_MODELS:
-    "moz-src:///browser/components/aiwindow/ui/modules/AIWindowConstants.sys.mjs",
-});
-
 const { SmartWindowTelemetry } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/ui/modules/SmartWindowTelemetry.sys.mjs"
 );
@@ -23,6 +18,8 @@ describe("Smart Window telemetry", () => {
       set: [
         ["browser.preferences.aiControls", true],
         ["browser.smartwindow.enabled", true],
+        // TODO: Bug 2053495 - Refactor tests upon pref removal
+        ["browser.smartwindow.mistralRelease", false],
         ["browser.smartwindow.tos.consentTime", 1770830464],
       ],
     });
@@ -34,7 +31,7 @@ describe("Smart Window telemetry", () => {
     BrowserTestUtils.removeTab(gBrowser.selectedTab);
     Services.prefs.clearUserPref("browser.smartwindow.firstrun.modelChoice");
     Services.prefs.clearUserPref("browser.smartwindow.model");
-    Services.prefs.clearUserPref("browser.smartwindow.preferences.endpoint");
+    Services.prefs.clearUserPref("browser.smartwindow.customEndpoint");
     Services.prefs.clearUserPref("browser.smartwindow.endpoint");
     Services.prefs.clearUserPref("browser.smartwindow.apiKey");
     Services.fog.testResetFOG();
@@ -42,6 +39,7 @@ describe("Smart Window telemetry", () => {
   });
 
   it("sends telemetry when no model was chosen during onboarding but is chosen via settings", async () => {
+    const expectedModel = await modelFor("1");
     let { doc } = await openSmartWindowPanel();
 
     const modelSelection = doc.getElementById("modelSelection");
@@ -76,25 +74,21 @@ describe("Smart Window telemetry", () => {
 
     Assert.equal(
       settingsModelEvent[0].extra.new_model,
-      lazy.FALLBACK_MODELS["1"].model,
+      expectedModel,
       "New model was set properly"
     );
 
     await TestUtils.waitForCondition(
-      () =>
-        Glean.smartWindow.model.testGetValue() ===
-        lazy.FALLBACK_MODELS["1"].model,
+      () => Glean.smartWindow.model.testGetValue() === expectedModel,
       "Model metric should be updated asynchronously"
     );
     const modelMetric = Glean.smartWindow.model.testGetValue();
-    Assert.equal(
-      modelMetric,
-      lazy.FALLBACK_MODELS["1"].model,
-      "Model metric was set properly"
-    );
+    Assert.equal(modelMetric, expectedModel, "Model metric was set properly");
   });
 
   it("sends telemetry when new model is chosen via settings", async () => {
+    const previousModel = await modelFor("2");
+    const newModel = await modelFor("1");
     await SpecialPowers.pushPrefEnv({
       set: [["browser.smartwindow.firstrun.modelChoice", "2"]],
     });
@@ -123,31 +117,26 @@ describe("Smart Window telemetry", () => {
 
     Assert.equal(
       settingsModelEvent[0].extra.previous_model,
-      lazy.FALLBACK_MODELS["2"].model,
+      previousModel,
       "Model 2 is previous model"
     );
 
     Assert.equal(
       settingsModelEvent[0].extra.new_model,
-      lazy.FALLBACK_MODELS["1"].model,
+      newModel,
       "Model 1 is new model"
     );
 
     await TestUtils.waitForCondition(
-      () =>
-        Glean.smartWindow.model.testGetValue() ===
-        lazy.FALLBACK_MODELS["1"].model,
+      () => Glean.smartWindow.model.testGetValue() === newModel,
       "Model metric should be updated asynchronously"
     );
     const modelMetric = Glean.smartWindow.model.testGetValue();
-    Assert.equal(
-      modelMetric,
-      lazy.FALLBACK_MODELS["1"].model,
-      "Model metric was set properly"
-    );
+    Assert.equal(modelMetric, newModel, "Model metric was set properly");
   });
 
   it("sends telemetry when custom model is chosen via settings", async () => {
+    const previousModel = await modelFor("2");
     await SpecialPowers.pushPrefEnv({
       set: [["browser.smartwindow.firstrun.modelChoice", "2"]],
     });
@@ -159,7 +148,7 @@ describe("Smart Window telemetry", () => {
     );
     customRadio.click();
 
-    await BrowserTestUtils.waitForCondition(
+    await TestUtils.waitForCondition(
       () => BrowserTestUtils.isVisible(doc.getElementById("customModelName")),
       "Waiting for custom fields to be visible"
     );
@@ -169,7 +158,7 @@ describe("Smart Window telemetry", () => {
     customModelEndpoint.dispatchEvent(new Event("change", { bubbles: true }));
 
     const customModelSaveButton = doc.getElementById("customModelSaveButton");
-    await BrowserTestUtils.waitForCondition(
+    await TestUtils.waitForCondition(
       () => !customModelSaveButton.disabled,
       "Waiting for save button to be enabled"
     );
@@ -194,28 +183,22 @@ describe("Smart Window telemetry", () => {
 
     Assert.equal(
       settingsModelEvent[0].extra.previous_model,
-      lazy.FALLBACK_MODELS["2"].model,
+      previousModel,
       "Model 2 is previous model"
     );
 
     Assert.equal(
       settingsModelEvent[0].extra.new_model,
-      lazy.FALLBACK_MODELS["0"].model,
+      "custom-model",
       "Custom model is new model"
     );
 
     await TestUtils.waitForCondition(
-      () =>
-        Glean.smartWindow.model.testGetValue() ===
-        lazy.FALLBACK_MODELS["0"].model,
+      () => Glean.smartWindow.model.testGetValue() === "custom-model",
       "Model metric should be updated asynchronously"
     );
     const modelMetric = Glean.smartWindow.model.testGetValue();
-    Assert.equal(
-      modelMetric,
-      lazy.FALLBACK_MODELS["0"].model,
-      "Model metric was set properly"
-    );
+    Assert.equal(modelMetric, "custom-model", "Model metric was set properly");
   });
 
   it("sends telemetry when custom model is updated", async () => {
@@ -225,7 +208,7 @@ describe("Smart Window telemetry", () => {
 
     let { doc } = await openSmartWindowPanel();
 
-    await BrowserTestUtils.waitForCondition(
+    await TestUtils.waitForCondition(
       () => BrowserTestUtils.isVisible(doc.getElementById("customModelName")),
       "Waiting for custom fields to be visible"
     );
@@ -235,7 +218,7 @@ describe("Smart Window telemetry", () => {
     customModelEndpoint.dispatchEvent(new Event("change", { bubbles: true }));
 
     const customModelSaveButton = doc.getElementById("customModelSaveButton");
-    await BrowserTestUtils.waitForCondition(
+    await TestUtils.waitForCondition(
       () => !customModelSaveButton.disabled,
       "Waiting for save button to be enabled"
     );
@@ -266,22 +249,16 @@ describe("Smart Window telemetry", () => {
 
     Assert.equal(
       settingsModelEvent[0].extra.new_model,
-      lazy.FALLBACK_MODELS["0"].model,
+      "custom-model",
       "Custom model is new model"
     );
 
     await TestUtils.waitForCondition(
-      () =>
-        Glean.smartWindow.model.testGetValue() ===
-        lazy.FALLBACK_MODELS["0"].model,
+      () => Glean.smartWindow.model.testGetValue() === "custom-model",
       "Model metric should be updated asynchronously"
     );
     const modelMetric = Glean.smartWindow.model.testGetValue();
-    Assert.equal(
-      modelMetric,
-      lazy.FALLBACK_MODELS["0"].model,
-      "Model metric was set properly"
-    );
+    Assert.equal(modelMetric, "custom-model", "Model metric was set properly");
   });
 
   it("sends telemetry when memories chat checkbox is updated", async () => {
@@ -475,7 +452,7 @@ describe("Smart Window telemetry", () => {
     deleteAllMemoriesButton.click();
     await dialogPromise;
 
-    await BrowserTestUtils.waitForCondition(
+    await TestUtils.waitForCondition(
       () => Glean.smartWindow.memoriesNuke.testGetValue(),
       "Waiting for memoriesNuke telemetry to be recorded"
     );

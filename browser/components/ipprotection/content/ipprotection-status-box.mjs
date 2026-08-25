@@ -23,6 +23,7 @@ export default class IPProtectionStatusBox extends MozLitElement {
     headerL10nId: { type: String },
     descriptionL10nId: { type: String },
     descriptionL10nArgs: { type: String },
+    descriptionSupportSlug: { type: String },
     type: { type: String },
   };
 
@@ -82,9 +83,12 @@ export default class IPProtectionStatusBox extends MozLitElement {
           <div>
             <h1
               id="title"
+              class="heading-xlarge"
               data-l10n-id=${this.headerL10nId}
               data-l10n-attrs="aria-label"
               tabindex="-1"
+              aria-live="polite"
+              aria-atomic="true"
             ></h1>
             <slot name="bandwidth"></slot>
             <div id="content">
@@ -93,7 +97,16 @@ export default class IPProtectionStatusBox extends MozLitElement {
                     id="description"
                     data-l10n-id=${this.descriptionL10nId}
                     data-l10n-args=${this.descriptionL10nArgs}
-                  ></span>`
+                  >
+                    ${this.descriptionSupportSlug
+                      ? html` <a
+                          is="moz-support-link"
+                          data-l10n-name="learn-more-link"
+                          part="support-link"
+                          support-page=${this.descriptionSupportSlug}
+                        ></a>`
+                      : null}
+                  </span>`
                 : null}
             </div>
           </div>

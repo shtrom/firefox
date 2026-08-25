@@ -1055,7 +1055,8 @@ CompareNetwork::OnStreamComplete(nsIStreamLoader* aLoader,
     ServiceWorkerManager::LocalizeAndReportToAllClients(
         mRegistration->Scope(), "ServiceWorkerRegisterNetworkError",
         nsTArray<nsString>{NS_ConvertUTF8toUTF16(mRegistration->Scope()),
-                           statusAsText, NS_ConvertUTF8toUTF16(mURL)});
+                           std::move(statusAsText),
+                           NS_ConvertUTF8toUTF16(mURL)});
 
     rv = NS_ERROR_FAILURE;
     return NS_OK;
@@ -1071,12 +1072,10 @@ CompareNetwork::OnStreamComplete(nsIStreamLoader* aLoader,
     mRegistration->RefreshLastUpdateCheckTime();
   }
 
-#ifdef NIGHTLY_BUILD
   nsCOMPtr<nsILoadInfo> loadInfo = mChannel->LoadInfo();
   if (!JS::Prefs::experimental_import_text() ||
       (loadInfo->GetExternalContentPolicyType() !=
        ExtContentPolicyType::TYPE_TEXT)) {
-#endif
     nsAutoCString mimeType;
     rv = httpChannel->GetContentType(mimeType);
     if (NS_WARN_IF(NS_FAILED(rv))) {
@@ -1089,19 +1088,21 @@ CompareNetwork::OnStreamComplete(nsIStreamLoader* aLoader,
     }
 
     auto mimeTypeUTF16 = NS_ConvertUTF8toUTF16(mimeType);
+    // The top-level service worker script must be served with a JavaScript
+    // MIME type. JSON is only permitted for non-top-level (imported) modules,
+    // such as `import data from "./x.json" with { type: "json" }`.
     if (mimeTypeUTF16.IsEmpty() ||
         !(nsContentUtils::IsJavascriptMIMEType(mimeTypeUTF16) ||
-          nsContentUtils::IsJsonMimeType(mimeTypeUTF16))) {
+          (!mIsMainScript && nsContentUtils::IsJsonMimeType(mimeTypeUTF16)))) {
       ServiceWorkerManager::LocalizeAndReportToAllClients(
           mRegistration->Scope(), "ServiceWorkerRegisterMimeTypeError2",
           nsTArray<nsString>{NS_ConvertUTF8toUTF16(mRegistration->Scope()),
-                             mimeTypeUTF16, NS_ConvertUTF8toUTF16(mURL)});
+                             std::move(mimeTypeUTF16),
+                             NS_ConvertUTF8toUTF16(mURL)});
       rv = NS_ERROR_DOM_SECURITY_ERR;
       return rv;
     }
-#ifdef NIGHTLY_BUILD
   }
-#endif
 
   nsCOMPtr<nsIURI> channelURL;
   rv = httpChannel->GetURI(getter_AddRefs(channelURL));

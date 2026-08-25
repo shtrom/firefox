@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const FRAME_SCRIPT_URL = "chrome://gfxsanity/content/gfxFrameScript.js";
+const FRAME_SCRIPT_URL = "resource://gfxsanity/gfxFrameScript.js";
 
 const TEST_DISABLED_PREF = "media.sanity-test.disabled";
 const PAGE_WIDTH = 160;
@@ -391,7 +391,7 @@ SanityTest.prototype = {
         PAGE_WIDTH +
         ",height=" +
         PAGE_HEIGHT +
-        ",chrome,titlebar=0,scrollbars=0,dialog=1",
+        ",chrome,titlebar=0,dialog=1",
       null
     );
 

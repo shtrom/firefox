@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "vm/FrameIter-inl.h"
-
 #include "mozilla/Assertions.h"  // MOZ_ASSERT, MOZ_CRASH
 #include "mozilla/MaybeOneOf.h"  // mozilla::MaybeOneOf
 
@@ -29,6 +27,7 @@
 #include "wasm/WasmInstance.h"   // js::wasm::Instance
 
 #include "jit/JSJitFrameIter-inl.h"  // js::jit::JSJitFrameIter::baselineFrame{,NumValueSlots}
+#include "vm/FrameIter-inl.h"
 #include "vm/Stack-inl.h"  // js::AbstractFramePtr::*
 
 namespace JS {
@@ -560,6 +559,18 @@ bool FrameIter::isFunctionFrame() const {
   MOZ_CRASH("Unexpected state");
 }
 
+bool FrameIter::isResumingGenerator() const {
+  MOZ_ASSERT(!done());
+  if (isInterp()) {
+    return interpFrame()->isResumingGenerator();
+  }
+  if (isPhysicalJitFrame()) {
+    return physicalJitFrame()->isResumingGenerator();
+  }
+  // Wasm frames and inlined Ion frames are never resuming a generator.
+  return false;
+}
+
 JSAtom* FrameIter::maybeFunctionDisplayAtom() const {
   switch (data_.state_) {
     case DONE:
@@ -612,7 +623,7 @@ const char16_t* FrameIter::displayURL() const {
     case INTERP:
     case JIT:
       if (isWasm()) {
-        return wasmFrame().displayURL();
+        return nullptr;
       }
       ScriptSource* ss = script()->scriptSource();
       return ss->hasDisplayURL() ? ss->displayURL() : nullptr;
@@ -647,7 +658,7 @@ bool FrameIter::mutedErrors() const {
     case INTERP:
     case JIT:
       if (isWasm()) {
-        return wasmFrame().mutedErrors();
+        return false;
       }
       return script()->mutedErrors();
   }
@@ -779,7 +790,8 @@ void FrameIter::wasmUpdateBytecodeOffset() {
 
   // Relookup the current frame, updating the bytecode offset in the process.
   data_.jitFrames_ = JitFrameIter(data_.activations_->asJit());
-  while (!isWasm() || wasmFrame().debugFrame() != frame) {
+  while (!isWasm() || !wasmFrame().debugEnabled() ||
+         wasmFrame().debugFrame() != frame) {
     ++data_.jitFrames_;
   }
 

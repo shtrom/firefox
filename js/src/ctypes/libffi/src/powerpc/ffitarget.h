@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------*-C-*-
-   ffitarget.h - Copyright (c) 2012  Anthony Green
+   ffitarget.h - Copyright (c) 2012, 2026  Anthony Green
                  Copyright (C) 2007, 2008, 2010 Free Software Foundation, Inc
                  Copyright (c) 1996-2003  Red Hat, Inc.
 
@@ -148,6 +148,16 @@ typedef enum ffi_abi {
 #endif
 #if defined (POWERPC_AIX)
 # define FFI_GO_CLOSURES 1
+#endif
+
+/* Complex types are supported on ELFv2 (the only PowerPC64 variant where
+   the assembly and C-side passing/return logic has been wired up).  Under
+   ELFv2, float/double _Complex are passed and returned as a 2-element
+   homogeneous floating-point aggregate, but each scalar half consumes a
+   GPR shadow slot of its own — i.e. the same way the underlying C ABI
+   handles them, which is what GCC's split_complex_arg emits.  */
+#if defined(POWERPC64) && _CALL_ELF == 2
+# define FFI_TARGET_HAS_COMPLEX_TYPE
 #endif
 
 #if _CALL_ELF == 2

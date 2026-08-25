@@ -5,14 +5,15 @@
 //! Computed angles.
 
 use crate::derives::*;
+use crate::typed_om::{NumericType, NumericValue, ToTyped, TypedValue, UnitValue};
 use crate::values::distance::{ComputeSquaredDistance, SquaredDistance};
 use crate::values::CSSFloat;
 use crate::Zero;
 use std::f64::consts::PI;
 use std::fmt::{self, Write};
-use std::ops::Neg;
+use std::ops::{AddAssign, Neg};
 use std::{f32, f64};
-use style_traits::{CssString, CssWriter, NumericValue, ToCss, ToTyped, TypedValue, UnitValue};
+use style_traits::{CssString, CssWriter, ToCss};
 use thin_vec::ThinVec;
 
 /// A computed angle in degrees.
@@ -46,6 +47,7 @@ impl ToCss for Angle {
 impl ToTyped for Angle {
     fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
         dest.push(TypedValue::Numeric(NumericValue::Unit(UnitValue {
+            numeric_type: NumericType::angle(),
             value: self.degrees(),
             unit: CssString::from("deg"),
         })));
@@ -119,5 +121,11 @@ impl Neg for Angle {
     #[inline]
     fn neg(self) -> Angle {
         Angle(-self.0)
+    }
+}
+
+impl AddAssign for Angle {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0
     }
 }

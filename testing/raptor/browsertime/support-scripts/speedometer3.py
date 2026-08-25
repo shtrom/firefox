@@ -11,8 +11,28 @@ LOG = RaptorLogger(component="raptor-speedometer3-support")
 
 
 class Speedometer3Support(BasePythonSupport):
+    no_nova = None
+    profiling = False
+
     def setup_test(self, test, args):
         super().setup_test(test, args)
+
+        if args.extra_prefs.get("browser.nova.enabled", True) is False:
+            self.no_nova = True
+
+        for profile_type, profile_enabled in [
+            ("etw_profile", args.etw_profile),
+            ("samply_profile", args.samply_profile),
+            ("perf_profile", args.perf_profile),
+        ]:
+            if profile_enabled:
+                test[profile_type] = True
+                if args.browser_cycles is None:
+                    test["browser_cycles"] = 20
+                test["browsertime_args"] = (
+                    f"{test.get('browsertime_args', '')} --browsertime.post_startup_delay=2000".strip()
+                )
+                self.profiling = True
 
         if args.simpleperf:
             # Each test suite runs in its own browser cycle.
@@ -33,6 +53,7 @@ class Speedometer3Support(BasePythonSupport):
             # For correctness (should not affect functionality), set
             # test["apps"] to apps that work with Simpleperf profiling.
             test["apps"] = "fenix, geckoview"
+            self.profiling = True
 
     def handle_result(self, bt_result, raw_result, **kwargs):
         """Parse a result for the required results.
@@ -136,6 +157,14 @@ class Speedometer3Support(BasePythonSupport):
         suite["alertSeverity"] = "subcritical"
         if self.platform == "Windows":
             suite["alertSeverity"] = "critical"
+
+        if self.profiling:
+            suite["shouldAlert"] = False
+            for subtest in suite.get("subtests", []):
+                subtest["shouldAlert"] = False
+
+        if self.no_nova:
+            suite["extraOptions"].append("no-nova")
 
     def modify_command(self, cmd, test):
         """Modify the browsertime command for speedometer 3.

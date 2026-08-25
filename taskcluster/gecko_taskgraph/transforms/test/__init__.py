@@ -358,6 +358,9 @@ class TestDescriptionSchema(Schema, kw_only=True):
             use_msgspec=True,
         )
     ] = None
+    # Information for indexing this build so its artifacts can be discovered;
+    # see the docstring on `IndexSchema` in 'task.py' transforms.
+    index: TOptional[JobDescriptionSchema.__annotations__["index"]] = None  # type: ignore
     # A list of artifacts to install from 'fetch' tasks. Validation deferred
     # to 'job' transforms.
     fetches: TOptional[object] = None
@@ -373,7 +376,13 @@ class TestDescriptionSchema(Schema, kw_only=True):
     # Define if a given task supports artifact builds or not, see bug 1695325.
     supports_artifact_builds: TOptional[bool] = None
     # Version of python used to run the task
-    use_python: TOptional[JobDescriptionSchema.__annotations__["use_python"]] = None  # type: ignore
+    use_python: TOptional[  # type: ignore
+        optionally_keyed_by(
+            "test-platform",
+            JobDescriptionSchema.__annotations__["use_python"],
+            use_msgspec=True,
+        )
+    ] = None
     # Fetch uv binary and add it to PATH
     use_uv: TOptional[bool] = None
     # Cache mounts / volumes to set up
@@ -498,6 +507,7 @@ def resolve_keys(config, tasks):
         "test-manifest-loader",
         "timeoutfactor",
         "use-caches",
+        "use-python",
     )
     for task in tasks:
         for key in keys:
@@ -578,10 +588,11 @@ def make_job_description(config, tasks):
             label = "test-{}-{}".format(task["test-platform"], task["test-name"])
 
         try_name = task["try-name"]
+        variant_suffix = ""
         if attributes.get("unittest_variant"):
-            suffix = task.pop("variant-suffix")
-            label += suffix
-            try_name += suffix
+            variant_suffix = task.pop("variant-suffix")
+            label += variant_suffix
+            try_name += variant_suffix
 
         if task["chunks"] > 1:
             label += "-{}".format(task["this-chunk"])
@@ -633,6 +644,19 @@ def make_job_description(config, tasks):
             jobdesc["expires-after"] = task["expires-after"]
 
         jobdesc["routes"] = task.get("routes", [])
+        # The confirm-failure ('-cf') copy of a task is a retrigger helper that
+        # never runs on real branches, so it must not claim the shared index.
+        if "index" in task and not task.get("confirm-failure"):
+            index = dict(task["index"])
+            # The same job runs on multiple test platforms, so disambiguate the
+            # index path to avoid the per-platform tasks clobbering each other.
+            # The test-platform is "<platform>/<build-type>"; '/' isn't allowed
+            # in an index name, so join the two with a '-'.
+            platform = task["test-platform"].replace("/", "-")
+            index["job-name"] = "{}.{}{}".format(
+                index["job-name"], platform, variant_suffix
+            )
+            jobdesc["index"] = index
         jobdesc["run-on-repo-type"] = sorted(task["run-on-repo-type"])
         jobdesc["run-on-projects"] = sorted(task["run-on-projects"])
         jobdesc["scopes"] = []
@@ -665,6 +689,7 @@ def make_job_description(config, tasks):
 
         run = jobdesc["run"] = {}
         run["using"] = "mozharness-test"
+        run["clone-with"] = "hg"
         run["test"] = task
 
         if "workdir" in task:
@@ -677,6 +702,9 @@ def make_job_description(config, tasks):
 
         if task.get("fetches"):
             jobdesc["fetches"] = task.pop("fetches")
+
+        jobdesc["use-python"] = task.pop("use-python")
+        jobdesc["use-uv"] = task.pop("use-uv")
 
         yield jobdesc
 

@@ -11,6 +11,7 @@ use crate::color::mix::ColorInterpolationMethod;
 use crate::derives::*;
 use crate::parser::{Parse, ParserContext};
 use crate::stylesheets::CorsMode;
+use crate::typed_om::{ImageValue, KeywordValue, ToTyped, TypedValue};
 use crate::values::generics::color::{ColorMixFlags, GenericLightDark};
 use crate::values::generics::image::{
     self as generic, Circle, Ellipse, GradientCompatMode, ShapeExtent,
@@ -31,17 +32,29 @@ use cssparser::{match_ignore_ascii_case, Delimiter, Parser, Token};
 use selectors::parser::SelectorParseErrorKind;
 use std::cmp::Ordering;
 use std::fmt::{self, Write};
-use style_traits::{CssType, CssWriter, KeywordsCollectFn, ParseError};
+use style_traits::{CssString, CssType, CssWriter, KeywordsCollectFn, ParseError};
 use style_traits::{SpecifiedValueInfo, StyleParseErrorKind, ToCss};
-
-#[inline]
-fn gradient_color_interpolation_method_enabled() -> bool {
-    static_prefs::pref!("layout.css.gradient-color-interpolation-method.enabled")
-}
+use thin_vec::ThinVec;
 
 /// Specified values for an image according to CSS-IMAGES.
 /// <https://drafts.csswg.org/css-images/#image-values>
 pub type Image = generic::Image<Gradient, SpecifiedUrl, Color, Percentage, Resolution>;
+
+impl ToTyped for Image {
+    fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
+        match *self {
+            Image::None => {
+                dest.push(TypedValue::Keyword(KeywordValue(CssString::from("none"))));
+                Ok(())
+            },
+            Image::Url(ref url) => {
+                dest.push(TypedValue::Image(ImageValue::Specified(url.clone())));
+                Ok(())
+            },
+            _ => Err(()),
+        }
+    }
+}
 
 // Images should remain small, see https://github.com/servo/servo/pull/18430
 size_of_test!(Image, 16);
@@ -108,10 +121,6 @@ fn default_color_interpolation_method<T>(
     } else {
         ColorInterpolationMethod::srgb()
     }
-}
-
-fn image_light_dark_enabled(context: &ParserContext) -> bool {
-    context.chrome_rules_enabled() || static_prefs::pref!("layout.css.light-dark.images.enabled")
 }
 
 #[cfg(feature = "gecko")]
@@ -246,7 +255,7 @@ impl Image {
             "paint" => Self::PaintWorklet(Box::new(<PaintWorklet>::parse_args(context, input)?)),
             "cross-fade" if cross_fade_enabled() => Self::CrossFade(Box::new(CrossFade::parse_args(context, input, cors_mode, flags)?)),
             "image" => Self::Image(Box::new(Color::parse(context, input)?)),
-            "light-dark" if image_light_dark_enabled(context) => Self::LightDark(Box::new(GenericLightDark::parse_args_with(input, |input| {
+            "light-dark" => Self::LightDark(Box::new(GenericLightDark::parse_args_with(input, |input| {
                 // `none` in `light-dark()` has a special meaning.
                 Self::parse_with_cors_mode(context, input, cors_mode, flags & !ParseImageFlags::FORBID_NONE)
             })?)),
@@ -830,20 +839,6 @@ impl Gradient {
         Ok(items)
     }
 
-    /// Try to parse a color interpolation method.
-    fn try_parse_color_interpolation_method<'i, 't>(
-        context: &ParserContext,
-        input: &mut Parser<'i, 't>,
-    ) -> Option<ColorInterpolationMethod> {
-        if gradient_color_interpolation_method_enabled() {
-            input
-                .try_parse(|i| ColorInterpolationMethod::parse(context, i))
-                .ok()
-        } else {
-            None
-        }
-    }
-
     /// Parses a linear gradient.
     /// GradientCompatMode can change during `-moz-` prefixed gradient parsing if it come across a `to` keyword.
     fn parse_linear<'i, 't>(
@@ -855,15 +850,18 @@ impl Gradient {
         let mut flags = GradientFlags::empty();
         flags.set(GradientFlags::REPEATING, repeating);
 
-        let mut color_interpolation_method =
-            Self::try_parse_color_interpolation_method(context, input);
+        let mut color_interpolation_method = input
+            .try_parse(|i| ColorInterpolationMethod::parse(context, i))
+            .ok();
 
         let direction = input
             .try_parse(|p| LineDirection::parse(context, p, &mut compat_mode))
             .ok();
 
         if direction.is_some() && color_interpolation_method.is_none() {
-            color_interpolation_method = Self::try_parse_color_interpolation_method(context, input);
+            color_interpolation_method = input
+                .try_parse(|i| ColorInterpolationMethod::parse(context, i))
+                .ok();
         }
 
         // If either of the 2 options were specified, we require a comma.
@@ -904,8 +902,9 @@ impl Gradient {
         let mut flags = GradientFlags::empty();
         flags.set(GradientFlags::REPEATING, repeating);
 
-        let mut color_interpolation_method =
-            Self::try_parse_color_interpolation_method(context, input);
+        let mut color_interpolation_method = input
+            .try_parse(|i| ColorInterpolationMethod::parse(context, i))
+            .ok();
 
         let (shape, position) = match compat_mode {
             GradientCompatMode::Modern => {
@@ -930,7 +929,9 @@ impl Gradient {
 
         let has_shape_or_position = shape.is_ok() || position.is_some();
         if has_shape_or_position && color_interpolation_method.is_none() {
-            color_interpolation_method = Self::try_parse_color_interpolation_method(context, input);
+            color_interpolation_method = input
+                .try_parse(|i| ColorInterpolationMethod::parse(context, i))
+                .ok();
         }
 
         if has_shape_or_position || color_interpolation_method.is_some() {
@@ -971,8 +972,9 @@ impl Gradient {
         let mut flags = GradientFlags::empty();
         flags.set(GradientFlags::REPEATING, repeating);
 
-        let mut color_interpolation_method =
-            Self::try_parse_color_interpolation_method(context, input);
+        let mut color_interpolation_method = input
+            .try_parse(|i| ColorInterpolationMethod::parse(context, i))
+            .ok();
 
         let angle = input.try_parse(|i| {
             i.expect_ident_matching("from")?;
@@ -987,7 +989,9 @@ impl Gradient {
 
         let has_angle_or_position = angle.is_ok() || position.is_ok();
         if has_angle_or_position && color_interpolation_method.is_none() {
-            color_interpolation_method = Self::try_parse_color_interpolation_method(context, input);
+            color_interpolation_method = input
+                .try_parse(|i| ColorInterpolationMethod::parse(context, i))
+                .ok();
         }
 
         if has_angle_or_position || color_interpolation_method.is_some() {
@@ -1376,4 +1380,31 @@ pub enum ImageRendering {
     Optimizespeed,
     #[cfg(feature = "gecko")]
     Optimizequality,
+}
+
+/// Internal -moz-image-decoding property. This allows images to be forcefully sync-decoded.
+///
+/// We use different defaults for sync vs. async decoding, which sometimes cause site issues.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    FromPrimitive,
+    MallocSizeOf,
+    Parse,
+    PartialEq,
+    SpecifiedValueInfo,
+    ToComputedValue,
+    ToCss,
+    ToResolvedValue,
+    ToShmem,
+    ToTyped,
+)]
+#[repr(u8)]
+pub enum ImageDecoding {
+    /// Use the default heuristics.
+    Auto,
+    /// Force sync-decoding.
+    Sync,
 }

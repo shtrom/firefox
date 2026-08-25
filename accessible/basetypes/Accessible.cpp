@@ -3,18 +3,19 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "Accessible.h"
+
 #include "ARIAMap.h"
-#include "nsAccUtils.h"
-#include "nsIURI.h"
 #include "Pivot.h"
 #include "Relation.h"
 #include "States.h"
-#include "mozilla/a11y/FocusManager.h"
-#include "mozilla/a11y/HyperTextAccessibleBase.h"
 #include "mozilla/BasicEvents.h"
 #include "mozilla/Components.h"
 #include "mozilla/ProfilerMarkers.h"
+#include "mozilla/a11y/FocusManager.h"
+#include "mozilla/a11y/HyperTextAccessibleBase.h"
+#include "nsAccUtils.h"
 #include "nsIStringBundle.h"
+#include "nsIURI.h"
 
 #ifdef A11Y_LOG
 #  include "nsAccessibilityService.h"
@@ -391,24 +392,10 @@ int32_t Accessible::GetLevel(bool aFast) const {
       }
     }
   } else if (role == roles::HEADING) {
-    nsAtom* tagName = TagName();
-    if (tagName == nsGkAtoms::h1) {
-      return 1;
-    }
-    if (tagName == nsGkAtoms::h2) {
-      return 2;
-    }
-    if (tagName == nsGkAtoms::h3) {
-      return 3;
-    }
-    if (tagName == nsGkAtoms::h4) {
-      return 4;
-    }
-    if (tagName == nsGkAtoms::h5) {
-      return 5;
-    }
-    if (tagName == nsGkAtoms::h6) {
-      return 6;
+    const uint8_t level = HeadingLevel();
+    if (level) {
+      MOZ_ASSERT(level > 0 && level <= 9);
+      return level;
     }
 
     const nsRoleMapEntry* ariaRole = this->ARIARoleMap();

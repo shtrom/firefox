@@ -5,6 +5,7 @@
 #include "SharedSurfaceANGLE.h"
 
 #include <d3d11.h>
+
 #include "GLContextEGL.h"
 #include "GLLibraryEGL.h"
 #include "mozilla/gfx/DeviceManagerDx.h"
@@ -51,7 +52,7 @@ static EGLSurface CreatePBufferSurface(EglDisplay* egl, EGLConfig config,
     EGLint err = egl->mLib->fGetError();
     gfxCriticalError() << "Failed to create Pbuffer surface error: "
                        << gfx::hexa(err) << " Size : " << size;
-    return 0;
+    return nullptr;
   }
 
   return surface;

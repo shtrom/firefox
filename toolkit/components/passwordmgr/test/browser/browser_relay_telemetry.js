@@ -53,9 +53,10 @@ async function openRelayAC(browser) {
   Services.telemetry.clearEvents();
   const popup = document.getElementById("PopupAutoComplete");
   await openACPopup(popup, browser, "#form-basic-username");
-  const popupItem = document
-    .querySelector("richlistitem")
-    .getAttribute("ac-value");
+  const firstRichlistitem = document.querySelector("richlistitem");
+  const popupItem = firstRichlistitem.querySelector(
+    "autocomplete-row-item"
+  ).value;
 
   Assert.ok(
     gRelayACOptionsTitles.some(title => title.value === popupItem),
@@ -136,7 +137,7 @@ add_task(async function test_popup_option_optin_enabled() {
       await notificationShown;
 
       notificationPopup
-        .querySelector("button.popup-notification-primary-button")
+        .querySelector("moz-button.popup-notification-primary-button")
         .click();
 
       await Promise.all([
@@ -206,7 +207,7 @@ add_task(async function test_popup_option_optin_postponed() {
       await notificationShown;
 
       notificationPopup
-        .querySelector("button.popup-notification-secondary-button")
+        .querySelector("moz-button.popup-notification-secondary-button")
         .click();
 
       await notificationHidden;
@@ -417,7 +418,7 @@ add_task(async function test_auth_token_error() {
       await notificationShown;
 
       notificationPopup
-        .querySelector("button.popup-notification-primary-button")
+        .querySelector("moz-button.popup-notification-primary-button")
         .click();
 
       await notificationHidden;

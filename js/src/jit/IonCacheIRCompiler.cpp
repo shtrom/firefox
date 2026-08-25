@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "jit/IonCacheIRCompiler.h"
+
 #include "mozilla/Maybe.h"
 
 #include <algorithm>
@@ -610,7 +611,11 @@ JitCode* IonCacheIRCompiler::compile(IonICStub* stub) {
     allocator.nextOp();
   } while (reader.more());
 
-  masm.assumeUnreachable("Should have returned from IC");
+  if (!savedLiveRegs_) {
+    allocator.restoreInputState(masm);
+  }
+  uint8_t* rejoinAddr = ic_->rejoinAddr(ionScript_);
+  masm.jump(ImmPtr(rejoinAddr));
 
   // Done emitting the main IC code. Now emit the failure paths.
   perfSpewer_.recordOffset(masm, "FailurePath");
@@ -1943,17 +1948,6 @@ bool IonCacheIRCompiler::emitMegamorphicSetElement(ObjOperandId objId,
   return true;
 }
 
-bool IonCacheIRCompiler::emitReturnFromIC() {
-  JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
-  if (!savedLiveRegs_) {
-    allocator.restoreInputState(masm);
-  }
-
-  uint8_t* rejoinAddr = ic_->rejoinAddr(ionScript_);
-  masm.jump(ImmPtr(rejoinAddr));
-  return true;
-}
-
 bool IonCacheIRCompiler::emitGuardDOMExpandoMissingOrGuardShape(
     ValOperandId expandoId, uint32_t shapeOffset) {
   JitSpew(JitSpew_Codegen, "%s", __FUNCTION__);
@@ -2131,7 +2125,7 @@ void IonIC::attachCacheIRStub(JSContext* cx, const CacheIRWriter& writer,
     }
   }
 
-  attachStub(newStub, code);
+  attachStub(ionScript, newStub, code);
   *attached = true;
 }
 

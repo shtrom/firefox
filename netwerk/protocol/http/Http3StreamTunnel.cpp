@@ -3,12 +3,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // HttpLog.h should generally be included first
-#include "HttpLog.h"
+#include "Http3StreamTunnel.h"
 
+#include "Http3Session.h"
+#include "HttpLog.h"
 #include "nsHttpConnectionMgr.h"
 #include "nsHttpHandler.h"
-#include "Http3StreamTunnel.h"
-#include "Http3Session.h"
 #include "nsQueryObject.h"
 
 namespace mozilla::net {
@@ -475,7 +475,6 @@ FWD_H3ST_ADDREF(GetScriptablePeerAddr, nsINetAddr);
 FWD_H3ST_ADDREF(GetScriptableSelfAddr, nsINetAddr);
 FWD_H3ST_PTR(GetConnectionFlags, uint32_t);
 FWD_H3ST(SetConnectionFlags, uint32_t);
-FWD_H3ST(SetIsPrivate, bool);
 FWD_H3ST(SetIsTRRConnection, bool);
 FWD_H3ST_PTR(GetIsTRRConnection, bool);
 FWD_H3ST_PTR(GetTlsFlags, uint32_t);

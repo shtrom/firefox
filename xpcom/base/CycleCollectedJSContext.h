@@ -5,19 +5,19 @@
 #ifndef mozilla_CycleCollectedJSContext_h
 #define mozilla_CycleCollectedJSContext_h
 
+#include "js/GCVector.h"
+#include "js/Promise.h"
 #include "js/TracingAPI.h"
+#include "js/friend/MicroTask.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/LinkedList.h"
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/dom/AtomList.h"
 #include "mozilla/dom/Promise.h"
-#include "js/GCVector.h"
-#include "js/Promise.h"
-#include "js/friend/MicroTask.h"
-
 #include "nsCOMPtr.h"
 #include "nsRefPtrHashtable.h"
 #include "nsTArray.h"
+#include "nsTHashMap.h"
 
 class nsCycleCollectionNoteRootCallback;
 class nsIRunnable;
@@ -432,9 +432,9 @@ class CycleCollectedJSContext : dom::PerThreadAtomCache, public JS::JobQueue {
   uint32_t RecursionDepth() const;
 
   // Run in stable state (call through nsContentUtils)
-  void RunInStableState(already_AddRefed<nsIRunnable>&& aRunnable);
+  void RunInStableState(already_AddRefed<nsIRunnable> aRunnable);
 
-  void AddPendingIDBTransaction(already_AddRefed<nsIRunnable>&& aTransaction);
+  void AddPendingIDBTransaction(already_AddRefed<nsIRunnable> aTransaction);
 
   // Get the CycleCollectedJSContext for a JSContext.
   // Returns null only if Initialize() has not completed on or during
@@ -471,6 +471,21 @@ class CycleCollectedJSContext : dom::PerThreadAtomCache, public JS::JobQueue {
   void LeaveSyncOperation() { --mSyncOperations; }
   bool IsInSyncOperation() const { return mSyncOperations > 0; }
 
+  // Track how many globals on this context's thread currently have a
+  // WebTaskSchedulingState, so that getHostDefinedData can skip
+  // walking the script settings stack in the common case where nothing has one.
+  void NoteWebTaskSchedulingStateAdded() { ++mWebTaskSchedulingStateCount; }
+  void NoteWebTaskSchedulingStateRemoved() {
+    MOZ_DIAGNOSTIC_ASSERT(mWebTaskSchedulingStateCount > 0,
+                          "unbalanced WebTaskSchedulingState notification");
+    if (mWebTaskSchedulingStateCount > 0) {
+      --mWebTaskSchedulingStateCount;
+    }
+  }
+  bool MayHaveWebTaskSchedulingState() const {
+    return mWebTaskSchedulingStateCount != 0;
+  }
+
   bool CheckRecursionDepth(uint32_t aCurrentDepth, bool aForce = false);
 
   MOZ_CAN_RUN_SCRIPT
@@ -490,6 +505,14 @@ class CycleCollectedJSContext : dom::PerThreadAtomCache, public JS::JobQueue {
   JS::PersistentRooted<JS::GCVector<JSObject*, 0, js::SystemAllocPolicy>>
       mUncaughtRejections;
 
+  // Length past which mUncaughtRejections is searched through a companion
+  // index hashtable rather than scanned linearly.
+  static constexpr size_t kRejectedPromiseIndexThreshold = 8;
+
+  // Promise ID to its index in mUncaughtRejections. Only populated once that
+  // list grows past kRejectedPromiseIndexThreshold.
+  nsTHashMap<nsUint64HashKey, size_t> mUncaughtRejectionIndices;
+
   // Promises in this list have previously been reported as rejected
   // (because they were in the above list), but the rejection was handled
   // in the last turn of the event loop.
@@ -497,6 +520,10 @@ class CycleCollectedJSContext : dom::PerThreadAtomCache, public JS::JobQueue {
       mConsumedRejections;
   nsTArray<nsCOMPtr<nsISupports /* UncaughtRejectionObserver */>>
       mUncaughtRejectionObservers;
+
+  bool HasPendingUnhandledRejection(uint64_t aPromiseID) const {
+    return mPendingUnhandledRejections.Contains(aPromiseID);
+  }
 
   virtual bool IsSystemCaller() const = 0;
 
@@ -576,6 +603,8 @@ class CycleCollectedJSContext : dom::PerThreadAtomCache, public JS::JobQueue {
 
   uint32_t mSyncOperations;
 
+  uint32_t mWebTaskSchedulingStateCount = 0;
+
   RefPtr<SuppressedMicroTaskList> mSuppressedMicroTaskList;
 
   uint64_t mSuppressionGeneration;
@@ -611,7 +640,14 @@ class CycleCollectedJSContext : dom::PerThreadAtomCache, public JS::JobQueue {
   // - it is handled, or
   // - A unhandledrejection is fired and it isn't being handled in event
   // handler.
-  typedef nsRefPtrHashtable<nsUint64HashKey, dom::Promise> PromiseHashtable;
+  struct PendingRejection {
+    RefPtr<dom::Promise> mPromise;
+    // Index of mPromise in mAboutToBeNotifiedRejectedPromises. That array is
+    // not compacted, so this stays valid until the array is emptied, after
+    // which it may name an unrelated entry and must be re-checked before use.
+    size_t mIndex = 0;
+  };
+  typedef nsTHashMap<nsUint64HashKey, PendingRejection> PromiseHashtable;
   PromiseHashtable mPendingUnhandledRejections;
 
   class NotifyUnhandledRejections final : public CancelableRunnable {

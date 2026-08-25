@@ -298,7 +298,7 @@ quantize_up (double v)
 }
 
 static inline double
-dequantize (int16_t v)
+dequantize (int v)
 {
   return (double) v / HB_GPU_UNITS_PER_EM;
 }
@@ -325,17 +325,26 @@ encode_offset (unsigned offset)
   return (int16_t) (offset - 32768u);
 }
 
+/* Note: the bounds are computed from the *quantized* control points,
+ * because that is what the shader sees.  Band membership derived from
+ * the unquantized bounds can leave a curve out of the band that its
+ * quantized extent reaches into; fragments in that sliver then never
+ * see the curve, get the wrong winding number, and render as a thin
+ * black line through the glyph. */
 static hb_gpu_encode_curve_info_t
 encode_curve_info (const hb_gpu_curve_t *c)
 {
   hb_gpu_encode_curve_info_t info;
 
-  info.min_x = hb_min (hb_min (c->p1x, c->p2x), c->p3x);
-  info.max_x = hb_max (hb_max (c->p1x, c->p2x), c->p3x);
-  info.min_y = hb_min (hb_min (c->p1y, c->p2y), c->p3y);
-  info.max_y = hb_max (hb_max (c->p1y, c->p2y), c->p3y);
-  info.is_horizontal = c->p1y == c->p2y && c->p2y == c->p3y;
-  info.is_vertical   = c->p1x == c->p2x && c->p2x == c->p3x;
+  int p1x = quantize (c->p1x), p2x = quantize (c->p2x), p3x = quantize (c->p3x);
+  int p1y = quantize (c->p1y), p2y = quantize (c->p2y), p3y = quantize (c->p3y);
+
+  info.min_x = dequantize (hb_min (hb_min (p1x, p2x), p3x));
+  info.max_x = dequantize (hb_max (hb_max (p1x, p2x), p3x));
+  info.min_y = dequantize (hb_min (hb_min (p1y, p2y), p3y));
+  info.max_y = dequantize (hb_max (hb_max (p1y, p2y), p3y));
+  info.is_horizontal = p1y == p2y && p2y == p3y;
+  info.is_vertical   = p1x == p2x && p2x == p3x;
   info.hband_lo = 0;
   info.hband_hi = -1;
   info.vband_lo = 0;
@@ -446,6 +455,16 @@ hb_gpu_draw_encode (hb_gpu_draw_t      *draw,
   if (unlikely (!s.curve_infos.resize (num_curves)))
     return nullptr;
 
+  /* Validate the extents fit in i16 before quantizing: the casts in
+   * quantize_down()/quantize_up() are undefined for out-of-range
+   * values, and every later i16 conversion of a curve point is bounded
+   * by these extents. */
+  if (!quantize_down_fits_i16 (draw->ext_min_x) ||
+      !quantize_down_fits_i16 (draw->ext_min_y) ||
+      !quantize_up_fits_i16 (draw->ext_max_x) ||
+      !quantize_up_fits_i16 (draw->ext_max_y))
+    return nullptr;
+
   int16_t min_x_q = quantize_down (draw->ext_min_x);
   int16_t min_y_q = quantize_down (draw->ext_min_y);
   int16_t max_x_q = quantize_up (draw->ext_max_x);
@@ -474,6 +493,11 @@ hb_gpu_draw_encode (hb_gpu_draw_t      *draw,
   double hband_size = height / num_hbands;
   double vband_size = width  / num_vbands;
 
+  /* The shader recomputes the band index from the fragment position in
+   * float32, this code does it in double.  Widen the band range of each
+   * curve by a hair so the two cannot disagree at a band boundary. */
+  static const double BAND_EPSILON = 1.0 / 1024;
+
   if (unlikely (!s.hband_curve_counts.resize (num_hbands) ||
 		!s.vband_curve_counts.resize (num_vbands)))
     return nullptr;
@@ -488,8 +512,8 @@ hb_gpu_draw_encode (hb_gpu_draw_t      *draw,
     if (!info.is_horizontal)
     {
       if (height > 0) {
-	info.hband_lo = (int) floor ((info.min_y - min_y) / hband_size);
-	info.hband_hi = (int) floor ((info.max_y - min_y) / hband_size);
+	info.hband_lo = (int) floor ((info.min_y - min_y) / hband_size - BAND_EPSILON);
+	info.hband_hi = (int) floor ((info.max_y - min_y) / hband_size + BAND_EPSILON);
 	info.hband_lo = hb_max (info.hband_lo, 0);
 	info.hband_hi = hb_min (info.hband_hi, (int) num_hbands - 1);
 	for (int b = info.hband_lo; b <= info.hband_hi; b++)
@@ -504,8 +528,8 @@ hb_gpu_draw_encode (hb_gpu_draw_t      *draw,
     if (!info.is_vertical)
     {
       if (width > 0) {
-	info.vband_lo = (int) floor ((info.min_x - min_x) / vband_size);
-	info.vband_hi = (int) floor ((info.max_x - min_x) / vband_size);
+	info.vband_lo = (int) floor ((info.min_x - min_x) / vband_size - BAND_EPSILON);
+	info.vband_hi = (int) floor ((info.max_x - min_x) / vband_size + BAND_EPSILON);
 	info.vband_lo = hb_max (info.vband_lo, 0);
 	info.vband_hi = hb_min (info.vband_hi, (int) num_vbands - 1);
 	for (int b = info.vband_lo; b <= info.vband_hi; b++)
@@ -579,11 +603,13 @@ hb_gpu_draw_encode (hb_gpu_draw_t      *draw,
     unsigned count = s.hband_curve_counts.arrayZ[b];
     s.hband_curves.as_array ().sub_array (off, count)
       .qsort ([infos] (const unsigned &a, const unsigned &b) {
-	return infos[a].max_x > infos[b].max_x;
+	auto av = infos[a].max_x, bv = infos[b].max_x;
+	return (av < bv) - (av > bv);
       });
     s.hband_curves_asc.as_array ().sub_array (off, count)
       .qsort ([infos] (const unsigned &a, const unsigned &b) {
-	return infos[a].min_x < infos[b].min_x;
+	auto av = infos[a].min_x, bv = infos[b].min_x;
+	return (av > bv) - (av < bv);
       });
   }
 
@@ -593,11 +619,13 @@ hb_gpu_draw_encode (hb_gpu_draw_t      *draw,
     unsigned count = s.vband_curve_counts.arrayZ[b];
     s.vband_curves.as_array ().sub_array (off, count)
       .qsort ([infos] (const unsigned &a, const unsigned &b) {
-	return infos[a].max_y > infos[b].max_y;
+	auto av = infos[a].max_y, bv = infos[b].max_y;
+	return (av < bv) - (av > bv);
       });
     s.vband_curves_asc.as_array ().sub_array (off, count)
       .qsort ([infos] (const unsigned &a, const unsigned &b) {
-	return infos[a].min_y < infos[b].min_y;
+	auto av = infos[a].min_y, bv = infos[b].min_y;
+	return (av > bv) - (av < bv);
       });
   }
 
@@ -647,12 +675,6 @@ hb_gpu_draw_encode (hb_gpu_draw_t      *draw,
 
   /* Validate fits in uint16 offsets (stored as int16 with bias) */
   if (total_len > (unsigned) UINT16_MAX + 1u)
-    return nullptr;
-
-  if (!quantize_down_fits_i16 (draw->ext_min_x) ||
-      !quantize_down_fits_i16 (draw->ext_min_y) ||
-      !quantize_up_fits_i16 (draw->ext_max_x) ||
-      !quantize_up_fits_i16 (draw->ext_max_y))
     return nullptr;
 
   /* Allocate or reuse encode buffer */

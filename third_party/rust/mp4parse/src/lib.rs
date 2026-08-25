@@ -324,7 +324,7 @@ impl TryFrom<&ItemProperty> for Feature {
             ItemProperty::Colour(_) => Self::Colr,
             ItemProperty::ImageSpatialExtents(_) => Self::Ispe,
             ItemProperty::LayeredImageIndexing => Self::A1lx,
-            ItemProperty::LayerSelection => Self::Lsel,
+            ItemProperty::LayerSelection(_) => Self::Lsel,
             ItemProperty::Mirroring(_) => Self::Imir,
             ItemProperty::OperatingPointSelector => Self::A1op,
             ItemProperty::PixelAspectRatio(_) => Self::Pasp,
@@ -467,8 +467,8 @@ impl From<Status> for &str {
                  per HEIF (ISO/IEC DIS 23008-12) § 6.5.5.1"
             }
             Status::ColrBadQuantityBMFF => {
-                "Each sample entry shall have at most one ColourInformationBox (colr) \
-                 per ISOBMFF (ISO 14496-12:2020) § 12.1.5"
+                "Each sample entry should have at most one ColourInformationBox (colr) \
+                 for a given value of colour_type per ISOBMFF (ISO 14496-12:2020) § 12.1.5"
             }
             Status::ColrBadSize => {
                 "Unexpected size for colr box"
@@ -1155,6 +1155,11 @@ pub struct AudioSampleEntry {
     data_reference_index: u16,
     pub channelcount: u32,
     pub samplesize: u16,
+    /// Sample rate stored in the ISOBMFF `AudioSampleEntry`.
+    ///
+    /// Codec-specific metadata can define a different effective sample rate;
+    /// for example, high-rate FLAC uses a constrained value here and carries
+    /// its native rate in [`FLACSpecificBox::stream_info`].
     pub samplerate: f64,
     pub codec_specific: AudioCodecSpecific,
     pub protection_info: TryVec<ProtectionSchemeInfoBox>,
@@ -1278,12 +1283,46 @@ pub struct FLACMetadataBlock {
     pub data: TryVec<u8>,
 }
 
+/// Audio properties parsed from a FLAC `METADATA_BLOCK_STREAMINFO` block.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FLACStreamInfo {
+    /// Native sample rate of the FLAC bitstream.
+    pub sample_rate: u32,
+    /// Number of channels in the FLAC bitstream.
+    pub channel_count: u8,
+    /// Number of bits per sample in the FLAC bitstream.
+    pub bits_per_sample: u8,
+}
+
+impl FLACStreamInfo {
+    fn parse(data: &[u8]) -> Result<Self> {
+        if data.len() != 34 {
+            return Status::DflaStreamInfoBadSize.into();
+        }
+
+        // FLAC format § METADATA_BLOCK_STREAMINFO packs these fields into
+        // bytes 10 through 13 of the fixed-size 34-byte structure.
+        let sample_rate =
+            u32::from(data[10]) << 12 | u32::from(data[11]) << 4 | u32::from(data[12] >> 4);
+        let channel_count = ((data[12] >> 1) & 0x07) + 1;
+        let bits_per_sample = (((data[12] & 0x01) << 4) | (data[13] >> 4)) + 1;
+
+        Ok(Self {
+            sample_rate,
+            channel_count,
+            bits_per_sample,
+        })
+    }
+}
+
 /// Represents a FLACSpecificBox 'dfLa'
 #[derive(Debug)]
 pub struct FLACSpecificBox {
     #[allow(dead_code)] // See https://github.com/mozilla/mp4parse-rust/issues/340
     version: u8,
     pub blocks: TryVec<FLACMetadataBlock>,
+    /// Parsed audio properties from the first, mandatory STREAMINFO block.
+    pub stream_info: FLACStreamInfo,
 }
 
 #[derive(Debug)]
@@ -3024,6 +3063,14 @@ fn read_iprp<T: Read>(
     let mut association_entries = TryVec::<ItemPropertyAssociationEntry>::new();
     let mut forbidden_items = TryVec::new();
 
+    // A LayerSelectorProperty with this layer_id enables, but does not require,
+    // progressive rendering: a client may render progressively or just show the
+    // final image (which is also what ignoring the property does), so no client
+    // can get this wrong. It therefore does not need to be treated as an
+    // unsupported essential property, and its item is accepted and processed.
+    // See <https://aomediacodec.github.io/av1-avif/#layer-selector-property>
+    const LSEL_LAYER_ID_NO_SELECTION: u16 = 0xffff;
+
     while let Some(mut b) = iter.next_box()? {
         if b.head.name != BoxType::ItemPropertyAssociationBox {
             return Status::IprpBadChild.into();
@@ -3089,16 +3136,25 @@ fn read_iprp<T: Read>(
                     assert!(brand == MIF1_BRAND);
 
                     let feature = Feature::try_from(property);
-                    let property_supported = match feature {
-                        Ok(feature) => {
-                            if feature.supported() {
-                                true
-                            } else {
-                                unsupported_features.insert(feature);
-                                false
+                    let property_supported = if matches!(
+                        property,
+                        ItemProperty::LayerSelection(layer_id)
+                            if *layer_id == LSEL_LAYER_ID_NO_SELECTION
+                    ) {
+                        // Not an unsupported feature; see LSEL_LAYER_ID_NO_SELECTION.
+                        true
+                    } else {
+                        match feature {
+                            Ok(feature) => {
+                                if feature.supported() {
+                                    true
+                                } else {
+                                    unsupported_features.insert(feature);
+                                    false
+                                }
                             }
+                            Err(_) => false,
                         }
-                        Err(_) => false,
                     };
 
                     if !property_supported {
@@ -3169,18 +3225,22 @@ fn read_iprp<T: Read>(
                             }
                         }
 
-                        ItemProperty::LayerSelection => {
-                            assert!(feature.is_ok() && unsupported_features.contains(feature?));
-                            if a.essential {
-                                assert!(
-                                    forbidden_items.contains(&association_entry.item_id)
-                                        || strictness == ParseStrictness::Permissive
-                                );
-                            } else {
+                        ItemProperty::LayerSelection(layer_id) => {
+                            if !a.essential {
+                                // lsel shall be marked as essential regardless of its
+                                // layer_id.
                                 fail_with_status_if(
                                     strictness != ParseStrictness::Permissive,
                                     Status::LselNoEssential,
                                 )?;
+                            } else if *layer_id != LSEL_LAYER_ID_NO_SELECTION {
+                                // A specific layer was requested; selecting a layer is
+                                // unsupported, so the item shall not be processed.
+                                assert!(feature.is_ok() && unsupported_features.contains(feature?));
+                                assert!(
+                                    forbidden_items.contains(&association_entry.item_id)
+                                        || strictness == ParseStrictness::Permissive
+                                );
                             }
                         }
 
@@ -3266,7 +3326,7 @@ pub enum ItemProperty {
     Colour(ColourInformation),
     ImageSpatialExtents(ImageSpatialExtentsProperty),
     LayeredImageIndexing,
-    LayerSelection,
+    LayerSelection(u16),
     Mirroring(ImageMirror),
     OperatingPointSelector,
     PixelAspectRatio(PixelAspectRatio),
@@ -3283,7 +3343,7 @@ impl From<&ItemProperty> for BoxType {
             ItemProperty::CleanAperture => BoxType::CleanApertureBox,
             ItemProperty::Colour(_) => BoxType::ColourInformationBox,
             ItemProperty::LayeredImageIndexing => BoxType::AV1LayeredImageIndexingProperty,
-            ItemProperty::LayerSelection => BoxType::LayerSelectorProperty,
+            ItemProperty::LayerSelection(_) => BoxType::LayerSelectorProperty,
             ItemProperty::Mirroring(_) => BoxType::ImageMirror,
             ItemProperty::OperatingPointSelector => BoxType::OperatingPointSelectorProperty,
             ItemProperty::PixelAspectRatio(_) => BoxType::PixelAspectRatioBox,
@@ -3636,13 +3696,16 @@ fn read_ipco<T: Read>(
         let property = match b.head.name {
             BoxType::AuxiliaryTypeProperty => ItemProperty::AuxiliaryType(read_auxc(&mut b)?),
             BoxType::AV1CodecConfigurationBox => ItemProperty::AV1Config(read_av1c(&mut b)?),
-            BoxType::ColourInformationBox => match read_colr(&mut b, strictness)? {
-                ParsedColourInformation::Supported(colr) => ItemProperty::Colour(colr),
-                ParsedColourInformation::Unsupported(colour_type) => {
-                    error!("read_colr colour_type: {colour_type:?}");
-                    return Status::ColrBadType.into();
+            BoxType::ColourInformationBox => {
+                let colour_type = be_u32(&mut b)?.to_be_bytes();
+                match read_colr(&mut b, colour_type, strictness)? {
+                    ParsedColourInformation::Supported(colr) => ItemProperty::Colour(colr),
+                    ParsedColourInformation::Unsupported(colour_type) => {
+                        error!("read_colr colour_type: {colour_type:?}");
+                        return Status::ColrBadType.into();
+                    }
                 }
-            },
+            }
             BoxType::ImageMirror => ItemProperty::Mirroring(read_imir(&mut b)?),
             BoxType::ImageRotation => ItemProperty::Rotation(read_irot(&mut b)?),
             BoxType::ImageSpatialExtentsProperty => {
@@ -3650,6 +3713,7 @@ fn read_ipco<T: Read>(
             }
             BoxType::PixelAspectRatioBox => ItemProperty::PixelAspectRatio(read_pasp(&mut b)?),
             BoxType::PixelInformationBox => ItemProperty::Channels(read_pixi(&mut b)?),
+            BoxType::LayerSelectorProperty => ItemProperty::LayerSelection(read_lsel(&mut b)?),
 
             other_box_type => {
                 // Even if we didn't do anything with other property types, we still store
@@ -3658,7 +3722,6 @@ fn read_ipco<T: Read>(
                 let item_property = match other_box_type {
                     BoxType::AV1LayeredImageIndexingProperty => ItemProperty::LayeredImageIndexing,
                     BoxType::CleanApertureBox => ItemProperty::CleanAperture,
-                    BoxType::LayerSelectorProperty => ItemProperty::LayerSelection,
                     BoxType::OperatingPointSelectorProperty => ItemProperty::OperatingPointSelector,
                     _ => {
                         warn!("No ItemProperty variant for {other_box_type:?}");
@@ -3682,6 +3745,14 @@ fn read_ipco<T: Read>(
     }
 
     Ok(properties)
+}
+
+/// Parse a LayerSelectorProperty, returning its layer_id.
+///
+/// See <https://aomediacodec.github.io/av1-avif/#layer-selector-property>
+fn read_lsel<T: Read>(src: &mut BMFFBox<T>) -> Result<u16> {
+    let layer_id = be_u16(src)?;
+    Ok(layer_id)
 }
 
 #[repr(C)]
@@ -3837,12 +3908,12 @@ enum ParsedColourInformation {
 
 /// Parse colour information
 /// See ISOBMFF (ISO 14496-12:2020) § 12.1.5
+/// The caller is expected to have already read the colour_type field.
 fn read_colr<T: Read>(
     src: &mut BMFFBox<T>,
+    colour_type: [u8; 4],
     strictness: ParseStrictness,
 ) -> Result<ParsedColourInformation> {
-    let colour_type = be_u32(src)?.to_be_bytes();
-
     match &colour_type {
         b"nclx" => {
             const NUM_RESERVED_BITS: u8 = 7;
@@ -3850,22 +3921,31 @@ fn read_colr<T: Read>(
             let transfer_characteristics = be_u16(src)?.try_into()?;
             let matrix_coefficients = be_u16(src)?.try_into()?;
             let bytes = src.read_into_try_vec()?;
-            let mut bit_reader = BitReader::new(&bytes);
-            let full_range_flag = bit_reader.read_bool()?;
-            if bit_reader.remaining() != NUM_RESERVED_BITS.into() {
-                error!(
-                    "read_colr expected {} reserved bits, found {}",
-                    NUM_RESERVED_BITS,
-                    bit_reader.remaining()
-                );
-                return Status::ColrBadSize.into();
-            }
-            if bit_reader.read_u8(NUM_RESERVED_BITS)? != 0 {
-                fail_with_status_if(
-                    strictness != ParseStrictness::Permissive,
-                    Status::ColrReservedNonzero,
-                )?;
-            }
+            // Tolerate an nclx box truncated before full_range_flag;
+            // treat it as unset (limited range).
+            let full_range_flag = if bytes.is_empty() {
+                warn!("read_colr: nclx missing full_range_flag, assuming limited range");
+                fail_with_status_if(strictness == ParseStrictness::Strict, Status::ColrBadSize)?;
+                false
+            } else {
+                let mut bit_reader = BitReader::new(&bytes);
+                let full_range_flag = bit_reader.read_bool()?;
+                if bit_reader.remaining() != NUM_RESERVED_BITS.into() {
+                    error!(
+                        "read_colr expected {} reserved bits, found {}",
+                        NUM_RESERVED_BITS,
+                        bit_reader.remaining()
+                    );
+                    return Status::ColrBadSize.into();
+                }
+                if bit_reader.read_u8(NUM_RESERVED_BITS)? != 0 {
+                    fail_with_status_if(
+                        strictness != ParseStrictness::Permissive,
+                        Status::ColrReservedNonzero,
+                    )?;
+                }
+                full_range_flag
+            };
 
             Ok(ParsedColourInformation::Supported(ColourInformation::Nclx(
                 NclxColourInformation {
@@ -5151,6 +5231,20 @@ fn read_ds_descriptor(
     esds: &mut ES_Descriptor,
     strictness: ParseStrictness,
 ) -> Result<()> {
+    // Keep the first DecSpecificInfo and ignore subsequent entries in
+    // non-strict mode.  Concatenating raw bytes and/or overwriting the parsed
+    // fields from a second DSI leaves the ES_Descriptor inconsistent (e.g.
+    // sample-rate/channel-count mismatched with the stored DSI bytes) and
+    // produces silent-audio playback.  A single well-formed DSI is always
+    // sufficient.
+    if !esds.decoder_specific_data.is_empty() {
+        fail_with_status_if(
+            strictness == ParseStrictness::Strict,
+            Status::EsdsDecSpecificInfoTagQuantity,
+        )?;
+        return Ok(());
+    }
+
     #[cfg(feature = "mp4v")]
     // Check if we are in a Visual esda Box.
     if esds.video_codec != CodecType::Unknown {
@@ -5253,6 +5347,32 @@ fn read_ds_descriptor(
                 _ => 96000,
             };
 
+            // Map channel_configuration to channel count.  Zero indicates PCE
+            // (program_config_element) signalling, which requires parsing the
+            // trailing GASpecificConfig fields below and so can't be resolved
+            // yet.
+            let channel_count_from_config = match channel_configuration {
+                0 => None,
+                1..=7 => Some(channel_configuration),
+                11 => Some(7),      // 6.1, AAC Amendment 4 (2013)
+                12 | 14 => Some(8), // 7.1 (a/d), ITU BS.2159
+                _ => return Err(Error::Unsupported("invalid channel configuration")),
+            };
+
+            // Record the essential audio fields now, before any further bit
+            // reads that may hit EOF on a truncated DSI.  find_descriptor
+            // swallows BitReaderError in non-strict mode; without recording
+            // here we'd return a playable-looking track with no usable config
+            // (see band-orion.de, where HE-AAC with explicit SBR signalling
+            // omits the GASpecificConfig tail).
+            esds.audio_object_type = Some(audio_object_type);
+            esds.extended_audio_object_type = extended_audio_object_type;
+            esds.audio_sample_rate = Some(sample_frequency_value);
+            if let Some(cc) = channel_count_from_config {
+                esds.audio_channel_count = Some(cc);
+                esds.decoder_specific_data.extend_from_slice(data)?;
+            }
+
             bit_reader.skip(1)?; // frameLengthFlag
             let depend_on_core_order: u8 = ReadInto::read(bit_reader, 1)?;
             if depend_on_core_order > 0 {
@@ -5260,63 +5380,45 @@ fn read_ds_descriptor(
             }
             bit_reader.skip(1)?; // extensionFlag
 
-            let channel_counts = match channel_configuration {
-                0 => {
-                    debug!("Parsing program_config_element for channel counts");
+            if channel_count_from_config.is_none() {
+                // channel_configuration == 0: derive channel count from the
+                // program_config_element.
+                debug!("Parsing program_config_element for channel counts");
 
-                    bit_reader.skip(4)?; // element_instance_tag
-                    bit_reader.skip(2)?; // object_type
-                    bit_reader.skip(4)?; // sampling_frequency_index
-                    let num_front_channel: u8 = ReadInto::read(bit_reader, 4)?;
-                    let num_side_channel: u8 = ReadInto::read(bit_reader, 4)?;
-                    let num_back_channel: u8 = ReadInto::read(bit_reader, 4)?;
-                    let num_lfe_channel: u8 = ReadInto::read(bit_reader, 2)?;
-                    bit_reader.skip(3)?; // num_assoc_data
-                    bit_reader.skip(4)?; // num_valid_cc
+                bit_reader.skip(4)?; // element_instance_tag
+                bit_reader.skip(2)?; // object_type
+                bit_reader.skip(4)?; // sampling_frequency_index
+                let num_front_channel: u8 = ReadInto::read(bit_reader, 4)?;
+                let num_side_channel: u8 = ReadInto::read(bit_reader, 4)?;
+                let num_back_channel: u8 = ReadInto::read(bit_reader, 4)?;
+                let num_lfe_channel: u8 = ReadInto::read(bit_reader, 2)?;
+                bit_reader.skip(3)?; // num_assoc_data
+                bit_reader.skip(4)?; // num_valid_cc
 
-                    let mono_mixdown_present: bool = ReadInto::read(bit_reader, 1)?;
-                    if mono_mixdown_present {
-                        bit_reader.skip(4)?; // mono_mixdown_element_number
-                    }
-
-                    let stereo_mixdown_present: bool = ReadInto::read(bit_reader, 1)?;
-                    if stereo_mixdown_present {
-                        bit_reader.skip(4)?; // stereo_mixdown_element_number
-                    }
-
-                    let matrix_mixdown_idx_present: bool = ReadInto::read(bit_reader, 1)?;
-                    if matrix_mixdown_idx_present {
-                        bit_reader.skip(2)?; // matrix_mixdown_idx
-                        bit_reader.skip(1)?; // pseudo_surround_enable
-                    }
-                    let mut _channel_counts = 0;
-                    _channel_counts += read_surround_channel_count(bit_reader, num_front_channel)?;
-                    _channel_counts += read_surround_channel_count(bit_reader, num_side_channel)?;
-                    _channel_counts += read_surround_channel_count(bit_reader, num_back_channel)?;
-                    _channel_counts += read_surround_channel_count(bit_reader, num_lfe_channel)?;
-                    _channel_counts
+                let mono_mixdown_present: bool = ReadInto::read(bit_reader, 1)?;
+                if mono_mixdown_present {
+                    bit_reader.skip(4)?; // mono_mixdown_element_number
                 }
-                1..=7 => channel_configuration,
-                // Amendment 4 of the AAC standard in 2013 below
-                11 => 7,      // 6.1 Amendment 4 of the AAC standard in 2013
-                12 | 14 => 8, // 7.1 (a/d) of ITU BS.2159
-                _ => {
-                    return Err(Error::Unsupported("invalid channel configuration"));
+
+                let stereo_mixdown_present: bool = ReadInto::read(bit_reader, 1)?;
+                if stereo_mixdown_present {
+                    bit_reader.skip(4)?; // stereo_mixdown_element_number
                 }
-            };
 
-            esds.audio_object_type = Some(audio_object_type);
-            esds.extended_audio_object_type = extended_audio_object_type;
-            esds.audio_sample_rate = Some(sample_frequency_value);
-            esds.audio_channel_count = Some(channel_counts);
+                let matrix_mixdown_idx_present: bool = ReadInto::read(bit_reader, 1)?;
+                if matrix_mixdown_idx_present {
+                    bit_reader.skip(2)?; // matrix_mixdown_idx
+                    bit_reader.skip(1)?; // pseudo_surround_enable
+                }
+                let mut channel_counts = 0;
+                channel_counts += read_surround_channel_count(bit_reader, num_front_channel)?;
+                channel_counts += read_surround_channel_count(bit_reader, num_side_channel)?;
+                channel_counts += read_surround_channel_count(bit_reader, num_back_channel)?;
+                channel_counts += read_surround_channel_count(bit_reader, num_lfe_channel)?;
 
-            if !esds.decoder_specific_data.is_empty() {
-                fail_with_status_if(
-                    strictness == ParseStrictness::Strict,
-                    Status::EsdsDecSpecificInfoTagQuantity,
-                )?;
+                esds.audio_channel_count = Some(channel_counts);
+                esds.decoder_specific_data.extend_from_slice(data)?;
             }
-            esds.decoder_specific_data.extend_from_slice(data)?;
 
             Ok(())
         }
@@ -5434,7 +5536,10 @@ fn read_esds<T: Read>(src: &mut BMFFBox<T>, strictness: ParseStrictness) -> Resu
 
 /// Parse `FLACSpecificBox`.
 /// See [Encapsulation of FLAC in ISO Base Media File Format](https://github.com/xiph/flac/blob/master/doc/isoflac.txt) §  3.3.2
-fn read_dfla<T: Read>(src: &mut BMFFBox<T>) -> Result<FLACSpecificBox> {
+fn read_dfla<T: Read>(
+    src: &mut BMFFBox<T>,
+    strictness: ParseStrictness,
+) -> Result<FLACSpecificBox> {
     let (version, flags) = read_fullbox_extra(src)?;
     if version != 0 {
         return Err(Error::Unsupported("unknown dfLa (FLAC) version"));
@@ -5442,21 +5547,51 @@ fn read_dfla<T: Read>(src: &mut BMFFBox<T>) -> Result<FLACSpecificBox> {
     if flags != 0 {
         return Status::DflaFlagsNonzero.into();
     }
-    let mut blocks = TryVec::new();
-    while src.bytes_left() > 0 {
-        let block = read_flac_metadata(src)?;
-        blocks.push(block)?;
-    }
-    // The box must have at least one meta block, and the first block
-    // must be the METADATA_BLOCK_STREAMINFO
-    if blocks.is_empty() {
+
+    // STREAMINFO must be present and first. It is required to configure the
+    // decoder, so failure to parse it is fatal in every strictness mode.
+    if src.bytes_left() == 0 {
         return Status::DflaMissingMetadata.into();
-    } else if blocks[0].block_type != 0 {
-        return Status::DflaStreamInfoNotFirst.into();
-    } else if blocks[0].data.len() != 34 {
-        return Status::DflaStreamInfoBadSize.into();
     }
-    Ok(FLACSpecificBox { version, blocks })
+    let first_block = read_flac_metadata(src)?;
+    if first_block.block_type != 0 {
+        return Status::DflaStreamInfoNotFirst.into();
+    }
+    let stream_info = FLACStreamInfo::parse(&first_block.data)?;
+
+    let mut blocks = TryVec::new();
+    blocks.push(first_block)?;
+
+    while src.bytes_left() > 0 {
+        match read_flac_metadata(src) {
+            Ok(block) => blocks.push(block)?,
+            Err(error) => {
+                let recoverable = matches!(
+                    &error,
+                    Error::UnexpectedEOF
+                        | Error::InvalidData(Status::DflaBadMetadataBlockSize | Status::ReadBufErr)
+                );
+                if strictness == ParseStrictness::Strict || !recoverable {
+                    return Err(error);
+                }
+
+                // Do not hide physical truncation or an I/O failure. A short
+                // trailing metadata header contained within dfLa leaves no
+                // bytes here, while a file ending before dfLa's declared end
+                // causes this exact skip to fail.
+                let remaining = src.bytes_left();
+                skip_exact(src, remaining)?;
+                warn!("Ignoring malformed trailing FLAC metadata: {error}");
+                break;
+            }
+        }
+    }
+
+    Ok(FLACSpecificBox {
+        version,
+        blocks,
+        stream_info,
+    })
 }
 
 /// Parse `OpusSpecificBox`.
@@ -5652,6 +5787,7 @@ fn read_video_sample_entry<T: Read>(
     let mut codec_specific = None;
     let mut pixel_aspect_ratio = None;
     let mut colour_info = None;
+    let mut colr_types_seen = TryVec::<FourCC>::new();
     let mut hdr_mastering_display = None;
     let mut hdr_content_light_level = None;
     let mut protection_info = TryVec::new();
@@ -5771,18 +5907,32 @@ fn read_video_sample_entry<T: Read>(
                 debug!("Parsed pasp box: {pasp:?}, PAR {pixel_aspect_ratio:?}");
             }
             BoxType::ColourInformationBox => {
-                if colour_info.is_some() {
-                    warn!("Multiple colr boxes in video sample entry, keeping first");
+                // ISO/IEC 14496-12:2015 § 12.1.5.1 permits one or more colr boxes
+                // in a VisualSampleEntry (at most one for a given colour_type) and
+                // assigns them no normative behaviour; a reader may keep the first
+                // (most accurate) and ignore the rest. Only reject a repeated
+                // colour_type, and only under Strict.
+                let colour_type = FourCC::from(be_u32(&mut b)?.to_be_bytes());
+                if colr_types_seen.contains(&colour_type) {
+                    warn!(
+                        "Multiple {colour_type:?} colr boxes in video sample entry, keeping first"
+                    );
                     fail_with_status_if(
-                        strictness != ParseStrictness::Permissive,
+                        strictness == ParseStrictness::Strict,
                         Status::ColrBadQuantityBMFF,
                     )?;
-                    skip_box_content(&mut b)?;
-                } else if let ParsedColourInformation::Supported(colr) =
-                    read_colr(&mut b, strictness)?
-                {
-                    debug!("Parsed colr box: {colr:?}");
-                    colour_info = Some(colr);
+                    skip_box_remain(&mut b)?;
+                } else {
+                    colr_types_seen.push(colour_type.clone())?;
+                    if colour_info.is_some() {
+                        debug!("Already have colour info, skipping {colour_type:?} colr box");
+                        skip_box_remain(&mut b)?;
+                    } else if let ParsedColourInformation::Supported(colr) =
+                        read_colr(&mut b, colour_type.value, strictness)?
+                    {
+                        debug!("Parsed colr box: {colr:?}");
+                        colour_info = Some(colr);
+                    }
                 }
             }
             BoxType::MasteringDisplayColourVolumeBox => {
@@ -5929,7 +6079,7 @@ fn read_audio_sample_entry<T: Read>(
                 {
                     return Status::StsdBadAudioSampleEntry.into();
                 }
-                let dfla = read_dfla(&mut b)?;
+                let dfla = read_dfla(&mut b, strictness)?;
                 codec_type = CodecType::FLAC;
                 codec_specific = Some(AudioCodecSpecific::FLACSpecificBox(dfla));
             }
@@ -6354,6 +6504,16 @@ fn read_ilst_data<T: Read>(src: &mut BMFFBox<T>) -> Result<TryVec<u8>> {
 /// Skip a number of bytes that we don't care to parse.
 fn skip<T: Read>(src: &mut T, bytes: u64) -> Result<()> {
     std::io::copy(&mut src.take(bytes), &mut std::io::sink())?;
+    Ok(())
+}
+
+/// Skip exactly `bytes`, returning an error if the underlying reader ends
+/// before all requested bytes have been consumed.
+fn skip_exact<T: Read>(src: &mut T, bytes: u64) -> Result<()> {
+    let skipped = std::io::copy(&mut src.take(bytes), &mut std::io::sink())?;
+    if skipped != bytes {
+        return Err(Error::UnexpectedEOF);
+    }
     Ok(())
 }
 

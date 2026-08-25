@@ -204,8 +204,8 @@ impl NonTSPseudoClass {
                 match *self {
                     $(NonTSPseudoClass::$name => check_flag!($flags),)*
                     NonTSPseudoClass::MozLocaleDir(_) => check_flag!(PSEUDO_CLASS_ENABLED_IN_UA_SHEETS_AND_CHROME),
+                    NonTSPseudoClass::Heading(_) => check_flag!(PSEUDO_CLASS_ENABLED_IN_UA_SHEETS),
                     NonTSPseudoClass::CustomState(_) |
-                    NonTSPseudoClass::Heading(_) |
                     NonTSPseudoClass::Lang(_) |
                     NonTSPseudoClass::ActiveViewTransitionType(_) |
                     NonTSPseudoClass::Dir(_) => false,
@@ -218,26 +218,14 @@ impl NonTSPseudoClass {
     /// Returns whether the pseudo-class is enabled in content sheets.
     #[inline]
     fn is_enabled_in_content(&self) -> bool {
-        if matches!(
-            *self,
-            Self::ActiveViewTransition | Self::ActiveViewTransitionType(..)
-        ) {
-            return static_prefs::pref!("dom.viewTransitions.enabled");
-        }
         if matches!(*self, Self::Heading(..)) {
-            return static_prefs::pref!("layout.css.heading-selector.enabled");
+            return static_prefs::pref!("dom.headingoffset.enabled");
         }
-        if matches!(
-            *self,
-            Self::Playing
-                | Self::Paused
-                | Self::Seeking
-                | Self::Buffering
-                | Self::Stalled
-                | Self::Muted
-                | Self::VolumeLocked
-        ) {
-            return static_prefs::pref!("dom.media.pseudo-classes.enabled");
+        if matches!(*self, Self::PictureInPicture) {
+            return static_prefs::pref!("dom.media-pip.enabled");
+        }
+        if matches!(*self, NonTSPseudoClass::MozPlaceholder) {
+            return static_prefs::pref!("layout.css.moz-placeholder.content.enabled");
         }
         !self.has_any_flag(NonTSPseudoClassFlag::PSEUDO_CLASS_ENABLED_IN_UA_SHEETS_AND_CHROME)
     }
@@ -305,8 +293,6 @@ impl NonTSPseudoClass {
 }
 
 impl ::selectors::parser::NonTSPseudoClass for NonTSPseudoClass {
-    type Impl = SelectorImpl;
-
     #[inline]
     fn is_active_or_hover(&self) -> bool {
         matches!(*self, NonTSPseudoClass::Active | NonTSPseudoClass::Hover)
@@ -378,15 +364,11 @@ impl<'a> SelectorParser<'a> {
             return true;
         }
 
-        if matches!(*pseudo_class, NonTSPseudoClass::MozBroken) {
-            return static_prefs::pref!("layout.css.moz-broken.content.enabled");
-        }
-
         return false;
     }
 
     fn is_pseudo_element_enabled(&self, pseudo_element: &PseudoElement) -> bool {
-        if pseudo_element.enabled_in_content(&self.url_data) {
+        if pseudo_element.enabled_in_content(&self.url_data, self.for_supports_rule) {
             return true;
         }
 
@@ -594,9 +576,15 @@ impl<'a, 'i> ::selectors::Parser<'i> for SelectorParser<'a> {
         location: SourceLocation,
         name: CowRcStr<'i>,
     ) -> Result<PseudoElement, ParseError<'i>> {
-        let allow_unkown_webkit = !self.for_supports_rule;
-        if let Some(pseudo) = PseudoElement::from_slice(&name, allow_unkown_webkit) {
+        if let Some(pseudo) = PseudoElement::from_slice(&name) {
             if self.is_pseudo_element_enabled(&pseudo) {
+                return Ok(pseudo);
+            }
+        }
+
+        // @supports must report disabled/unknown `-webkit-*` pseudos as unsupported.
+        if !self.for_supports_rule {
+            if let Some(pseudo) = PseudoElement::unknown_webkit_from_name(&name) {
                 return Ok(pseudo);
             }
         }

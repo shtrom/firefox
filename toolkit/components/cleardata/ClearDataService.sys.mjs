@@ -40,9 +40,9 @@ XPCOMUtils.defineLazyServiceGetter(
 );
 XPCOMUtils.defineLazyServiceGetter(
   lazy,
-  "nssComponent",
-  "@mozilla.org/psm;1",
-  Ci.nsINSSComponent
+  "sslTokensCache",
+  "@mozilla.org/network/ssl-tokens-cache;1",
+  Ci.nsISSLTokensCache
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -329,160 +329,6 @@ const CookieCleaner = {
       Services.cache2.clearAllOriginDictionaries();
       aResolve();
     });
-  },
-};
-
-// A cleaner for clearing cookie banner handling exceptions.
-const CookieBannerExceptionCleaner = {
-  async deleteAll() {
-    try {
-      Services.cookieBanners.removeAllDomainPrefs(false);
-    } catch (e) {
-      // Don't throw an error if the cookie banner handling is disabled.
-      if (e.result != Cr.NS_ERROR_NOT_AVAILABLE) {
-        throw e;
-      }
-    }
-  },
-
-  async deleteByPrincipal(aPrincipal) {
-    try {
-      Services.cookieBanners.removeDomainPref(aPrincipal.URI, false);
-    } catch (e) {
-      // Don't throw an error if the cookie banner handling is disabled.
-      if (e.result != Cr.NS_ERROR_NOT_AVAILABLE) {
-        throw e;
-      }
-    }
-  },
-
-  async deleteBySite(aSchemelessSite, aOriginAttributesPattern) {
-    let { privateBrowsingId } = aOriginAttributesPattern;
-
-    try {
-      let uri = Services.io.newURI("https://" + aSchemelessSite);
-
-      // privateBrowsingId unset clears both normal and private browsing.
-      // Otherwise only clear either normal or private browsing depending on the
-      // value.
-      if (
-        privateBrowsingId == null ||
-        privateBrowsingId ===
-          Services.scriptSecurityManager.DEFAULT_PRIVATE_BROWSING_ID
-      ) {
-        Services.cookieBanners.removeDomainPref(uri, false);
-      }
-      if (
-        privateBrowsingId == null ||
-        privateBrowsingId !==
-          Services.scriptSecurityManager.DEFAULT_PRIVATE_BROWSING_ID
-      ) {
-        Services.cookieBanners.removeDomainPref(uri, true);
-      }
-    } catch (e) {
-      // Don't throw an error if the cookie banner handling is disabled.
-      if (e.result != Cr.NS_ERROR_NOT_AVAILABLE) {
-        throw e;
-      }
-    }
-  },
-
-  async deleteByHost(aHost, aOriginAttributes) {
-    try {
-      let isPrivate =
-        !!aOriginAttributes.privateBrowsingId &&
-        aOriginAttributes.privateBrowsingId !==
-          Services.scriptSecurityManager.DEFAULT_PRIVATE_BROWSING_ID;
-
-      Services.cookieBanners.removeDomainPref(
-        Services.io.newURI("https://" + aHost),
-        isPrivate
-      );
-    } catch (e) {
-      // Don't throw an error if the cookie banner handling is disabled.
-      if (e.result != Cr.NS_ERROR_NOT_AVAILABLE) {
-        throw e;
-      }
-    }
-  },
-};
-
-// A cleaner for cleaning cookie banner handling executed records.
-const CookieBannerExecutedRecordCleaner = {
-  async deleteAll() {
-    try {
-      Services.cookieBanners.removeAllExecutedRecords(false);
-    } catch (e) {
-      // Don't throw an error if the cookie banner handling is disabled.
-      if (e.result != Cr.NS_ERROR_NOT_AVAILABLE) {
-        throw e;
-      }
-    }
-  },
-
-  async deleteByPrincipal(aPrincipal) {
-    try {
-      Services.cookieBanners.removeExecutedRecordForSite(
-        aPrincipal.baseDomain,
-        false
-      );
-    } catch (e) {
-      // Don't throw an error if the cookie banner handling is disabled.
-      if (e.result != Cr.NS_ERROR_NOT_AVAILABLE) {
-        throw e;
-      }
-    }
-  },
-
-  async deleteBySite(aSchemelessSite, aOriginAttributesPattern) {
-    let { privateBrowsingId } = aOriginAttributesPattern;
-
-    try {
-      // privateBrowsingId unset clears both normal and private browsing.
-      // Otherwise only clear either normal or private browsing depending on the
-      // value
-      if (
-        privateBrowsingId == null ||
-        privateBrowsingId ===
-          Services.scriptSecurityManager.DEFAULT_PRIVATE_BROWSING_ID
-      ) {
-        Services.cookieBanners.removeExecutedRecordForSite(
-          aSchemelessSite,
-          false
-        );
-      }
-      if (
-        privateBrowsingId == null ||
-        privateBrowsingId !==
-          Services.scriptSecurityManager.DEFAULT_PRIVATE_BROWSING_ID
-      ) {
-        Services.cookieBanners.removeExecutedRecordForSite(
-          aSchemelessSite,
-          true
-        );
-      }
-    } catch (e) {
-      // Don't throw an error if the cookie banner handling is disabled.
-      if (e.result != Cr.NS_ERROR_NOT_AVAILABLE) {
-        throw e;
-      }
-    }
-  },
-
-  async deleteByHost(aHost, aOriginAttributes) {
-    try {
-      let isPrivate =
-        !!aOriginAttributes.privateBrowsingId &&
-        aOriginAttributes.privateBrowsingId !==
-          Services.scriptSecurityManager.DEFAULT_PRIVATE_BROWSING_ID;
-
-      Services.cookieBanners.removeExecutedRecordForSite(aHost, isPrivate);
-    } catch (e) {
-      // Don't throw error if the cookie banner handling is disabled.
-      if (e.result != Cr.NS_ERROR_NOT_AVAILABLE) {
-        throw e;
-      }
-    }
   },
 };
 
@@ -1461,7 +1307,7 @@ const AuthCacheCleaner = {
 };
 
 // Type of the shutdown exception permission.
-const SHUTDOWN_EXCEPTION_PERMISSION = "cookie";
+const SHUTDOWN_EXCEPTION_PERMISSION = "persist-data-on-shutdown";
 
 const ShutdownExceptionsCleaner = {
   async _deleteInternal(filter) {
@@ -1534,7 +1380,8 @@ const ShutdownExceptionsCleaner = {
 const PermissionsCleaner = {
   async _deleteInternal(filter) {
     Services.perms.all
-      // Skip shutdown exception permission because it is handled by ShutDownExceptionsCleaner
+      // Skip persist-data-on-shutdown because it is handled by
+      // ShutdownExceptionsCleaner.
       .filter(({ type }) => type != SHUTDOWN_EXCEPTION_PERMISSION)
       .filter(filter)
       .forEach(perm => {
@@ -1756,7 +1603,7 @@ const TlsTokenCacheCleaner = {
     if (aOriginAttributes.partitionKey) {
       pattern.partitionKey = aOriginAttributes.partitionKey;
     }
-    lazy.nssComponent.removeSSLTokensByHostAndOriginAttributesPattern(
+    lazy.sslTokensCache.removeSSLTokensByHostAndOriginAttributesPattern(
       aHost,
       JSON.stringify(pattern)
     );
@@ -1767,14 +1614,14 @@ const TlsTokenCacheCleaner = {
   },
 
   async deleteBySite(aSchemelessSite, aOriginAttributesPattern) {
-    lazy.nssComponent.removeSSLTokensBySiteAndOriginAttributesPattern(
+    lazy.sslTokensCache.removeSSLTokensBySiteAndOriginAttributesPattern(
       aSchemelessSite,
       JSON.stringify(aOriginAttributesPattern)
     );
   },
 
   async deleteAll() {
-    lazy.nssComponent.clearSSLExternalAndInternalSessionCache();
+    lazy.sslTokensCache.clearSSLExternalAndInternalSessionCache();
   },
 };
 
@@ -2461,16 +2308,6 @@ const FLAGS_MAP = [
   },
 
   {
-    flag: Ci.nsIClearDataService.CLEAR_COOKIE_BANNER_EXCEPTION,
-    cleaners: [CookieBannerExceptionCleaner],
-  },
-
-  {
-    flag: Ci.nsIClearDataService.CLEAR_COOKIE_BANNER_EXECUTED_RECORD,
-    cleaners: [CookieBannerExecutedRecordCleaner],
-  },
-
-  {
     flag: Ci.nsIClearDataService.CLEAR_FINGERPRINTING_PROTECTION_STATE,
     cleaners: [FingerprintingProtectionStateCleaner],
   },
@@ -2495,6 +2332,16 @@ const FLAGS_MAP = [
     cleaners: [BfcacheCleaner],
   },
 ];
+
+// Returns the nsIClearDataService.CLEAR_* constant name matching a single flag
+// value, for use in log messages. Falls back to the hexadecimal value.
+function flagToName(aFlag) {
+  return (
+    Object.entries(Ci.nsIClearDataService).find(
+      ([key, value]) => key.startsWith("CLEAR_") && value === aFlag
+    )?.[0] ?? `0x${aFlag.toString(16)}`
+  );
+}
 
 export function ClearDataService() {
   this._initialize();
@@ -2782,7 +2629,10 @@ ClearDataService.prototype = Object.freeze({
       return Promise.all(
         c.cleaners.map(cleaner => {
           return aHelper(cleaner).catch(e => {
-            console.error(e);
+            console.error(
+              `ClearDataService failed to clear ${flagToName(c.flag)}:`,
+              e
+            );
             resultFlags |= c.flag;
           });
         })

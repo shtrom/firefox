@@ -68,7 +68,7 @@
   <!-- Text for the menu button to remove a recently saved bookmark from the user's home screen -->
   <string name="home_bookmarks_menu_item_remove">ເອົາອອກ</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">%1$s ແມ່ນຜະລິດຂື້ນໂດຍ Mozilla.</string>
+  <string name="about_content" tools:ignore="BrandUsage">%1$s ແມ່ນຜະລິດຂື້ນໂດຍ Mozilla.</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">ຄວາມເຂົ້າໃຈຜິດທີ່ມັກພົບຕະລອດກ່ຽວກັບການທ່ອງເວັບແບບສ່ວນຕົວ</string>
   <!-- Text to be announced by the accessibility service to inform the user that the private browsing mode is currently active. -->
@@ -102,12 +102,6 @@
   <string name="open_in_app_cfr_negative_button_text">ຍົກເລີກ</string>
   <!-- Private browsing erase action "contextual feature recommendation" (CFR) -->
 
-  <!--
-    Address bar swipe "contextual feature recommendation" (CFR)
-
-    Text for the message displayed in the contextual feature recommendation popup promoting swipe of address bar.
-  -->
-  <string name="address_bar_swipe_cfr_message_2">ປັດແຖບເຄື່ອງມືຊ້າຍ ຫຼື ຂວາເພື່ອສະຫຼັບແຖບ.</string>
   <!-- Text for the info dialog when camera permissions have been denied but user tries to access a camera feature. -->
   <string name="camera_permissions_needed_message">ຕ້ອງການເຂົ້ານຳໃຊ້ກ້ອງ. ໄປທີ່ການຕັ້ງຄ່າ Android ແຕະໃສ່ ສິດ ແລະ ແຕະໃສ່ ອະນຸຍາດ</string>
   <!-- Text for the positive action button to go to Android Settings to grant permissions. -->
@@ -308,14 +302,6 @@
   <!-- Content description (not visible, for screen readers etc.) for recommended extensions in main menu -->
   <string name="browser_menu_recommended_extensions_content_description">ຂໍ້ມູນເພີ່ມເຕີມ</string>
   <!--
-    Menu "contextual feature recommendation" (CFR)
-
-    Text for the title in the contextual feature recommendation popup promoting the menu feature.
-  -->
-  <string name="menu_cfr_title">ໃໝ່: ເມນູປັບປຸງ</string>
-  <!-- Text for the message in the contextual feature recommendation popup promoting the menu feature. -->
-  <string name="menu_cfr_body">ຊອກຫາສິ່ງທີ່ທ່ານຕ້ອງການໄດ້ໄວຂຶ້ນ, ຈາກການທ່ອງເວັບສ່ວນຕົວເພື່ອບັນທຶກຄຳສັ່ງ.</string>
-  <!--
     Extensions management fragment
 
     Text displayed when there are no extensions to be shown
@@ -324,21 +310,9 @@
   <!--
     Browser Toolbar
 
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">ໜ້າທຳອິດ</string>
-  <!--
-    Browser Toolbar
-
     Content description for the translate page toolbar button that opens the translations dialog when no translation has occurred.
   -->
   <string name="browser_toolbar_translate">ແປໜ້ານີ້</string>
-  <!--
-    Content description (not visible, for screen readers etc.) for the translate page toolbar button that opens the translations dialog when the page is translated successfully.
-    %1$s is the name of the language that is displayed in the original page. (For example: English)
-    %2$s is the name of the language which the page was translated to. (For example: French)
-  -->
-  <string name="browser_toolbar_translated_successfully">ແປຈາກໜ້າ %1$s ຫາ %2$s.</string>
   <!--
     Translation Toolbar
 
@@ -361,12 +335,6 @@
   <string name="default_locale_text">ຕາມພາສາໃນອຸປະກອນ</string>
   <!-- Placeholder text shown in the search bar before a user enters text -->
   <string name="locale_search_hint">ຄົ້ນຫາພາສາ</string>
-  <!--
-    Search Fragment
-
-    Button in the search view that lets a user search by scanning a QR code
-  -->
-  <string name="search_scan_button_2">ສະແກນລະຫັດ QR</string>
   <!--
     Search Fragment
 
@@ -410,62 +378,6 @@
     Content description (not visible, for screen readers etc.): Close button for the home onboarding dialog
   -->
   <string name="onboarding_home_content_description_close_button">ປິດ</string>
-  <!--
-    Juno first user onboarding flow experiment, strings are marked unused as they are only referenced by Nimbus experiments.
-
-    Description for learning more about our privacy notice.
-  -->
-  <string name="juno_onboarding_privacy_notice_text" tools:ignore="BrandUsage">ແຈ້ງການຄວາມເປັນສ່ວນຕົວຂອງ Firefox</string>
-  <!-- Title for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_title_nimbus_2">ພວກເຮົາຮັກຮັກສາຄວາມປອດໄພໃຫ້ທ່ານ</string>
-  <!-- Description for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_description_nimbus_3">ບຣາວເຊີທີ່ບໍ່ຫວັງຜົນກຳໄລຂອງພວກເຮົາຊ່ວຍຢຸດບໍລິສັດບໍ່ໃຫ້ຕິດຕາມທ່ານໄປທົ່ວເວັບ.</string>
-  <!-- Text for the button to set firefox as default browser on the device -->
-  <string name="juno_onboarding_default_browser_positive_button" tools:ignore="UnusedResources">ຕັ້ງໃຫ້ເປັນບຣາວເຊີຫລັກ</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_default_browser_negative_button" tools:ignore="UnusedResources">ບໍ່ແມ່ນຕອນນີ້</string>
-  <!-- Title for sign in to sync screen. -->
-  <string name="juno_onboarding_sign_in_title_2">ຢູ່ໃນການເຂົ້າລະຫັດເມືອທ່ານປ່ຽນຈາກອຸປະກອນໜຶ່ງໄປຫາອີກອຸປະກອນໜຶ່ງ</string>
-  <!--
-    Description for sign in to sync screen. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_sign_in_description_3" tools:ignore="BrandUsage">Firefox ເຂົ້າລະຫັດລັບຂອງທ່ານ, ບຸກມາກສ໌, ແລະ ອື່ນໆອີກເມື່ອທ່ານຖືກຊິງຄ໌.</string>
-  <!-- Text for the button to sign in to sync on the device -->
-  <string name="juno_onboarding_sign_in_positive_button" tools:ignore="UnusedResources">ເຂົ້າສູ່ລະບົບ</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_sign_in_negative_button" tools:ignore="UnusedResources">ບໍ່ແມ່ນຕອນນີ້</string>
-  <!--
-    Title for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_title_nimbus_2" tools:ignore="BrandUsage">ການແຈ້ງເຕືອນຊ່ວຍໃຫ້ທ່ານປອດໄພກວ່າກັບ Firefox</string>
-  <!--
-    Description for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_description_nimbus_2" tools:ignore="BrandUsage">ສົ່ງແຖບຢ່າງປອດໄພລະຫວ່າງອຸປະກອນຂອງທ່ານ ແລະ ຄົ້ນພົບຄຸນສົມບັດຄວາມເປັນສ່ວນຕົວອື່ນໆໃນ Firefox.</string>
-  <!-- Text for the button to request notification permission on the device -->
-  <string name="juno_onboarding_enable_notifications_positive_button" tools:ignore="UnusedResources">ເປີດການແຈ້ງເຕືອນ</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_enable_notifications_negative_button" tools:ignore="UnusedResources">ບໍ່​ແມ່ນ​ຕອນ​ນີ້</string>
-  <!--
-    Title for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_title" tools:ignore="BrandUsage,UnusedResources">ລອງໃຊ້ວິດເຈັດຄົ້ນຫາຂອງ Firefox</string>
-  <!--
-    Description for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_description" tools:ignore="BrandUsage,UnusedResources">ດ້ວຍ Firefox ໃນຫນ້າຈໍເຮືອນຂອງທ່ານ, ທ່ານຈະສາມາດເຂົ້າເຖິງຕົວທ່ອງເວັບຄວາມເປັນສ່ວນຕົວທໍາອິດທີ່ສະກັດຕົວຕິດຕາມຂ້າມເວັບໄຊທ໌.</string>
-  <!--
-    Text for the button to add search widget on the device used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_positive_button" tools:ignore="BrandUsage,UnusedResources">ເພີ່ມ widget Firefox</string>
-  <!-- Text for the button to dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_add_search_widget_negative_button" tools:ignore="UnusedResources">ບໍ່ແມ່ນຕອນນີ້</string>
   <!-- Title for the privacy preferences dialog shown during onboarding. Note: The word "Firefox" should NOT be translated. -->
   <string name="onboarding_preferences_dialog_title" tools:ignore="BrandUsage">ຊ່ວຍພວກເຮົາເຮັດໃຫ້ Firefox ດີຂຶ້ນ</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
@@ -485,17 +397,13 @@
   <!-- Button text to reopen firefox after the crash is processed %s is the name of the app (for example "Firefox") -->
   <string name="startup_crash_restart">ເປີດ %s ຄືນໃໝ່</string>
   <!-- Title for the usage data option in the privacy preferences dialog shown during onboarding. Note: The word "Mozilla" should NOT be translated. -->
-  <string name="onboarding_preferences_dialog_usage_data_title">ສົ່ງຂໍ້ມູນດ້ານເຕັກນິກ ແລະ ການໂຕ້ຕອບກັບ Mozilla</string>
+  <string name="onboarding_preferences_dialog_usage_data_title" tools:ignore="BrandUsage">ສົ່ງຂໍ້ມູນດ້ານເຕັກນິກ ແລະ ການໂຕ້ຕອບກັບ Mozilla</string>
   <string name="onboarding_preferences_dialog_usage_data_description_2" tools:ignore="BrandUsage">ຂໍ້​ມູນ​ກ່ຽວ​ກັບ​ອຸ​ປະ​ກອນ​ຂອງ​ທ່ານ, ການ​ຕັ້ງ​ຄ່າ​ຮາດ​ແວ, ແລະ​ ວິ​ທີ​ທີ່​ທ່ານ​ນໍາ​ໃຊ້ Firefox ຊ່ວຍ​ປັບ​ປຸງ​ຄຸນ​ສົມ​ບັດ, ປະ​ສິດ​ທິ​ພາບ, ແລະ ​ຄວາມ​ສະຖຽນສໍາ​ລັບ​ທຸກ​ຄົນ.</string>
   <string name="onboarding_preferences_dialog_usage_data_learn_more_2">ຮຽນຮູ້ເພີ່ມເຕີມ</string>
   <!-- Positive button label for the privacy preferences dialog shown during onboarding. -->
   <string name="onboarding_preferences_dialog_positive_button">ສຳເລັດ</string>
   <!-- Terms of service onboarding title card label. 'Firefox' intentionally hardcoded here -->
   <string name="onboarding_welcome_to_firefox" tools:ignore="BrandUsage">ຍິນດີຕ້ອນຮັບສູ່ Firefox</string>
-  <!-- Terms of service sub header label. -->
-  <string name="onboarding_terms_of_service_sub_header_2">ການທ່ອງເວັບທີ່ວ່ອງໄວ ແລະ ປອດໄພ</string>
-  <!-- Terms of service onboarding page continue button label. -->
-  <string name="onboarding_term_of_service_agree_and_continue_button_label_2">ສືບຕໍ່</string>
   <!-- Line one of the terms of service onboarding page. %1$s is replaced by an active link, using onboarding_term_of_service_line_one_link_text_2 as text (“Firefox Terms of Use”). -->
   <string name="onboarding_term_of_service_line_one_2">ໂດຍການດຳເນີນການຕໍ່, ທ່ານເຫັນດີນຳ %1$s.</string>
   <!-- Used as text for the link in onboarding_term_of_service_line_one_2. -->
@@ -563,16 +471,6 @@
   <string name="onboarding_redesign_sync_positive_button" tools:ignore="UnusedResources">ເລີ່ມການຊິງຄ໌</string>
   <!-- Sync onboarding redesign negative button text. -->
   <string name="onboarding_redesign_sync_negative_button" tools:ignore="UnusedResources">ບໍ່ແມ່ນດຽວນີ້</string>
-  <!-- Marketing onboarding page title. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_title" tools:ignore="BrandUsage,UnusedResources">ຊ່ວຍພວກເຮົາພັດທະນາ Firefox</string>
-  <!-- Marketing onboarding page body. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_body" tools:ignore="BrandUsage,UnusedResources">ເມື່ອທ່ານແບ່ງປັນວິທີທີ່ທ່ານຄົ້ນພົບ Firefox ແລະ ທີ່ທ່ານໃຊ້ມັນ, ທ່ານຊ່ວຍພວກເຮົາແນະນໍາຕົວທ່ອງເວັບຂອງພວກເຮົາໃຫ້ກັບຄົນຫຼາຍຂຶ້ນ.</string>
-  <!-- Marketing onboarding page opt-out checkbox. Unchecking the box does not increase data collection. Our data practices remain the same. 'Mozilla' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_opt_out_checkbox">ແບ່ງປັນຂໍ້ມູນກັບຄູ່ຮ່ວມງານດ້ານເຕັກໂນໂລຢີການຕະຫຼາດຂອງ Mozilla. ຂໍ້ມູນນີ້ບໍ່ເຄີຍຖືກຂາຍ ຫຼືໃຊ້ເພື່ອສະແດງໂຄສະນາໃຫ້ທ່ານເຫັນ.</string>
-  <!-- Marketing onboarding page clickable link text to "learn more" on how data is used. -->
-  <string name="onboarding_marketing_learn_more" tools:ignore="UnusedResources">ພວກເຮົາໃຊ້ຂໍ້ມູນແນວໃດ</string>
-  <!-- Marketing onboarding page button label. Button to confirm choice and start browsing. -->
-  <string name="onboarding_marketing_positive_button" tools:ignore="UnusedResources">ຢືນຢັນ ແລະ ເລີ່ມໃຊ້ browser</string>
   <!-- Marketing onboarding page title variant. “One last thing” refers to the final step or action in the onboarding process that we’re asking users to take before they can start using the browser. -->
   <string name="onboarding_marketing_title_1" tools:ignore="UnusedResources">ຂັ້ນຕອນສຸດທ້າຍ</string>
   <!-- Marketing onboarding page body variant. 'Firefox' is intentionally hardcoded. -->
@@ -647,41 +545,6 @@
   <string name="nova_onboarding_marketing_body" tools:ignore="BrandUsage,UnusedResources">ແບ່ງປັນວິທີທີ່ເຈົ້າຄົ້ນພົບ Firefox ແລະ ວິທີທີ່ເຈົ້າໃຊ້ມັນກັບຄູ່ຮ່ວມງານດ້ານການຕະຫຼາດຂອງ Mozilla. ຂໍ້ມູນນີ້ບໍ່ເຄີຍຖືກຂາຍ. %1$s</string>
   <!-- ==== End of Project "Nova" onboarding strings ==== -->
 
-  <!-- Onboarding header for the toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_title" tools:ignore="UnusedResources">ເລືອກການຈັດວາງແຖບເຄື່ອງມື</string>
-  <!-- Onboarding sub header for toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_description" tools:ignore="UnusedResources">ໃຫ້ການຄົ້ນຫາຢູ່ໃກ້.</string>
-  <!-- Onboarding label for 'Save and continue' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_continue_button">ບັນທຶກ ແລະ ສືບຕໍ່</string>
-  <!-- Onboarding toolbar selection card label for 'top' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_top_option">ເທິງ</string>
-  <!-- Onboarding toolbar selection card label for 'bottom' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_bottom_option">ລຸ່ມ</string>
-  <!-- Onboarding toolbar selection card content description for the main image. -->
-  <string name="onboarding_customize_toolbar_main_image_content_description">ຮູບພາບສ່ວນຫົວໃຫຍ່ຂອງມຸມເບິ່ງການເລືອກແຖບເຄື່ອງມືສະແດງແຖບເຄື່ອງມືທີ່ສະແດງໃຫ້ເຫັນ.</string>
-  <!-- Onboarding toolbar selection card content description for the toolbar placement image. -->
-  <string name="onboarding_customize_toolbar_placement_bottom_content_description">ຮູບພາບຂອງແຖບເຄື່ອງມືດ້ານລຸ່ມ</string>
-  <string name="onboarding_customize_toolbar_placement_top_content_description">ຮູບພາບຂອງແຖບເຄື່ອງມືເທິງ</string>
-  <!-- Action label for toolbar options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_toolbar_a11y_action_label_select">ເລືອກ</string>
-  <!-- Onboarding header for the theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_title" tools:ignore="UnusedResources">ເລືອກຮູບແບບສີສັນ</string>
-  <!-- Onboarding sub header for theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_description" tools:ignore="UnusedResources">ເບິ່ງເວັບໃນແສງສະຫວ່າງທີ່ດີທີ່ສຸດ.</string>
-  <!-- Onboarding label for 'Save and start browsing' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_start_button">ບັນທຶກ ແລະ ເລີ່ມໃຊ້ browser</string>
-  <!-- Onboarding theme selection card label for 'dark' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_dark_option">ມືດ</string>
-  <!-- Onboarding theme selection card label for 'light' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_light_option">ແຈ້ງ</string>
-  <!-- Onboarding theme selection card label for 'System auto' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_system_option">ລະບົບອັດຕະໂນມັດ</string>
-  <!-- Onboarding theme selection card content description for the main image. -->
-  <string name="onboarding_customize_theme_main_image_content_description">ຮູບພາບສ່ວນຫົວຂະຫນາດໃຫຍ່ຂອງມຸມເບິ່ງການເລືອກຮູບແບບທີ່ສະແດງໃຫ້ເຫັນສິລະປິນ ແລະ ເຄື່ອງມືສ້າງ.</string>
-  <!-- Onboarding theme selection card content description for the theme selection image. %1$s is placeholder for either 'system', 'light' or 'dark'. -->
-  <string name="onboarding_customize_theme_content_description">ຮູບພາບຂອງຮູບແບບສີສັນ %1$s</string>
-  <!-- Action label for options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_theme_a11y_action_label_select">ເລືອກ</string>
   <!--
     Widget Picker
 
@@ -761,40 +624,8 @@
   <string name="preferences_pbm_lock_screen_title">ໃຊ້ການລັອກໜ້າຈໍເພື່ອເຊື່ອງແຖບໃນຜົນການຄົ້ນຫາສ່ວນຕົວ</string>
   <!-- Informs the user how to access the tabs when "Use screen lock to hide tabs in private browsing" is enabled -->
   <string name="preferences_pbm_lock_screen_summary_3">ເບິ່ງແຖບທີ່ມີລາຍນິ້ວມື, PIN ຫຼື ການປົດລັອກດ້ວຍໜ້າຂອງທ່ານ. ການເປີດອັນນີ້ຍັງປ້ອງກັນການຈັບພາບໜ້າຈໍ ແລະ ການແບ່ງປັນ.</string>
-  <!-- Label for cookie banner section in quick settings panel. -->
-  <string name="cookie_banner_blocker">ໂຕປິດກັ້ນ Cookie banner</string>
   <!-- Preference for removing cookie/consent banners from sites automatically in private mode. See reduce_cookie_banner_summary for additional context. -->
   <string name="preferences_cookie_banner_reduction_private_mode">Cookie Banner Blocker ໃນຜົນການຄົ້ນຫາສ່ວນຕົວ</string>
-  <!-- Text for indicating cookie banner handling is off this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_off_for_site">ປິດສໍາລັບເວັບໄຊທ໌ນີ້</string>
-  <!-- Text for cancel button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_cancel_button">ຍົກເລີກ</string>
-  <!-- Text for request support button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_request_support_button_2">ສົ່ງ​ຄໍາ​ຂໍ</string>
-  <!-- Text for title indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_title_2">ຮ້ອງຂໍການສະຫນັບສະຫນູນສໍາລັບເວັບໄຊທ໌ນີ້ບໍ?</string>
-  <!-- Label for the snackBar, after the user reports with success a website where cookie banner reducer did not work -->
-  <string name="cookie_banner_handling_report_site_snack_bar_text_2">ສົ່ງຄຳຮ້ອງຂໍແລ້ວ</string>
-  <!-- Text for indicating cookie banner handling is on this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_on_for_site">ເປິດສຳລັບເວັບໄຊນີ້</string>
-  <!-- Text for indicating that a request for unsupported site was sent to Nimbus (it's a Mozilla library for experiments), this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site_request_submitted_2">ສົ່ງຄຳຮ້ອງຂໍການຊ່ວຍເຫຼືອແລ້ວ</string>
-  <!-- Text for indicating cookie banner handling is currently not supported for this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site">ຕອນນີ້ບໍ່ຮອງຮັບເວັບໄຊ</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is on this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_on_for_site_1">ເປີດໃຊ້ Cookie Banner Blocker ສໍາລັບ %1$s ບໍ?</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is off this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_off_for_site_1">ປິດຕົວບລັອກຄຸກກີ້ສຳລັບ %1$s ບໍ?</string>
-  <!-- Title text for a detail explanation indicating cookie banner reducer didn't work for the current site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_title_unsupported_site_request_2">%1$s ບໍ່ສາມາດປະຕິເສດຄຳຮ້ອງຂໍຄຸກກີໃນເວັບໄຊນີ້ໄດ້ໂດຍອັດຕະໂນມັດ. ທ່ານສາມາດສົ່ງຄໍາຮ້ອງຂໍເພື່ອສະຫນັບສະຫນູນເວັບໄຊທ໌ນີ້ໃນອະນາຄົດ.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is off for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_off_for_site_1">ປິດ ແລະ %1$s ຈະລຶບລ້າງຄຸກກີ້ ແລະ ໂຫຼດເວັບໄຊນີ້ຄືນໃໝ່. ນີ້ອາດຈະເຮັດໃຫ້ທ່ານອອກຈາກລະບົບ ຫຼື ຫວ່າງເປົ່າກະຕ່າຊື້ເຄື່ອງ.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is on for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_on_for_site_3">ເປີດ ແລະ %1$s ຈະພະຍາຍາມປະຕິເສດປ້າຍໂຄສະນາຄຸກກີທັງໝົດຢູ່ໃນເວັບໄຊນີ້ໂດຍອັດຕະໂນມັດ.</string>
-  <!-- Title for the cookie banner re-engagement CFR, the placeholder is replaced with app name. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="cookie_banner_cfr_title">%1$s ຫາກໍ່ປະຕິເສດຄຸກກີ້ສຳລັບທ່ານ</string>
-  <!-- Message for the cookie banner re-engagement CFR -->
-  <string name="cookie_banner_cfr_message">ລົບກວນໜ້ອຍລົງ, ຄຸກກີ້ໜ້ອຍລົງຕິດຕາມທ່ານຢູ່ໃນເວັບໄຊນີ້.</string>
   <!-- Description of the preference to enable "HTTPS-Only" mode. -->
   <string name="preferences_https_only_summary">ພະຍາຍາມເຊື່ອມຕໍ່ຫາເວັບໄຊໂດຍອັດຕະໂນມັດໂດຍໃຊ້ໂປຣໂຕຄໍການເຂົ້າລະຫັດ HTTPS ເພື່ອຄວາມປອດໄພທີ່ເພີ່ມຂຶ້ນ.</string>
   <!-- Summary of https only preference if https only is set to off -->
@@ -818,7 +649,7 @@
   <!-- Preference for accessibility -->
   <string name="preferences_accessibility">ສິ່ງອຳນວຍຄວາມສະດວກ</string>
   <!-- Preference to override the Mozilla account server -->
-  <string name="preferences_override_account_server">ເຊີບເວີບັນຊີ Mozilla ແບບກຳນົດເອງ</string>
+  <string name="preferences_override_account_server" tools:ignore="BrandUsage">ເຊີບເວີບັນຊີ Mozilla ແບບກຳນົດເອງ</string>
   <!-- Preference to override the Sync token server -->
   <string name="preferences_override_sync_tokenserver">ກຳຫນົດເຊີເວີ Sync</string>
   <!-- Preference category for account information -->
@@ -846,7 +677,7 @@
   <!-- Preference description shown in the banner prompting the user to sign in for sync features -->
   <string name="preferences_sign_in_description">ຊິ້ງແຖບ, ບຸກມາກ, ລະຫັດຜ່ານ ແລະ ອື່ນໆອີກ.</string>
   <!-- Preference shown instead of account display name while account profile information isn't available yet. -->
-  <string name="preferences_account_default_name_2">ບັນຊີ Mozilla</string>
+  <string name="preferences_account_default_name_2" tools:ignore="BrandUsage">ບັນຊີ Mozilla</string>
   <!-- Preference text for account title when there was an error syncing FxA -->
   <string name="preferences_account_sync_error">ເຊື່ອມຕໍຄືນເພື່ອເລີ່ມ sync ຄືນໃຫມ່</string>
   <!-- Preference for language -->
@@ -1188,7 +1019,7 @@
   <string name="preferences_usage_data_description_1" tools:ignore="BrandUsage">ຂໍ້​ມູນ​ກ່ຽວ​ກັບ​ອຸ​ປະ​ກອນ​ຂອງ​ທ່ານ, ການ​ຕັ້ງ​ຄ່າ​ຮາດ​ແວ, ແລະ​ ການ​ນໍາ​ໃຊ້​ຊ່ວຍ​ໃຫ້​ພວກ​ເຮົາ​ປັບ​ປຸງ​ຄຸນ​ສົມ​ບັດ Firefox, ປະ​ສິດ​ທິ​ພາບ, ແລະ ​ຄວາມ​ຫມັ້ນ​ຄົງ.</string>
   <!-- Preference switch for daily usage ping data collection -->
   <string name="preferences_daily_usage_ping_title">ping ການນໍາໃຊ້ປະຈໍາວັນ</string>
-  <string name="preferences_daily_usage_ping_description">ນີ້ຊ່ວຍໃຫ້ Mozilla ຄາດຄະເນຜູ້ໃຊ້ງານທີ່ມີການເຄື່ອນໄຫວ.</string>
+  <string name="preferences_daily_usage_ping_description" tools:ignore="BrandUsage">ນີ້ຊ່ວຍໃຫ້ Mozilla ຄາດຄະເນຜູ້ໃຊ້ງານທີ່ມີການເຄື່ອນໄຫວ.</string>
   <string name="preferences_daily_usage_ping_learn_more">ສຶກສາເພີ່ມເຕີມກ່ຽວກັບການໃຊ້ ping ປະຈໍາວັນ</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
   <string name="crash_reporting_snack_bar_message">ສົ່ງລາຍງານແລ້ວ</string>
@@ -1214,7 +1045,7 @@
   <!-- Title for studies preferences -->
   <string name="preference_experiments_2">ການສຶກສາ</string>
   <!-- Summary for studies preferences -->
-  <string name="preference_experiments_summary_2">ອະນຸຍາດໃຫ້ Mozilla ຕິດຕັ້ງ ແລະ ເປີດໃຊ້ການສຶກສາ</string>
+  <string name="preference_experiments_summary_2" tools:ignore="BrandUsage">ອະນຸຍາດໃຫ້ Mozilla ຕິດຕັ້ງ ແລະ ເປີດໃຊ້ການສຶກສາ</string>
   <!--
     Turn On Sync Preferences
 
@@ -1297,8 +1128,6 @@
   <string name="library_desktop_bookmarks_unfiled">ບຸກມາກອື່ນໆ</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">ປະຫວັດການໃຊ້ງານ</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">ແທັບໃຫມ່</string>
   <!-- Settings Page Title -->
   <string name="settings_title">ການຕັ້ງຄ່າ</string>
   <!-- Content description (not visible, for screen readers etc.): "Close button for library settings" -->
@@ -1488,8 +1317,6 @@
   <string name="history_search_1">ປ້ອນຄຳທີ່ຕ້ອງການຄົ້ນຫາ</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">ລຶບປະຫວັດການໃຊ້ງານ</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">ລຶບປະຫວັດການໃຊ້ງານແລ້ວ</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">ລຶບ %1$s ແລ້ວ</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -1670,26 +1497,10 @@
   <string name="webcompat_reporter_label_url">URL</string>
   <!-- The error message of the URL text field when an invalid URL has been entered. -->
   <string name="webcompat_reporter_url_error_invalid">ກະລຸນາປ້ອນ URL ທີ່ຖືກຕ້ອງ</string>
-  <!-- The label/title of a field in the Web Compat Reporter feature for explaining a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_label_whats_broken_2">ບັນຫາແມ່ນຫຍັງ?</string>
-  <!-- The placeholder text for the dropdown where a user selects a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_2">ເລືອກເຫດຜົນ</string>
-  <!-- The error message of the dropdown, prompting the user to select a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_error">ກະລຸນາເລືອກເຫດຜົນ</string>
-  <!-- The label/title of an optional field in the Web Compat Reporter feature for adding additional information. -->
-  <string name="webcompat_reporter_label_description">ອະທິບາຍບັນຫາ (ທາງເລືອກ)</string>
-  <!-- The button text for navigating away from the feature to provide more information on the broken site's bug report. -->
-  <string name="webcompat_reporter_add_more_info">ເພີ່ມຂໍ້ມູນເພີ່ມເຕີມ</string>
   <!-- The button text for the cancel button to leave the Web Compat Reporter feature. -->
   <string name="webcompat_reporter_cancel">ຍົກເລີກ</string>
-  <!-- The button text for the send button to submit the provided form data. -->
-  <string name="webcompat_reporter_send">ສົ່ງ</string>
   <!-- Text for a snackbar to confirm the successful submission of a WebCompat report. -->
   <string name="webcompat_reporter_success_snackbar_text_2">ສົ່ງລາຍງານແລ້ວ</string>
-  <!-- Placeholder text for the description field to prompt the user on what they should type. -->
-  <string name="webcompat_reporter_problem_description_placeholder_text">ເກີດຫຍັງຂຶ້ນ? ສິ່ງທີ່ຄວນເກີດຂຶ້ນ?</string>
-  <!-- Label of the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. -->
-  <string name="webcompat_reporter_etp_checkbox_text">ສົ່ງ URL ທີ່ຖືກບລັອກໂດຍການປ້ອງກັນການຕິດຕາມ</string>
   <!--
     These reason strings are dropdown options on a WebCompat reporter form, indicating what is broken on the site.
 
@@ -1708,8 +1519,6 @@
   <string name="webcompat_reporter_reason_account2">ບໍ່ສາມາດເຂົ້າສູ່ລະບົບ ຫຼື ລົງທະບຽນໄດ້</string>
   <!-- Broken site reason text for site asked to turn off ad blocker -->
   <string name="webcompat_reporter_reason_turn_off_adblocker">ເວັບໄຊຂໍໃຫ້ປິດຕົວບລັອກໂຄສະນາ</string>
-  <!-- Broken site reason text for browser isn’t supported or blocked -->
-  <string name="webcompat_reporter_reason_notsupported">ບຣາວເຊີບໍ່ຖືກຮອງຮັບ ຫຼື ຖືກບລັອກ</string>
   <!-- Broken site reason text for something else -->
   <string name="webcompat_reporter_reason_other">ບາງສິ່ງບາງຢ່າງອື່ນ</string>
   <!--
@@ -1719,7 +1528,7 @@
   -->
   <string name="tab_crash_title_2">ຂໍ​ອະໄພ. %1$s ບໍ່ສາມາດໂຫລດໜ້າເວັບນັ້ນໄດ້.</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">ສົ່ງລາຍງານການຂັດຂ້ອງໄປຫາ Mozilla</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">ສົ່ງລາຍງານການຂັດຂ້ອງໄປຫາ Mozilla</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">ປິດແທັບ</string>
   <!-- Restore tab button text on the tab crash page -->
@@ -1810,12 +1619,8 @@
   <string name="edit_bookmark_folder_fragment_title">ແກ້ໄຂໂຟລເດີ</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">URL</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">ໂຟ​ລ​ເດີ</string>
   <!-- Text indicating which folder a bookmark or folder will be saved in -->
   <string name="bookmark_save_in_label">ບັນທຶກໃນ</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">ຊື່</string>
   <!-- Label for a text input field for a bookmark or folder name -->
   <string name="bookmark_name_label_normal_case">ຊື່</string>
   <!-- Bookmark select folder screen title -->
@@ -1849,12 +1654,8 @@
   <string name="bookmark_empty_list_title">ບໍ່ທັນມີບຸກມາກເທື່ອ</string>
   <!-- Bookmark screen folder description. %s is the count of bookmark folder children -->
   <string name="bookmarks_folder_description">ບຸກມາກໃນໂຟນເດີ: %s</string>
-  <!-- Description for the bookmark list empty state when you're not signed into sync. -->
-  <string name="bookmark_empty_list_guest_description">ບັນທຶກເວັບໄຊໃນຂະນະທີ່ທ່ານທ່ອງເວັບ. ເຂົ້າສູ່ລະບົບເພື່ອເອົາບຸກມາກຈາກອຸປະກອນອື່ນທີ່ຊິ້ງແລ້ວ.</string>
   <!-- Text for the button to navigate to sync authentication -->
   <string name="bookmark_empty_list_guest_cta">ເຂົ້າສູ່ລະບົບເພື່ອ Sync</string>
-  <!-- Description for the bookmark list empty state when you're signed into sync. -->
-  <string name="bookmark_empty_list_authenticated_description">ບັນທຶກເວັບໄຊໃນຂະນະທີ່ທ່ານທ່ອງເວັບ. ພວກເຮົາຍັງຈະຈັບບຸກມາກຈາກອຸປະກອນອື່ນທີ່ຊິ້ງໄວ້.</string>
   <!-- Description for the bookmark list empty state when you're in an empty folder. -->
   <string name="bookmark_empty_list_folder_description">ເພີ່ມບຸກມາກໃນຂະນະທີ່ທ່ານທ່ອງເວັບເພື່ອໃຫ້ທ່ານສາມາຄົ້ນຫາເວັບໄຊທີ່ທ່ານມັກໃນພາຍຫຼັງ.</string>
   <!-- Description for the add new folder button when selecting a folder. -->
@@ -1865,12 +1666,6 @@
     Button label that take the user to the Android App setting
   -->
   <string name="phone_feature_go_to_settings">ໄປທີ່ການຕັ້ງຄ່າ</string>
-  <!--
-    Content description (not visible, for screen readers etc.): Quick settings sheet
-    to give users access to site specific information / settings. For example:
-    Secure settings status and a button to modify site permissions
-  -->
-  <string name="quick_settings_sheet">ອອກຈາກການຕັ້ງຄ່າ sheet</string>
   <!-- Label that indicates that this option it the recommended one -->
   <string name="phone_feature_recommended">ແນະນຳ</string>
   <!-- Button label for clearing all the information of site permissions -->
@@ -1967,8 +1762,6 @@
   <string name="collections_header">ການສະສົມ</string>
   <!-- Content description (not visible, for screen readers etc.): Opens the collection menu when pressed -->
   <string name="collection_menu_button_content_description">ເມນູການສະສົມ</string>
-  <!-- Label to describe what collections are to a new user without any collections -->
-  <string name="no_collections_description2">ເກັບກຳສິ່ງທີ່ສຳຄັນກັບທ່ານ.\nຈັດກຸ່ມການຄົ້ນຫາທີ່ຄ້າຍຄືກັນ, ເວັບໄຊ ແລະແຖບຕ່າງໆເພື່ອເຂົ້າເຖິງໄດ້ໄວໃນພາຍຫຼັງ.</string>
   <!-- Title for the "select tabs" step of the collection creator -->
   <string name="create_collection_select_tabs">ເລືອກແທັບ</string>
   <!-- Title for the "select collection" step of the collection creator -->
@@ -2243,10 +2036,8 @@
   <!--
     Enhanced Tracking Protection
 
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
+    Preference title for enhanced tracking protection settings
   -->
-  <string name="etp_settings">ຕັ້ງຄ່າການປ້ອງກັນ</string>
-  <!-- Preference title for enhanced tracking protection settings -->
   <string name="preference_enhanced_tracking_protection">ເພີ່ມການປ້ອງກັນການຕິດຕາມ</string>
   <!-- Preference summary for enhanced tracking protection settings on/off switch -->
   <string name="preference_enhanced_tracking_protection_summary">ຕອນນີ້ມີການປົກປ້ອງຄຸກກີ້ທັງໝົດ, ເປັນອຸປະສັກທີ່ມີປະສິດທິພາບທີ່ສຸດຂອງພວກເຮົາຕໍ່ກັບຕົວຕິດຕາມຂ້າມເວັບໄຊ.</string>
@@ -2300,12 +2091,8 @@
   <string name="preference_enhanced_tracking_protection_custom_cryptominers">Cryptominers</string>
   <!-- Preference for enhanced tracking protection for the custom protection settings -->
   <string name="preference_enhanced_tracking_protection_custom_known_fingerprinters">ລາຍນິ້ວດິຈິຕອນທີ່ຮູ້ຈັກ</string>
-  <!-- Button label for navigating to the Enhanced Tracking Protection details -->
-  <string name="enhanced_tracking_protection_details">ລາຍລະອຽດ</string>
   <!-- Header for categories that are being being blocked by current Enhanced Tracking Protection settings -->
   <string name="enhanced_tracking_protection_blocked">ບັອກແລ້ວ</string>
-  <!-- Header for categories that are being not being blocked by current Enhanced Tracking Protection settings -->
-  <string name="enhanced_tracking_protection_allowed">ອະນຸຍາດແລ້ວ</string>
   <!-- Category of trackers (social media trackers) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_social_media_trackers_title">ຕົວຕິດຕາມສືສັງຄົມອອນລາຍ</string>
   <!-- Description of social media trackers that can be blocked by Enhanced Tracking Protection -->
@@ -2328,10 +2115,6 @@
   <string name="etp_tracking_content_title">ຕົວຕິດຕາມເນື້ອຫາ</string>
   <!-- Description of tracking content that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_tracking_content_description">ຢຸດການໂຄສະນາພາຍນອກ, ວິດີໂອ, ແລະເນື້ອຫາອື່ນໆຈາກການໂຫຼດທີ່ມີລະຫັດຕິດຕາມ. ອາດຈະສົ່ງຜົນກະທົບຕໍ່ການເຮັດວຽກຂອງເວັບໄຊທ໌ບາງຢ່າງ.</string>
-  <!-- Enhanced Tracking Protection message that protection is currently on for this site -->
-  <string name="etp_panel_on">ການປົກປ້ອງແມ່ນເປີດຢູ່ສຳລັບເວັບໄຊນີ້</string>
-  <!-- Enhanced Tracking Protection message that protection is currently off for this site -->
-  <string name="etp_panel_off">ການປົກປ້ອງຖືກປິດໄວ້ສຳລັບເວັບໄຊນີ້</string>
   <!-- Header for exceptions list for which sites enhanced tracking protection is always off -->
   <string name="enhanced_tracking_protection_exceptions">ເວັບໄຊທ</string>
   <!--
@@ -2354,13 +2137,6 @@
   <string name="etp_suspected_fingerprinters_title">ລາຍນິ້ວມືດິຈິຕອນທີ່ສົງໃສ</string>
   <!-- Category of trackers (fingerprinters) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_known_fingerprinters_title">ລາຍນີ້ວມືດິຈິຕອນທີ່ຮູ້ຈັກ</string>
-  <!--
-    Description of the SmartBlock Enhanced Tracking Protection feature. The * symbol is intentionally hardcoded here,
-    as we use it on the UI to indicate which trackers have been partially unblocked.
-  -->
-  <string name="preference_etp_smartblock_description">ບາງຕົວຕິດຕາມທີ່ໝາຍໄວ້ຂ້າງລຸ່ມນີ້ໄດ້ປົດບລັອກບາງສ່ວນຢູ່ໃນໜ້ານີ້ ເພາະວ່າທ່ານໄດ້ໂຕ້ຕອບກັບພວກມັນ *.</string>
-  <!-- Text displayed that links to website about enhanced tracking protection SmartBlock -->
-  <string name="preference_etp_smartblock_learn_more">ຮຽນຮູ້ເພີ່ມເຕີມ</string>
   <!--
     Content description (not visible, for screen readers etc.):
     Enhanced tracking protection exception preference icon for ETP settings.
@@ -2648,8 +2424,6 @@
   <string name="addresses_save_button">ບັນທຶກ</string>
   <!-- The text for the "Cancel" button for cancelling adding, updating or deleting an address -->
   <string name="addresses_cancel_button">ຍົກເລີກ</string>
-  <!-- The text for the "Delete address" button for deleting an address -->
-  <string name="addressess_delete_address_button">ລຶບທີ່ຢູ່</string>
   <!-- The text for the positive button on "Delete address" dialog -->
   <string name="addressess_confirm_dialog_ok_button">ລຶບ</string>
   <!-- The text for the negative button on "Delete address" dialog -->
@@ -2702,14 +2476,8 @@
   <string name="phone_feature_blocked_step_permissions"><![CDATA[2. ແຕະທີ່ <b>ສິດ</b>]]></string>
   <!-- Third step for the allowing a permission (%1$s is the permission name, for example "Camera"). -->
   <string name="phone_feature_blocked_step_feature"><![CDATA[3. ສະລັບ <b>%1$s</b> ເປັນເປີດ]]></string>
-  <!-- Label that indicates a site is using a secure connection -->
-  <string name="quick_settings_sheet_secure_connection_2">ການເຊື່ອມຕໍ່ແມ່ນປອດໄພ</string>
-  <!-- Label that indicates a site is using a insecure connection -->
-  <string name="quick_settings_sheet_insecure_connection_2">ການເຊື່ອມຕໍ່ບໍ່ປອດໄພ</string>
   <!-- Label to clear site data -->
   <string name="clear_site_data">ລຶບລ້າງຄຸກກີ້ ແລະຂໍ້ມູນເວັບໄຊ</string>
-  <!-- Confirmation message for a dialog confirming if the user wants to delete all data for current site. %s is the domain of the site. -->
-  <string name="confirm_clear_site_data"><![CDATA[ທ່ານແນ່ໃຈບໍ່ວ່າຕ້ອງການລຶບລ້າງຄຸກກີ້ ແລະຂໍ້ມູນທັງໝົດຂອງເວັບໄຊ <b>%s</b>?]]></string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for all sites -->
   <string name="confirm_clear_permissions_on_all_sites">ທ່ານແນ່ໃຈບໍ່ວ່າຕ້ອງການລຶບລ້າງການອະນຸຍາດທັງໝົດຢູ່ໃນທຸກເວັບໄຊ?</string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for a site -->
@@ -2722,11 +2490,6 @@
   <string name="browser_menu_add_to_shortcuts">ເພີ່ມທາງລັດ</string>
   <!-- Browser menu button that removes a shortcut from the home fragment -->
   <string name="browser_menu_remove_from_shortcuts">ລຶບອອກຈາກທາງລັດ</string>
-  <!--
-    text shown before the issuer name to indicate who its verified by, %1$s is the name of
-    the certificate authority that verified the ticket
-  -->
-  <string name="certificate_info_verified_by">ໄດ້ຮັບການຢັ້ງຢືນໂດຍ: %1$s</string>
   <!-- Positive action of a dialog asking to delete -->
   <string name="dialog_delete_positive">ລຶບ</string>
   <!-- Negative action of a dialog asking to delete login -->
@@ -2835,8 +2598,6 @@
   <string name="recent_searches_header">ການຄົ້ນຫາຫຼ້າສຸດ</string>
   <!-- Default browser card text -->
   <string name="default_browser_experiment_card_text" tools:ignore="BrandUsage">ຕັ້ງລິ້ງຈາກເວັບໄຊທ໌, ອີເມວ ແລະຂໍ້ຄວາມໃຫ້ເປີດໂດຍອັດຕະໂນມັດໃນ Firefox.</string>
-  <!-- Content description for close button in collection placeholder. -->
-  <string name="remove_home_collection_placeholder_content_description">ລົບ</string>
   <!-- Content description radio buttons with a link to more information -->
   <string name="radio_preference_info_content_description">ຄຣິກສຳລັບລາຍລະອຽດເພີ່ມເຕີມ</string>
   <!-- Content description for the action bar "up" button -->
@@ -2890,19 +2651,6 @@
     %d is a placeholder for the number of trackers blocked.
   -->
   <string name="protection_panel_num_trackers_blocked">ບລັອກຕົວຕິດຕາມ: %d</string>
-  <!-- Text for when no trackers have been blocked. -->
-  <string name="protection_panel_no_trackers_blocked">ບໍ່ພົບຕົວຕິດຕາມ</string>
-  <!--
-    Text for displaying the total number of trackers blocked in the trackers blocked panel.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_total_num_trackers_blocked">ບລັອກຕົວຕິດຕາມ: %d</string>
-  <!--
-    Text for displaying the number of trackers blocked for a specific tracker category in the trackers blocked panel.
-    %s is a placeholder for the name of the tracker category.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_categorical_num_trackers_blocked">%s: %d</string>
   <!--
     Description text for a dialog confirming whether the user wants to delete all data for current site.
     %s is a placeholder for the base domain of website.

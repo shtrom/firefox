@@ -1,23 +1,23 @@
 [DEFAULT]
 prefs = [
-  "dom.viewTransitions.enabled=true",
   "gfx.omta.background-color=true",
   "gfx.font_loader.delay=0",
   "layout.css.motion-path-url.enabled=true",
   "layout.css.backdrop-filter.enabled=true",
   "layout.css.fit-content-function.enabled=true",
   "layout.css.scroll-driven-animations.enabled=true",
-  "layout.css.scroll-driven-animations.viewtimeline.enabled=true",
   "layout.css.stretch-size-keyword.enabled=true",
   "layout.css.webkit-fill-available.all-size-properties.enabled=true",
   "layout.css.basic-shape-shape.enabled=true",
   "layout.css.field-sizing.enabled=true",
-  "layout.css.anchor-positioning.enabled=true",
-  "layout.css.anchor-positioning.position-try-order.enabled=true",
   "layout.css.attr.enabled=true",
   "layout.css.scroll-state.enabled=true",
   "layout.css.style-queries.enabled=true",
   "layout.css.text-box.enabled=true",
+  "layout.css.text-decoration-inset-percentage.enabled=true",
+  "layout.css.link-parameters.enabled=true",
+  "layout.css.ellipse-corners.enabled=true",
+  "layout.css.calc-typed-arithmetic.enabled=true"
 ]
 support-files = [
   "animation_utils.js",
@@ -411,6 +411,8 @@ skip-if = [
 ["test_dont_use_document_fonts.html"]
 
 ["test_dynamic_change_causing_reflow.html"]
+
+["test_dynamic_change_causing_reflow_content.html"]
 
 ["test_exposed_prop_accessors.html"]
 

@@ -1,4 +1,5 @@
 [DEFAULT]
+tags = "urlbar"
 support-files = [
   "../browser/head-common.js",
   "head.js",
@@ -70,6 +71,8 @@ support-files = ["has-a-link.html"]
 
 ["browser_searchModeSwitcher_keyNavigation.js"]
 
+["browser_searchModeSwitcher_newBadge.js"]
+
 ["browser_searchModeSwitcher_opensearchInstall.js"]
 
 ["browser_searchModeSwitcher_searchMode.js"]
@@ -81,6 +84,12 @@ https_first_disabled = true
 
 ["browser_setURI.js"]
 https_first_disabled = true
+
+["browser_spaceToEnterSearchMode.js"]
+support-files = [
+  "../browser/searchSuggestionEngine.xml",
+  "../browser/searchSuggestionEngine.sjs",
+]
 
 ["browser_suggestions.js"]
 support-files = [

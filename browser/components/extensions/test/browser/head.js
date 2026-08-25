@@ -9,6 +9,7 @@
  *          openBrowserActionPanel
  *          closeBrowserAction closePageAction
  *          promisePopupShown promisePopupHidden promisePopupNotificationShown
+ *          dismissTabHideDoorhanger
  *          toggleBookmarksToolbar
  *          openContextMenu closeContextMenu promiseContextMenuClosed
  *          openContextMenuInSidebar openContextMenuInPopup
@@ -234,6 +235,22 @@ function promisePopupHidden(popup) {
 }
 
 /**
+ * Waits for the doorhanger that tabs.hide() shows to inform the user that an
+ * extension is hiding tabs, and dismisses it. Tests that hide tabs need to do
+ * this, otherwise the doorhanger stays open for the rest of the test file.
+ */
+async function dismissTabHideDoorhanger() {
+  const { ExtensionControlledPopup } = ChromeUtils.importESModule(
+    "resource:///modules/ExtensionControlledPopup.sys.mjs"
+  );
+  let panel = ExtensionControlledPopup._getAndMaybeCreatePanel(document);
+  await promisePopupShown(panel);
+  let hidden = promisePopupHidden(panel);
+  panel.hidePopup();
+  await hidden;
+}
+
+/**
  * Wait for the given PopupNotification to display
  *
  * @param {string} name
@@ -249,6 +266,14 @@ function promisePopupNotificationShown(name, win = window) {
     function popupshown() {
       let notification = win.PopupNotifications.getNotification(name);
       if (!notification) {
+        return;
+      }
+      // Don't use PopupNotifications.isPanelOpen here: it also returns true
+      // while the panel is still in the "showing" state, in which case the
+      // popup frame isn't open yet and its contents aren't focusable.
+      let panelState = win.PopupNotifications.panel.state;
+      if (panelState != "open") {
+        info(`Ignoring popupshown for ${name}, panel state: ${panelState}`);
         return;
       }
 
@@ -1090,21 +1115,19 @@ function roundCssPixcel(pixel, screen) {
 }
 
 function getCssAvailRect(screen) {
-  const availDeviceLeft = {};
-  const availDeviceTop = {};
-  const availDeviceWidth = {};
-  const availDeviceHeight = {};
-  screen.GetAvailRect(
-    availDeviceLeft,
-    availDeviceTop,
-    availDeviceWidth,
-    availDeviceHeight
-  );
-  const factor = screen.defaultCSSScaleFactor;
-  const left = Math.floor(availDeviceLeft.value / factor);
-  const top = Math.floor(availDeviceTop.value / factor);
-  const width = Math.floor(availDeviceWidth.value / factor);
-  const height = Math.floor(availDeviceHeight.value / factor);
+  const availLeft = {};
+  const availTop = {};
+  const availWidth = {};
+  const availHeight = {};
+  // GetAvailRectDisplayPix is in desktop pixels; divide by the screen's own
+  // CSS-to-desktop scale to get the CSS pixels that window.screenX uses.
+  screen.GetAvailRectDisplayPix(availLeft, availTop, availWidth, availHeight);
+  const cssToDesktop =
+    screen.defaultCSSScaleFactor / screen.contentsScaleFactor;
+  const left = Math.floor(availLeft.value / cssToDesktop);
+  const top = Math.floor(availTop.value / cssToDesktop);
+  const width = Math.floor(availWidth.value / cssToDesktop);
+  const height = Math.floor(availHeight.value / cssToDesktop);
   return {
     left,
     top,

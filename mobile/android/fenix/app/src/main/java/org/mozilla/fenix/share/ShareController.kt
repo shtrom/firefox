@@ -6,6 +6,7 @@ package org.mozilla.fenix.share
 
 import android.content.ActivityNotFoundException
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -16,6 +17,8 @@ import android.content.Intent.FLAG_ACTIVITY_MULTIPLE_TASK
 import android.content.Intent.FLAG_ACTIVITY_NEW_DOCUMENT
 import android.net.Uri
 import android.os.Build
+import android.os.PersistableBundle
+import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
 import androidx.navigation.NavController
@@ -52,25 +55,29 @@ import org.mozilla.fenix.share.listadapters.AppShareOption
  */
 interface ShareController {
     fun handleReauth()
+
     fun handleShareClosed()
+
     fun handleShareToApp(app: AppShareOption)
 
-    /**
-     * Handles when a save to PDF action was requested.
-     */
+    /** Handles when a save to PDF action was requested. */
     fun handleSaveToPDF(tabId: String?)
+
     fun handleAddNewDevice()
+
     fun handleShareToDevice(device: Device)
+
     fun handleShareToAllDevices(devices: List<Device>)
+
     fun handleSignIn()
 
-    /**
-     * Handles when a print action was requested.
-     */
+    /** Handles when a print action was requested. */
     fun handlePrint(tabId: String?)
 
     enum class Result {
-        DISMISSED, SHARE_ERROR, SUCCESS
+        DISMISSED,
+        SHARE_ERROR,
+        SUCCESS,
     }
 }
 
@@ -115,9 +122,8 @@ class DefaultShareController(
 ) : ShareController {
 
     override fun handleReauth() {
-        val directions = ShareFragmentDirections.actionGlobalAccountProblemFragment(
-            entrypoint = fxaEntrypoint as FenixFxAEntryPoint,
-        )
+        val directions =
+            ShareFragmentDirections.actionGlobalAccountProblemFragment(entrypoint = fxaEntrypoint as FenixFxAEntryPoint)
         navController.nav(R.id.shareFragment, directions)
         dismiss(ShareController.Result.DISMISSED)
     }
@@ -126,12 +132,13 @@ class DefaultShareController(
         dismiss(ShareController.Result.DISMISSED)
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun handleShareToApp(app: AppShareOption) {
         Events.shareToApp.record(
             getShareToAppSafeExtra(
                 appPackage = app.packageName,
                 sentFromFirefoxEnabled = sentFromFirefoxManager.featureEnabled,
-            ),
+            )
         )
         if (app.packageName == ACTION_COPY_LINK_TO_CLIPBOARD) {
             copyClipboard()
@@ -144,32 +151,36 @@ class DefaultShareController(
             recentAppsStorage.updateRecentApp(app.activityName)
         }
 
-        val intent = Intent(ACTION_SEND).apply {
-            val sharedText = sentFromFirefoxManager.maybeAppendShareText(
-                packageName = app.packageName,
-                shareText = getShareText(),
-            )
-            putExtra(EXTRA_TEXT, sharedText)
-            putExtra(EXTRA_SUBJECT, getShareSubject())
-            type = "text/plain"
-            flags = FLAG_ACTIVITY_NEW_DOCUMENT + FLAG_ACTIVITY_MULTIPLE_TASK
-            setClassName(app.packageName, app.activityName)
-        }
+        val intent =
+            Intent(ACTION_SEND).apply {
+                val sharedText =
+                    sentFromFirefoxManager.maybeAppendShareText(
+                        packageName = app.packageName,
+                        shareText = getShareText(),
+                    )
+                putExtra(EXTRA_TEXT, sharedText)
+                putExtra(EXTRA_SUBJECT, getShareSubject())
+                type = "text/plain"
+                flags = FLAG_ACTIVITY_NEW_DOCUMENT + FLAG_ACTIVITY_MULTIPLE_TASK
+                setClassName(app.packageName, app.activityName)
+            }
 
         @Suppress("TooGenericExceptionCaught")
-        val result = try {
-            context.startActivity(intent)
-            ShareController.Result.SUCCESS
-        } catch (e: Exception) {
-            when (e) {
-                is SecurityException, is ActivityNotFoundException -> {
-                    appStore.dispatch(ShareAction.ShareToAppFailed)
+        val result =
+            try {
+                context.startActivity(intent)
+                ShareController.Result.SUCCESS
+            } catch (e: Exception) {
+                when (e) {
+                    is SecurityException,
+                    is ActivityNotFoundException -> {
+                        appStore.dispatch(ShareAction.ShareToAppFailed)
 
-                    ShareController.Result.SHARE_ERROR
+                        ShareController.Result.SHARE_ERROR
+                    }
+                    else -> throw e
                 }
-                else -> throw e
             }
-        }
         dismiss(result)
     }
 
@@ -197,16 +208,13 @@ class DefaultShareController(
     }
 
     override fun handleShareToAllDevices(devices: List<Device>) {
-        shareToDevicesWithRetry(
-            devices.map { it.id },
-        ) { sendTabUseCases.sendToAllAsync(shareData.toTabData()) }
+        shareToDevicesWithRetry(devices.map { it.id }) { sendTabUseCases.sendToAllAsync(shareData.toTabData()) }
     }
 
     override fun handleSignIn() {
         SyncAccount.signInToSendTab.record(NoExtras())
-        val directions = ShareFragmentDirections.actionGlobalTurnOnSync(
-            entrypoint = fxaEntrypoint as FenixFxAEntryPoint,
-        )
+        val directions =
+            ShareFragmentDirections.actionGlobalTurnOnSync(entrypoint = fxaEntrypoint as FenixFxAEntryPoint)
         navController.nav(R.id.shareFragment, directions)
         dismiss(ShareController.Result.DISMISSED)
     }
@@ -224,13 +232,14 @@ class DefaultShareController(
     ) {
         // Use GlobalScope to allow the continuation of this method even if the share fragment is closed.
         GlobalScope.launch(mainDispatcher) {
-            val result = if (shareOperation.invoke().await()) {
-                showSuccess(destination)
-                ShareController.Result.SUCCESS
-            } else {
-                showFailureWithRetryOption(destination)
-                ShareController.Result.DISMISSED
-            }
+            val result =
+                if (shareOperation.invoke().await()) {
+                    showSuccess(destination)
+                    ShareController.Result.SUCCESS
+                } else {
+                    showFailureWithRetryOption(destination)
+                    ShareController.Result.DISMISSED
+                }
             if (navController.currentDestination?.id == R.id.shareFragment) {
                 dismiss(result)
             }
@@ -258,29 +267,30 @@ class DefaultShareController(
     }
 
     @VisibleForTesting
-    fun getShareText() = shareData.joinToString("\n\n") { data ->
-        val url = data.url.orEmpty()
-        val text = data.text.orEmpty()
-        val shareUrl = if (url.isExtensionUrl()) {
-            // Sharing moz-extension:// URLs is not practical in general, as
-            // they will only work on the current device.
+    fun getShareText() =
+        shareData.joinToString("\n\n") { data ->
+            val url = data.url.orEmpty()
+            val text = data.text.orEmpty()
+            val shareUrl =
+                if (url.isExtensionUrl()) {
+                    // Sharing moz-extension:// URLs is not practical in general, as
+                    // they will only work on the current device.
 
-            // We solve this for URLs from our reader extension as they contain
-            // the original URL as a query parameter. This is a workaround for
-            // now and needs a clean fix once we have a reader specific protocol
-            // e.g. ext+reader://
-            // https://github.com/mozilla-mobile/android-components/issues/2879
-            url.toUri().getQueryParameter("url") ?: url
-        } else {
-            url
+                    // We solve this for URLs from our reader extension as they contain
+                    // the original URL as a query parameter. This is a workaround for
+                    // now and needs a clean fix once we have a reader specific protocol
+                    // e.g. ext+reader://
+                    // https://github.com/mozilla-mobile/android-components/issues/2879
+                    url.toUri().getQueryParameter("url") ?: url
+                } else {
+                    url
+                }
+            listOfNotNull(text, shareUrl).filter { it.isNotEmpty() }.joinToString("\n")
         }
-        listOfNotNull(text, shareUrl).filter { it.isNotEmpty() }.joinToString("\n")
-    }
 
     @VisibleForTesting
     internal fun getShareSubject() =
-        shareSubject ?: shareData.filterNot { it.title.isNullOrEmpty() }
-            .joinToString(", ") { it.title.toString() }
+        shareSubject ?: shareData.filterNot { it.title.isNullOrEmpty() }.joinToString(", ") { it.title.toString() }
 
     // Navigation between app fragments uses ShareTab as arguments. SendTabUseCases uses TabData.
     @VisibleForTesting
@@ -296,19 +306,19 @@ class DefaultShareController(
         return "data:,${Uri.encode(this)}"
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun copyClipboard() {
         val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clipData = ClipData.newPlainText(getShareSubject(), getShareText())
 
-        clipboardManager.setPrimaryClip(clipData)
-
-        // Android 13+ shows by default a popup for copied text.
-        // Avoid overlapping popups informing the user when the URL is copied to the clipboard.
-        // and only show our snackbar when Android will not show an indication by default.                 *
-        // See https://developer.android.com/develop/ui/views/touch-and-input/copy-paste#duplicate-notifications).
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-            appStore.dispatch(ShareAction.CopyLinkToClipboard)
+        if (isPrivate) {
+            clipData.description.extras =
+                PersistableBundle().apply {
+                    putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+                }
         }
+
+        clipboardManager.setPrimaryClip(clipData)
     }
 
     companion object {

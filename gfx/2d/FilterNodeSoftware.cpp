@@ -2,16 +2,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include <cmath>
-#include "DataSurfaceHelpers.h"
 #include "FilterNodeSoftware.h"
-#include "2D.h"
-#include "Tools.h"
-#include "Blur.h"
+
+#include <cmath>
 #include <map>
 #include <numeric>
+
+#include "2D.h"
+#include "Blur.h"
+#include "DataSurfaceHelpers.h"
 #include "FilterProcessing.h"
 #include "Logging.h"
+#include "Tools.h"
 #include "mozilla/PodOperations.h"
 
 // #define DEBUG_DUMP_SURFACES
@@ -441,96 +443,96 @@ already_AddRefed<FilterNode> FilterNodeSoftware::Create(FilterType aType) {
   RefPtr<FilterNodeSoftware> filter;
   switch (aType) {
     case FilterType::BLEND:
-      filter = new FilterNodeBlendSoftware();
+      filter = MakeRefPtr<FilterNodeBlendSoftware>();
       break;
     case FilterType::TRANSFORM:
-      filter = new FilterNodeTransformSoftware();
+      filter = MakeRefPtr<FilterNodeTransformSoftware>();
       break;
     case FilterType::MORPHOLOGY:
-      filter = new FilterNodeMorphologySoftware();
+      filter = MakeRefPtr<FilterNodeMorphologySoftware>();
       break;
     case FilterType::COLOR_MATRIX:
-      filter = new FilterNodeColorMatrixSoftware();
+      filter = MakeRefPtr<FilterNodeColorMatrixSoftware>();
       break;
     case FilterType::FLOOD:
-      filter = new FilterNodeFloodSoftware();
+      filter = MakeRefPtr<FilterNodeFloodSoftware>();
       break;
     case FilterType::TILE:
-      filter = new FilterNodeTileSoftware();
+      filter = MakeRefPtr<FilterNodeTileSoftware>();
       break;
     case FilterType::TABLE_TRANSFER:
-      filter = new FilterNodeTableTransferSoftware();
+      filter = MakeRefPtr<FilterNodeTableTransferSoftware>();
       break;
     case FilterType::DISCRETE_TRANSFER:
-      filter = new FilterNodeDiscreteTransferSoftware();
+      filter = MakeRefPtr<FilterNodeDiscreteTransferSoftware>();
       break;
     case FilterType::LINEAR_TRANSFER:
-      filter = new FilterNodeLinearTransferSoftware();
+      filter = MakeRefPtr<FilterNodeLinearTransferSoftware>();
       break;
     case FilterType::GAMMA_TRANSFER:
-      filter = new FilterNodeGammaTransferSoftware();
+      filter = MakeRefPtr<FilterNodeGammaTransferSoftware>();
       break;
     case FilterType::CONVOLVE_MATRIX:
-      filter = new FilterNodeConvolveMatrixSoftware();
+      filter = MakeRefPtr<FilterNodeConvolveMatrixSoftware>();
       break;
     case FilterType::DISPLACEMENT_MAP:
-      filter = new FilterNodeDisplacementMapSoftware();
+      filter = MakeRefPtr<FilterNodeDisplacementMapSoftware>();
       break;
     case FilterType::TURBULENCE:
-      filter = new FilterNodeTurbulenceSoftware();
+      filter = MakeRefPtr<FilterNodeTurbulenceSoftware>();
       break;
     case FilterType::ARITHMETIC_COMBINE:
-      filter = new FilterNodeArithmeticCombineSoftware();
+      filter = MakeRefPtr<FilterNodeArithmeticCombineSoftware>();
       break;
     case FilterType::COMPOSITE:
-      filter = new FilterNodeCompositeSoftware();
+      filter = MakeRefPtr<FilterNodeCompositeSoftware>();
       break;
     case FilterType::GAUSSIAN_BLUR:
-      filter = new FilterNodeGaussianBlurSoftware();
+      filter = MakeRefPtr<FilterNodeGaussianBlurSoftware>();
       break;
     case FilterType::DIRECTIONAL_BLUR:
-      filter = new FilterNodeDirectionalBlurSoftware();
+      filter = MakeRefPtr<FilterNodeDirectionalBlurSoftware>();
       break;
     case FilterType::CROP:
-      filter = new FilterNodeCropSoftware();
+      filter = MakeRefPtr<FilterNodeCropSoftware>();
       break;
     case FilterType::PREMULTIPLY:
-      filter = new FilterNodePremultiplySoftware();
+      filter = MakeRefPtr<FilterNodePremultiplySoftware>();
       break;
     case FilterType::UNPREMULTIPLY:
-      filter = new FilterNodeUnpremultiplySoftware();
+      filter = MakeRefPtr<FilterNodeUnpremultiplySoftware>();
       break;
     case FilterType::OPACITY:
-      filter = new FilterNodeOpacitySoftware();
+      filter = MakeRefPtr<FilterNodeOpacitySoftware>();
       break;
     case FilterType::POINT_DIFFUSE:
-      filter = new FilterNodeLightingSoftware<PointLightSoftware,
-                                              DiffuseLightingSoftware>(
+      filter = MakeRefPtr<FilterNodeLightingSoftware<PointLightSoftware,
+                                                     DiffuseLightingSoftware>>(
           "FilterNodeLightingSoftware<PointLight, DiffuseLighting>");
       break;
     case FilterType::POINT_SPECULAR:
-      filter = new FilterNodeLightingSoftware<PointLightSoftware,
-                                              SpecularLightingSoftware>(
+      filter = MakeRefPtr<FilterNodeLightingSoftware<PointLightSoftware,
+                                                     SpecularLightingSoftware>>(
           "FilterNodeLightingSoftware<PointLight, SpecularLighting>");
       break;
     case FilterType::SPOT_DIFFUSE:
-      filter = new FilterNodeLightingSoftware<SpotLightSoftware,
-                                              DiffuseLightingSoftware>(
+      filter = MakeRefPtr<FilterNodeLightingSoftware<SpotLightSoftware,
+                                                     DiffuseLightingSoftware>>(
           "FilterNodeLightingSoftware<SpotLight, DiffuseLighting>");
       break;
     case FilterType::SPOT_SPECULAR:
-      filter = new FilterNodeLightingSoftware<SpotLightSoftware,
-                                              SpecularLightingSoftware>(
+      filter = MakeRefPtr<FilterNodeLightingSoftware<SpotLightSoftware,
+                                                     SpecularLightingSoftware>>(
           "FilterNodeLightingSoftware<SpotLight, SpecularLighting>");
       break;
     case FilterType::DISTANT_DIFFUSE:
-      filter = new FilterNodeLightingSoftware<DistantLightSoftware,
-                                              DiffuseLightingSoftware>(
+      filter = MakeRefPtr<FilterNodeLightingSoftware<DistantLightSoftware,
+                                                     DiffuseLightingSoftware>>(
           "FilterNodeLightingSoftware<DistantLight, DiffuseLighting>");
       break;
     case FilterType::DISTANT_SPECULAR:
-      filter = new FilterNodeLightingSoftware<DistantLightSoftware,
-                                              SpecularLightingSoftware>(
+      filter = MakeRefPtr<FilterNodeLightingSoftware<DistantLightSoftware,
+                                                     SpecularLightingSoftware>>(
           "FilterNodeLightingSoftware<DistantLight, SpecularLighting>");
       break;
   }
@@ -894,11 +896,9 @@ void FilterNodeSoftware::FilterInvalidated(FilterNodeSoftware* aFilter) {
 void FilterNodeSoftware::Invalidate() {
   mCachedOutput = nullptr;
   mCachedRect = IntRect();
-  for (std::vector<FilterInvalidationListener*>::iterator it =
-           mInvalidationListeners.begin();
-       it != mInvalidationListeners.end(); it++) {
-    (*it)->FilterInvalidated(this);
-  }
+  std::ranges::for_each(
+      mInvalidationListeners,
+      [&](FilterInvalidationListener* i) { i->FilterInvalidated(this); });
 }
 
 FilterNodeSoftware::FilterNodeSoftware() = default;
@@ -908,13 +908,11 @@ FilterNodeSoftware::~FilterNodeSoftware() {
       mInvalidationListeners.empty(),
       "All invalidation listeners should have unsubscribed themselves by now!");
 
-  for (std::vector<RefPtr<FilterNodeSoftware> >::iterator it =
-           mInputFilters.begin();
-       it != mInputFilters.end(); it++) {
-    if (*it) {
-      (*it)->RemoveInvalidationListener(this);
+  std::ranges::for_each(mInputFilters, [&](RefPtr<FilterNodeSoftware>& i) {
+    if (i) {
+      i->RemoveInvalidationListener(this);
     }
-  }
+  });
 }
 
 void FilterNodeSoftware::SetInput(uint32_t aIndex, FilterNode* aFilter) {
@@ -2440,8 +2438,7 @@ already_AddRefed<DataSourceSurface> FilterNodeConvolveMatrixSoftware::DoRender(
     CoordType aKernelUnitLengthY) {
   // Ensure multiply fits in an int32_t so convolve math won't overflow.
   auto kernelArea = CheckedInt32(mKernelSize.width) * mKernelSize.height;
-  if (mKernelSize.width <= 0 || mKernelSize.height <= 0 ||
-      !kernelArea.isValid() ||
+  if (mKernelSize.IsEmpty() || !kernelArea.isValid() ||
       mKernelMatrix.size() != size_t(kernelArea.value()) ||
       !IntRect(IntPoint(0, 0), mKernelSize).Contains(mTarget) ||
       mDivisor == 0) {
@@ -2505,7 +2502,7 @@ already_AddRefed<DataSourceSurface> FilterNodeConvolveMatrixSoftware::DoRender(
   MOZ_ASSERT(255.0 * maxResultAbs * factorFromShifts <= INT32_MAX / 2.0,
              "badly chosen float-to-int scale");
 
-  int32_t* intKernel = new int32_t[kernel.size()];
+  auto intKernel = MakeUnique<int32_t[]>(kernel.size());
   for (size_t i = 0; i < kernel.size(); i++) {
     intKernel[i] = NS_lround(kernel[i] * factorFromShifts);
   }
@@ -2515,13 +2512,11 @@ already_AddRefed<DataSourceSurface> FilterNodeConvolveMatrixSoftware::DoRender(
     for (int32_t x = 0; x < aRect.Width(); x++) {
       ConvolvePixel(sourceData, targetData, aRect.Width(), aRect.Height(),
                     sourceStride, targetStride, sourceBegin, sourceEnd, x, y,
-                    intKernel, bias, shiftL, shiftR, mPreserveAlpha,
+                    intKernel.get(), bias, shiftL, shiftR, mPreserveAlpha,
                     mKernelSize.width, mKernelSize.height, mTarget.x, mTarget.y,
                     aKernelUnitLengthX, aKernelUnitLengthY);
     }
   }
-  delete[] intKernel;
-
   return target.forget();
 }
 
@@ -2601,6 +2596,9 @@ int32_t FilterNodeDisplacementMapSoftware::InputIndex(
 void FilterNodeDisplacementMapSoftware::SetAttribute(uint32_t aIndex,
                                                      Float aScale) {
   MOZ_ASSERT(aIndex == ATT_DISPLACEMENT_MAP_SCALE);
+  if (!std::isfinite(aScale)) {
+    aScale = 0.0f;
+  }
   mScale = aScale;
   Invalidate();
 }
@@ -2707,9 +2705,17 @@ IntRect FilterNodeDisplacementMapSoftware::MapRectToSource(
 
 IntRect FilterNodeDisplacementMapSoftware::InflatedSourceOrDestRect(
     const IntRect& aDestOrSourceRect) {
-  IntRect sourceOrDestRect = aDestOrSourceRect;
-  sourceOrDestRect.Inflate(ceil(fabs(mScale) / 2));
-  return sourceOrDestRect;
+  if (aDestOrSourceRect.IsEmpty()) {
+    return IntRect();
+  }
+
+  RectDouble destOrSourceRect(aDestOrSourceRect);
+  destOrSourceRect.Inflate(ceil(fabs(mScale) / 2));
+  if (!RectIsInt32Safe(destOrSourceRect)) {
+    return IntRect();
+  }
+
+  return TruncatedToInt(destOrSourceRect);
 }
 
 IntRect FilterNodeDisplacementMapSoftware::GetOutputRectInRect(
@@ -3215,7 +3221,7 @@ IntRect FilterNodeUnpremultiplySoftware::GetOutputRectInRect(
 
 void FilterNodeOpacitySoftware::SetAttribute(uint32_t aIndex, Float aValue) {
   MOZ_ASSERT(aIndex == ATT_OPACITY_VALUE);
-  mValue = aValue;
+  mValue = std::clamp(aValue, 0.0f, 1.0f);
   Invalidate();
 }
 
@@ -3280,10 +3286,10 @@ bool SpotLightSoftware::SetAttribute(uint32_t aIndex, const Point3D& aPoint) {
 bool SpotLightSoftware::SetAttribute(uint32_t aIndex, Float aValue) {
   switch (aIndex) {
     case ATT_SPOT_LIGHT_LIMITING_CONE_ANGLE:
-      mLimitingConeAngle = aValue;
+      mLimitingConeAngle = std::clamp(aValue, -90.0f, 90.0f);
       break;
     case ATT_SPOT_LIGHT_FOCUS:
-      mSpecularFocus = aValue;
+      mSpecularFocus = std::clamp(aValue, 0.0f, 200.0f);
       break;
     default:
       return false;
@@ -3293,13 +3299,22 @@ bool SpotLightSoftware::SetAttribute(uint32_t aIndex, Float aValue) {
 
 DistantLightSoftware::DistantLightSoftware() : mAzimuth(0), mElevation(0) {}
 
+static Float NormalizeAngle(Float aValue) {
+  if (aValue < 0.0f) {
+    return std::fmod(aValue, 360.f) + 360.f;
+  } else if (aValue > 360.f) {
+    return std::fmod(aValue, 360.f);
+  }
+  return aValue;
+}
+
 bool DistantLightSoftware::SetAttribute(uint32_t aIndex, Float aValue) {
   switch (aIndex) {
     case ATT_DISTANT_LIGHT_AZIMUTH:
-      mAzimuth = aValue;
+      mAzimuth = NormalizeAngle(aValue);
       break;
     case ATT_DISTANT_LIGHT_ELEVATION:
-      mElevation = aValue;
+      mElevation = NormalizeAngle(aValue);
       break;
     default:
       return false;
@@ -3669,7 +3684,7 @@ DiffuseLightingSoftware::DiffuseLightingSoftware() : mDiffuseConstant(0) {}
 bool DiffuseLightingSoftware::SetAttribute(uint32_t aIndex, Float aValue) {
   switch (aIndex) {
     case ATT_DIFFUSE_LIGHTING_DIFFUSE_CONSTANT:
-      mDiffuseConstant = aValue;
+      mDiffuseConstant = std::clamp(aValue, 0.0f, 10000.0f);
       break;
     default:
       return false;

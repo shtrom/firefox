@@ -88,9 +88,7 @@ add_task(async function test_smartbar_submit_chat() {
   try {
     const fetchWithHistoryStub = sb.stub(this.Chat, "fetchWithHistory");
     // prevent title generation network requests
-    sb.stub(this.openAIEngine, "build").resolves({
-      loadPrompt: () => Promise.resolve("Mock system prompt"),
-    });
+    sb.stub(this.openAIEngine, "build").resolves({});
     const win = await openAIWindow();
     const browser = win.gBrowser.selectedBrowser;
 
@@ -101,7 +99,7 @@ add_task(async function test_smartbar_submit_chat() {
     );
 
     const conversation = fetchWithHistoryStub.firstCall.args[0].conversation;
-    const messages = conversation.getMessagesInOpenAiFormat();
+    const messages = conversation.getMessagesInChatCompletionsFormat();
     const userMessage = messages.findLast(message => message.role === "user");
 
     Assert.equal(
@@ -161,6 +159,9 @@ add_task(async function test_smartbar_explicit_navigate_action() {
 
   await typeInSmartbar(browser, testURL);
   await selectExplicitSmartbarAction(browser, "navigate");
+  // Picking an action locks the button but does not submit.
+  await waitForSmartbarAction(browser, "navigate");
+  await submitSmartbar(browser);
 
   await loaded;
   Assert.equal(
@@ -178,18 +179,27 @@ add_task(async function test_smartbar_explicit_search_action() {
 
   const searchQuery = "tell me about cats";
 
-  await stubLoadURL(browser, { captureURL: true });
+  await stubOpenSERP(browser);
   await typeInSmartbar(browser, searchQuery);
   await selectExplicitSmartbarAction(browser, "search");
+  // Picking an action locks the button but does not submit.
+  await waitForSmartbarAction(browser, "search");
+  const beforeSubmit = await getStubLoadURLResult(browser);
+  Assert.ok(
+    !beforeSubmit.called,
+    "Selecting an action should not submit on its own"
+  );
+  await submitSmartbar(browser);
 
-  const searchResult = await getStubLoadURLResult(browser);
+  const searchResult = await getStubOpenSERPResult(browser);
   Assert.ok(
     searchResult.called,
-    "_loadURL should get called for explicit search action"
+    "controller.openSERP should get called for explicit search action"
   );
-  Assert.ok(
-    searchResult.url.includes("cats"),
-    `Search URL should contain the query: ${searchResult.url}`
+  Assert.equal(
+    searchResult.terms,
+    searchQuery,
+    "Search terms should match the query"
   );
 
   await BrowserTestUtils.closeWindow(win);
@@ -288,9 +298,7 @@ add_task(async function test_smartbar_can_submit_followup_prompts() {
   try {
     const fetchWithHistoryStub = sb.stub(this.Chat, "fetchWithHistory");
     // prevent title generation network requests
-    sb.stub(this.openAIEngine, "build").resolves({
-      loadPrompt: () => Promise.resolve("Mock system prompt"),
-    });
+    sb.stub(this.openAIEngine, "build").resolves({});
     const win = await openAIWindow();
     const browser = win.gBrowser.selectedBrowser;
 
@@ -303,7 +311,7 @@ add_task(async function test_smartbar_can_submit_followup_prompts() {
     await submitSmartbar(browser);
 
     const conversation = fetchWithHistoryStub.firstCall.args[0].conversation;
-    const messages = conversation.getMessagesInOpenAiFormat();
+    const messages = conversation.getMessagesInChatCompletionsFormat();
     const initialUserMessage = messages.find(
       message => message.content === intialPrompt
     );
@@ -333,9 +341,7 @@ add_task(async function test_smartbar_cleared_after_chat_action() {
   try {
     sb.stub(this.Chat, "fetchWithHistory");
     // prevent title generation network requests
-    sb.stub(this.openAIEngine, "build").resolves({
-      loadPrompt: () => Promise.resolve("Mock system prompt"),
-    });
+    sb.stub(this.openAIEngine, "build").resolves({});
     const win = await openAIWindow();
     const browser = win.gBrowser.selectedBrowser;
     const aiWindowElement =

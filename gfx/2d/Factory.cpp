@@ -15,38 +15,33 @@
 #include "PathSkia.h"
 #include "ScaledFontBase.h"
 
-#if defined(WIN32)
-#  include "ScaledFontWin.h"
-#  include "NativeFontResourceGDI.h"
-#  include "UnscaledFontGDI.h"
-#endif
-
 #ifdef XP_DARWIN
-#  include "ScaledFontMac.h"
 #  include "NativeFontResourceMac.h"
+#  include "ScaledFontMac.h"
 #  include "UnscaledFontMac.h"
 #endif
 
 #ifdef MOZ_WIDGET_GTK
-#  include "ScaledFontFontconfig.h"
 #  include "NativeFontResourceFreeType.h"
+#  include "ScaledFontFontconfig.h"
 #  include "UnscaledFontFreeType.h"
 #endif
 
 #ifdef MOZ_WIDGET_ANDROID
-#  include "ScaledFontFreeType.h"
 #  include "NativeFontResourceFreeType.h"
+#  include "ScaledFontFreeType.h"
 #  include "UnscaledFontFreeType.h"
 #endif
 
 #ifdef WIN32
-#  include "ScaledFontDWrite.h"
-#  include "NativeFontResourceDWrite.h"
-#  include "UnscaledFontDWrite.h"
 #  include <d3d10_1.h>
 #  include <stdlib.h>
+
 #  include "HelpersWin.h"
 #  include "ImageContainer.h"
+#  include "NativeFontResourceDWrite.h"
+#  include "ScaledFontDWrite.h"
+#  include "UnscaledFontDWrite.h"
 #  include "mozilla/layers/LayersSurfaces.h"
 #  include "mozilla/layers/TextureD3D11.h"
 #  include "mozilla/layers/VideoProcessorD3D11.h"
@@ -56,9 +51,7 @@
 #include "DrawTargetOffset.h"
 #include "DrawTargetRecording.h"
 #include "PathRecording.h"
-
 #include "SourceSurfaceRawData.h"
-
 #include "mozilla/CheckedInt.h"
 
 #ifdef MOZ_ENABLE_FREETYPE
@@ -127,8 +120,8 @@ StaticMutex Factory::mFTLock;
 
 already_AddRefed<SharedFTFace> FTUserFontData::CloneFace(int aFaceIndex) {
   if (mFontData) {
-    RefPtr<SharedFTFace> face = Factory::NewSharedFTFaceFromData(
-        nullptr, mFontData, mLength, aFaceIndex, this);
+    RefPtr<SharedFTFace> face =
+        Factory::NewSharedFTFaceFromData(nullptr, mFontData, aFaceIndex, this);
     if (!face ||
         (FT_Select_Charmap(face->GetFace(), FT_ENCODING_UNICODE) != FT_Err_Ok &&
          FT_Select_Charmap(face->GetFace(), FT_ENCODING_MS_SYMBOL) !=
@@ -358,7 +351,7 @@ already_AddRefed<DrawTarget> Factory::CreateDrawTargetForData(
 
 already_AddRefed<DrawTarget> Factory::CreateOffsetDrawTarget(
     DrawTarget* aDrawTarget, IntPoint aTileOrigin) {
-  RefPtr<DrawTargetOffset> dt = new DrawTargetOffset();
+  RefPtr dt = MakeRefPtr<DrawTargetOffset>();
 
   if (!dt->Init(aDrawTarget, aTileOrigin)) {
     return nullptr;
@@ -412,8 +405,6 @@ already_AddRefed<NativeFontResource> Factory::CreateNativeFontResource(
 #ifdef WIN32
     case FontType::DWRITE:
       return NativeFontResourceDWrite::Create(aData, aSize);
-    case FontType::GDI:
-      return NativeFontResourceGDI::Create(aData, aSize);
 #elif defined(XP_DARWIN)
     case FontType::MAC:
       return NativeFontResourceMac::Create(aData, aSize);
@@ -441,9 +432,6 @@ already_AddRefed<UnscaledFont> Factory::CreateUnscaledFontFromFontDescriptor(
     case FontType::DWRITE:
       return UnscaledFontDWrite::CreateFromFontDescriptor(aData, aDataLength,
                                                           aIndex);
-    case FontType::GDI:
-      return UnscaledFontGDI::CreateFromFontDescriptor(aData, aDataLength,
-                                                       aIndex);
 #elif defined(XP_DARWIN)
     case FontType::MAC:
       return UnscaledFontMac::CreateFromFontDescriptor(aData, aDataLength,
@@ -578,13 +566,13 @@ already_AddRefed<SharedFTFace> Factory::NewSharedFTFace(FT_Library aFTLibrary,
 }
 
 FT_Face Factory::NewFTFaceFromData(FT_Library aFTLibrary, const uint8_t* aData,
-                                   size_t aDataSize, int aFaceIndex) {
+                                   uint32_t aLength, int aFaceIndex) {
   StaticMutexAutoLock lock(mFTLock);
   if (!aFTLibrary) {
     aFTLibrary = mFTLibrary;
   }
   FT_Face face;
-  if (FT_New_Memory_Face(aFTLibrary, aData, aDataSize, aFaceIndex, &face) !=
+  if (FT_New_Memory_Face(aFTLibrary, aData, aLength, aFaceIndex, &face) !=
       FT_Err_Ok) {
     return nullptr;
   }
@@ -592,10 +580,10 @@ FT_Face Factory::NewFTFaceFromData(FT_Library aFTLibrary, const uint8_t* aData,
 }
 
 already_AddRefed<SharedFTFace> Factory::NewSharedFTFaceFromData(
-    FT_Library aFTLibrary, const uint8_t* aData, size_t aDataSize,
-    int aFaceIndex, SharedFTFaceData* aSharedData) {
-  if (FT_Face face =
-          NewFTFaceFromData(aFTLibrary, aData, aDataSize, aFaceIndex)) {
+    FT_Library aFTLibrary, FontData* aFontData, int aFaceIndex,
+    SharedFTFaceData* aSharedData) {
+  if (FT_Face face = NewFTFaceFromData(aFTLibrary, aFontData->Data(),
+                                       aFontData->Length(), aFaceIndex)) {
     return MakeAndAddRef<SharedFTFace>(face, aSharedData);
   } else {
     return nullptr;
@@ -712,18 +700,11 @@ already_AddRefed<ScaledFont> Factory::CreateScaledFontForDWriteFont(
       aFontFace, aUnscaledFont, aSize, aUseEmbeddedBitmap, aUseMultistrikeBold,
       aGDIForced, aStyle);
 }
-
-already_AddRefed<ScaledFont> Factory::CreateScaledFontForGDIFont(
-    const void* aLogFont, const RefPtr<UnscaledFont>& aUnscaledFont,
-    Float aSize) {
-  return MakeAndAddRef<ScaledFontWin>(static_cast<const LOGFONT*>(aLogFont),
-                                      aUnscaledFont, aSize);
-}
 #endif  // WIN32
 
 already_AddRefed<DrawTarget> Factory::CreateDrawTargetWithSkCanvas(
     SkCanvas* aCanvas) {
-  RefPtr<DrawTargetSkia> newTarget = new DrawTargetSkia();
+  RefPtr newTarget = MakeRefPtr<DrawTargetSkia>();
   if (!newTarget->Init(aCanvas)) {
     return nullptr;
   }
@@ -741,7 +722,7 @@ already_AddRefed<DrawTarget> Factory::CreateDrawTargetForCairoSurface(
   RefPtr<DrawTarget> retVal;
 
 #ifdef USE_CAIRO
-  RefPtr<DrawTargetCairo> newTarget = new DrawTargetCairo();
+  RefPtr newTarget = MakeRefPtr<DrawTargetCairo>();
 
   if (newTarget->Init(aSurface, aSize, aFormat)) {
     retVal = newTarget;
@@ -781,7 +762,7 @@ already_AddRefed<DataSourceSurface> Factory::CreateWrappingDataSourceSurface(
 
   MOZ_ASSERT(aData);
 
-  RefPtr<SourceSurfaceRawData> newSurf = new SourceSurfaceRawData();
+  RefPtr newSurf = MakeRefPtr<SourceSurfaceRawData>();
   newSurf->InitWrappingData(aData, aSize, aStride, aFormat, aDeallocator,
                             aClosure);
 
@@ -800,8 +781,7 @@ already_AddRefed<DataSourceSurface> Factory::CreateDataSourceSurface(
   bool clearSurface = aZero || aFormat == SurfaceFormat::B8G8R8X8;
   uint8_t clearValue = aFormat == SurfaceFormat::B8G8R8X8 ? 0xFF : 0;
 
-  RefPtr<SourceSurfaceAlignedRawData> newSurf =
-      new SourceSurfaceAlignedRawData();
+  RefPtr newSurf = MakeRefPtr<SourceSurfaceAlignedRawData>();
   if (newSurf->Init(aSize, aFormat, clearSurface, clearValue)) {
     return newSurf.forget();
   }
@@ -824,8 +804,7 @@ already_AddRefed<DataSourceSurface> Factory::CreateDataSourceSurfaceWithStride(
   bool clearSurface = aZero || aFormat == SurfaceFormat::B8G8R8X8;
   uint8_t clearValue = aFormat == SurfaceFormat::B8G8R8X8 ? 0xFF : 0;
 
-  RefPtr<SourceSurfaceAlignedRawData> newSurf =
-      new SourceSurfaceAlignedRawData();
+  RefPtr newSurf = MakeRefPtr<SourceSurfaceAlignedRawData>();
   if (newSurf->Init(aSize, aFormat, clearSurface, clearValue, aStride)) {
     return newSurf.forget();
   }

@@ -19,7 +19,6 @@
 #include "mozilla/Maybe.h"
 
 #include "js/Value.h"
-
 #include "wasm/WasmGcObject.h"
 #include "wasm/WasmInstance.h"
 #include "wasm/WasmOpIter.h"
@@ -40,7 +39,7 @@ class MOZ_STACK_CLASS InitExprInterpreter {
  public:
   explicit InitExprInterpreter(JSContext* cx,
                                Handle<WasmInstanceObject*> instanceObj)
-      : features(FeatureArgs::build(cx, FeatureOptions())),
+      : features(instanceObj->instance().codeMeta().features()),
         stack(cx),
         instanceObj(cx, instanceObj),
         types(instanceObj->instance().codeMeta().types) {}

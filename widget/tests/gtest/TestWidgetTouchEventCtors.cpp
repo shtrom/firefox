@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "TestWidgetEventCtors.h"
 #include "gtest/gtest.h"
 #include "mozilla/TouchEvents.h"
 #include "mozilla/dom/MouseEventBinding.h"
-#include "TestWidgetEventCtors.h"
 
 namespace mozilla {
 
@@ -170,8 +170,8 @@ TEST(WidgetTouchEventCtorTests, WidgetTouchEvent)
   origin.mButtons = MouseButtonsFlag::eMiddleFlag;
   origin.mInputSource = dom::MouseEvent_Binding::MOZ_SOURCE_MOUSE;
   origin.mCallbackId = Some(256);
-  RefPtr<dom::Touch> touch = new dom::Touch(
-      3, LayoutDeviceIntPoint{0, 0}, LayoutDeviceIntPoint{1, 1}, 0.0f, 0.5f);
+  auto touch = MakeRefPtr<dom::Touch>(3, LayoutDeviceIntPoint{0, 0},
+                                      LayoutDeviceIntPoint{1, 1}, 0.0f, 0.5f);
   origin.mTouches.AppendElement(touch);
   {
     WidgetTouchEvent copy(origin);

@@ -303,7 +303,6 @@ export class _DSCard extends React.PureComponent {
           value: {
             event_source: "card",
             card_type: this.props.flightId ? "spoc" : "organic",
-            recommendation_id: this.props.recommendation_id,
             tile_id: this.props.id,
             ...(this.props.shim && this.props.shim.click
               ? { shim: this.props.shim.click }
@@ -354,7 +353,6 @@ export class _DSCard extends React.PureComponent {
                 ? { shim: this.props.shim.click }
                 : {}),
               type: this.props.flightId ? "spoc" : "organic",
-              recommendation_id: this.props.recommendation_id,
               topic: this.props.topic,
               selected_topics: this.props.selectedTopics,
               ...(this.props.format
@@ -539,7 +537,9 @@ export class _DSCard extends React.PureComponent {
   renderSectionCardImages() {
     const { sectionsCardImageSizes } = this.props;
 
-    const columns = ["1", "2", "3", "4"];
+    // Derived from the layout's breakpoints rather than a fixed list, so a
+    // 5-column layout renders a 5th variant.
+    const columns = Object.keys(sectionsCardImageSizes);
 
     return (
       <>
@@ -612,6 +612,8 @@ export class _DSCard extends React.PureComponent {
     } = DiscoveryStream;
 
     const sectionsEnabled = Prefs.values[PREF_SECTIONS_ENABLED];
+    // @nova-cleanup(remove-pref): Delete this read and the two novaEnabled props
+    // passed to DSContextFooter below; that component drops the prop entirely.
     const novaEnabled = Prefs.values["nova.enabled"];
     // We can ignore hideDescriptions if we are in sections.
     const excerpt =
@@ -680,51 +682,47 @@ export class _DSCard extends React.PureComponent {
           tabIndex={this.props.tabIndex}
           onFocus={this.props.onFocus}
         >
-          <div className="img-wrapper">
-            {images}
-            {this.props.isDailyBrief && this.props.topic && (
-              <span
-                className="ds-card-daily-brief-topic"
-                data-l10n-id={`newtab-topic-label-${this.props.topic}`}
-              />
-            )}
-          </div>
-          <ImpressionStats
-            flightId={this.props.flightId}
-            rows={[
-              {
-                id: this.props.id,
-                pos: this.props.pos,
-                ...(this.props.shim && this.props.shim.impression
-                  ? { shim: this.props.shim.impression }
-                  : {}),
-                recommendation_id: this.props.recommendation_id,
-                corpus_item_id: this.props.corpus_item_id,
-                scheduled_corpus_item_id: this.props.scheduled_corpus_item_id,
-                recommended_at: this.props.recommended_at,
-                received_rank: this.props.received_rank,
-                topic: this.props.topic,
-                features: this.props.features,
-                ...(format ? { format } : {}),
-                category: this.props.category,
-                attribution: this.props.attribution,
-                ...(this.props.section
-                  ? {
-                      section: this.props.section,
-                      section_position: this.props.sectionPosition,
-                      is_section_followed: this.props.sectionFollowed,
-                      sectionLayoutName: this.props.sectionLayoutName,
-                    }
-                  : {}),
-                ...(!format && this.props.section
-                  ? // Note: sectionsCardsClassName is passed to ImpressionStats.jsx in order to calculate format
-                    { class_names: sectionsCardsClassName }
-                  : {}),
-              },
-            ]}
-            dispatch={this.props.dispatch}
-            source={this.props.type}
-          />
+          <div className="img-wrapper">{images}</div>
+          {/* Only the carousel passes isActive for its current slide. Its hidden
+              slides are stacked at zero opacity, which IntersectionObserver still
+              counts as visible, so they would otherwise all report impressions. */}
+          {this.props.isActive !== false && (
+            <ImpressionStats
+              flightId={this.props.flightId}
+              rows={[
+                {
+                  id: this.props.id,
+                  pos: this.props.pos,
+                  ...(this.props.shim && this.props.shim.impression
+                    ? { shim: this.props.shim.impression }
+                    : {}),
+                  corpus_item_id: this.props.corpus_item_id,
+                  scheduled_corpus_item_id: this.props.scheduled_corpus_item_id,
+                  recommended_at: this.props.recommended_at,
+                  received_rank: this.props.received_rank,
+                  topic: this.props.topic,
+                  features: this.props.features,
+                  ...(format ? { format } : {}),
+                  category: this.props.category,
+                  attribution: this.props.attribution,
+                  ...(this.props.section
+                    ? {
+                        section: this.props.section,
+                        section_position: this.props.sectionPosition,
+                        is_section_followed: this.props.sectionFollowed,
+                        sectionLayoutName: this.props.sectionLayoutName,
+                      }
+                    : {}),
+                  ...(!format && this.props.section
+                    ? // Note: sectionsCardsClassName is passed to ImpressionStats.jsx in order to calculate format
+                      { class_names: sectionsCardsClassName }
+                    : {}),
+                },
+              ]}
+              dispatch={this.props.dispatch}
+              source={this.props.type}
+            />
+          )}
 
           {ctaButtonVariant === "variant-b" && (
             <div className="cta-header">Shop Now</div>
@@ -768,7 +766,6 @@ export class _DSCard extends React.PureComponent {
               onMenuUpdate={this.onMenuUpdate}
               onMenuShow={this.onMenuShow}
               isRecentSave={isRecentSave}
-              recommendation_id={this.props.recommendation_id}
               tile_id={this.props.id}
               block_key={this.props.id}
               corpus_item_id={this.props.corpus_item_id}

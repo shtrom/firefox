@@ -9,49 +9,48 @@
  * nsWindow - Native window management and event handling.
  */
 
-#include "mozilla/RefPtr.h"
-#include "nsIWidget.h"
-#include "CompositorWidget.h"
-#include "mozilla/EventForwards.h"
-#include "nsClassHashtable.h"
 #include <windows.h>
-#include "touchinjection_sdk80.h"
-#include "nsdefs.h"
-#include "nsUserIdleService.h"
-#include "nsToolkit.h"
-#include "nsString.h"
-#include "nsTArray.h"
-#include "gfxWindowsPlatform.h"
-#include "gfxWindowsSurface.h"
-#include "nsWindowDbg.h"
-#include "cairo.h"
-#include "nsRegion.h"
-#include "mozilla/EnumeratedArray.h"
-#include "mozilla/Maybe.h"
-#include "mozilla/MouseEvents.h"
-#include "mozilla/TimeStamp.h"
-#include "mozilla/webrender/WebRenderTypes.h"
-#include "mozilla/dom/MouseEventBinding.h"
-#include "mozilla/DataMutex.h"
-#include "mozilla/UniquePtr.h"
-#include "nsMargin.h"
-#include "nsRegionFwd.h"
 
-#include "nsWinGesture.h"
+#include "CompositorWidget.h"
+#include "TaskbarWindowPreview.h"
 #include "WinPointerEvents.h"
 #include "WinUtils.h"
 #include "WindowHook.h"
-#include "TaskbarWindowPreview.h"
+#include "cairo.h"
+#include "gfxWindowsPlatform.h"
+#include "gfxWindowsSurface.h"
+#include "mozilla/DataMutex.h"
+#include "mozilla/EnumeratedArray.h"
+#include "mozilla/EventForwards.h"
+#include "mozilla/Maybe.h"
+#include "mozilla/MouseEvents.h"
+#include "mozilla/RefPtr.h"
+#include "mozilla/TimeStamp.h"
+#include "mozilla/UniquePtr.h"
+#include "mozilla/dom/MouseEventBinding.h"
+#include "mozilla/webrender/WebRenderTypes.h"
+#include "nsClassHashtable.h"
+#include "nsIWidget.h"
+#include "nsMargin.h"
+#include "nsRegion.h"
+#include "nsRegionFwd.h"
+#include "nsString.h"
+#include "nsTArray.h"
+#include "nsToolkit.h"
+#include "nsUserIdleService.h"
+#include "nsWinGesture.h"
+#include "nsWindowDbg.h"
+#include "nsdefs.h"
+#include "touchinjection_sdk80.h"
 
 #ifdef ACCESSIBILITY
-#  include "oleacc.h"
 #  include "mozilla/a11y/LocalAccessible.h"
+#  include "oleacc.h"
 #endif
 
-#include "nsIUserIdleServiceInternal.h"
-
-#include "IMMHandler.h"
 #include "CheckInvariantWrapper.h"
+#include "IMMHandler.h"
+#include "nsIUserIdleServiceInternal.h"
 
 /**
  * Forward class definitions
@@ -95,12 +94,9 @@ struct WindowStyles {
 
   static WindowStyles FromHWND(HWND);
 
-  constexpr bool operator==(WindowStyles const& that) const {
-    return style == that.style && ex == that.ex;
-  }
-  constexpr bool operator!=(WindowStyles const& that) const {
-    return !(*this == that);
-  }
+  constexpr bool operator==(WindowStyles const& that) const = default;
+  constexpr bool operator!=(WindowStyles const& that) const = default;
+
   constexpr WindowStyles operator|(WindowStyles const& that) const {
     return WindowStyles{.style = style | that.style, .ex = ex | that.ex};
   }
@@ -240,6 +236,9 @@ class nsWindow final : public nsIWidget {
   void* GetNativeData(uint32_t aDataType) override;
   nsresult SetTitle(const nsAString& aTitle) override;
   void SetIcon(const nsAString& aIconSpec) override;
+  // Apply WM_SETICON from an icon resource embedded in this process's
+  // executable. A resource ID of 0 reverts to IDI_APPICON.
+  void SetIconFromExeResource(uint16_t aResourceId);
   LayoutDeviceIntPoint WidgetToScreenOffset() override;
   LayoutDeviceIntMargin NormalSizeModeClientToWindowMargin() override;
   void EnableDragDrop(bool aEnable) override;
@@ -253,12 +252,12 @@ class nsWindow final : public nsIWidget {
       const LayoutDeviceIntRect& aButtonRect) override;
   nsresult SynthesizeNativeKeyEvent(
       int32_t aNativeKeyboardLayout, int32_t aNativeKeyCode,
-      uint32_t aModifierFlags, const nsAString& aCharacters,
+      nsIWidget::NativeModifiers aModifierFlags, const nsAString& aCharacters,
       const nsAString& aUnmodifiedCharacters,
       nsISynthesizedEventCallback* aCallback) override;
   nsresult SynthesizeNativeMouseEvent(
       LayoutDeviceIntPoint aPoint, NativeMouseMessage aNativeMessage,
-      mozilla::MouseButton aButton, nsIWidget::Modifiers aModifierFlags,
+      mozilla::MouseButton aButton, nsIWidget::NativeModifiers aModifierFlags,
       nsISynthesizedEventCallback* aCallback) override;
 
   nsresult SynthesizeNativeMouseMove(
@@ -266,12 +265,12 @@ class nsWindow final : public nsIWidget {
       nsISynthesizedEventCallback* aCallback) override {
     return SynthesizeNativeMouseEvent(
         aPoint, NativeMouseMessage::Move, mozilla::MouseButton::eNotPressed,
-        nsIWidget::Modifiers::NO_MODIFIERS, aCallback);
+        nsIWidget::NativeModifiers::NO_MODIFIERS, aCallback);
   }
 
   nsresult SynthesizeNativeMouseScrollEvent(
       LayoutDeviceIntPoint aPoint, uint32_t aNativeMessage, double aDeltaX,
-      double aDeltaY, double aDeltaZ, uint32_t aModifierFlags,
+      double aDeltaY, double aDeltaZ, nsIWidget::NativeModifiers aModifierFlags,
       uint32_t aAdditionalFlags,
       nsISynthesizedEventCallback* aCallback) override;
 
@@ -661,6 +660,7 @@ class nsWindow final : public nsIWidget {
    */
   void StopFlashing();
   static HWND WindowAtMouse();
+  static HWND NsWindowAtMouse();
   static bool IsTopLevelMouseExit(HWND aWnd);
   LayoutDeviceIntRegion GetRegionToPaint(const PAINTSTRUCT& ps, HDC aDC) const;
 
@@ -704,6 +704,10 @@ class nsWindow final : public nsIWidget {
   // is on, or Nothing if taskbar isn't hidden.
   mozilla::Maybe<UINT> GetHiddenTaskbarEdge();
 
+  void SetNativeLockedRegion();
+  void ReleaseNativeLockedRegion();
+  void MaybeUpdateNativeLockedRegion();
+
   static bool sTouchInjectInitialized;
   static InjectTouchInputPtr sInjectTouchFuncPtr;
   static uint32_t sInstanceCount;
@@ -716,6 +720,7 @@ class nsWindow final : public nsIWidget {
   static bool sIsRestoringSession;
   static bool sIsNativePointLocked;
   static bool sIsUsingRawInputForMouseMove;
+  static nsWindow* sNativePointLockedWindow;
 
   // Message postponement hack. See the definition-site of
   // WndProcUrgentInvocation::sDepth for details.

@@ -13,6 +13,7 @@
 #include "mozilla/ServoBindings.h"
 #include "mozilla/ServoCSSRuleList.h"
 #include "mozilla/ServoStyleSet.h"
+#include "mozilla/SharedStyleSheetCache.h"
 #include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/StyleSheetInlines.h"
 #include "mozilla/css/ErrorReporter.h"
@@ -32,15 +33,14 @@ namespace mozilla {
 
 using namespace dom;
 
-StyleSheet::StyleSheet(css::SheetParsingMode aParsingMode, CORSMode aCORSMode,
+StyleSheet::StyleSheet(StyleOrigin aOrigin, CORSMode aCORSMode,
                        const dom::SRIMetadata& aIntegrity)
     : mParentSheet(nullptr),
       mConstructorDocument(nullptr),
       mDocumentOrShadowRoot(nullptr),
       mURLData{URLExtraData::Dummy()},
-      mParsingMode(aParsingMode),
       mState(static_cast<State>(0)),
-      mInner(new StyleSheetInfo(aCORSMode, aIntegrity, aParsingMode)) {
+      mInner(new StyleSheetInfo(aCORSMode, aIntegrity, aOrigin)) {
   mInner->AddSheet(this);
 }
 
@@ -53,7 +53,6 @@ StyleSheet::StyleSheet(const StyleSheet& aCopy, StyleSheet* aParentSheetToUse,
       mDocumentOrShadowRoot(aDocOrShadowRootToUse),
       mURLData(aCopy.mURLData),
       mOriginalSheetURI(aCopy.mOriginalSheetURI),
-      mParsingMode(aCopy.mParsingMode),
       mState(aCopy.mState),
       // Shallow copy, but concrete subclasses will fix up.
       mInner(aCopy.mInner) {
@@ -150,7 +149,9 @@ void StyleSheet::LastRelease() {
 
   if (mInner) {
     MOZ_ASSERT(mInner->mSheets.Contains(this), "Our mInner should include us.");
-    mInner->RemoveSheet(this);
+    if (mInner->RemoveSheet(this)) {
+      delete mInner;
+    }
     mInner = nullptr;
   }
 
@@ -166,7 +167,8 @@ void StyleSheet::UnlinkInner() {
   // We can only have a cycle through our inner if we have a unique inner,
   // because otherwise there are no JS wrappers for anything in the inner.
   if (mInner->mSheets.Length() != 1) {
-    mInner->RemoveSheet(this);
+    DebugOnly<bool> last = mInner->RemoveSheet(this);
+    MOZ_ASSERT(!last, "Should not have been the only sheet for this inner!");
     mInner = nullptr;
     return;
   }
@@ -226,19 +228,15 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(StyleSheet)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 dom::CSSStyleSheetParsingMode StyleSheet::ParsingModeDOM() {
-#define CHECK_MODE(X, Y)                            \
-  static_assert(                                    \
-      static_cast<int>(X) == static_cast<int>(Y),   \
-      "mozilla::dom::CSSStyleSheetParsingMode and " \
-      "mozilla::css::SheetParsingMode should have identical values");
-
-  CHECK_MODE(dom::CSSStyleSheetParsingMode::Agent, css::eAgentSheetFeatures);
-  CHECK_MODE(dom::CSSStyleSheetParsingMode::User, css::eUserSheetFeatures);
-  CHECK_MODE(dom::CSSStyleSheetParsingMode::Author, css::eAuthorSheetFeatures);
-
-#undef CHECK_MODE
-
-  return static_cast<dom::CSSStyleSheetParsingMode>(mParsingMode);
+  switch (GetOrigin()) {
+    case StyleOrigin::UserAgent:
+      return dom::CSSStyleSheetParsingMode::Agent;
+    case StyleOrigin::User:
+      return dom::CSSStyleSheetParsingMode::User;
+    case StyleOrigin::Author:
+      break;
+  }
+  return dom::CSSStyleSheetParsingMode::Author;
 }
 
 void StyleSheet::SetComplete() {
@@ -319,10 +317,10 @@ void StyleSheet::SetDisabled(bool aDisabled) {
 
 StyleSheetInfo::StyleSheetInfo(CORSMode aCORSMode,
                                const SRIMetadata& aIntegrity,
-                               css::SheetParsingMode aParsingMode)
+                               StyleOrigin aOrigin)
     : mCORSMode(aCORSMode),
       mIntegrity(aIntegrity),
-      mContents(Servo_StyleSheet_Empty(aParsingMode).Consume()) {
+      mContents(Servo_StyleSheet_Empty(aOrigin).Consume()) {
   MOZ_COUNT_CTOR(StyleSheetInfo);
 }
 
@@ -367,10 +365,14 @@ size_t StyleSheetInfo::SizeOfIncludingThis(MallocSizeOf aMallocSizeOf) const {
 }
 
 void StyleSheetInfo::AddSheet(StyleSheet* aSheet) {
+  aSheet->mInnerSheetIndex = mSheets.Length();
   mSheets.AppendElement(aSheet);
 }
 
-void StyleSheetInfo::RemoveSheet(StyleSheet* aSheet) {
+bool StyleSheetInfo::RemoveSheet(StyleSheet* aSheet) {
+  const size_t index = aSheet->mInnerSheetIndex;
+  MOZ_ASSERT(mSheets[index] == aSheet, "mInnerSheetIndex out of sync?");
+
   // Fix up the parent pointer in children lists.
   StyleSheet* newParent =
       aSheet == mSheets[0] ? mSheets.SafeElementAt(1) : mSheets[0];
@@ -382,13 +384,27 @@ void StyleSheetInfo::RemoveSheet(StyleSheet* aSheet) {
     }
   }
 
-  if (1 == mSheets.Length()) {
+  if (mSheets.Length() == 1) {
     NS_ASSERTION(aSheet == mSheets.ElementAt(0), "bad parent");
-    delete this;
-    return;
+    return true;
   }
 
-  mSheets.UnorderedRemoveElement(aSheet);
+  {
+    // We don't care about order so can make removals constant time by using
+    // swap and keeping the cached index up to date.
+    const size_t lastIndex = mSheets.Length() - 1;
+    mSheets[lastIndex]->mInnerSheetIndex = index;
+    mSheets.UnorderedRemoveElementAt(index);
+  }
+
+  if (mSheets.Length() == 1 &&
+      !mSheets[0]->GetAssociatedDocumentOrShadowRoot()) {
+    // A stylesheet without an associated document just became unique (most
+    // likely from the stylesheet cache). Make sure the entry is evicted from
+    // the cache eventually.
+    SharedStyleSheetCache::ScheduleGC();
+  }
+  return false;
 }
 
 void StyleSheet::GetType(nsAString& aType) { aType.AssignLiteral("text/css"); }
@@ -484,10 +500,15 @@ void StyleSheet::EnsureUniqueInner() {
     return;
   }
 
+  // Remove ourselves from the shared inner before cloning, since CloneFor would
+  // clobber mInnerSheetIndex otherwise.
+  DebugOnly<bool> last = mInner->RemoveSheet(this);
+  MOZ_ASSERT(
+      !last,
+      "HasUniqueInner implies mInner should have pointed to more than this");
+
   StyleSheetInfo* clone = mInner->CloneFor(this);
   MOZ_ASSERT(clone);
-
-  mInner->RemoveSheet(this);
   mInner = clone;
 
   // Fixup the child lists and parent links in the Servo sheet. This is done
@@ -693,7 +714,7 @@ void StyleSheet::ReplaceSync(const nsACString& aText, ErrorResult& aRv) {
   RefPtr<const StyleStylesheetContents> rawContent =
       Servo_StyleSheet_FromUTF8Bytes(
           &mConstructorDocument->EnsureCSSLoader(), this,
-          /* load_data = */ nullptr, &aText, mParsingMode, mURLData,
+          /* load_data = */ nullptr, &aText, GetOrigin(), mURLData,
           mConstructorDocument->GetCompatibilityMode(),
           /* reusable_sheets = */ nullptr, StyleAllowImportRules::No,
           StyleSanitizationKind::None,
@@ -857,6 +878,20 @@ void StyleSheet::SubjectSubsumesInnerPrincipal(nsIPrincipal& aSubjectPrincipal,
   }
 }
 
+bool StyleSheet::IsAdoptedBy(const dom::DocumentOrShadowRoot& aTree) const {
+  // Our adopter list and the tree's adopted stylesheet list answer the same
+  // question, and either can be arbitrarily long depending on the workload
+  // (one sheet adopted into many shadow roots vs. many sheets adopted into one
+  // tree), so scan whichever is shorter.
+  const auto& adopted = aTree.AdoptedStyleSheets();
+  const bool result = mAdopters.Length() <= adopted.Length()
+                          ? mAdopters.Contains(&aTree)
+                          : adopted.Contains(this);
+  MOZ_ASSERT(result == mAdopters.Contains(&aTree));
+  MOZ_ASSERT(result == adopted.Contains(this));
+  return result;
+}
+
 bool StyleSheet::IsDirectlyAssociatedTo(
     dom::DocumentOrShadowRoot& aTree) const {
   if (mParentSheet) {
@@ -867,11 +902,7 @@ bool StyleSheet::IsDirectlyAssociatedTo(
   }
   bool associated = false;
   if (IsConstructed()) {
-    // Idea is that the adopted stylesheet list is likely to be smaller than
-    // list of adopters of a single sheet, but we could reverse the check if
-    // needed.
-    associated = aTree.AdoptedStyleSheets().Contains(this);
-    MOZ_ASSERT(associated == mAdopters.Contains(&aTree));
+    associated = IsAdoptedBy(aTree);
   } else {
     associated = GetAssociatedDocumentOrShadowRoot() == &aTree;
   }
@@ -1113,9 +1144,8 @@ already_AddRefed<StyleSheet> StyleSheet::CreateConstructedSheet(
     dom::Document& aConstructorDocument, nsIURI* aBaseURI,
     const dom::CSSStyleSheetInit& aOptions, ErrorResult& aRv) {
   // 1. Construct a sheet and set its properties (see spec).
-  auto sheet =
-      MakeRefPtr<StyleSheet>(css::SheetParsingMode::eAuthorSheetFeatures,
-                             CORSMode::CORS_NONE, dom::SRIMetadata());
+  auto sheet = MakeRefPtr<StyleSheet>(StyleOrigin::Author, CORSMode::CORS_NONE,
+                                      dom::SRIMetadata());
 
   // baseURL not yet in the spec. Implemented based on the following discussion:
   // https://github.com/WICG/construct-stylesheets/issues/95#issuecomment-594217180
@@ -1158,7 +1188,7 @@ already_AddRefed<StyleSheet> StyleSheet::CreateConstructedSheet(
 already_AddRefed<StyleSheet> StyleSheet::CreateEmptyChildSheet(
     already_AddRefed<dom::MediaList> aMediaList) const {
   auto child =
-      MakeRefPtr<StyleSheet>(ParsingMode(), CORSMode::CORS_NONE, SRIMetadata());
+      MakeRefPtr<StyleSheet>(GetOrigin(), CORSMode::CORS_NONE, SRIMetadata());
 
   child->mMedia = aMediaList;
   return child.forget();
@@ -1179,14 +1209,13 @@ RefPtr<StyleSheetParsePromise> StyleSheet::ParseSheet(
   // @import rules are disallowed due to this decision:
   // https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588352418
   // We may allow @import rules again in the future.
-  auto allowImportRules = SelfOrAncestorIsConstructed()
-                              ? StyleAllowImportRules::No
-                              : StyleAllowImportRules::Yes;
+  auto allowImportRules =
+      IsConstructed() ? StyleAllowImportRules::No : StyleAllowImportRules::Yes;
   if (aLoadData->get()->mRecordErrors) {
     MOZ_ASSERT(NS_IsMainThread());
     RefPtr<StyleStylesheetContents> contents =
         Servo_StyleSheet_FromUTF8Bytes(
-            &aLoader, this, aLoadData->get(), &aBytes, mParsingMode, mURLData,
+            &aLoader, this, aLoadData->get(), &aBytes, GetOrigin(), mURLData,
             aLoadData->get()->mCompatMode,
             /* reusable_sheets = */ nullptr, allowImportRules,
             StyleSanitizationKind::None,
@@ -1195,7 +1224,7 @@ RefPtr<StyleSheetParsePromise> StyleSheet::ParseSheet(
     FinishAsyncParse(contents.forget());
   } else {
     Servo_StyleSheet_FromUTF8BytesAsync(
-        aLoadData, mURLData, &aBytes, mParsingMode,
+        aLoadData, mURLData, &aBytes, GetOrigin(),
         aLoadData->get()->mCompatMode, allowImportRules);
   }
 
@@ -1273,13 +1302,12 @@ void StyleSheet::ParseSheetSync(
     return eCompatibility_FullStandards;
   }();
 
-  auto allowImportRules = SelfOrAncestorIsConstructed()
-                              ? StyleAllowImportRules::No
-                              : StyleAllowImportRules::Yes;
+  auto allowImportRules =
+      IsConstructed() ? StyleAllowImportRules::No : StyleAllowImportRules::Yes;
 
   Inner().mContents =
       Servo_StyleSheet_FromUTF8Bytes(
-          aLoader, this, aLoadData, &aBytes, mParsingMode, mURLData, compatMode,
+          aLoader, this, aLoadData, &aBytes, GetOrigin(), mURLData, compatMode,
           aReusableSheets, allowImportRules, StyleSanitizationKind::None,
           /* sanitized_output = */ nullptr)
           .Consume();

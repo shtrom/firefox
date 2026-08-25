@@ -475,15 +475,18 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
   // here in order to allow JSScript to access them during finalize (see bug
   // 1568245; this change in 1575350). The tables are initialized lazily by
   // JSScript.
-  js::UniquePtr<js::ScriptCountsMap> scriptCountsMap;
-  js::UniquePtr<js::ScriptLCovMap> scriptLCovMap;
+  js::UniquePtr<JS::WeakCache<js::ScriptCountsMap>> scriptCountsMap;
+  js::UniquePtr<JS::WeakCache<js::ScriptLCovMap>> scriptLCovMap;
   js::MainThreadData<js::DebugScriptMap*> debugScriptMap;
 #ifdef MOZ_VTUNE
-  js::UniquePtr<js::ScriptVTuneIdMap> scriptVTuneIdMap;
+  js::UniquePtr<JS::WeakCache<js::ScriptVTuneIdMap>> scriptVTuneIdMap;
 #endif
 #ifdef JS_CACHEIR_SPEW
-  js::UniquePtr<js::ScriptFinalWarmUpCountMap> scriptFinalWarmUpCountMap;
+  js::UniquePtr<JS::WeakCache<js::ScriptFinalWarmUpCountMap>>
+      scriptFinalWarmUpCountMap;
 #endif
+
+  js::UniquePtr<JS::WeakCache<js::ProfileStringMap>> profilerStrings;
 
   js::MainThreadData<js::StringStats> previousGCStringStats;
   js::MainThreadData<js::StringStats> stringStats;
@@ -526,8 +529,8 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
 
   js::MainThreadData<js::UniquePtr<js::RegExpZone>> regExps_;
 
-  // Bitmap of atoms marked by this zone.
-  js::MainThreadOrGCTaskData<js::SparseBitmap> markedAtoms_;
+  // Bitmap of atoms referenced by this zone.
+  js::MainThreadOrGCTaskData<js::SparseBitmap> referencedAtoms_;
 
   // Set of atoms recently used by this Zone. Purged on GC.
   js::MainThreadOrGCTaskData<js::UniquePtr<js::AtomCacheHashTable>> atomCache_;
@@ -658,7 +661,7 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
                               size_t* regexpZone, size_t* jitZone,
                               size_t* cacheIRStubs, size_t* objectFusesArg,
                               size_t* uniqueIdMap, size_t* initialPropMapTable,
-                              size_t* shapeTables, size_t* atomsMarkBitmaps,
+                              size_t* shapeTables, size_t* atomReferenceBitmaps,
                               size_t* compartmentObjects,
                               size_t* crossCompartmentWrappersTables,
                               size_t* compartmentsPrivateData,
@@ -734,12 +737,12 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
   }
   static constexpr size_t offsetOfJitZone() { return offsetof(Zone, jitZone_); }
 
-  js::jit::JitZone* getJitZone(JSContext* cx) {
+  js::jit::JitZone* getOrCreateJitZone(JSContext* cx) {
     return jitZone_ ? jitZone_ : createJitZone(cx);
   }
   js::jit::JitZone* jitZone() { return jitZone_; }
 
-  bool ensureJitZoneExists(JSContext* cx) { return !!getJitZone(cx); }
+  bool ensureJitZoneExists(JSContext* cx) { return getOrCreateJitZone(cx); }
 
   bool preserveWrapper(JSObject* obj) {
     MOZ_ASSERT(preservedWrappersCount_ <= preservedWrappersCapacity_);
@@ -811,8 +814,10 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
   void sweepCompartments(JS::GCContext* gcx, bool keepAtleastOne,
                          bool destroyingRuntime);
 
-  // Remove dead weak maps from gcWeakMapList_ and remove entries from the
-  // remaining weak maps whose keys are dead.
+  void maybeWriteCoverageAndSpew();
+
+  // Remove dead weak maps from the zone weak map lists and remove entries from
+  // the remaining weak maps whose keys are dead.
   void sweepWeakMaps(JSTracer* trc);
 
   // Trace all weak maps in this zone. Used to update edges after a moving GC.
@@ -880,8 +885,6 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
 
   void prepareForMovingGC();
   void fixupAfterMovingGC();
-
-  void fixupScriptMapsAfterMovingGC(JSTracer* trc);
 
   void setNurseryAllocFlags(bool allocObjects, bool allocStrings,
                             bool allocBigInts, bool allocGetterSetters);
@@ -965,7 +968,7 @@ class Zone : public js::ZoneAllocator, public js::gc::GraphNodeBase<JS::Zone> {
 
   js::RegExpZone& regExps() { return *regExps_.ref(); }
 
-  js::SparseBitmap& markedAtoms() { return markedAtoms_.ref(); }
+  js::SparseBitmap& referencedAtoms() { return referencedAtoms_.ref(); }
 
   // The atom cache is "allocate-on-demand". This function can return nullptr if
   // the allocation failed.
