@@ -7,15 +7,8 @@ package org.mozilla.fenix.components.metrics
 import com.adjust.sdk.Adjust
 import com.adjust.sdk.AdjustThirdPartySharing
 
-/**
- * Controls third-party data sharing settings for distribution and attribution partners.
- */
+/** Controls third-party data sharing settings for distribution and attribution partners. */
 interface ThirdPartySharingController {
-
-    /**
-     * Disables data sharing with Meta specifically, while leaving global sharing enabled.
-     */
-    fun disableMetaThirdPartySharing()
 
     /**
      * Enables data sharing exclusively for the given partner, disabling it for all others.
@@ -24,38 +17,24 @@ interface ThirdPartySharingController {
      */
     fun enableThirdPartySharingForPartner(partnerId: String)
 
-    /**
-     * Disables data sharing with all third-party partners globally.
-     */
+    /** Disables data sharing with all third-party partners globally. */
     fun disableAllThirdPartySharing()
 }
 
-/**
- * [ThirdPartySharingController] implementation that delegates to the Adjust SDK.
- */
+/** [ThirdPartySharingController] implementation that delegates to the Adjust SDK. */
 class AdjustThirdPartySharingController : ThirdPartySharingController {
-
-    override fun disableMetaThirdPartySharing() {
-        Adjust.trackThirdPartySharing(
-            AdjustThirdPartySharing(true).apply {
-                addPartnerSharingSetting(META_PARTNER_ID, "all", false)
-            },
-        )
-    }
 
     override fun enableThirdPartySharingForPartner(partnerId: String) {
         Adjust.trackThirdPartySharing(
             AdjustThirdPartySharing(true).apply {
                 addPartnerSharingSetting("all", "all", false)
                 addPartnerSharingSetting(partnerId, "all", true)
-            },
+            }
         )
     }
 
     override fun disableAllThirdPartySharing() {
-        Adjust.trackThirdPartySharing(
-            AdjustThirdPartySharing(false),
-        )
+        Adjust.trackThirdPartySharing(AdjustThirdPartySharing(false))
     }
 
     companion object {
@@ -64,5 +43,23 @@ class AdjustThirdPartySharingController : ThirdPartySharingController {
 
         /** Adjust partner ID for Aura. */
         const val AURA_PARTNER_ID = "802"
+
+        /** Adjust partner ID for Google. */
+        const val GOOGLE_PARTNER_ID = "254"
+
+        /** Adjust partner ID for TikTok. */
+        const val TIKTOK_PARTNER_ID = "2337"
+
+        /** Adjust partner ID for Reddit. */
+        const val REDDIT_PARTNER_ID = "375"
+
+        /** Adjust partner ID for X (Twitter). */
+        const val X_TWITTER_PARTNER_ID = "32"
+
+        /** Adjust partner ID for Moloco. */
+        const val MOLOCO_PARTNER_ID = "56"
+
+        /** Adjust partner ID for dynamic callback partners. */
+        const val DYNAMIC_CALLBACK_ID = "dynamic_callbacks"
     }
 }

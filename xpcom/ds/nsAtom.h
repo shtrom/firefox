@@ -10,6 +10,7 @@
 #include "mozilla/Atomics.h"
 #include "mozilla/Char16.h"
 #include "mozilla/MemoryReporting.h"
+#include "mozilla/TextUtils.h"
 #include "nsISupports.h"
 #include "nsString.h"
 
@@ -34,6 +35,27 @@ class nsDynamicAtom;
 //
 class nsAtom {
  public:
+  // Returns true if ToLowercaseASCII would return the string unchanged.
+  //
+  // This is deliberately a plain loop rather than std::all_of: gGkAtoms calls
+  // this for every static atom within a single constant expression, and
+  // std::all_of costs enough extra constexpr steps to exceed the default
+  // -fconstexpr-steps budget with some standard library implementations.
+  static constexpr bool ComputeIsAsciiLowercase(const char16_t* aString,
+                                                const uint32_t aLength) {
+    for (uint32_t i = 0; i < aLength; ++i) {
+      if (mozilla::IsAsciiUppercaseAlpha(aString[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  template <size_t N>
+  static constexpr bool ComputeIsAsciiLowercase(const char16_t (&aString)[N]) {
+    return ComputeIsAsciiLowercase(aString, N - 1);
+  }
+
   void AddSizeOfIncludingThis(mozilla::MallocSizeOf aMallocSizeOf,
                               mozilla::AtomsSizes& aSizes) const;
 
@@ -108,10 +130,7 @@ class nsAtom {
   const uint32_t mHash;
 };
 
-// This class would be |final| if it wasn't for nsCSSAnonBoxPseudoStaticAtom
-// and nsCSSPseudoElementStaticAtom, which are trivial subclasses used to
-// ensure only certain static atoms are passed to certain functions.
-class nsStaticAtom : public nsAtom {
+class nsStaticAtom final : public nsAtom {
  public:
   // These are deleted so it's impossible to RefPtr<nsStaticAtom>. Raw
   // nsStaticAtom pointers should be used instead.

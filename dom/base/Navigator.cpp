@@ -16,13 +16,13 @@
 #include "mozilla/dom/FetchBinding.h"
 #include "mozilla/dom/File.h"
 #include "mozilla/dom/Serial.h"
+#include "mozilla/glean/DomMediaMetrics.h"
 #include "nsCharSeparatedTokenizer.h"
 #include "nsContentPolicyUtils.h"
 #include "nsContentUtils.h"
 #include "nsIClassOfService.h"
 #include "nsIContentPolicy.h"
 #include "nsIHttpProtocolHandler.h"
-#include "nsIPrivateAttributionService.h"
 #include "nsISupportsPriority.h"
 #include "nsIWebProtocolHandlerRegistrar.h"
 #include "nsIXULAppInfo.h"
@@ -42,6 +42,7 @@
 #include "mozilla/StaticPrefs_privacy.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/StorageAccess.h"
+#include "mozilla/dom/AudioSession.h"
 #include "mozilla/dom/Clipboard.h"
 #include "mozilla/dom/ContentChild.h"
 #include "mozilla/dom/CredentialsContainer.h"
@@ -56,7 +57,6 @@
 #include "mozilla/dom/ModelContext.h"
 #include "mozilla/dom/NavigatorLogin.h"
 #include "mozilla/dom/Permissions.h"
-#include "mozilla/dom/PrivateAttribution.h"
 #include "mozilla/dom/ServiceWorkerContainer.h"
 #include "mozilla/dom/StorageManager.h"
 #include "mozilla/dom/TCPSocket.h"
@@ -153,12 +153,12 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(Navigator)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mServiceWorkerContainer)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mMediaCapabilities)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mMediaSession)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mAudioSession)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mAddonManager)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWebGpu)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mLocks)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mLogin)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mModelContext)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPrivateAttribution)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mUserActivation)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWakeLock)
 
@@ -241,6 +241,8 @@ void Navigator::Invalidate() {
     mMediaSession = nullptr;
   }
 
+  mAudioSession = nullptr;
+
   mAddonManager = nullptr;
 
   mWebGpu = nullptr;
@@ -256,8 +258,6 @@ void Navigator::Invalidate() {
   mLogin = nullptr;
 
   mModelContext = nullptr;
-
-  mPrivateAttribution = nullptr;
 
   mUserActivation = nullptr;
 
@@ -1170,7 +1170,7 @@ class BeaconStreamListener final : public nsIStreamListener {
   ~BeaconStreamListener() = default;
 
  public:
-  BeaconStreamListener() : mLoadGroup(nullptr) {}
+  BeaconStreamListener() = default;
 
   void SetLoadGroup(nsILoadGroup* aLoadGroup) { mLoadGroup = aLoadGroup; }
 
@@ -1179,7 +1179,7 @@ class BeaconStreamListener final : public nsIStreamListener {
   NS_DECL_NSIREQUESTOBSERVER
 
  private:
-  nsCOMPtr<nsILoadGroup> mLoadGroup;
+  nsCOMPtr<nsILoadGroup> mLoadGroup{};
 };
 
 NS_IMPL_ISUPPORTS(BeaconStreamListener, nsIStreamListener, nsIRequestObserver)
@@ -1334,7 +1334,7 @@ bool Navigator::SendBeaconInternal(const nsAString& aUrl,
     }
 
     uploadChannel->ExplicitSetUploadStream(in, contentTypeWithCharset, length,
-                                           "POST"_ns, false);
+                                           "POST"_ns);
   } else {
     rv = httpChannel->SetRequestMethod("POST"_ns);
     MOZ_ASSERT(NS_SUCCEEDED(rv));
@@ -2284,6 +2284,14 @@ dom::MediaSession* Navigator::MediaSession() {
   return mMediaSession;
 }
 
+dom::AudioSession* Navigator::AudioSession() {
+  if (!mAudioSession) {
+    mAudioSession = new dom::AudioSession(GetWindow());
+    glean::media_audio_session::api_used.Add(1);
+  }
+  return mAudioSession;
+}
+
 bool Navigator::HasCreatedMediaSession() const {
   return mMediaSession != nullptr;
 }
@@ -2341,30 +2349,23 @@ dom::ModelContext* Navigator::ModelContext() {
   return mModelContext;
 }
 
-dom::PrivateAttribution* Navigator::PrivateAttribution() {
-  if (!mPrivateAttribution) {
-    mPrivateAttribution = new dom::PrivateAttribution(GetWindow()->AsGlobal());
-  }
-  return mPrivateAttribution;
-}
-
 /* static */
 bool Navigator::Webdriver() {
 #ifdef ENABLE_WEBDRIVER
   nsCOMPtr<nsIMarionette> marionette = do_GetService(NS_MARIONETTE_CONTRACTID);
   if (marionette) {
-    bool marionetteRunning = false;
-    marionette->GetRunning(&marionetteRunning);
-    if (marionetteRunning) {
+    bool isBrowserAutomationRunning = false;
+    marionette->GetIsBrowserAutomationRunning(&isBrowserAutomationRunning);
+    if (isBrowserAutomationRunning) {
       return true;
     }
   }
 
   nsCOMPtr<nsIRemoteAgent> agent = do_GetService(NS_REMOTEAGENT_CONTRACTID);
   if (agent) {
-    bool remoteAgentRunning = false;
-    agent->GetRunning(&remoteAgentRunning);
-    if (remoteAgentRunning) {
+    bool isBrowserAutomationRunning = false;
+    agent->GetIsBrowserAutomationRunning(&isBrowserAutomationRunning);
+    if (isBrowserAutomationRunning) {
       return true;
     }
   }

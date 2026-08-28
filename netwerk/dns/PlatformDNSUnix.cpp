@@ -2,18 +2,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include <netinet/in.h>
+#include <resolv.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "GetAddrInfo.h"
-#include "mozilla/glean/NetwerkMetrics.h"
-#include "mozilla/net/DNSPacket.h"
-#include "nsIDNSService.h"
 #include "mozilla/Mutex.h"
 #include "mozilla/StaticPrefs_network.h"
 #include "mozilla/ThreadLocal.h"
-
-#include <stdlib.h>
-#include <string.h>
-#include <netinet/in.h>
-#include <resolv.h>
+#include "mozilla/glean/NetwerkMetrics.h"
+#include "mozilla/net/DNSPacket.h"
+#include "nsIDNSService.h"
 
 namespace mozilla::net {
 
@@ -27,7 +27,8 @@ mozilla::StaticMutex sMutex MOZ_ANNOTATED;
 
 nsresult ResolveHTTPSRecordImpl(const nsACString& aHost,
                                 nsIDNSService::DNSFlags aFlags,
-                                TypeRecordResultType& aResult, uint32_t& aTTL) {
+                                TypeRecordResultType& aResult, uint32_t& aTTL,
+                                nsACString& aAliasName) {
   DNSPacket packet;
   nsAutoCString host(aHost);
   nsAutoCString cname;
@@ -80,7 +81,7 @@ nsresult ResolveHTTPSRecordImpl(const nsACString& aHost,
     return rv;
   }
 
-  return ParseHTTPSRecord(host, packet, aResult, aTTL);
+  return ParseHTTPSRecord(host, packet, aResult, aTTL, aAliasName);
 }
 
 void DNSThreadShutdown() {

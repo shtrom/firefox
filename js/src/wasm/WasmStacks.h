@@ -30,6 +30,7 @@
 #include "util/TrailingArray.h"
 #include "vm/NativeObject.h"
 #include "wasm/WasmAnyRef.h"
+#include "wasm/WasmCode.h"
 #include "wasm/WasmConstants.h"
 #include "wasm/WasmFrame.h"
 
@@ -52,6 +53,7 @@ namespace js::wasm {
 struct SwitchTarget;
 struct Handler;
 struct Handlers;
+class Instance;
 class ContStack;
 class ContObject;
 class ContStackArena;
@@ -199,6 +201,9 @@ class ContStack {
   // The initial resume target and callee for the base frame to use.
   SwitchTarget initialResumeTarget_{};
   HeapPtr<JSFunction*> initialResumeCallee_;
+  // Keeps the creator module's code alive while initialResumeTarget_.resumePC
+  // points into it (before the first resume).
+  SharedCode initialResumeCode_;
 
   // A target useable when switching to this stack.
   StackTarget target_{};
@@ -240,7 +245,7 @@ class ContStack {
   // Prepare a stack for execution. Must be called after init, poison, or
   // decommit. Transitions pageState_ to Ready.
   void prepare(Handle<ContObject*> continuation, Handle<JSFunction*> target,
-               void* contBaseFrameStub);
+               void* contBaseFrameStub, const Code* creatorCode);
   // Reset the fields for returning to a ContStackArena. Can call poison or
   // decommit after this. Must call prepare before executing.
   void reset();
@@ -263,8 +268,10 @@ class ContStack {
   // Trace the fields on this stack, but no the frames.
   void traceFields(JSTracer* trc);
   // Trace the fields and all frames for a suspended stack. This must be the
-  // resume base.
-  void traceSuspended(JSTracer* trc);
+  // resume base. When marking, |src| (the owning ContObject) also traces the
+  // inferred ContObject to Debugger.Frame edges via
+  // DebugAPI::traceWasmContFrame.
+  void traceSuspended(JSTracer* trc, JSObject* src);
   // Update all the frames for a moving GC. This must be the resume base.
   void updateSuspendedForMovingGC(Nursery& nursery);
 
@@ -436,7 +443,8 @@ class ContStackArena {
   // Allocate a ContStack. The stack will be returned automatically to the pool
   // through ContStackDeleter when the UniquePtr goes out of scope.
   UniqueContStack allocate(Handle<ContObject*> continuation,
-                           Handle<JSFunction*> target, void* contBaseFrameStub);
+                           Handle<JSFunction*> target, void* contBaseFrameStub,
+                           const Code* creatorCode);
 
   // Find the stack that would belong to this SP, if any.
   ContStack* findForAddress(uintptr_t address) const;
@@ -513,7 +521,8 @@ class ContStackAllocator {
   // Allocate a ContStack. The stack will be returned automatically to the pool
   // through ContStackDeleter when the UniquePtr goes out of scope.
   UniqueContStack allocate(JSContext* cx, Handle<ContObject*> continuation,
-                           Handle<JSFunction*> target, void* contBaseFrameStub);
+                           Handle<JSFunction*> target, void* contBaseFrameStub,
+                           const Code* creatorCode);
 
   // Find the ContStack whose stack region contains `address`.
   ContStack* findForAddress(uintptr_t address) const;
@@ -552,7 +561,7 @@ class ContObject : public NativeObject {
   // function. `contBaseFrameStub` is the corresponding stub created by
   // wasm::GenerateContBaseFrameStub for the wasm function type.
   static ContObject* create(JSContext* cx, Handle<JSFunction*> target,
-                            void* contBaseFrameStub);
+                            void* contBaseFrameStub, const Code* creatorCode);
   // Create a continuation that is empty and cannot be resumed.
   static ContObject* createEmpty(JSContext* cx);
 
@@ -612,13 +621,18 @@ void EmitFindHandler(jit::MacroAssembler& masm, jit::Register instance,
 // Does not return. After the stack switch, execution resumes at
 // *suspendCodeOffset with only InstanceReg live.
 //
+// suspendResultsAreaBase is the FP relative offset of the suspend results
+// area (0 when no tag results). Its address is advertised into the resume
+// SwitchTarget's paramsArea so the next resumer writes the tag results
+// straight into this area; the suspender then reads them back from here.
+//
 // Clobbers scratch1, scratch2, scratch3, and suspendedCont.
 void EmitSuspend(jit::MacroAssembler& masm, jit::Register instance,
                  jit::Register suspendedCont, jit::Register handler,
                  jit::Register scratch1, jit::Register scratch2,
                  jit::Register scratch3, const CallSiteDesc& callSiteDesc,
                  jit::CodeOffset* suspendCodeOffset,
-                 uint32_t* suspendFramePushed);
+                 uint32_t* suspendFramePushed, uint32_t suspendResultsAreaBase);
 
 // Offsets used when initializing a handler for a resume.
 struct HandlerJitOffsets {
@@ -626,21 +640,52 @@ struct HandlerJitOffsets {
   uint32_t resultsAreaOffset = UINT32_MAX;
 };
 
+// Validates the continuation (null/resumable checks, branching to fail on
+// failure) and computes into `output` the destination paramsArea pointer that
+// the resume params should be written to.
+//
+// For a fresh continuation the destination is the resumer's own
+// resumeParamsArea (FP - resumeParamsAreaBase), which is also advertised into
+// initialResumeTarget.paramsArea for the base frame stub. For a suspended
+// continuation the destination is the paramsArea the suspender already
+// advertised (its suspendResultsArea), so the params are written straight into
+// the suspender's frame.
+//
+// Only used when the continuation takes params (resumeParamsAreaBase != 0).
+//
+// Clobbers scratch1, scratch2; preserves cont.
+void EmitPrepareResume(jit::MacroAssembler& masm, jit::Register cont,
+                       uint32_t resumeParamsAreaBase, jit::Register output,
+                       jit::Register scratch1, jit::Register scratch2,
+                       jit::Label* fail);
+
 // Resume a suspended continuation with the given handlers.
 //
 // Does not return. After the resumed stack returns, execution continues at
 // *resumeCodeOffset with only InstanceReg live. Each handler landing pad
 // jumps to the corresponding handlerLabels entry with only InstanceReg live.
 //
+// handlersParamsAreaBase: FP relative offset of the handlers params area;
+//   each handler's target.paramsArea is set to FP - base + resultsAreaOffset
+//   (0 only when there are no handlers; the continuation is always passed, so a
+//   handler with no tag params still has a non-empty area).
+// contResultsAreaBase: FP relative offset of the cont results area whose
+//   address is written into returnTarget.paramsArea so the typed base frame
+//   stub can store cont results (0 when there are no cont results).
+//
+// The resume params are written by EmitPrepareResume before this is called, so
+// EmitResume no longer touches resumeTarget.paramsArea.
+//
 // Clobbers scratch1, scratch2, scratch3, and cont.
 void EmitResume(jit::MacroAssembler& masm, jit::Register instance,
-                jit::Register cont, jit::Register handlersResultArea,
+                jit::Register cont, uint32_t handlersParamsAreaBase,
                 jit::Register scratch1, jit::Register scratch2,
-                jit::Register scratch3, jit::Label* fail,
+                jit::Register scratch3,
                 mozilla::Span<HandlerJitOffsets> handlerOffsets,
                 mozilla::Span<jit::Label*> handlerLabels,
                 const CallSiteDesc& callSiteDesc,
-                jit::CodeOffset* resumeCodeOffset, uint32_t* resumeFramePushed);
+                jit::CodeOffset* resumeCodeOffset, uint32_t* resumeFramePushed,
+                uint32_t contResultsAreaBase);
 
 #endif  // ENABLE_WASM_JSPI
 

@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "jit/JSJitFrameIter-inl.h"
-
 #include "jit/CalleeToken.h"
 #include "jit/IonScript.h"
 #include "jit/JitcodeMap.h"
@@ -18,6 +16,7 @@
 #include "js/friend/DumpFunctions.h"  // js::DumpObject, js::DumpValue
 #include "vm/JitActivation.h"
 
+#include "jit/JSJitFrameIter-inl.h"
 #include "vm/JSScript-inl.h"
 
 using namespace js;
@@ -176,11 +175,20 @@ static uint32_t ComputeBaselineFrameSize(const JSJitFrameIter& frame) {
   // Note: an UnwoundJit exit frame is a JitFrameLayout that was turned into an
   // ExitFrameLayout by EnsureUnwoundJitExitFrame. We have to use the original
   // header size here because that's what we have on the stack.
-  if (frame.isScripted() || frame.isUnwoundJitExit()) {
+  //
+  // A BaselineInterpreterEntry frame can be called directly by a Baseline frame
+  // (without an intervening stub frame) for JSOp::Resume.
+  if (frame.isScripted() || frame.isUnwoundJitExit() ||
+      frame.isBaselineInterpreterEntry()) {
     return frameSize - JitFrameLayout::Size();
   }
 
   if (frame.isExitFrame()) {
+    // A CalledFromJit exit frame (lazy-link stub or interpreter stub) wraps a
+    // full JitFrameLayout for the callee it was about to enter.
+    if (frame.isExitFrameLayout<CalledFromJitExitFrameLayout>()) {
+      return frameSize - JitFrameLayout::Size();
+    }
     frameSize -= ExitFrameLayout::Size();
     if (frame.exitFrame()->isWrapperExit()) {
       VMFunctionId id = frame.exitFrame()->footer()->functionId();
@@ -657,6 +665,7 @@ void JSJitProfilingFrameIterator::moveToNextFrame(CommonFrameLayout* frame) {
       frame = GetPreviousRawFrame<TrampolineNativeFrameLayout*>(frame);
       MOZ_ASSERT(frame->prevType() == FrameType::IonJS ||
                  frame->prevType() == FrameType::BaselineStub ||
+                 frame->prevType() == FrameType::IonICCall ||
                  frame->prevType() == FrameType::WasmToJSJit ||
                  frame->prevType() == FrameType::CppToJSJit);
       continue;

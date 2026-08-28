@@ -6,26 +6,17 @@
 
 /* ::::: menupopup ::::: */
 
+*|*:root {
+  --panel-icon-fill: currentColor;
+}
+
 :is(menupopup, panel):where(:not([type="arrow"])) {
+  --panel-icon-fill: currentColor;
   --panel-background-color: Menu;
   --panel-text-color: MenuText;
   --panel-padding: var(--panel-padding-block) 0;
   /* This should match GetMenuCornerRadius() on macOS, or be overridden below */
   --panel-border-radius: 6px;
-  --panel-border-color: ThreeDShadow;
-
-  @media (-moz-platform: linux) {
-    @media (prefers-contrast) {
-      --panel-border-color: color-mix(in srgb, currentColor 60%, transparent);
-    }
-
-    /* On some linux WMs we need to draw square and opaque menus because alpha
-     * is not available */
-    @media not (-moz-gtk-csd-transparency-available) {
-      --panel-box-shadow-margin: 0px !important;
-      --panel-border-radius: 0px !important;
-    }
-  }
 
   @media (-moz-platform: macos) {
     --panel-background-color: none;
@@ -46,13 +37,17 @@
   -moz-window-input-region-margin: var(--panel-box-shadow-margin);
   margin: calc(-1 * var(--panel-box-shadow-margin));
 
+  --button-icon-fill: var(--panel-icon-fill);
+
   /* Panel design token theming */
   --background-color-canvas: var(--panel-background-color);
 
   @media (-moz-platform: linux) and (not (-moz-gtk-csd-transparency-available)) {
     /* On some linux WMs we need to draw square and opaque menus because alpha
-     * is not available */
+     * is not available. */
     opacity: 1 !important;
+    --panel-box-shadow-margin: 0px !important;
+    --panel-border-radius: 0px !important;
   }
 
   @media (-moz-platform: macos) {
@@ -99,6 +94,13 @@
 
   &[orient="vertical"]::part(content) {
     flex-direction: column;
+  }
+
+  /* A submenu is part of the same menu as its parent popup, so it must not
+   * widen a color scheme that the parent narrowed. */
+  menupopup,
+  panel {
+    color-scheme: inherit;
   }
 }
 

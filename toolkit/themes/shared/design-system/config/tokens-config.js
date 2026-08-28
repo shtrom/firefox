@@ -285,19 +285,28 @@ const STATE_ORDER = [
 ];
 
 const getLayerString = () => {
-  const defaultLayers = [
+  const themeLayers = [
     "tokens-foundation",
-    "tokens-prefers-contrast",
-    "tokens-forced-colors",
     "tokens-browser-theme",
+    "tokens-foundation-brand",
+  ];
+  const a11yLayers = ["tokens-prefers-contrast", "tokens-forced-colors"];
+
+  const themeLayersWithOverrides = [
+    ...themeLayers,
+    ...OVERRIDE_IDENTIFIERS.flatMap(({ name }) =>
+      themeLayers.map(layer => `${layer}-${name}`)
+    ),
   ];
 
-  const layersWithOverrides = defaultLayers.flatMap(layer => [
+  const a11yLayersWithOverrides = a11yLayers.flatMap(layer => [
     layer,
     ...OVERRIDE_IDENTIFIERS.map(({ name }) => `${layer}-${name}`),
   ]);
 
-  return `@layer ${layersWithOverrides.join(", ").trim()};\n\n`;
+  const layers = [...themeLayersWithOverrides, ...a11yLayersWithOverrides];
+
+  return `@layer ${layers.join(", ")};\n\n`;
 };
 
 /**
@@ -332,9 +341,6 @@ let customFileHeader = ({ surface, platform, componentName = "" }) => {
     licenseString + "\n\n" + commentString + "\n\n" + cssImport + layerString,
   ];
 };
-
-const NEST_MEDIA_QUERIES_COMMENT = `/* Bug 1879900: Can't nest media queries inside of :host, :root selector
-   until Bug 1879349 lands */`;
 
 const MEDIA_QUERY_PROPERTY_MAP = {
   "forced-colors": "forcedColors",
@@ -372,72 +378,61 @@ function formatBaseTokenNames(str) {
 const createDesktopFormat =
   ({ surface, componentName = "" } = {}) =>
   args => {
-    let contents =
-      customFileHeader({ surface, componentName }) +
-      formatTokens({
-        surface,
-        args,
-        componentName,
-      }) +
-      formatTokens({
-        mediaQuery: "prefers-contrast",
-        surface,
-        args,
-        componentName,
-      }) +
-      formatTokens({
-        mediaQuery: "forced-colors",
-        surface,
-        args,
-        componentName,
-      }) +
-      formatTokens({
-        mediaQuery: "browser-theme",
-        surface,
-        args,
-        componentName,
+    // Layer blocks that share the same selector, in cascade order. `undefined`
+    // is the foundation pass, which has no media query.
+    const sharedMediaQueries = [undefined, "prefers-contrast", "forced-colors"];
+
+    // Builds every @layer block that belongs inside a single selector, both the
+    // default tokens and the pref-gated overrides.
+    const buildLayers = mediaQueries => {
+      let layers = mediaQueries
+        .map(mediaQuery =>
+          formatTokens({ mediaQuery, surface, args, componentName })
+        )
+        .join("");
+
+      OVERRIDE_IDENTIFIERS.forEach(({ name, pref }) => {
+        const overrideLayers = mediaQueries
+          .map(mediaQuery =>
+            formatTokens({
+              mediaQuery,
+              surface,
+              args,
+              overrideIdentifier: name,
+              componentName,
+            })
+          )
+          .join("");
+        if (!overrideLayers) {
+          return;
+        }
+
+        layers += `
+  @media -moz-pref("${pref}") {${overrideLayers}  }
+`;
       });
 
-    OVERRIDE_IDENTIFIERS.forEach(({ name, pref }) => {
-      const overrideContents =
-        formatTokens({
-          surface,
-          args,
-          overrideIdentifier: name,
-          componentName,
-        }) +
-        formatTokens({
-          mediaQuery: "prefers-contrast",
-          surface,
-          args,
-          overrideIdentifier: name,
-          componentName,
-        }) +
-        formatTokens({
-          mediaQuery: "forced-colors",
-          surface,
-          args,
-          overrideIdentifier: name,
-          componentName,
-        }) +
-        formatTokens({
-          mediaQuery: "browser-theme",
-          surface,
-          args,
-          overrideIdentifier: name,
-          componentName,
-        });
-      if (!overrideContents) {
-        return;
-      }
+      return layers;
+    };
 
-      contents += `
-/* stylelint-disable-next-line media-query-no-invalid */
-@media -moz-pref("${pref}") {
-${overrideContents}
-}
+    let contents = customFileHeader({ surface, componentName });
+
+    const sharedLayers = buildLayers(sharedMediaQueries);
+    if (sharedLayers) {
+      contents += `:root,
+:host${componentName ? "" : "(.anonymous-content-host)"} {${sharedLayers}}
 `;
-    });
+    }
+
+    // The browser theme tokens only apply to browser windows, so they need
+    // their own selector rather than sharing the one above.
+    const browserThemeLayers = buildLayers(["browser-theme"]);
+    if (browserThemeLayers) {
+      contents += `
+:root:is([theme-in-app], :not([lwtheme])),
+:host(.anonymous-content-host) {${browserThemeLayers}}
+`;
+    }
 
     return contents;
   };
@@ -522,7 +517,11 @@ function formatNovaNewtabTokens({ mediaQuery, args }) {
       return;
     }
 
-    let originalVal = getOriginalTokenValue(token, prop);
+    // The newtab is an in-content surface, so prefer brand values. Tokens
+    // without a brand/platform split fall back to their shared value.
+    let originalVal =
+      getOriginalTokenValue(token, prop, "brand") ??
+      getOriginalTokenValue(token, prop);
     if (originalVal != undefined) {
       let formattedToken = transformToken({ token, originalVal, dictionary });
       tokens.push(formattedToken);
@@ -564,14 +563,19 @@ function formatNovaNewtabTokens({ mediaQuery, args }) {
  */
 const shouldSkipToken = ({ overrideIdentifier, componentName, token }) => {
   // Skip any tokens that belong to a set of overrides.
-  if (
-    !overrideIdentifier &&
-    (OVERRIDE_IDENTIFIERS.some(({ name }) =>
-      token.name.includes(`-${name}-`)
-    ) ||
-      token.override)
-  ) {
-    return true;
+  try {
+    if (
+      !overrideIdentifier &&
+      (OVERRIDE_IDENTIFIERS.some(({ name }) =>
+        token.name.includes(`-${name}-`)
+      ) ||
+        token.override)
+    ) {
+      return true;
+    }
+  } catch (e) {
+    console.error(token);
+    throw e;
   }
 
   // Ignore base/default tokens if a set of overrides is specified.
@@ -664,10 +668,10 @@ function formatTokens({
   }
 
   dictionary.allTokens = dictionary.allProperties = tokens;
-  let indentation = mediaQuery ? "      " : "    ";
-  if (overrideIdentifier) {
-    indentation += "  ";
-  }
+  // Layer blocks sit inside a selector, and pref-gated overrides add another
+  // level for their media query.
+  let layerIndentation = overrideIdentifier ? "    " : "  ";
+  let indentation = layerIndentation + (mediaQuery ? "    " : "  ");
 
   let formattedVars = formatVariables({
     format: "css",
@@ -680,42 +684,46 @@ function formatTokens({
     componentName,
   });
 
-  let layer = `tokens-${mediaQuery ?? "foundation"}${overrideIdentifier ? `-${overrideIdentifier}` : ""}`;
+  let layer = `tokens-${mediaQuery ?? `foundation${surface == "brand" ? "-brand" : ""}`}${overrideIdentifier ? `-${overrideIdentifier}` : ""}`;
+
   // Weird spacing below is unfortunately necessary for formatting the built CSS.
   if (mediaQuery === "browser-theme") {
     return `
-${NEST_MEDIA_QUERIES_COMMENT}
-@layer ${layer} {
-  @media not ((forced-colors) or (-moz-native-theme)) {
-    :root:not([lwtheme]),
-    :host(.anonymous-content-host) {
+${layerIndentation}@layer ${layer} {
+${layerIndentation}  @media not ((forced-colors) or (-moz-native-theme)) {
 ${formattedVars}
-    }
-  }
-}
+${layerIndentation}  }
+${layerIndentation}}
 `;
   }
   if (mediaQuery) {
     return `
-${NEST_MEDIA_QUERIES_COMMENT}
-@layer ${layer} {
-  @media (${mediaQuery}) {
-    :root,
-    :host${componentName ? "" : "(.anonymous-content-host)"} {
+${layerIndentation}@layer ${layer} {
+${layerIndentation}  @media (${mediaQuery}) {
 ${formattedVars}
-    }
-  }
-}
+${layerIndentation}  }
+${layerIndentation}}
 `;
   }
 
-  return `@layer ${layer} {
-  :root,
-  :host${componentName ? "" : "(.anonymous-content-host)"} {
+  return `
+${layerIndentation}@layer ${layer} {
 ${formattedVars}
-  }
-}
+${layerIndentation}}
 `;
+}
+
+/**
+ * Builds a `light-dark()` CSS value from a token layer's `light` and `dark` keys.
+ *
+ * @param {object} [layerValue] - Token layer from JSON with `light` and `dark` set.
+ * @returns {string|undefined} `light-dark(light, dark)`, or undefined if either key is missing.
+ */
+function getLightDarkPair(layerValue) {
+  if (layerValue?.light && layerValue?.dark) {
+    return `light-dark(${layerValue.light}, ${layerValue.dark})`;
+  }
+  return undefined;
 }
 
 /**
@@ -723,29 +731,28 @@ ${formattedVars}
  *
  * @param {object} token - Token object parsed by style-dictionary.
  * @param {string} prop - Name of the property we're querying for.
- * @param {string} surface
+ * @param {string} [surface]
  *  The desktop surface we're generating CSS for, either "brand" or "platform".
- * @returns {string} The original token value based on our parameters.
+ * @returns {string|undefined} The original token value based on our parameters.
  */
 function getOriginalTokenValue(token, prop, surface) {
   const { value } = token.original;
-  if (surface) {
-    return value[surface]?.[prop];
-  }
-  // Non-object default values apply to the foundation layer.
+
+  // Non-object values apply to the foundation layer only.
   if (typeof value !== "object") {
     return prop === "default" ? value : undefined;
   }
-  // Tokens that define a nativeTheme override use it as the foundation value.
-  if (prop === "default") {
-    return value.nativeTheme ?? value.default;
+
+  // Brand and platform CSS read from their surface layer. shared reads from the root.
+  const layer = surface ? value[surface] : value;
+  if (!layer || typeof layer !== "object") {
+    return undefined;
   }
-  // Only tokens with a nativeTheme override need a browser-theme value.
-  // Tokens without one use the default value in the foundation layer.
-  if (prop === "browserTheme") {
-    return value.nativeTheme ? value.default : undefined;
+  let originalValue = layer[prop];
+  if (typeof originalValue === "object") {
+    return originalValue.default;
   }
-  return value[prop];
+  return originalValue;
 }
 
 /**
@@ -767,13 +774,108 @@ function transformToken({ token, originalVal, dictionary, surface }) {
   let value = originalVal;
   if (dictionary.usesReference(value)) {
     dictionary.getReferences(value).forEach(ref => {
-      value = value.replace(`{${ref.path.join(".")}}`, `var(--${ref.name})`);
+      try {
+        value = value.replace(`{${ref.path.join(".")}}`, `var(--${ref.name})`);
+      } catch (ex) {
+        console.error(`Error processing token ref: ${originalVal}`);
+        throw ex;
+      }
     });
   }
 
   let surfaceComment = token.original?.value[surface]?.comment;
   return { ...token, value, comment: surfaceComment ?? token.comment };
 }
+
+const fileToComponentTypeMap = new Map();
+function isComponentToken({ filePath }) {
+  if (!fileToComponentTypeMap.has(filePath)) {
+    let componentInfo = COMPONENT_TOKEN_PATHS.find(info =>
+      filePath.startsWith(info.dir)
+    );
+    if (componentInfo) {
+      fileToComponentTypeMap.set(filePath, {
+        component: true,
+        global: !!componentInfo.isGlobal,
+      });
+    } else {
+      fileToComponentTypeMap.set(filePath, {
+        component: false,
+        global: true,
+      });
+    }
+  }
+  let info = fileToComponentTypeMap.get(filePath);
+  return info.component && !info.global;
+}
+
+/**
+ * Creates a browserTheme transform that works for a given surface. Maps the
+ * nativeTheme value to the correct browserTheme when necessary.
+ *
+ * @param {string} surface
+ *  The desktop surface we're generating CSS for, either "brand", "platform",
+ *  or "shared".
+ * @returns {string} Name of the transform that was registered.
+ */
+const createBrowserThemeTransform = surface => {
+  let name = `browserThemeTransform/${surface}`;
+
+  // Matcher function for determining if a token's value needs to undergo
+  // a light-dark transform.
+  let matcher = token => {
+    let match =
+      token.original.value.nativeTheme &&
+      // Components only have shared tokens, otherwise only run on platform.
+      (isComponentToken(token) ? surface == "shared" : surface == "platform");
+    return match;
+  };
+
+  let getValueObject = root => {
+    if (root.light) {
+      return { light: root.light, dark: root.dark };
+    }
+    return { default: root.default };
+  };
+
+  // Function that uses the token's original value to create a new "default"
+  // light-dark value and updates the original value object.
+  let transformer = token => {
+    let value = token.original.value;
+    if (surface == "platform" && value.platform) {
+      let browserTheme = getValueObject(token.original.value.platform);
+      token.original.value.platform = {
+        default: value.nativeTheme,
+        browserTheme,
+      };
+      return token.value;
+    }
+    let browserThemeRoot = value.brand ? value.brand : value;
+    let browserTheme = getValueObject(browserThemeRoot);
+    if (isComponentToken(token)) {
+      delete token.original.value.light;
+      delete token.original.value.dark;
+      token.original.value.default = value.nativeTheme;
+      token.original.value.browserTheme = browserTheme;
+    } else {
+      token.original.value.platform = {
+        default: value.nativeTheme,
+        browserTheme,
+      };
+    }
+    return token.value;
+  };
+
+  StyleDictionary.registerTransform({
+    type: "value",
+    transitive: true,
+    name,
+    matcher,
+    transformer,
+  });
+
+  return name;
+};
 
 /**
  * Creates a light-dark transform that works for a given surface. Registers
@@ -787,29 +889,35 @@ function transformToken({ token, originalVal, dictionary, surface }) {
 const createLightDarkTransform = surface => {
   let name = `lightDarkTransform/${surface}`;
 
+  function getTokenRoot(token) {
+    let isComponent = isComponentToken(token);
+    let root =
+      isComponent || surface == "shared"
+        ? token.original.value
+        : token.original.value[surface];
+    let isBrowserTheme =
+      (surface == "platform" || (isComponent && surface == "shared")) &&
+      root?.browserTheme;
+    if (isBrowserTheme) {
+      root = root.browserTheme;
+    }
+    return root;
+  }
+
   // Matcher function for determining if a token's value needs to undergo
   // a light-dark transform.
   let matcher = token => {
-    if (surface != "shared") {
-      return (
-        token.original.value[surface]?.light &&
-        token.original.value[surface]?.dark
-      );
-    }
-    return token.original.value.light && token.original.value.dark;
+    let root = getTokenRoot(token);
+    return root && root.light && root.dark;
   };
 
   // Function that uses the token's original value to create a new "default"
   // light-dark value and updates the original value object.
   let transformer = token => {
-    if (surface != "shared") {
-      let lightDarkVal = `light-dark(${token.original.value[surface].light}, ${token.original.value[surface].dark})`;
-      token.original.value[surface].default = lightDarkVal;
-      return token.value;
-    }
-    let value = `light-dark(${token.original.value.light}, ${token.original.value.dark})`;
-    token.original.value.default = value;
-    return value;
+    let root = getTokenRoot(token);
+    let lightDarkVal = `light-dark(${root.light}, ${root.dark})`;
+    root.default = lightDarkVal;
+    return lightDarkVal;
   };
 
   StyleDictionary.registerTransform({
@@ -1093,6 +1201,7 @@ module.exports = {
       },
       transforms: [
         ...StyleDictionary.transformGroup.css,
+        ...["shared", "platform", "brand"].map(createBrowserThemeTransform),
         ...["shared", "platform", "brand"].map(createLightDarkTransform),
       ],
       files: [
@@ -1129,6 +1238,7 @@ module.exports = {
       },
       transforms: [
         ...StyleDictionary.transformGroup.css,
+        ...["shared", "platform", "brand"].map(createBrowserThemeTransform),
         ...["shared", "platform", "brand"].map(createLightDarkTransform),
       ],
       files: [

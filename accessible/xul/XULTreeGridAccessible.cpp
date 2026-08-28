@@ -5,26 +5,26 @@
 #include "XULTreeGridAccessible.h"
 
 #include <stdint.h>
-#include "AccAttributes.h"
-#include "LocalAccessible-inl.h"
-#include "nsAccCache.h"
-#include "nsAccessibilityService.h"
-#include "nsAccUtils.h"
-#include "DocAccessible.h"
-#include "nsEventShell.h"
-#include "Relation.h"
-#include "mozilla/a11y/Role.h"
-#include "States.h"
-#include "nsQueryObject.h"
-#include "nsTreeColumns.h"
 
-#include "nsITreeSelection.h"
-#include "nsComponentManagerUtils.h"
+#include "AccAttributes.h"
+#include "DocAccessible.h"
+#include "LocalAccessible-inl.h"
+#include "Relation.h"
+#include "States.h"
 #include "mozilla/PresShell.h"
+#include "mozilla/a11y/Role.h"
 #include "mozilla/a11y/TableAccessible.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/TreeColumnBinding.h"
 #include "mozilla/dom/XULTreeElementBinding.h"
+#include "nsAccCache.h"
+#include "nsAccUtils.h"
+#include "nsAccessibilityService.h"
+#include "nsComponentManagerUtils.h"
+#include "nsEventShell.h"
+#include "nsITreeSelection.h"
+#include "nsQueryObject.h"
+#include "nsTreeColumns.h"
 
 using namespace mozilla::a11y;
 using namespace mozilla;
@@ -590,7 +590,7 @@ bool XULTreeGridCellAccessible::CellInvalidated() {
           MakeRefPtr<AccStateChangeEvent>(this, states::CHECKED, isEnabled);
       nsEventShell::FireEvent(accEvent);
 
-      mCachedTextEquiv = textEquiv;
+      mCachedTextEquiv = std::move(textEquiv);
       return true;
     }
 
@@ -600,7 +600,7 @@ bool XULTreeGridCellAccessible::CellInvalidated() {
   mTreeView->GetCellText(mRow, mColumn, textEquiv);
   if (mCachedTextEquiv != textEquiv) {
     nsEventShell::FireEvent(nsIAccessibleEvent::EVENT_NAME_CHANGE, this);
-    mCachedTextEquiv = textEquiv;
+    mCachedTextEquiv = std::move(textEquiv);
     return true;
   }
 

@@ -16,12 +16,11 @@ import org.junit.runners.JUnit4
 class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     override fun getDetector(): Detector = NoFunctionTypeMockingDetector()
 
-    override fun getIssues(): List<Issue> = listOf(
-        NoFunctionTypeMockingDetector.ISSUE_NO_FUNCTION_TYPE_MOCKING,
-    )
+    override fun getIssues(): List<Issue> = listOf(NoFunctionTypeMockingDetector.ISSUE_NO_FUNCTION_TYPE_MOCKING)
 
-    private val mockkStubs = TestFiles.kotlin(
-        """
+    private val mockkStubs =
+        TestFiles.kotlin(
+                """
         package io.mockk
 
         inline fun <reified T : Any> mockk(
@@ -39,24 +38,25 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
             recordPrivateCalls: Boolean = false,
             block: T.() -> Unit = {},
         ): T = null as T
-        """,
-    ).indented()
+        """
+            )
+            .indented()
 
     @Test
     fun `explicit Function0 type argument is flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.mockk
                     class MyTest {
                         val onClick = mockk<() -> Unit>(relaxed = true)
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectErrorCount(1)
@@ -66,18 +66,18 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `explicit Function1 type argument is flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.mockk
                     class MyTest {
                         val onValue = mockk<(String) -> Int>()
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectErrorCount(1)
@@ -87,18 +87,18 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `multi-arg function type is flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.mockk
                     class MyTest {
                         val onPair = mockk<(String, Int) -> Boolean>()
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectErrorCount(1)
@@ -108,18 +108,18 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `suspend function type is flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.mockk
                     class MyTest {
                         val onSuspend = mockk<suspend () -> Unit>(relaxed = true)
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectErrorCount(1)
@@ -129,18 +129,18 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `spyk of function type is flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.spyk
                     class MyTest {
                         val onClick = spyk<() -> Unit>()
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectErrorCount(1)
@@ -150,18 +150,18 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `function type inferred from property type is flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.mockk
                     class MyTest {
                         private val onClick: () -> Unit = mockk(relaxed = true)
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectErrorCount(1)
@@ -171,19 +171,19 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `mockk of a non-function type is not flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.mockk
                     interface MyService { fun doIt() }
                     class MyTest {
                         val svc = mockk<MyService>(relaxed = true)
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectClean()
@@ -192,17 +192,17 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `unrelated mockk-named function is not flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.other
                     fun <T> mockk(): T = TODO()
                     class MyTest {
                         val foo: () -> Unit = com.example.other.mockk()
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented()
             )
             .run()
             .expectClean()
@@ -211,19 +211,19 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `spyk of a real instance whose type is not a function type is not flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.spyk
                     class Subject { fun doIt() = Unit }
                     class MyTest {
                         val subject = spyk(Subject())
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectClean()
@@ -232,11 +232,10 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `function-typed property assigned a plain lambda alongside an unrelated mockk is not flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.mockk
                     interface MyService { fun doIt() }
@@ -246,8 +245,9 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
                         private val onValue: (String) -> Unit = { _ -> Unit }
                         private val svc: MyService = mockk(relaxed = true)
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectClean()
@@ -256,11 +256,10 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
     @Test
     fun `function-typed lateinit assigned a plain lambda alongside an unrelated mockk is not flagged`() {
         lint()
-            .allowMissingSdk()
             .files(
                 mockkStubs,
                 TestFiles.kotlin(
-                    """
+                        """
                     package com.example.test
                     import io.mockk.mockk
                     interface MyService { fun doIt() }
@@ -271,8 +270,9 @@ class NoFunctionTypeMockingDetectorTest : LintDetectorTest() {
                             onClick = { }
                         }
                     }
-                    """,
-                ).indented(),
+                    """
+                    )
+                    .indented(),
             )
             .run()
             .expectClean()

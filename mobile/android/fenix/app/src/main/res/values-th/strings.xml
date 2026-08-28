@@ -23,6 +23,8 @@
   <string name="content_description_normal_browsing">การเรียกดูตามปกติ</string>
   <!-- Placeholder text shown in the search bar before a user enters text for the default engine -->
   <string name="search_hint">ค้นหาหรือป้อนที่อยู่</string>
+  <!-- Shorter placeholder text shown in the search bar when an additional action (voice search) is rendered alongside the hint. -->
+  <string name="search_hint_short">ค้นหา</string>
   <!-- Placeholder text shown in the search bar before a user enters text for a general engine -->
   <string name="search_hint_general_engine">ค้นหาเว็บ</string>
   <!-- Placeholder text shown in search bar when using history search -->
@@ -70,7 +72,7 @@
   <!-- Text for the menu button to remove a recently saved bookmark from the user's home screen -->
   <string name="home_bookmarks_menu_item_remove">เอาออก</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">%1$s ผลิตขึ้นโดย Mozilla</string>
+  <string name="about_content" tools:ignore="BrandUsage">%1$s ผลิตขึ้นโดย Mozilla</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">ความเข้าใจผิดที่พบบ่อยเกี่ยวกับการท่องเว็บแบบส่วนตัว</string>
   <!-- Text to be announced by the accessibility service to inform the user that the private browsing mode is currently active. -->
@@ -104,12 +106,6 @@
   <string name="open_in_app_cfr_negative_button_text">ยกเลิก</string>
   <!-- Private browsing erase action "contextual feature recommendation" (CFR) -->
 
-  <!--
-    Address bar swipe "contextual feature recommendation" (CFR)
-
-    Text for the message displayed in the contextual feature recommendation popup promoting swipe of address bar.
-  -->
-  <string name="address_bar_swipe_cfr_message_2">ปัดแถบเครื่องมือไปทางซ้ายหรือขวาเพื่อสลับแท็บ</string>
   <!-- Text for the info dialog when camera permissions have been denied but user tries to access a camera feature. -->
   <string name="camera_permissions_needed_message">จำเป็นต้องมีการเข้าถึงกล้อง ไปที่การตั้งค่า Android แตะสิทธิอนุญาต แล้วแตะอนุญาต</string>
   <!-- Text for the positive action button to go to Android Settings to grant permissions. -->
@@ -147,6 +143,8 @@
   <string name="home_screen_shortcut_open_new_private_tab_2">แท็บส่วนตัวใหม่</string>
   <!-- Shortcut action to open Passwords screen -->
   <string name="home_screen_shortcut_passwords">รหัสผ่าน</string>
+  <!-- Shortcut action to open uninstall survey -->
+  <string name="home_screen_shortcut_uninstall_survey">ทำไมถึงถอนการติดตั้ง?</string>
   <!--
     Recent Tabs
 
@@ -314,14 +312,6 @@
   <!-- Content description (not visible, for screen readers etc.) for recommended extensions in main menu -->
   <string name="browser_menu_recommended_extensions_content_description">ข้อมูลเพิ่มเติม</string>
   <!--
-    Menu "contextual feature recommendation" (CFR)
-
-    Text for the title in the contextual feature recommendation popup promoting the menu feature.
-  -->
-  <string name="menu_cfr_title">ใหม่: เมนูที่เรียบง่ายขึ้น</string>
-  <!-- Text for the message in the contextual feature recommendation popup promoting the menu feature. -->
-  <string name="menu_cfr_body">ค้นหาสิ่งที่คุณต้องการได้เร็วขึ้น ตั้งแต่การท่องเว็บแบบส่วนตัวจนถึงการบันทึก</string>
-  <!--
     Extensions management fragment
 
     Text displayed when there are no extensions to be shown
@@ -330,21 +320,9 @@
   <!--
     Browser Toolbar
 
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">หน้าแรก</string>
-  <!--
-    Browser Toolbar
-
     Content description for the translate page toolbar button that opens the translations dialog when no translation has occurred.
   -->
   <string name="browser_toolbar_translate">แปลหน้า</string>
-  <!--
-    Content description (not visible, for screen readers etc.) for the translate page toolbar button that opens the translations dialog when the page is translated successfully.
-    %1$s is the name of the language that is displayed in the original page. (For example: English)
-    %2$s is the name of the language which the page was translated to. (For example: French)
-  -->
-  <string name="browser_toolbar_translated_successfully">แปลหน้าจาก%1$sเป็น%2$sแล้ว</string>
   <!-- CFR description for the browser toolbar describing the "Shake to summarize feature" -->
   <string name="browser_toolbar_summarize_cfr_description">เขย่าอุปกรณ์ของคุณเพื่อสรุปข้อมูลหน้านี้ในไม่กี่วินาที ⚡️</string>
   <!--
@@ -375,8 +353,6 @@
   <string name="ai_controls_banner_headline">คุณมีทางเลือกเสมอใน %s</string>
   <!-- Supporting text for the AI controls banner. %s is a learn more link using ai_controls_learn_more as text. -->
   <string name="ai_controls_banner_supporting_text_2">นั่นรวมถึงว่าจะใช้คุณลักษณะที่ถูกเพิ่มประสิทธิภาพด้วย AI หรือไม่ %s</string>
-  <!-- Supporting text for the AI controls banner -->
-  <string name="ai_controls_banner_supporting_text">นั่นรวมถึงว่าจะใช้คุณลักษณะที่ถูกเพิ่มประสิทธิภาพด้วย AI หรือไม่</string>
   <!-- Link text for learning more about AI controls -->
   <string name="ai_controls_learn_more">เรียนรู้เพิ่มเติม</string>
   <!-- Title for the block AI enhancements toggle -->
@@ -424,12 +400,6 @@
   <!--
     Search Fragment
 
-    Button in the search view that lets a user search by scanning a QR code
-  -->
-  <string name="search_scan_button_2">สแกนคิวอาร์โค้ด</string>
-  <!--
-    Search Fragment
-
     Button in the search view that lets a user navigate to the site in their clipboard
   -->
   <string name="awesomebar_clipboard_title">เติมลิงก์จากคลิปบอร์ด</string>
@@ -464,68 +434,14 @@
   <string name="search_suggestions_delete_history_item_snackbar">ลบ %1$s ออกจากประวัติแล้ว</string>
   <!-- Content description (not visible, for screen readers etc.): Button shown near a history search result allowing to delete it from browsing history. -->
   <string name="mozac_browser_awesomebar_remove_suggestion" tools:ignore="UnusedResources">ลบรายการประวัตินี้</string>
+  <!-- Button in the app links prompt that keeps the user in the browser instead of opening the external app. %1$s is the name of the app (for example "Firefox"). -->
+  <string name="applinks_prompt_negative_button">อยู่ใน %1$s</string>
   <!--
     Home onboarding
 
     Content description (not visible, for screen readers etc.): Close button for the home onboarding dialog
   -->
   <string name="onboarding_home_content_description_close_button">ปิด</string>
-  <!--
-    Juno first user onboarding flow experiment, strings are marked unused as they are only referenced by Nimbus experiments.
-
-    Description for learning more about our privacy notice.
-  -->
-  <string name="juno_onboarding_privacy_notice_text" tools:ignore="BrandUsage">ประกาศความเป็นส่วนตัวของ Firefox</string>
-  <!-- Title for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_title_nimbus_2">เรารักที่จะดูแลคุณให้ปลอดภัย</string>
-  <!-- Description for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_description_nimbus_3">เบราว์เซอร์ที่สนับสนุนโดยองค์กรไม่แสวงหาผลกำไรของเราจะช่วยหยุดบริษัทต่างๆ ไม่ให้แอบติดตามคุณทางเว็บได้</string>
-  <!-- Text for the button to set firefox as default browser on the device -->
-  <string name="juno_onboarding_default_browser_positive_button" tools:ignore="UnusedResources">ตั้งเป็นเบราว์เซอร์เริ่มต้น</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_default_browser_negative_button" tools:ignore="UnusedResources">ไม่ใช่ตอนนี้</string>
-  <!-- Title for sign in to sync screen. -->
-  <string name="juno_onboarding_sign_in_title_2">คงการเข้ารหัสเมื่อคุณเปลี่ยนจากอุปกรณ์เครื่องหนึ่งไปยังอีกเครื่องหนึ่ง</string>
-  <!--
-    Description for sign in to sync screen. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_sign_in_description_3" tools:ignore="BrandUsage">Firefox เข้ารหัสรหัสผ่าน ที่คั่นหน้า และอื่นๆ ของคุณเมื่อคุณซิงค์</string>
-  <!-- Text for the button to sign in to sync on the device -->
-  <string name="juno_onboarding_sign_in_positive_button" tools:ignore="UnusedResources">ลงชื่อเข้า</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_sign_in_negative_button" tools:ignore="UnusedResources">ไม่ใช่ตอนนี้</string>
-  <!--
-    Title for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_title_nimbus_2" tools:ignore="BrandUsage">การแจ้งเตือนช่วยให้คุณปลอดภัยยิ่งขึ้นด้วย Firefox</string>
-  <!--
-    Description for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_description_nimbus_2" tools:ignore="BrandUsage">ส่งแท็บระหว่างอุปกรณ์ของคุณอย่างปลอดภัยและค้นพบคุณสมบัติความเป็นส่วนตัวอื่นๆ ใน Firefox</string>
-  <!-- Text for the button to request notification permission on the device -->
-  <string name="juno_onboarding_enable_notifications_positive_button" tools:ignore="UnusedResources">เปิดการแจ้งเตือน</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_enable_notifications_negative_button" tools:ignore="UnusedResources">ไม่ใช่ตอนนี้</string>
-  <!--
-    Title for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_title" tools:ignore="BrandUsage,UnusedResources">ลองใช้วิดเจ็ตค้นหาของ Firefox</string>
-  <!--
-    Description for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_description" tools:ignore="BrandUsage,UnusedResources">ด้วย Firefox บนหน้าจอแรกของคุณ คุณจะสามารถเข้าถึงเบราว์เซอร์ที่เน้นเรื่องความเป็นส่วนตัวเป็นหลักซึ่งช่วยปิดกั้นตัวติดตามแบบข้ามไซต์ได้อย่างง่ายดาย</string>
-  <!--
-    Text for the button to add search widget on the device used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_positive_button" tools:ignore="BrandUsage,UnusedResources">เพิ่มวิดเจ็ต Firefox</string>
-  <!-- Text for the button to dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_add_search_widget_negative_button" tools:ignore="UnusedResources">ไม่ใช่ตอนนี้</string>
   <!-- Title for the privacy preferences dialog shown during onboarding. Note: The word "Firefox" should NOT be translated. -->
   <string name="onboarding_preferences_dialog_title" tools:ignore="BrandUsage">ช่วยเราทำให้ Firefox ดีขึ้น</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
@@ -545,17 +461,13 @@
   <!-- Button text to reopen firefox after the crash is processed %s is the name of the app (for example "Firefox") -->
   <string name="startup_crash_restart">เปิด %s ใหม่</string>
   <!-- Title for the usage data option in the privacy preferences dialog shown during onboarding. Note: The word "Mozilla" should NOT be translated. -->
-  <string name="onboarding_preferences_dialog_usage_data_title">ส่งข้อมูลทางเทคนิคและข้อมูลการโต้ตอบไปยัง Mozilla</string>
+  <string name="onboarding_preferences_dialog_usage_data_title" tools:ignore="BrandUsage">ส่งข้อมูลทางเทคนิคและข้อมูลการโต้ตอบไปยัง Mozilla</string>
   <string name="onboarding_preferences_dialog_usage_data_description_2" tools:ignore="BrandUsage">ข้อมูลเกี่ยวกับอุปกรณ์ของคุณ การกำหนดค่าฮาร์ดแวร์ และพฤติกรรมการใช้งาน Firefox ช่วยปรับปรุงคุณลักษณะ ประสิทธิภาพ และเสถียรภาพสำหรับผู้ใช้จากทุกที่ได้</string>
   <string name="onboarding_preferences_dialog_usage_data_learn_more_2">เรียนรู้เพิ่มเติม</string>
   <!-- Positive button label for the privacy preferences dialog shown during onboarding. -->
   <string name="onboarding_preferences_dialog_positive_button">เสร็จสิ้น</string>
   <!-- Terms of service onboarding title card label. 'Firefox' intentionally hardcoded here -->
   <string name="onboarding_welcome_to_firefox" tools:ignore="BrandUsage">ยินดีต้อนรับสู่ Firefox</string>
-  <!-- Terms of service sub header label. -->
-  <string name="onboarding_terms_of_service_sub_header_2">เรียกดูเว็บได้อย่างรวดเร็วและปลอดภัย</string>
-  <!-- Terms of service onboarding page continue button label. -->
-  <string name="onboarding_term_of_service_agree_and_continue_button_label_2">ดำเนินการต่อ</string>
   <!-- Line one of the terms of service onboarding page. %1$s is replaced by an active link, using onboarding_term_of_service_line_one_link_text_2 as text (“Firefox Terms of Use”). -->
   <string name="onboarding_term_of_service_line_one_2">เมื่อดำเนินการต่อ แสดงว่าคุณยอมรับ%1$s</string>
   <!-- Used as text for the link in onboarding_term_of_service_line_one_2. -->
@@ -623,16 +535,6 @@
   <string name="onboarding_redesign_sync_positive_button" tools:ignore="UnusedResources">เริ่มซิงค์</string>
   <!-- Sync onboarding redesign negative button text. -->
   <string name="onboarding_redesign_sync_negative_button" tools:ignore="UnusedResources">ไม่ใช่ตอนนี้</string>
-  <!-- Marketing onboarding page title. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_title" tools:ignore="BrandUsage,UnusedResources">ช่วยเราพัฒนา Firefox</string>
-  <!-- Marketing onboarding page body. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_body" tools:ignore="BrandUsage,UnusedResources">เมื่อคุณแบ่งปันว่าคุณค้นพบ Firefox ได้อย่างไร และคุณใช้งานมันอย่างไร คุณช่วยให้เราแนะนำเบราว์เซอร์ของเราให้ผู้คนรู้จักมากขึ้น</string>
-  <!-- Marketing onboarding page opt-out checkbox. Unchecking the box does not increase data collection. Our data practices remain the same. 'Mozilla' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_opt_out_checkbox">แบ่งปันข้อมูลกับพันธมิตรด้านเทคโนโลยีการตลาดของ Mozilla ข้อมูลนี้จะไม่ถูกขายหรือถูกใช้เพื่อแสดงโฆษณาให้แก่คุณ</string>
-  <!-- Marketing onboarding page clickable link text to "learn more" on how data is used. -->
-  <string name="onboarding_marketing_learn_more" tools:ignore="UnusedResources">เราใช้ข้อมูลอย่างไร</string>
-  <!-- Marketing onboarding page button label. Button to confirm choice and start browsing. -->
-  <string name="onboarding_marketing_positive_button" tools:ignore="UnusedResources">ยืนยันและเริ่มเรียกดู</string>
   <!-- Marketing onboarding page title variant. “One last thing” refers to the final step or action in the onboarding process that we’re asking users to take before they can start using the browser. -->
   <string name="onboarding_marketing_title_1" tools:ignore="UnusedResources">ขั้นตอนสุดท้าย</string>
   <!-- Marketing onboarding page body variant. 'Firefox' is intentionally hardcoded. -->
@@ -712,12 +614,12 @@
   <!-- Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded. -->
   <string name="nova_onboarding_marketing_body_2" tools:ignore="BrandUsage">แบ่งปันว่าคุณค้นพบ Firefox ได้อย่างไร และคุณใช้มันอย่างไรกับพันธมิตรด้านการตลาดของ Mozilla โดยข้อมูลนี้จะไม่ถูกนำไปขาย</string>
   <!-- Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded. -->
-  <string name="nova_onboarding_marketing_body_3" tools:ignore="BrandUsage">คุณสามารถช่วยเราเข้าถึงผู้คนได้มากขึ้นด้วยการอนุญาตให้ Mozilla แจ้งช่องทางต่าง ๆ ที่เราโปรโมต Firefox ว่าคุณคือผู้ใช้ Firefox</string>
+  <string name="nova_onboarding_marketing_body_3" tools:ignore="BrandUsage,UnusedResources">คุณสามารถช่วยเราเข้าถึงผู้คนได้มากขึ้นด้วยการอนุญาตให้ Mozilla แจ้งช่องทางต่าง ๆ ที่เราโปรโมต Firefox ว่าคุณคือผู้ใช้ Firefox</string>
   <!--
     Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
     “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
   -->
-  <string name="nova_onboarding_marketing_body_4" tools:ignore="BrandUsage">คุณสามารถช่วยเราเข้าถึงผู้คนได้มากขึ้นด้วยการอนุญาตให้ Mozilla แจ้งแพลตฟอร์มที่คุณเข้ามาว่าคุณใช้ Firefox</string>
+  <string name="nova_onboarding_marketing_body_4" tools:ignore="BrandUsage,UnusedResources">คุณสามารถช่วยเราเข้าถึงผู้คนได้มากขึ้นด้วยการอนุญาตให้ Mozilla แจ้งแพลตฟอร์มที่คุณเข้ามาว่าคุณใช้ Firefox</string>
   <!--
     Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
     “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
@@ -729,12 +631,31 @@
     %1$s is replaced by an active link, using nova_onboarding_marketing_body_link_text as text (“How we use the data”).
   -->
   <string name="nova_onboarding_marketing_body_6" tools:ignore="BrandUsage,UnusedResources">ช่วยเราเข้าถึงผู้คนได้มากขึ้นด้วยการอนุญาตให้ Mozilla แจ้งแพลตฟอร์มที่คุณเข้ามาว่าคุณใช้ Firefox %1$s</string>
+  <!--
+    Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
+    “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
+    %1$s is replaced by an active link, using nova_onboarding_marketing_body_link_text_1 as text (“Learn More”).
+  -->
+  <string name="nova_onboarding_marketing_body_7" tools:ignore="BrandUsage">คุณสามารถช่วยเราเข้าถึงผู้คนได้มากขึ้นด้วยการอนุญาตให้ Mozilla แจ้งแพลตฟอร์มที่คุณเข้ามาว่าคุณใช้ Firefox %1$s</string>
+  <!-- Marketing onboarding additional body text. 'Firefox' is intentionally hardcoded. -->
+  <string name="nova_onboarding_marketing_body_line_two" tools:ignore="BrandUsage">Firefox เป็นองค์กรอิสระอย่างภาคภูมิใจ และมุ่งมั่นที่จะปกป้องเว็บแบบเปิดจากบริษัทเทคโนโลยียักษ์ใหญ่</string>
+  <!--
+    Marketing onboarding additional body text. 'Firefox' is intentionally hardcoded.
+    “Allowing” refers to the main button “Allow and Continue”; the ask for the user is to allow communicating back to the platform.
+  -->
+  <string name="nova_onboarding_marketing_body_line_three" tools:ignore="BrandUsage">โปรดพิจารณาอนุญาตเพื่อช่วยเหลือ Firefox ในการนี้</string>
   <!-- Marketing onboarding body link text. -->
   <string name="nova_onboarding_marketing_body_link_text">เราใช้ข้อมูลอย่างไร</string>
+  <!-- Marketing onboarding body link text. -->
+  <string name="nova_onboarding_marketing_body_link_text_1">เรียนรู้เพิ่มเติม</string>
   <!-- Marketing onboarding primary button text. 'Firefox' is intentionally hardcoded. -->
-  <string name="nova_onboarding_marketing_primary_button_text" tools:ignore="BrandUsage">ช่วย Firefox</string>
+  <string name="nova_onboarding_marketing_primary_button_text" tools:ignore="BrandUsage,UnusedResources">ช่วย Firefox</string>
+  <!-- Marketing onboarding primary button text. -->
+  <string name="nova_onboarding_marketing_primary_button_text_3">ใช่</string>
   <!-- Marketing onboarding secondary button text. -->
-  <string name="nova_onboarding_marketing_secondary_button_text">ไม่ ขอบคุณ</string>
+  <string name="nova_onboarding_marketing_secondary_button_text" tools:ignore="UnusedResources">ไม่ ขอบคุณ</string>
+  <!-- Marketing onboarding secondary button text. -->
+  <string name="nova_onboarding_marketing_secondary_button_text_2">ไม่</string>
   <!-- Notifications onboarding title. 'Firefox' is intentionally hardcoded. -->
   <string name="nova_onboarding_notifications_title" tools:ignore="BrandUsage,UnusedResources">การแจ้งเตือนช่วยให้คุณปลอดภัยยิ่งขึ้นด้วย Firefox</string>
   <!-- Notifications onboarding subtitle. 'Firefox' is intentionally hardcoded. -->
@@ -767,41 +688,6 @@
   <string name="nova_onboarding_app_icon_prompt_body" tools:ignore="UnusedResources">ปรับแต่งหน้าจอหลักให้มีความเป็นคุณ</string>
   <!-- ==== End of Project "Nova" onboarding strings ==== -->
 
-  <!-- Onboarding header for the toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_title" tools:ignore="UnusedResources">เลือกตำแหน่งแถบเครื่องมือ</string>
-  <!-- Onboarding sub header for toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_description" tools:ignore="UnusedResources">ให้การค้นหาอยู่ใกล้แค่เอื้อม</string>
-  <!-- Onboarding label for 'Save and continue' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_continue_button">บันทึกและดำเนินการต่อ</string>
-  <!-- Onboarding toolbar selection card label for 'top' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_top_option">ด้านบน</string>
-  <!-- Onboarding toolbar selection card label for 'bottom' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_bottom_option">ด้านล่าง</string>
-  <!-- Onboarding toolbar selection card content description for the main image. -->
-  <string name="onboarding_customize_toolbar_main_image_content_description">ภาพส่วนหัวขนาดใหญ่ของมุมมองการเลือกแถบเครื่องมือที่แสดงแถบเครื่องมือที่เป็นภาพประกอบ</string>
-  <!-- Onboarding toolbar selection card content description for the toolbar placement image. -->
-  <string name="onboarding_customize_toolbar_placement_bottom_content_description">รูปภาพของแถบเครื่องมือด้านล่าง</string>
-  <string name="onboarding_customize_toolbar_placement_top_content_description">รูปภาพของแถบเครื่องมือด้านบน</string>
-  <!-- Action label for toolbar options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_toolbar_a11y_action_label_select">เลือก</string>
-  <!-- Onboarding header for the theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_title" tools:ignore="UnusedResources">เลือกชุดตกแต่ง</string>
-  <!-- Onboarding sub header for theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_description" tools:ignore="UnusedResources">รับชมเว็บด้วยแสงที่ดีที่สุด</string>
-  <!-- Onboarding label for 'Save and start browsing' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_start_button">บันทึกและเริ่มการเรียกดู</string>
-  <!-- Onboarding theme selection card label for 'dark' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_dark_option">มืด</string>
-  <!-- Onboarding theme selection card label for 'light' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_light_option">สว่าง</string>
-  <!-- Onboarding theme selection card label for 'System auto' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_system_option">ระบบอัตโนมัติ</string>
-  <!-- Onboarding theme selection card content description for the main image. -->
-  <string name="onboarding_customize_theme_main_image_content_description">ภาพส่วนหัวขนาดใหญ่ของมุมมองการเลือกชุดตกแต่งที่แสดงศิลปินและเครื่องมือสำหรับผู้สร้างที่เป็นภาพประกอบ</string>
-  <!-- Onboarding theme selection card content description for the theme selection image. %1$s is placeholder for either 'system', 'light' or 'dark'. -->
-  <string name="onboarding_customize_theme_content_description">ภาพของชุดตกแต่ง %1$s</string>
-  <!-- Action label for options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_theme_a11y_action_label_select">เลือก</string>
   <!--
     Widget Picker
 
@@ -889,40 +775,8 @@
   <string name="preferences_pbm_lock_screen_title">ใช้การล็อกหน้าจอเพื่อซ่อนแท็บในการเรียกดูแบบส่วนตัว</string>
   <!-- Informs the user how to access the tabs when "Use screen lock to hide tabs in private browsing" is enabled -->
   <string name="preferences_pbm_lock_screen_summary_3">ดูแท็บต่าง ๆ ได้โดยปลดล็อกด้วยลายนิ้วมือ PIN หรือใบหน้าของคุณ การเปิดตัวเลือกนี้ยังช่วยป้องกันการจับภาพและการแบ่งปันหน้าจออีกด้วย</string>
-  <!-- Label for cookie banner section in quick settings panel. -->
-  <string name="cookie_banner_blocker">ตัวปิดกั้นแบนเนอร์คุกกี้</string>
   <!-- Preference for removing cookie/consent banners from sites automatically in private mode. See reduce_cookie_banner_summary for additional context. -->
   <string name="preferences_cookie_banner_reduction_private_mode">ตัวปิดกั้นแบนเนอร์คุกกี้ในการเรียกดูแบบส่วนตัว</string>
-  <!-- Text for indicating cookie banner handling is off this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_off_for_site">ปิดสำหรับไซต์นี้</string>
-  <!-- Text for cancel button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_cancel_button">ยกเลิก</string>
-  <!-- Text for request support button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_request_support_button_2">ส่งคำขอ</string>
-  <!-- Text for title indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_title_2">ขอการรองรับไซต์นี้ไหม?</string>
-  <!-- Label for the snackBar, after the user reports with success a website where cookie banner reducer did not work -->
-  <string name="cookie_banner_handling_report_site_snack_bar_text_2">ส่งคำขอแล้ว</string>
-  <!-- Text for indicating cookie banner handling is on this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_on_for_site">เปิดสำหรับไซต์นี้</string>
-  <!-- Text for indicating that a request for unsupported site was sent to Nimbus (it's a Mozilla library for experiments), this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site_request_submitted_2">ส่งคำขอรองรับแล้ว</string>
-  <!-- Text for indicating cookie banner handling is currently not supported for this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site">ไม่รองรับไซต์ในขณะนี้</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is on this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_on_for_site_1">ต้องการเปิดตัวปิดกั้นแบนเนอร์คุกกี้สำหรับ %1$s หรือไม่?</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is off this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_off_for_site_1">ต้องการปิดตัวปิดกั้นแบนเนอร์คุกกี้สำหรับ %1$s หรือไม่?</string>
-  <!-- Title text for a detail explanation indicating cookie banner reducer didn't work for the current site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_title_unsupported_site_request_2">%1$s ไม่สามารถปฏิเสธคำขอคุกกี้โดยอัตโนมัติบนไซต์นี้ คุณสามารถส่งคำขอให้รองรับไซต์นี้ในอนาคตได้</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is off for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_off_for_site_1">หลังจากปิดแล้ว %1$s จะล้างคุกกี้และโหลดไซต์นี้ใหม่ การกระทำนี้อาจนำคุณลงชื่อออกหรือล้างรถเข็นช็อปปิ้ง</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is on for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_on_for_site_3">หลังจากเปิดแล้ว %1$s จะพยายามปฏิเสธแบนเนอร์คุกกี้ทั้งหมดบนไซต์นี้โดยอัตโนมัติ</string>
-  <!-- Title for the cookie banner re-engagement CFR, the placeholder is replaced with app name. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="cookie_banner_cfr_title">%1$s เพิ่งปฏิเสธคุกกี้สำหรับคุณ</string>
-  <!-- Message for the cookie banner re-engagement CFR -->
-  <string name="cookie_banner_cfr_message">รบกวนสมาธิน้อยลง คุกกี้ติดตามคุณน้อยลงบนเว็บไซต์นี้</string>
   <!-- Description of the preference to enable "HTTPS-Only" mode. -->
   <string name="preferences_https_only_summary">พยายามเชื่อมต่อกับเว็บไซต์โดยใช้โปรโตคอลการเข้ารหัส HTTPS โดยอัตโนมัติเพื่อเพิ่มความปลอดภัย</string>
   <!-- Summary of https only preference if https only is set to off -->
@@ -946,7 +800,7 @@
   <!-- Preference for accessibility -->
   <string name="preferences_accessibility">การช่วยเข้าถึง</string>
   <!-- Preference to override the Mozilla account server -->
-  <string name="preferences_override_account_server">เซิร์ฟเวอร์บัญชี Mozilla ที่กำหนดเอง</string>
+  <string name="preferences_override_account_server" tools:ignore="BrandUsage">เซิร์ฟเวอร์บัญชี Mozilla ที่กำหนดเอง</string>
   <!-- Preference to override the Sync token server -->
   <string name="preferences_override_sync_tokenserver">เซิร์ฟเวอร์ Sync ที่กำหนดเอง</string>
   <!-- Preference category for account information -->
@@ -974,7 +828,7 @@
   <!-- Preference description shown in the banner prompting the user to sign in for sync features -->
   <string name="preferences_sign_in_description">ซิงค์แท็บ ที่คั่นหน้า รหัสผ่าน และอื่น ๆ</string>
   <!-- Preference shown instead of account display name while account profile information isn't available yet. -->
-  <string name="preferences_account_default_name_2">บัญชี Mozilla</string>
+  <string name="preferences_account_default_name_2" tools:ignore="BrandUsage">บัญชี Mozilla</string>
   <!-- Preference text for account title when there was an error syncing FxA -->
   <string name="preferences_account_sync_error">เชื่อมต่ออีกครั้งเพื่อทำการซิงค์ต่อ</string>
   <!-- Preference for language -->
@@ -1022,7 +876,7 @@
   <!-- Summary for preference to show Firefox Suggest search suggestions for web content -->
   <string name="preferences_show_nonsponsored_suggestions_summary">รับคำแนะนำจากเว็บที่เกี่ยวข้องกับการค้นหาของคุณ</string>
   <!-- Preference title for switch preference to show search optimization cards -->
-  <string name="preferences_show_search_optimization_cards">ดึงคำแนะนำจาก Mozilla ขณะที่คุณพิมพ์</string>
+  <string name="preferences_show_search_optimization_cards" tools:ignore="BrandUsage">ดึงคำแนะนำจาก Mozilla ขณะที่คุณพิมพ์</string>
   <!-- Preference for link sharing -->
   <string name="preferences_link_sharing">การแบ่งปันลิงก์</string>
   <!-- Title for the link sharing toggle. %1$s is replaced by the brand name (e.g. Firefox). -->
@@ -1075,6 +929,10 @@
   <string name="notifications_allowed_summary">อนุญาต</string>
   <!-- Summary for notification preference indicating notifications are not allowed -->
   <string name="notifications_not_allowed_summary">ไม่อนุญาต</string>
+  <!-- Summary for local network access preference indicating access is allowed -->
+  <string name="local_network_access_allowed_summary">อนุญาต</string>
+  <!-- Summary for local network access preference indicating access is not allowed -->
+  <string name="local_network_access_not_allowed_summary">ไม่อนุญาต</string>
   <!--
     Add-on Permissions
 
@@ -1134,10 +992,12 @@
   <string name="customize_toggle_pocket_sponsored">เรื่องราวที่ได้รับการสนับสนุน</string>
   <!-- Title for the opening wallpaper settings screen -->
   <string name="customize_wallpapers">รูปพื้นหลัง</string>
+  <!-- Label for the menu item that opens the wallpaper settings screen. -->
+  <string name="browser_menu_change_wallpaper">เปลี่ยนรูปพื้นหลัง</string>
   <!-- Title for the customize home screen section with sponsored shortcuts. -->
   <string name="customize_toggle_contile">ทางลัดที่ได้รับการสนับสนุน</string>
   <!-- Title for the customize home screen section that toggles the Homepage sports widget. -->
-  <string name="customize_toggle_world_cup" tools:ignore="UnusedResources">ฟุตบอลโลก</string>
+  <string name="customize_toggle_world_cup">ฟุตบอลโลก</string>
   <!--
     Wallpapers
 
@@ -1350,7 +1210,7 @@
   <string name="preferences_usage_data_description_1" tools:ignore="BrandUsage">ข้อมูลเกี่ยวกับอุปกรณ์ของคุณ การกำหนดค่าฮาร์ดแวร์ และการใช้งานของคุณช่วยปรับปรุงคุณลักษณะ ประสิทธิภาพ และเสถียรภาพของ Firefox</string>
   <!-- Preference switch for daily usage ping data collection -->
   <string name="preferences_daily_usage_ping_title">พิงการใช้งานรายวัน</string>
-  <string name="preferences_daily_usage_ping_description">ตัวเลือกนี้ช่วยให้ Mozilla ประเมินจำนวนผู้ใช้ที่มีความเคลื่อนไหวได้</string>
+  <string name="preferences_daily_usage_ping_description" tools:ignore="BrandUsage">ตัวเลือกนี้ช่วยให้ Mozilla ประเมินจำนวนผู้ใช้ที่มีความเคลื่อนไหวได้</string>
   <string name="preferences_daily_usage_ping_learn_more">เรียนรู้เพิ่มเติมเกี่ยวกับพิงการใช้งานรายวัน</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
   <string name="crash_reporting_snack_bar_message">ส่งรายงานแล้ว</string>
@@ -1376,7 +1236,7 @@
   <!-- Title for studies preferences -->
   <string name="preference_experiments_2">การศึกษา</string>
   <!-- Summary for studies preferences -->
-  <string name="preference_experiments_summary_2">อนุญาตให้ Mozilla ติดตั้งและเรียกใช้การศึกษา</string>
+  <string name="preference_experiments_summary_2" tools:ignore="BrandUsage">อนุญาตให้ Mozilla ติดตั้งและเรียกใช้การศึกษา</string>
   <!--
     Turn On Sync Preferences
 
@@ -1477,8 +1337,6 @@
   <string name="library_desktop_bookmarks_unfiled">ที่คั่นหน้าอื่น ๆ</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">ประวัติ</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">แท็บใหม่</string>
   <!-- Settings Page Title -->
   <string name="settings_title">การตั้งค่า</string>
   <!-- Content description (not visible, for screen readers etc.): "Close button for library settings" -->
@@ -1637,10 +1495,14 @@
   <string name="add_tab">เพิ่มแท็บ</string>
   <!-- Content description (not visible, for screen readers etc.): Add tab button. Adds a news tab when pressed -->
   <string name="add_private_tab">เพิ่มแท็บส่วนตัว</string>
+  <!-- Content description (not visible, for screen readers etc.): Create tab group button. Opens the create tab group sheet when pressed -->
+  <string name="create_tab_group_content_description">สร้างกลุ่มแท็บ</string>
   <!-- Text for the tab search bar placeholder -->
   <string name="tab_manager_search_bar_placeholder">ค้นหาแท็บของคุณ</string>
   <!-- Text shown in the menu to view recently closed tabs -->
   <string name="tab_tray_menu_recently_closed">แท็บที่ปิดล่าสุด</string>
+  <!-- Text shown in the menu to select all tabs. -->
+  <string name="tab_tray_menu_select_all_tabs">เลือกทั้งหมด</string>
   <!-- Text shown in the menu to view account settings -->
   <string name="tab_tray_menu_account_settings">การตั้งค่าบัญชี</string>
   <!-- Text shown in the menu to view tab settings -->
@@ -1703,6 +1565,14 @@
   <string name="pwa_site_controls_title_private">%1$s (โหมดส่วนตัว)</string>
   <!-- Content description (not visible, for screen readers etc.) for the button to open the Tab Search feature to search through tabs. -->
   <string name="tab_manager_open_tab_search">เปิดการค้นหาแท็บ</string>
+  <!-- Title for introducing tab groups via an onboarding card shown in the tab manager. -->
+  <string name="tab_group_onboarding_item_title">สร้างกลุ่มแท็บ</string>
+  <!-- Description for tab groups onboarding shown in the tab manager when in grid view. -->
+  <string name="tab_group_onboarding_grid_item_description">ลากแท็บหนึ่งไปวางทับอีกแท็บหนึ่งเพื่อจัดกลุ่ม</string>
+  <!-- Description for tab groups onboarding shown in the tab manager when in list view. -->
+  <string name="tab_group_onboarding_list_item_description">เลือกหลายแท็บเพื่อสร้างกลุ่ม</string>
+  <!-- Content description (accessibility label) for button to dismiss the tab group onboarding item. -->
+  <string name="tab_group_onboarding_item_dismiss_content_description">ปิดออนบอร์ดกลุ่มแท็บ</string>
   <!-- The header text displayed on the tab groups page when no tab groups are open -->
   <string name="tab_manager_empty_tab_groups_page_header">ลองใช้กลุ่มแท็บเพื่อลดการเลื่อนและให้คุณทำงานได้เพิ่มขึ้น</string>
   <!-- The description displayed on the tab groups page when no tab groups are open -->
@@ -1780,6 +1650,16 @@
   <string name="close_tab_and_delete_group_confirmation_dialog_confirm">ลบกลุ่ม</string>
   <!-- Text shown on the cancel button in the Close last tab and delete tab group confirmation dialog. -->
   <string name="close_tab_and_delete_group_confirmation_dialog_cancel">ยกเลิก</string>
+  <!-- Content description for the three dot button next to a tab group" -->
+  <string name="tab_group_three_dot_button_content_description">ตัวเลือกเพิ่มเติม</string>
+  <!-- Text shown on the edit button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_edit">แก้ไข</string>
+  <!-- Text shown on the delete button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_delete">ลบ</string>
+  <!-- Text shown on the close button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_close">ปิด</string>
+  <!-- Text shown on the Don't Ask Again checkbox button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_dont_ask_again">ไม่ต้องถามอีก</string>
   <!--
     Color labels for tab groups, used for accessibility and selection UI.
 
@@ -1794,8 +1674,6 @@
   <string name="tab_group_color_pink">ชมพู</string>
   <!-- Tab group color: Purple -->
   <string name="tab_group_color_purple">ม่วง</string>
-  <!-- Tab group color: Violet -->
-  <string name="tab_group_color_violet">ม่วงเย็น</string>
   <!-- Tab group color: Blue -->
   <string name="tab_group_color_blue">น้ำเงิน</string>
   <!-- Tab group color: Cyan -->
@@ -1812,8 +1690,6 @@
   <string name="history_search_1">ป้อนคำค้นหา</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">ลบประวัติ</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">ลบประวัติแล้ว</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">ลบ %1$s แล้ว</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -2049,33 +1925,33 @@
   <!-- The error message of the URL text field when an invalid URL has been entered. -->
   <string name="webcompat_reporter_url_error_invalid">โปรดกรอก URL ที่ถูกต้อง</string>
   <!-- The label/title of a field in the Web Compat Reporter feature for explaining a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_label_whats_broken_2">มีอะไรเสียหาย?</string>
-  <!-- The placeholder text for the dropdown where a user selects a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_2">เลือกเหตุผล</string>
-  <!-- The error message of the dropdown, prompting the user to select a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_error">โปรดเลือกเหตุผล</string>
-  <!-- The label/title of an optional field in the Web Compat Reporter feature for adding additional information. -->
-  <string name="webcompat_reporter_label_description">อธิบายปัญหา (เพิ่มเติม)</string>
-  <!-- The button text for navigating away from the feature to provide more information on the broken site's bug report. -->
-  <string name="webcompat_reporter_add_more_info">เพิ่มข้อมูลเพิ่มเติม</string>
+  <string name="webcompat_reporter_label_whats_broken_3">มีอะไรที่ใช้งานไม่ได้หรือเปล่า?</string>
+  <!-- Content description for the icon button that clears the selected broken site reason in the WebCompat Reporter. -->
+  <string name="webcompat_reporter_clear_reason_content_description">ล้างเหตุผลที่เลือก</string>
+  <!-- The error message of the description when the user selects "Something else" as the reason, but left the description empty or too short. -->
+  <string name="webcompat_reporter_description_error">โปรดป้อนอย่างน้อย 10 อักขระ</string>
   <!-- The button text for the cancel button to leave the Web Compat Reporter feature. -->
   <string name="webcompat_reporter_cancel">ยกเลิก</string>
   <!-- The button text for the send button to submit the provided form data. -->
-  <string name="webcompat_reporter_send">ส่ง</string>
+  <string name="webcompat_reporter_send_report">ส่งรายงาน</string>
   <!-- Text for a snackbar to confirm the successful submission of a WebCompat report. -->
   <string name="webcompat_reporter_success_snackbar_text_2">ส่งรายงานแล้ว</string>
   <!-- Placeholder text for the description field to prompt the user on what they should type. -->
-  <string name="webcompat_reporter_problem_description_placeholder_text">เกิดอะไรขึ้น? แล้วควรจะเป็นอย่างไร?</string>
+  <string name="webcompat_reporter_problem_description_placeholder_text_2">เกิดปัญหาอะไรขึ้น? สิ่งที่ควรจะเป็นคืออะไร? โปรดระบุขั้นตอนที่ทำให้เกิดปัญหานี้</string>
   <!-- Label of the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. -->
-  <string name="webcompat_reporter_etp_checkbox_text">ส่ง URL ที่ปิดกั้นโดยการป้องกันการติดตาม</string>
-  <!-- Description text for the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. It informs the user when checked, the report will include the list of URLs that were blocked by Enhanced Tracking Protection on the current page. -->
-  <string name="webcompat_reporter_etp_checkbox_description">การป้องกันการติดตามแบบพิเศษอาจปิดกั้นตัวติดตามและสคริปต์ที่บางเว็บไซต์ต้องใช้เพื่อทำงานได้ถูกต้อง</string>
+  <string name="webcompat_reporter_etp_checkbox_text_2">ส่งรายการที่ถูกปิดกั้นโดยระบบป้องกันการติดตาม</string>
   <!-- The button text for the preview report button to view a preview of the report. -->
   <string name="webcompat_reporter_preview_report">ดูตัวอย่างรายงาน</string>
   <!-- The title shown at the top of the WebCompat Report preview panel. This appears after the user taps the “Preview” button before sending a report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_header">ตัวอย่างรายงาน</string>
   <!-- Label for the “Send” button shown in the WebCompat Report preview panel, which the user taps to submit the report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_send">ส่ง</string>
+  <!-- Title for the Edit URL confirmation dialog in the WebCompatReporter -->
+  <string name="webcompat_reporter_edit_url_dialog_title">แก้ไข URL ของเว็บไซต์</string>
+  <!-- Text shown on the save button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_save">บันทึก</string>
+  <!-- Text shown on the dismiss button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_dismiss">ยกเลิก</string>
   <!--
     These reason strings are dropdown options on a WebCompat reporter form, indicating what is broken on the site.
 
@@ -2095,7 +1971,9 @@
   <!-- Broken site reason text for site asked to turn off ad blocker -->
   <string name="webcompat_reporter_reason_turn_off_adblocker">เว็บไซต์ขอความร่วมมือปิดตัวปิดกั้นโฆษณา</string>
   <!-- Broken site reason text for browser isn’t supported or blocked -->
-  <string name="webcompat_reporter_reason_notsupported">เบราว์เซอร์ไม่เข้ากันหรือถูกปิดกั้น</string>
+  <string name="webcompat_reporter_reason_notsupported_2">เบราว์เซอร์ไม่เข้ากันหรือถูกปิดกั้น</string>
+  <!-- Broken site reason text for the site being deceptive -->
+  <string name="webcompat_reporter_reason_site_is_deceptive">เว็บไซต์นี้หลอกลวง</string>
   <!-- Broken site reason text for something else -->
   <string name="webcompat_reporter_reason_other">อื่น ๆ</string>
   <!--
@@ -2105,7 +1983,7 @@
   -->
   <string name="tab_crash_title_2">ขออภัย %1$s ไม่สามารถโหลดหน้านั้นได้</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">ส่งรายงานข้อขัดข้องไปยัง Mozilla</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">ส่งรายงานข้อขัดข้องไปยัง Mozilla</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">ปิดแท็บ</string>
   <!-- Restore tab button text on the tab crash page -->
@@ -2204,12 +2082,8 @@
   <string name="edit_bookmark_folder_fragment_title">แก้ไขโฟลเดอร์</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">URL</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">โฟลเดอร์</string>
   <!-- Text indicating which folder a bookmark or folder will be saved in -->
   <string name="bookmark_save_in_label">บันทึกใน</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">ชื่อ</string>
   <!-- Label for a text input field for a bookmark or folder name -->
   <string name="bookmark_name_label_normal_case">ชื่อ</string>
   <!-- Bookmark select folder screen title -->
@@ -2253,30 +2127,24 @@
   <string name="bookmark_empty_list_root_title">เก็บที่คั่นหน้าโปรดทั้งหมดของคุณไว้ด้วยกัน</string>
   <!-- Bookmark screen folder description. %s is the count of bookmark folder children -->
   <string name="bookmarks_folder_description">ที่คั่นหน้าในโฟลเดอร์: %s</string>
-  <!-- Description for the bookmark list empty state when you're not signed into sync. -->
-  <string name="bookmark_empty_list_guest_description">บันทึกไซต์ขณะที่คุณเรียกดู ลงชื่อเข้าเพื่อดึงที่คั่นหน้าจากอุปกรณ์อื่น ๆ ที่ซิงค์</string>
   <!-- Text for the button to navigate to sync authentication -->
   <string name="bookmark_empty_list_guest_cta">ลงชื่อเข้าใช้เพื่อซิงค์</string>
-  <!-- Description for the bookmark list empty state when you're signed into sync. -->
-  <string name="bookmark_empty_list_authenticated_description">บันทึกไซต์ขณะที่คุณเรียกดู นอกจากนี้ เราจะดึงที่คั่นหน้าจากอุปกรณ์อื่น ๆ ที่ซิงค์มาให้คุณด้วย</string>
   <!-- Description for the bookmark list empty state when you're in an empty folder. -->
   <string name="bookmark_empty_list_folder_description">เพิ่มที่คั่นหน้าขณะที่คุณเรียกดูเพื่อให้คุณสามารถหาไซต์โปรดของคุณได้ในภายหลัง</string>
   <!-- Description for the add new folder button when selecting a folder. -->
   <string name="bookmark_select_folder_new_folder_button_title">โฟลเดอร์ใหม่</string>
   <!-- Bookmark snackbar message for moving a single item. %1$s is the title of the item being moved and %2$s is the new parent folder of the bookmark -->
   <string name="bookmark_moved_single_item">ย้าย %1$s ไปยัง %2$s แล้ว</string>
+  <!-- Text for bookmark search page when there are no results. -->
+  <string name="bookmark_no_search_results">ไม่พบที่ตรงกัน</string>
+  <!-- Additional text for bookmark search page when there are no results. -->
+  <string name="bookmark_no_search_results_additional_text">ลองค้นหาแบบอื่นดู!</string>
   <!--
     Site Permissions
 
     Button label that take the user to the Android App setting
   -->
   <string name="phone_feature_go_to_settings">ไปยังการตั้งค่า</string>
-  <!--
-    Content description (not visible, for screen readers etc.): Quick settings sheet
-    to give users access to site specific information / settings. For example:
-    Secure settings status and a button to modify site permissions
-  -->
-  <string name="quick_settings_sheet">แผ่นการตั้งค่าด่วน</string>
   <!-- Label that indicates that this option it the recommended one -->
   <string name="phone_feature_recommended">แนะนำ</string>
   <!-- Button label for clearing all the information of site permissions -->
@@ -2373,8 +2241,6 @@
   <string name="collections_header">ชุดสะสม</string>
   <!-- Content description (not visible, for screen readers etc.): Opens the collection menu when pressed -->
   <string name="collection_menu_button_content_description">เมนูชุดสะสม</string>
-  <!-- Label to describe what collections are to a new user without any collections -->
-  <string name="no_collections_description2">รวบรวมสิ่งที่สำคัญต่อคุณ\nรวมกลุ่มการค้นหา ไซต์ และแท็บที่คล้ายกันให้อยู่ด้วยกันเพื่อให้เข้าถึงได้อย่างรวดเร็วในภายหลัง</string>
   <!-- Title for the "select tabs" step of the collection creator -->
   <string name="create_collection_select_tabs">เลือกแท็บ</string>
   <!-- Title for the "select collection" step of the collection creator -->
@@ -2669,10 +2535,8 @@
   <!--
     Enhanced Tracking Protection
 
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
+    Preference title for enhanced tracking protection settings
   -->
-  <string name="etp_settings">การตั้งค่าการป้องกัน</string>
-  <!-- Preference title for enhanced tracking protection settings -->
   <string name="preference_enhanced_tracking_protection">การป้องกันการติดตามแบบพิเศษ</string>
   <!-- Preference summary for enhanced tracking protection settings on/off switch -->
   <string name="preference_enhanced_tracking_protection_summary">ตอนนี้มีการป้องกันคุกกี้แบบทั้งหมด ซึ่งเป็นอุปสรรคต่อตัวติดตามข้ามไซต์ที่ทรงพลังที่สุดของเรา</string>
@@ -2680,13 +2544,13 @@
   <string name="preference_enhanced_tracking_protection_explanation_2">%s ปกป้องคุณจากตัวติดตามที่พบบ่อยที่สุดซึ่งติดตามสิ่งที่คุณทำทางออนไลน์</string>
   <!-- Text displayed that links to website about enhanced tracking protection -->
   <string name="preference_enhanced_tracking_protection_explanation_learn_more">เรียนรู้เพิ่มเติม</string>
-  <plurals name="trackers_blocked_count">
+  <plurals name="trackers_blocked_count_2">
     <!--
       Trackers blocked card on homepage
 
       Text shown on the trackers blocked card. %d is the number of trackers blocked.
     -->
-    <item quantity="other">%d ตัวติดตามถูกปิดกั้น</item>
+    <item quantity="other">ปิดกั้นตัวติดตามไป %d ตัว</item>
   </plurals>
   <!-- Text shown on the trackers blocked card when no trackers have been blocked yet -->
   <string name="trackers_blocked_empty">คุณได้รับการปกป้อง</string>
@@ -2760,12 +2624,8 @@
   <string name="preference_enhanced_tracking_protection_custom_cryptominers">ตัวขุดเหรียญดิจิทัล</string>
   <!-- Preference for enhanced tracking protection for the custom protection settings -->
   <string name="preference_enhanced_tracking_protection_custom_known_fingerprinters">ลายนิ้วมือดิจิทัลที่รู้จัก</string>
-  <!-- Button label for navigating to the Enhanced Tracking Protection details -->
-  <string name="enhanced_tracking_protection_details">รายละเอียด</string>
   <!-- Header for categories that are being being blocked by current Enhanced Tracking Protection settings -->
   <string name="enhanced_tracking_protection_blocked">ปิดกั้นแล้ว</string>
-  <!-- Header for categories that are being not being blocked by current Enhanced Tracking Protection settings -->
-  <string name="enhanced_tracking_protection_allowed">อนุญาตแล้ว</string>
   <!-- Category of trackers (social media trackers) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_social_media_trackers_title">ตัวติดตามสังคมออนไลน์</string>
   <!-- Description of social media trackers that can be blocked by Enhanced Tracking Protection -->
@@ -2788,10 +2648,6 @@
   <string name="etp_tracking_content_title">ตัวติดตามเนื้อหา</string>
   <!-- Description of tracking content that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_tracking_content_description">หยุดไม่ให้โหลดโฆษณาภายนอก, วิดีโอ, และเนื้อหาอื่น ๆ ที่มีรหัสการติดตาม อาจส่งผลต่อฟังก์ชันการทำงานของบางเว็บไซต์</string>
-  <!-- Enhanced Tracking Protection message that protection is currently on for this site -->
-  <string name="etp_panel_on">การป้องกันเปิดอยู่สำหรับไซต์นี้</string>
-  <!-- Enhanced Tracking Protection message that protection is currently off for this site -->
-  <string name="etp_panel_off">การป้องกันปิดอยู่สำหรับไซต์นี้</string>
   <!-- Header for exceptions list for which sites enhanced tracking protection is always off -->
   <string name="enhanced_tracking_protection_exceptions">การป้องกันการติดตามแบบพิเศษปิดอยู่สำหรับเว็บไซต์เหล่านี้</string>
   <!--
@@ -2816,13 +2672,6 @@
   <string name="etp_suspected_fingerprinters_description">เปิดใช้การป้องกันลายนิ้วมือดิจิทัลเพื่อหยุดลายนิ้วมือดิจิทัลที่ต้องสงสัย</string>
   <!-- Category of trackers (fingerprinters) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_known_fingerprinters_title">ลายนิ้วมือดิจิทัลที่รู้จัก</string>
-  <!--
-    Description of the SmartBlock Enhanced Tracking Protection feature. The * symbol is intentionally hardcoded here,
-    as we use it on the UI to indicate which trackers have been partially unblocked.
-  -->
-  <string name="preference_etp_smartblock_description">ตัวติดตามบางตัวที่ถูกทำเครื่องหมายไว้ด้านล่างนี้ได้ถูกเลิกปิดกั้นบนหน้านี้เนื่องจากคุณมีการโต้ตอบกับตัวติดตามเหล่านั้น *</string>
-  <!-- Text displayed that links to website about enhanced tracking protection SmartBlock -->
-  <string name="preference_etp_smartblock_learn_more">เรียนรู้เพิ่มเติม</string>
   <!--
     Content description (not visible, for screen readers etc.):
     Enhanced tracking protection exception preference icon for ETP settings.
@@ -3070,6 +2919,8 @@
   <string name="saved_logins_sort_strategy_last_used">ใช้งานครั้งสุดท้าย</string>
   <!-- Content description (not visible, for screen readers etc.) -->
   <string name="saved_logins_menu_dropdown_chevron_icon_content_description_2">เมนูเรียงลำดับรหัสผ่าน</string>
+  <!-- Label for button to import passwords from file. -->
+  <string name="passwords_import_menu_button">นำเข้าจากไฟล์</string>
   <!--
     Email Masks
 
@@ -3100,10 +2951,12 @@
   <string name="ip_protection_title">VPN</string>
   <!-- Label for the browser VPN toggle on the settings screen -->
   <string name="ip_protection_toggle_label">VPN</string>
+  <!-- Content description for the browser VPN settings screen top bar back button -->
+  <string name="ip_protection_navigate_back_button_content_description">นำทางย้อนกลับ</string>
   <!-- Headline for the browser VPN promo card. %s is the name of the app (for example "Firefox"). -->
   <string name="ip_protection_promo_headline">VPN ในตัวของ %s</string>
-  <!-- Body text for the browser VPN promo card -->
-  <string name="ip_protection_promo_body">ท่องเว็บได้อย่างปลอดภัยยิ่งขึ้นด้วยการซ่อนตำแหน่งที่ตั้งของคุณ แม้ว่าจะใช้ Wi-Fi สาธารณะก็ตาม</string>
+  <!-- Body text for the browser VPN promo card . %s is a learn more link using ip_protection_learn_more as text. -->
+  <string name="ip_protection_promo_body_2">ท่องเว็บได้อย่างปลอดภัยยิ่งขึ้นด้วยการซ่อนตำแหน่งที่ตั้งของคุณ แม้ว่าจะใช้ Wi-Fi สาธารณะก็ตาม %s</string>
   <!-- Link text that opens additional information about the browser VPN -->
   <string name="ip_protection_learn_more">เรียนรู้เพิ่มเติม</string>
   <!-- Label for the monthly data allowance section on the browser VPN settings screen -->
@@ -3155,6 +3008,8 @@
   <string name="ip_protection_toolbar_pill_description">VPN เปิดใช้งานอยู่</string>
   <!-- Label for the button that starts the browser VPN authentication or authorization flow on the settings screen -->
   <string name="ip_protection_get_started">เริ่มต้นใช้งาน</string>
+  <!-- Label for the "connecting" state of the button that starts the browser VPN authentication or authorization flow on the settings screen -->
+  <string name="ip_protection_connecting">กำลังเชื่อมต่อ…</string>
   <!-- Headline for the browser VPN onboarding card. %s is the name of the app (for example "Firefox"). -->
   <string name="ip_protection_onboarding_card_headline">ลองใช้ VPN ในตัวของ %s</string>
   <!--
@@ -3165,6 +3020,8 @@
   <string name="ip_protection_onboarding_body">%1$sด้วยการซ่อนตำแหน่งที่ตั้งของคุณแม้แต่บน Wi-Fi สาธารณะ รับ %2$d GB ฟรีทุกเดือน</string>
   <!-- Used as text for a link in ip_protection_onboarding_body. Make sure to adapt capitalization if the link is in the middle of the sentence. -->
   <string name="ip_protection_onboarding_body_link">ท่องเว็บด้วยการปกป้องเพิ่มเติม</string>
+  <!-- Used as text for a link in ip_protection_onboarding_body. Make sure to adapt capitalization if the link is in the middle of the sentence. -->
+  <string name="ip_protection_onboarding_body_link_promo">เรียนรู้เพิ่มเติม</string>
   <!-- Label for the dismiss button on the onboarding bottom sheet. -->
   <string name="ip_protection_onboarding_not_now_button">ไม่ใช่ตอนนี้</string>
   <!-- Snackbar (in-app pop-up notification) text to signal the browser VPN connection error -->
@@ -3174,6 +3031,14 @@
     %1$d is the total monthly allowance in GB (for example "50").
   -->
   <string name="ip_protection_data_limit_reached_snackbar">ใช้ข้อมูล VPN ครบ %1$d GB แล้ว การเข้าถึงจะถูกรีเซ็ตในเดือนหน้า</string>
+  <!-- Snackbar (in-app pop-up notification) action button text that takes the user to the VPN settings screen. -->
+  <string name="ip_protection_data_limit_reached_snackbar_action">การตั้งค่า</string>
+  <!-- Title shown on the browser VPN settings screen for location selection section. -->
+  <string name="ip_protection_location_title" tools:ignore="UnusedResources">ตำแหน่งที่ตั้ง</string>
+  <!-- Label for the Recommended server location option which is automatically selected by the browser. -->
+  <string name="ip_protection_recommended_location" tools:ignore="UnusedResources">แนะนำ</string>
+  <!-- Label for the button that takes the user to get the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_button" tools:ignore="UnusedResources,BrandUsage">รับ Mozilla VPN</string>
   <!--
     Autofill
 
@@ -3326,8 +3191,6 @@
   <string name="addresses_save_button">บันทึก</string>
   <!-- The text for the "Cancel" button for cancelling adding, updating or deleting an address -->
   <string name="addresses_cancel_button">ยกเลิก</string>
-  <!-- The text for the "Delete address" button for deleting an address -->
-  <string name="addressess_delete_address_button">ลบที่อยู่</string>
   <!-- The title for the "Delete address" confirmation dialog -->
   <string name="addressess_confirm_dialog_message_2">ลบที่อยู่นี้หรือไม่?</string>
   <!-- The text for the positive button on "Delete address" dialog -->
@@ -3382,16 +3245,8 @@
   <string name="phone_feature_blocked_step_permissions"><![CDATA[2. แตะ <b>สิทธิอนุญาต</b>]]></string>
   <!-- Third step for the allowing a permission (%1$s is the permission name, for example "Camera"). -->
   <string name="phone_feature_blocked_step_feature"><![CDATA[3. สลับ <b>%1$s</b> เป็นเปิด]]></string>
-  <!-- Label that indicates a site is using a secure connection -->
-  <string name="quick_settings_sheet_secure_connection_2">การเชื่อมต่อปลอดภัย</string>
-  <!-- Label that indicates a site is using a insecure connection -->
-  <string name="quick_settings_sheet_insecure_connection_2">การเชื่อมต่อไม่ปลอดภัย</string>
-  <!-- Label that indicates a site is displaying a local document -->
-  <string name="quick_settings_sheet_local_page">หน้านี้ถูกจัดเก็บไว้ในอุปกรณ์ของคุณ</string>
   <!-- Label to clear site data -->
   <string name="clear_site_data">ล้างคุกกี้และข้อมูลไซต์</string>
-  <!-- Confirmation message for a dialog confirming if the user wants to delete all data for current site. %s is the domain of the site. -->
-  <string name="confirm_clear_site_data"><![CDATA[คุณแน่ใจหรือไม่ว่าต้องการล้างคุกกี้และข้อมูลทั้งหมดสำหรับไซต์นี้ <b>%s</b>?]]></string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for all sites -->
   <string name="confirm_clear_permissions_on_all_sites">คุณแน่ใจหรือไม่ว่าต้องการล้างสิทธิอนุญาตทั้งหมดบนไซต์ทั้งหมด?</string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for a site -->
@@ -3404,11 +3259,6 @@
   <string name="browser_menu_add_to_shortcuts">เพิ่มทางลัด</string>
   <!-- Browser menu button that removes a shortcut from the home fragment -->
   <string name="browser_menu_remove_from_shortcuts">ลบออกจากทางลัด</string>
-  <!--
-    text shown before the issuer name to indicate who its verified by, %1$s is the name of
-    the certificate authority that verified the ticket
-  -->
-  <string name="certificate_info_verified_by">ยืนยันโดย: %1$s</string>
   <!-- Message in delete confirmation dialog for password -->
   <string name="login_deletion_confirmation_2">คุณแน่ใจหรือไม่ว่าต้องการลบรหัสผ่านนี้?</string>
   <!-- Positive action of a dialog asking to delete -->
@@ -3474,8 +3324,14 @@
   <string name="homepage_shortcuts_show_all_content_description">แสดงทางลัดทั้งหมด</string>
   <!-- Label for the "Add shortcut" button displayed as a tile. -->
   <string name="homepage_shortcuts_add_shortcut">เพิ่มทางลัด</string>
+  <!-- Title for the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_add_to_homepage">เพิ่มไปยังหน้าแรก</string>
+  <!-- Label for the "Add website" button in the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_add_website">เพิ่มเว็บไซต์</string>
   <!-- Title text for the "Enter a Website URL" dialog for adding a shortcut. -->
   <string name="homepage_shortcuts_add_website_title">ป้อน URL ของเว็บไซต์</string>
+  <!-- Title for the "Popular sites" section in the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_popular_sites">เว็บไซต์ยอดนิยม</string>
   <!-- Title text displayed in the dialog when shortcuts limit is reached. -->
   <string name="shortcut_max_limit_title">ถึงขีดจำกัดของทางลัดแล้ว</string>
   <!-- Content description text displayed in the dialog when shortcut limit is reached. -->
@@ -3562,8 +3418,6 @@
   <string name="default_browser_experiment_card_title">เปลี่ยนเบราว์เซอร์เริ่มต้นของคุณ</string>
   <!-- Default browser card text -->
   <string name="default_browser_experiment_card_text" tools:ignore="BrandUsage">ตั้งลิงก์จากเว็บไซต์ อีเมล และข้อความให้เปิดโดยอัตโนมัติใน Firefox</string>
-  <!-- Content description for close button in collection placeholder. -->
-  <string name="remove_home_collection_placeholder_content_description">ลบ</string>
   <!-- Content description radio buttons with a link to more information -->
   <string name="radio_preference_info_content_description">คลิกเพื่อดูรายละเอียดเพิ่มเติม</string>
   <!-- Content description for the action bar "up" button -->
@@ -3595,20 +3449,10 @@
     Action label for elements that can be collapsed if interacting with them. Talkback will append this to say "Double tap to collapse".
   -->
   <string name="a11y_action_label_collapse">ยุบ</string>
-  <!-- Current state for elements that can be collapsed if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_collapsed">ยุบแล้ว</string>
   <!-- Action label for elements that can be expanded if interacting with them. Talkback will append this to say "Double tap to expand". -->
   <string name="a11y_action_label_expand">ขยาย</string>
-  <!-- Current state for elements that can be expanded if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_expanded">ขยายอยู่</string>
   <!-- Action label for links to a website containing documentation about a wallpaper collection. Talkback will append this to say "Double tap to open link to learn more about this collection". -->
   <string name="a11y_action_label_wallpaper_collection_learn_more">เปิดลิงก์เพื่อเรียนรู้เพิ่มเติมเกี่ยวกับคอลเลกชันนี้</string>
-  <!-- Content description for headings announced by accessibility service. %s is the text of the heading. Talkback will announce the text and then speak the word "Heading" indicating to the user that this text is a heading for a section. -->
-  <string name="a11y_heading">%s หัวเรื่อง</string>
-  <!-- Title for dialog displayed when trying to access links present in a text. -->
-  <string name="a11y_links_title">ลิงก์</string>
-  <!-- Additional content description for text bodies that contain urls. -->
-  <string name="a11y_links_available">ลิงค์ที่มีอยู่</string>
   <!-- Translations feature -->
 
   <!--
@@ -3875,8 +3719,18 @@
     %s is the name of the app (for example "Firefox").
   -->
   <string name="protection_panel_banner_protected_title">%s ทำงานอยู่</string>
-  <!-- Description text for the protection panel banner when tracking protection is enabled. -->
-  <string name="protection_panel_banner_protected_description">คุณได้รับการปกป้อง หากเราพบสิ่งใดเราจะแจ้งให้คุณทราบ</string>
+  <plurals name="protection_panel_banner_protected_blocked_trackers_description">
+    <!--
+      Description text for the protection panel banner when privacy dashboard is enabled.
+      %1$d is the number of trackers blocked.
+    -->
+    <item quantity="other">มีตัวติดตาม %1$d ตัวที่ถูกปิดกั้นบนไซต์นี้</item>
+  </plurals>
+  <!--
+    Description text for the protection panel banner when privacy dashboard is enabled.
+    and there are no trackers blocked.
+  -->
+  <string name="protection_panel_banner_protected_no_blocked_trackers_description">คุณได้รับการปกป้องแล้ว</string>
   <!-- Label text for the Enhanced Tracking Protection toggle. -->
   <string name="protection_panel_etp_toggle_label">การป้องกันการติดตามแบบพิเศษ</string>
   <!-- Toggle if Enhanced Tracking Protection is turned on -->
@@ -3892,25 +3746,12 @@
     %d is a placeholder for the number of trackers blocked.
   -->
   <string name="protection_panel_num_trackers_blocked">ตัวติดตามที่ปิดกั้น: %d</string>
-  <!-- Text for when no trackers have been blocked. -->
-  <string name="protection_panel_no_trackers_blocked">ไม่พบตัวติดตาม</string>
   <!-- Text for when tracking protection is disabled and no trackers are blocked. -->
   <string name="protection_panel_etp_disabled_no_trackers_blocked">ตัวติดตามไม่ถูกปิดกั้น</string>
   <!-- Link text to navigate to privacy and security settings from the protection panel. -->
   <string name="protection_panel_privacy_and_security_settings_2">การตั้งค่าความเป็นส่วนตัว</string>
   <!-- Title text for the protection panel permissions section. -->
   <string name="protection_panel_permissions_title">การกำหนดสิทธิ์</string>
-  <!--
-    Text for displaying the total number of trackers blocked in the trackers blocked panel.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_total_num_trackers_blocked">ตัวติดตามที่ปิดกั้น: %d</string>
-  <!--
-    Text for displaying the number of trackers blocked for a specific tracker category in the trackers blocked panel.
-    %s is a placeholder for the name of the tracker category.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_categorical_num_trackers_blocked">%s: %d</string>
   <!--
     Description text for a dialog confirming whether the user wants to delete all data for current site.
     %s is a placeholder for the base domain of website.
@@ -4425,17 +4266,17 @@
   <!-- Section header for the South America confederation group in the sports widget country selector. -->
   <string name="sports_widget_confederation_south_america">อเมริกาใต้</string>
   <!-- Country name for England in the sports widget. England cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
-  <string name="sports_widget_country_england" tools:ignore="UnusedResources">อังกฤษ</string>
+  <string name="sports_widget_country_england">อังกฤษ</string>
   <!-- Country name for Scotland in the sports widget. Scotland cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
-  <string name="sports_widget_country_scotland" tools:ignore="UnusedResources">สกอตแลนด์</string>
+  <string name="sports_widget_country_scotland">สกอตแลนด์</string>
   <!-- Label shown on the sports widget scoreboard when a match is currently being played live. -->
   <string name="sports_widget_match_live">สด</string>
   <!-- Title shown on the sports widget champion scoreboard row celebrating the soccer tournament winner. -->
-  <string name="sports_widget_champions_title" tools:ignore="UnusedResources">แชมป์ฟุตบอลโลก 2026</string>
+  <string name="sports_widget_champions_title">แชมป์ฟุตบอลโลก 2026</string>
   <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament runners-up. Runners-up means second place. -->
   <string name="sports_widget_runner_up_title" tools:ignore="UnusedResources">รองชนะเลิศ</string>
   <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament third place winners. -->
-  <string name="sports_widget_third_place_title" tools:ignore="UnusedResources">อันดับสาม</string>
+  <string name="sports_widget_third_place_title">อันดับสาม</string>
   <!-- Round name shown on the sports widget for the Round of 32 stage in the soccer tournament. -->
   <string name="sports_widget_round_of_32">รอบ 32 ทีม</string>
   <!-- Round name shown on the sports widget for the Round of 16 stage in the soccer tournament. -->
@@ -4449,9 +4290,9 @@
   <!-- Round name shown on the sports widget for the bronze final stage in the soccer tournament. -->
   <string name="sports_widget_bronze_final">รอบชิงเหรียญทองแดง</string>
   <!-- Sports widget error card message shown when match data fails to load. -->
-  <string name="sports_widget_error_load_failed">ข้อมูลการแข่งไม่พร้อมใช้งานในขณะนี้ โปรดลองเรียกใหม่อีกครั้งในอีกสักครู่</string>
+  <string name="sports_widget_error_load_failed" tools:ignore="UnusedResources">ข้อมูลการแข่งไม่พร้อมใช้งานในขณะนี้ โปรดลองเรียกใหม่อีกครั้งในอีกสักครู่</string>
   <!-- Sports widget error card message shown when the network connection is interrupted and live updates pause. -->
-  <string name="sports_widget_error_connection_interrupted">การเชื่อมต่อถูกตัดขาด ทำให้การอัปเดตแบบสดหยุดชั่วคราว</string>
+  <string name="sports_widget_error_connection_interrupted" tools:ignore="UnusedResources">การเชื่อมต่อถูกตัดขาด ทำให้การอัปเดตแบบสดหยุดชั่วคราว</string>
   <!-- Sports widget action label to refresh match data after an error. -->
   <string name="sports_widget_error_refresh">เรียกใหม่</string>
   <!-- Sports widget group stage label for group A in the soccer tournament. -->
@@ -4489,7 +4330,7 @@
   <!-- Sports widget match status suffix appended to match scores (e.g., "3 - 2 (Full time)") to indicate the match has been completed. -->
   <string name="sports_widget_match_full_time_suffix">(หมดเวลา)</string>
   <!-- Sports widget match status to indicate the match has been completed. -->
-  <string name="sports_widget_match_full_time_2" tools:ignore="UnusedResources">หมดเวลา</string>
+  <string name="sports_widget_match_full_time_2">หมดเวลา</string>
   <!--
     Sports widget card title encouraging the user to follow the soccer tournament. “Keep tabs on” is an informal expression
     meaning to stay updated on or regularly follow something (in this case, World Cup matches and updates).
@@ -4521,7 +4362,7 @@
   <!-- Sports widget match status label shown during halftime of a match. -->
   <string name="sports_widget_halftime" tools:ignore="UnusedResources">ช่วงพักครึ่ง</string>
   <!-- Sports widget match status label shown during extra time of a match. -->
-  <string name="sports_widget_extra_time" tools:ignore="UnusedResources">ช่วงต่อเวลา</string>
+  <string name="sports_widget_extra_time">ช่วงต่อเวลา</string>
   <!-- Sports widget match status label shown during penalties of a match. -->
   <string name="sports_widget_penalties">ช่วงยิงจุดโทษ</string>
   <!--
@@ -4543,11 +4384,11 @@
   -->
   <string name="sports_widget_countdown_minutes">M</string>
   <!-- Content description (for accessibility, not displayed) for the close button on the sports widget team / country selector. -->
-  <string name="sports_widget_close_team_selection_sheet_content_description" tools:ignore="UnusedResources">ปิดหน้าเลือกทีม</string>
+  <string name="sports_widget_close_team_selection_sheet_content_description">ปิดหน้าเลือกทีม</string>
   <!-- Content description (for accessibility, not displayed) for the close button on the sports widget card. -->
   <string name="sports_widget_close_content_description">ปิด</string>
   <!-- Content description (for accessibility, not displayed) for the overflow (more options) menu button on the sports widget card. -->
-  <string name="sports_widget_more_options_content_description" tools:ignore="UnusedResources">ตัวเลือกเพิ่มเติม</string>
+  <string name="sports_widget_more_options_content_description">ตัวเลือกเพิ่มเติม</string>
   <!--
     Content description (for accessibility, not displayed) announcing the time remaining until the soccer tournament kickoff.
     %1$d is the number of days, %2$d is the number of hours, and %3$d is the number of minutes.
@@ -4559,30 +4400,44 @@
     Content description (for accessibility, not displayed)  announcing an upcoming soccer match.
     %1$s is the home team name, %2$s is the away team name, %3$s is the match date, %4$s is the kickoff time.
   -->
-  <string name="sports_widget_upcoming_match_content_description" tools:ignore="UnusedResources">กำลังจะมาถึง: %1$s แข่งกับ %2$s วันที่ %3$s เวลา %4$s</string>
+  <string name="sports_widget_upcoming_match_content_description">กำลังจะมาถึง: %1$s แข่งกับ %2$s วันที่ %3$s เวลา %4$s</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing a soccer match.
+    %1$s is the home team name, %2$s is the away team name, %3$s is trailing context
+    (e.g. formatted score "1 - 2 (Full time)", upcoming match info "Jun 19 5:00 PM",
+    or a match status like "Full time").
+  -->
+  <string name="sports_widget_match_content_description">%1$s พบกับ %2$s, %3$s</string>
   <!--
     Content description (for accessibility, not displayed)  used for the sports widget card header announcing a live match for a group or stage.
     %s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32,
     or Final represented by sports_widget_final).
   -->
-  <string name="sports_widget_live_game_content_description" tools:ignore="UnusedResources">แข่งสด %s</string>
+  <string name="sports_widget_live_game_content_description">แข่งสด %s</string>
   <!--
     Content description (for accessibility, not displayed) announcing a live score.
     %1$s is the home team name, %2$d is the home team score, %3$s is the away team name, %4$d is the away team score,
     and %5$s is the match elapsed time (e.g. 72 minutes).
   -->
-  <string name="sports_widget_live_score_content_description" tools:ignore="UnusedResources">สด %1$s กับ %2$d ด้วยคะแนน %3$s ต่อ %4$d ผ่านไปแล้ว %5$s</string>
+  <string name="sports_widget_live_score_content_description">สด %1$s กับ %2$d ด้วยคะแนน %3$s ต่อ %4$d ผ่านไปแล้ว %5$s</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing the elapsed minutes of a live match.
+    %1$s is the clock value, which may be a plain number (e.g. "72") or include extra time (e.g. "90+3").
+  -->
+  <string name="sports_widget_match_elapsed_minutes">เวลาที่ผ่านไป (นาที): %1$s</string>
   <!--
     Content description (for accessibility, not displayed) for a paginated item.
     %1$s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32),
     %2$d is the current page number, and %3$d is the total number of pages.
   -->
-  <string name="sports_widget_page_position_content_description" tools:ignore="UnusedResources">%1$s หน้า %2$d จาก %3$d</string>
+  <string name="sports_widget_page_position_content_description">%1$s หน้า %2$d จาก %3$d</string>
   <!--
     Content description (for accessibility, not displayed) for a page within the World Cup final results carousel.
     %1$d is the current page number, and %2$d is the total number of pages.
   -->
   <string name="sports_widget_final_results_page_content_description" tools:ignore="UnusedResources">ผลการแข่งขันฟุตบอลโลกรอบชิงชนะเลิศ หน้า %1$d จาก %2$d</string>
+  <!-- Content description (for accessibility, not displayed) for the World Cup final results page. -->
+  <string name="sports_widget_final_results_content_description">ผลการแข่งขันฟุตบอลโลกรอบชิงชนะเลิศ</string>
   <!-- Content description (for accessibility, not displayed) for the remove button that removes the sports widget from the homepage. -->
   <string name="sports_widget_remove_content_description" tools:ignore="UnusedResources">นำวิดเจ็ตฟุตบอลโลกออกจากหน้าแรก</string>
   <!-- Title shown on the sports widget immediately after the user has followed a team. %s is the selected team (e.g., "USA"). -->
@@ -4594,11 +4449,17 @@
   <!-- Sports widget match status label shown during second half of a match. -->
   <string name="sports_widget_second_half" tools:ignore="UnusedResources">ครึ่งหลัง</string>
   <!-- Sports widget error card title shown when the user is offline. -->
-  <string name="sports_widget_error_connection_offline_title" tools:ignore="UnusedResources">ดูเหมือนว่าคุณจะออฟไลน์อยู่</string>
+  <string name="sports_widget_error_connection_offline_title">ดูเหมือนว่าคุณจะออฟไลน์อยู่</string>
   <!-- Sports widget error card description shown when the user is offline. -->
-  <string name="sports_widget_error_connection_offline_description" tools:ignore="UnusedResources">ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตของคุณแล้วลองอีกครั้ง</string>
+  <string name="sports_widget_error_connection_offline_description">ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตของคุณแล้วลองอีกครั้ง</string>
   <!-- Sports widget general group stage label in the soccer tournament. -->
   <string name="sports_widget_group_stage">รอบแบ่งกลุ่ม</string>
+  <!-- Sports widget error card title shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_title">ไม่มีข้อมูลการแข่งขันในขณะนี้</string>
+  <!-- Sports widget error card description shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_description">โปรดลองเรียกใหม่ในอีกสักครู่</string>
+  <!-- Content description (for accessibility, not displayed) for teams which have not yet been determined in the match schedule. -->
+  <string name="sports_widget_team_to_be_determined">ยังไม่ได้กำหนดทีม</string>
   <!-- ==== End of Terms of use popup prompt. ==== -->
 
   <!--
@@ -4613,4 +4474,64 @@
   <string name="privacy_notice_updated_homepage_message_privacy_notice" tools:ignore="UnusedResources">ประกาศความเป็นส่วนตัว</string>
   <!-- The second active link used in privacy_notice_updated_homepage_message -->
   <string name="privacy_notice_updated_homepage_message_learn_more" tools:ignore="UnusedResources">เรียนรู้เพิ่มเติม</string>
+  <!-- Lens image search button content description -->
+  <string name="lens_search_content_description">ค้นหาด้วยรูปภาพ</string>
+  <!-- Image context menu entry that sends the long-pressed image to Google Lens -->
+  <string name="context_menu_open_image_with_google_lens">ค้นหาด้วย Google Lens</string>
+  <!-- Toast shown when the user denies the camera permission requested by the Lens camera screen -->
+  <string name="lens_camera_permission_denied">การอนุญาตถูกปฏิเสธ</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the photo they capture will be sent to Google Lens for a visual search.
+  -->
+  <string name="lens_camera_title_lens">Google Lens</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the camera is being used to scan a QR code.
+  -->
+  <string name="lens_camera_title_qr">คิวอาร์โค้ด</string>
+  <!-- Content description for the Google Lens half of the camera mode toggle -->
+  <string name="lens_camera_mode_lens">Google Lens</string>
+  <!-- Content description for the QR scanner half of the camera mode toggle -->
+  <string name="lens_camera_mode_qr">ตัวสแกน QR</string>
+  <!-- Toast shown when the user picks an image from the gallery in QR mode but no QR code is found in it -->
+  <string name="lens_camera_qr_no_code_found">ไม่พบคิวอาร์โค้ดในภาพ</string>
+  <!--
+    Firefox Labs
+
+    Firefox Labs is the name of a screen in Settings to allow users to learn about
+    experimental and in-development features, and turn those features on and off.
+    The "Labs" portion can be localized, "Firefox" must be treated as a brand and kept
+    in English.
+  -->
+  <string name="firefox_labs_title" tools:ignore="BrandUsage">Firefox Labs</string>
+  <!-- Banner title text on the Firefox Labs screen. -->
+  <string name="firefox_labs_banner_title_2">ลองใช้คุณลักษณะทดลองของเรา!</string>
+  <!--
+    Banner description text on the Firefox Labs screen. Provides information on what Firefox Labs does. %s is the name of the app (for example "Firefox Nightly").
+    Text will appear under the Firefox Labs banner title.
+  -->
+  <string name="firefox_labs_experimental_description">คุณลักษณะเหล่านั้นยังอยู่ระหว่างการพัฒนาและปรับปรุงอย่างต่อเนื่อง ซึ่งอาจส่งผลต่อการทำงานของ %s</string>
+  <!-- The link text shown when a feedback URL for a Firefox Labs feature is available. The feedback URL page will allow users to provide opinions and suggestions. -->
+  <string name="firefox_labs_share_feedback">แบ่งปันข้อคิดเห็น</string>
+  <!-- Content description for the share feedback link on a Firefox Labs feature. This text will be used by screen readers to provide more context on the feedback link. %s is the name of the Firefox Labs feature. -->
+  <string name="firefox_labs_share_feedback_content_description">แบ่งปันข้อคิดเห็นสำหรับ %s</string>
+  <!-- Button text on the Firefox Labs screen for restoring all toggles back to the default settings. The button will turn off any experimental features. -->
+  <string name="firefox_labs_restore_default_button_text">เรียกคืนค่าเริ่มต้น</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when toggling "on" or "off" an experimental feature that requires a restart. -->
+  <string name="firefox_labs_feature_dialog_title">ต้องเริ่มการทำงานใหม่</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the positive button when toggling "on" and "off" experimental features. This prompts the user to confirm that they want to restart the app. -->
+  <string name="firefox_labs_dialog_restart_button">เริ่มการทำงานใหม่</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the negative button when toggling "on" and "off" experimental features. This is used to cancel the action and return to the previous screen. -->
+  <string name="firefox_labs_dialog_cancel_button">ยกเลิก</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. -->
+  <string name="firefox_labs_restore_defaults_dialog_title">ต้องเริ่มการทำงานใหม่</string>
+  <!-- The description used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_restore_defaults_dialog_message">เมื่อต้องการคืนค่าเริ่มต้น ให้เริ่ม %s ใหม่</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "on" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_enable_dialog_message">เมื่อต้องการเปิดคุณลักษณะนี้ ให้เริ่ม %s ใหม่</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "off" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_disable_dialog_message">เมื่อต้องการปิดคุณลักษณะนี้ ให้เริ่ม %s ใหม่</string>
+  <!-- Text displayed on the Firefox Labs screen when there are no Labs experimental features present. -->
+  <string name="firefox_labs_no_labs_available_description">ไม่มีคุณลักษณะทดลองให้ลองใช้ในขณะนี้</string>
 </resources>

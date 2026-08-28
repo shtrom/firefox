@@ -10,6 +10,7 @@
 #include "mozilla/OverflowChangedTracker.h"
 #include "mozilla/PresShell.h"
 #include "mozilla/StaticPrefs_apz.h"
+#include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/dom/DOMIntersectionObserver.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/Element.h"
@@ -17,6 +18,7 @@
 #include "nsContainerFrame.h"
 #include "nsDisplayList.h"
 #include "nsIContent.h"
+#include "nsIContentInlines.h"
 #include "nsIFrame.h"
 #include "nsIFrameInlines.h"
 #include "nsINode.h"
@@ -240,8 +242,9 @@ bool IsAnchorLaidOutStrictlyBeforeElement(
   // containing blocks and positioned el's containing block is an
   // ancestor of possible anchor's containing block in the containing
   // block chain, aka one of the following:
-  if (anchorContainingBlock->FirstContinuation() !=
-      positionedContainingBlock->FirstContinuation()) {
+  if (nsLayoutUtils::FirstContinuationOrIBSplitSibling(anchorContainingBlock) !=
+      nsLayoutUtils::FirstContinuationOrIBSplitSibling(
+          positionedContainingBlock)) {
     // 2.1 positioned el's containing block is the viewport, and
     // possible anchor's containing block isn't.
     if (positionedContainingBlock->IsViewportFrame() &&
@@ -260,8 +263,10 @@ bool IsAnchorLaidOutStrictlyBeforeElement(
           return false;
         }
 
-        if (parentContainingBlock->FirstContinuation() ==
-            positionedContainingBlock->FirstContinuation()) {
+        if (nsLayoutUtils::FirstContinuationOrIBSplitSibling(
+                parentContainingBlock) ==
+            nsLayoutUtils::FirstContinuationOrIBSplitSibling(
+                positionedContainingBlock)) {
           return !it->IsAbsolutelyPositioned() ||
                  nsLayoutUtils::CompareTreePosition(it, aPositionedFrame,
                                                     aPositionedFrameAncestors,
@@ -488,22 +493,6 @@ nsIFrame* AnchorPositioningUtils::FindFirstAcceptableAnchor(
   return nullptr;
 }
 
-// Find the aContainer's child that is the ancestor of aDescendant.
-static const nsIFrame* TraverseUpToContainerChild(const nsIFrame* aContainer,
-                                                  const nsIFrame* aDescendant) {
-  const auto* current = aDescendant;
-  while (true) {
-    const auto* parent = current->GetParent();
-    if (!parent) {
-      return nullptr;
-    }
-    if (parent == aContainer) {
-      return current;
-    }
-    current = parent;
-  }
-}
-
 static const nsIFrame* GetAnchorOf(const nsIFrame* aPositioned,
                                    const ScopedNameRef& aAnchorName) {
   const auto* presShell = aPositioned->PresShell();
@@ -513,34 +502,23 @@ static const nsIFrame* GetAnchorOf(const nsIFrame* aPositioned,
 
 Maybe<nsRect> AnchorPositioningUtils::GetAnchorPosRect(
     const nsIFrame* aAbsoluteContainingBlock, const nsIFrame* aAnchor,
-    bool aCBRectIsvalid) {
+    bool aCBRectIsValid) {
   auto rect = [&]() -> Maybe<nsRect> {
-    if (aCBRectIsvalid) {
+    if (aCBRectIsValid) {
       return Some(ReassembleAnchorRect(aAnchor, aAbsoluteContainingBlock));
     }
 
-    // Ok, containing block doesn't have its rect fully resolved. Figure out
-    // rect relative to the child of containing block that is also the ancestor
-    // of the anchor, and manually compute the offset.
+    // Ok, containing block doesn't have its rect fully resolved. Compute the
+    // anchor rect in aAbsoluteContainingBlock's coordinate space.
     // TODO(dshin): This wouldn't handle anchor in a previous top layer.
-    const auto* containerChild =
-        TraverseUpToContainerChild(aAbsoluteContainingBlock, aAnchor);
-    if (!containerChild) {
+    if (!nsLayoutUtils::IsProperAncestorFrameConsideringContinuations(
+            aAbsoluteContainingBlock, aAnchor)) {
       return Nothing{};
     }
-
-    if (aAnchor == containerChild) {
-      // Anchor is the direct child of anchor's CBWM.
-      return Some(nsLayoutUtils::GetCombinedFragmentRects(aAnchor).mRect +
-                  aAnchor->GetPositionIgnoringScrolling());
-    }
-
-    // TODO(dshin): Already traversed up to find `containerChild`, and we're
-    // going to do it again here, which feels a little wasteful.
-    const nsRect rectToContainerChild =
-        nsLayoutUtils::GetCombinedFragmentRects(aAnchor).mRect;
-    const auto offset = aAnchor->GetOffsetToIgnoringScrolling(containerChild);
-    return Some(rectToContainerChild + offset + containerChild->GetPosition());
+    return Some(GetCombinedFragmentRects(aAnchor, aAbsoluteContainingBlock,
+                                         UnionFragments::All,
+                                         ApplyTransform::Yes)
+                    .mRect);
   }();
   return rect.map([&](const nsRect& aRect) {
     // We need to position the border box of the anchor within the abspos
@@ -556,7 +534,7 @@ Maybe<nsRect> AnchorPositioningUtils::GetAnchorPosRect(
 
 Maybe<AnchorPosInfo> AnchorPositioningUtils::ResolveAnchorPosRect(
     const nsIFrame* aPositioned, const nsIFrame* aAbsoluteContainingBlock,
-    const ScopedNameRef& aAnchorName, bool aCBRectIsvalid,
+    const ScopedNameRef& aAnchorName, bool aCBRectIsValid,
     AnchorPosResolutionCache* aResolutionCache) {
   if (!aPositioned) {
     return Nothing{};
@@ -598,7 +576,7 @@ Maybe<AnchorPosInfo> AnchorPositioningUtils::ResolveAnchorPosRect(
   }
 
   const auto result =
-      GetAnchorPosRect(aAbsoluteContainingBlock, anchor, aCBRectIsvalid);
+      GetAnchorPosRect(aAbsoluteContainingBlock, anchor, aCBRectIsValid);
   return result.map([&](const nsRect& aRect) {
     bool compensatesForScroll = false;
     DistanceToNearestScrollContainer distanceToNearestScrollContainer;
@@ -649,7 +627,8 @@ Maybe<AnchorPosInfo> AnchorPositioningUtils::ResolveAnchorPosRect(
 }
 
 Maybe<nsSize> AnchorPositioningUtils::ResolveAnchorPosSize(
-    const nsIFrame* aPositioned, const ScopedNameRef& aAnchorName,
+    const nsIFrame* aPositioned, const nsIFrame* aAbsoluteContainingBlock,
+    const ScopedNameRef& aAnchorName,
     AnchorPosResolutionCache* aResolutionCache) {
   auto anchorName = GetUsedAnchorName(aPositioned, aAnchorName);
   if (!anchorName) {
@@ -672,7 +651,9 @@ Maybe<nsSize> AnchorPositioningUtils::ResolveAnchorPosSize(
     return Nothing{};
   }
   const auto size =
-      nsLayoutUtils::GetCombinedFragmentRects(anchor).mRect.Size();
+      GetCombinedFragmentRects(anchor, aAbsoluteContainingBlock,
+                               UnionFragments::All, ApplyTransform::Yes)
+          .mRect.Size();
   if (entry) {
     *entry =
         Some(AnchorPosResolutionData{size, Nothing{}, aAnchorName.mTreeScope});
@@ -1313,23 +1294,24 @@ bool AnchorPositioningUtils::TriggerLayoutOnOverflow(PresShell* aPresShell,
   return didLayoutPositionedItems;
 }
 
-static const nsIFrame* GetMatchingContainingBlock(
+const nsIFrame* AnchorPositioningUtils::GetMatchingContainingBlock(
     const nsIFrame* aAnchor, const nsIFrame* aContainingBlock) {
   MOZ_ASSERT(nsLayoutUtils::IsProperAncestorFrameConsideringContinuations(
       aContainingBlock, aAnchor));
-  if ((!aContainingBlock->GetPrevContinuation() &&
-       !aContainingBlock->GetNextContinuation()) ||
+
+  const auto* firstCont =
+      nsLayoutUtils::FirstContinuationOrIBSplitSibling(aContainingBlock);
+  const auto* lastCont =
+      nsLayoutUtils::LastContinuationOrIBSplitSibling(aContainingBlock);
+  if (firstCont == lastCont ||
       nsLayoutUtils::IsProperAncestorFrame(aContainingBlock, aAnchor)) {
+    // aContainingBlock has no continuations nor IB-split siblings, or
+    // aContainingBlock itself is already a proper ancestor.
     return aContainingBlock;
   }
-  for (const auto* f = aContainingBlock->GetPrevContinuation(); f;
-       f = f->GetPrevContinuation()) {
-    if (nsLayoutUtils::IsProperAncestorFrame(f, aAnchor)) {
-      return f;
-    }
-  }
-  for (const auto* f = aContainingBlock->GetNextContinuation(); f;
-       f = f->GetNextContinuation()) {
+
+  for (const auto* f = firstCont; f;
+       f = nsLayoutUtils::GetNextContinuationOrIBSplitSibling(f)) {
     if (nsLayoutUtils::IsProperAncestorFrame(f, aAnchor)) {
       return f;
     }
@@ -1346,24 +1328,94 @@ static nscoord BSizeFromPhysicalSize(const nsSize& aSize,
   return LogicalSize{aWritingMode, aSize}.BSize(aWritingMode);
 }
 
+auto AnchorPositioningUtils::GetCombinedFragmentRects(
+    const nsIFrame* aFrame, const nsIFrame* aContainingBlock,
+    UnionFragments aUnionFragments, ApplyTransform aApplyTransform)
+    -> CombinedFragments {
+  MOZ_ASSERT(aFrame);
+  MOZ_ASSERT(aContainingBlock);
+  MOZ_ASSERT(aUnionFragments == UnionFragments::All ||
+                 nsLayoutUtils::IsProperAncestorFrame(aContainingBlock, aFrame),
+             "aContainingBlock must be a proper ancestor of aFrame when using "
+             "UnionFragments::SameContainingBlockOnly!");
+
+  bool isPaginated = aFrame->PresContext()->IsPaginated();
+
+  const bool applyTransform =
+      StaticPrefs::layout_css_anchor_positioning_follows_transforms_enabled() &&
+      aApplyTransform == ApplyTransform::Yes &&
+      nsLayoutUtils::IsProperAncestorFrame(aContainingBlock, aFrame) &&
+      nsLayoutUtils::IsTransformed(aFrame, aContainingBlock);
+
+  // Lazy getter for aFrame's page-frame ancestor, if any.
+  Maybe<const nsIFrame*> maybePageFrame;
+  auto currPageFrame = [=, &maybePageFrame]() -> const nsIFrame* {
+    MOZ_ASSERT(isPaginated);
+    if (!maybePageFrame) {
+      maybePageFrame.emplace(nsLayoutUtils::GetPageFrame(aFrame));
+    }
+    return maybePageFrame.ref();
+  };
+
+  // A continuation is considered "on the same page" if the context is not
+  // paginated, or if it has the same page-frame ancestor.
+  auto onSamePage = [=](const nsIFrame* aContinuation) -> bool {
+    return !isPaginated ||
+           nsLayoutUtils::GetPageFrame(aContinuation) == currPageFrame();
+  };
+
+  auto inSameCBFragment = [&](const nsIFrame* aContinuation) {
+    // When applying transforms, also restrict to continuations under
+    // aContainingBlock. A continuation in a different CB continuation cannot be
+    // transformed into aContainingBlock's coordinate space.
+    if (aUnionFragments == UnionFragments::SameContainingBlockOnly ||
+        applyTransform) {
+      return nsLayoutUtils::IsProperAncestorFrame(aContainingBlock,
+                                                  aContinuation);
+    }
+    return true;
+  };
+
+  auto GetRectInContainingBlockSpace = [&](const nsIFrame* aContinuation) {
+    if (applyTransform) {
+      return nsLayoutUtils::TransformFrameRectToAncestor(
+          aContinuation, aContinuation->GetRectRelativeToSelf(),
+          aContainingBlock, nullptr, nullptr,
+          TransformMatrixFlag::IgnoreScrolling);
+    }
+    return aContinuation->GetRectRelativeToSelf() +
+           aContinuation->GetOffsetToIgnoringScrolling(aContainingBlock);
+  };
+
+  // Collect rects from our continuations (limited to those that are on the
+  // same page if the context is paginated).
+  nsRect rect = GetRectInContainingBlockSpace(aFrame);
+  const auto* next = aFrame->GetNextContinuation();
+  for (; next && onSamePage(next) && inSameCBFragment(next);
+       next = next->GetNextContinuation()) {
+    rect = rect.Union(GetRectInContainingBlockSpace(next));
+  }
+  const auto* prev = aFrame->GetPrevContinuation();
+  for (; prev && onSamePage(prev) && inSameCBFragment(prev);
+       prev = prev->GetPrevContinuation()) {
+    rect = rect.Union(GetRectInContainingBlockSpace(prev));
+  }
+
+  return CombinedFragments{prev, next, rect};
+}
+
 nsRect AnchorPositioningUtils::ReassembleAnchorRect(
     const nsIFrame* aAnchor, const nsIFrame* aContainingBlock) {
-  if (!aAnchor->PresContext()->FragmentainerAwarePositioningEnabled()) {
-    // We aren't fragmenting abspos elements, with containing block sizes
-    // not fit for proper reassembly. Given the context of this function (Anchor
-    // positioning), we can safely assume that the containing block contains at
-    // least one abspos frame (Anchor positioned frame), so skip reassembly.
-    return nsLayoutUtils::GetCombinedFragmentRects(aAnchor, nullptr).mRect +
-           aAnchor->GetOffsetToIgnoringScrolling(aContainingBlock);
-  }
-  aContainingBlock = GetMatchingContainingBlock(aAnchor, aContainingBlock);
-  if (!aContainingBlock) {
+  const nsIFrame* matchingCB =
+      GetMatchingContainingBlock(aAnchor, aContainingBlock);
+  if (!matchingCB) {
     MOZ_ASSERT_UNREACHABLE("No matching containing block?");
     return nsRect{};
   }
   // Union fragments of the anchor within this containing block.
-  const auto fragRect =
-      nsLayoutUtils::GetCombinedFragmentRects(aAnchor, aContainingBlock);
+  auto fragRect = GetCombinedFragmentRects(
+      aAnchor, matchingCB, UnionFragments::SameContainingBlockOnly,
+      ApplyTransform::Yes);
   // This anchor is contained within this CB fragment, or the containing block
   // is inline.
   // TODO(dshin, bug 2014554): Handle inline containing blocks properly. Inline
@@ -1372,26 +1424,35 @@ nsRect AnchorPositioningUtils::ReassembleAnchorRect(
   // into account.
   if ((!fragRect.mSkippedPrevContinuation &&
        !fragRect.mSkippedNextContinuation) ||
-      aContainingBlock->IsInlineOutside()) {
-    return fragRect.mRect;
+      matchingCB->IsInlineOutside()) {
+    // fragRect.mRect is in matching containing block's coordinate space.
+    // Translate the rect back to aContainingBlock's coordinate space.
+    return fragRect.mRect +
+           matchingCB->GetOffsetToIgnoringScrolling(aContainingBlock);
   }
   // Ok, we need to reassemble the unfragmented size and position of the anchor,
   // by stacking up the containing block in block direction.
-  const auto cbwm = aContainingBlock->GetWritingMode();
+  // TODO(TYLin, Bug 2063761): the rects need to take transforms into account.
+  fragRect = GetCombinedFragmentRects(aAnchor, matchingCB,
+                                      UnionFragments::SameContainingBlockOnly,
+                                      ApplyTransform::No);
+  const auto cbwm = matchingCB->GetWritingMode();
   // Note the use of ink overflow, since the anchor may overflow it.
-  const auto cbSize = InkOverflowSize(aContainingBlock);
+  const auto cbSize = InkOverflowSize(matchingCB);
   LogicalRect unfragmentedAnchorRect{cbwm, fragRect.mRect, cbSize};
   LogicalSize relevantCbSize{cbwm, cbSize};
 
   const auto* prev = fragRect.mSkippedPrevContinuation;
-  const auto* prevCb = aContainingBlock->GetPrevContinuation();
+  const auto* prevCb = matchingCB->GetPrevContinuation();
   while (prev) {
     MOZ_ASSERT(unfragmentedAnchorRect.BStart(cbwm) == 0,
                "Prev continuation exists but this continuation didn't hit "
                "block-start?");
     MOZ_ASSERT(nsLayoutUtils::IsProperAncestorFrame(prevCb, prev));
 
-    const auto r = nsLayoutUtils::GetCombinedFragmentRects(prev, prevCb);
+    const auto r = GetCombinedFragmentRects(
+        prev, prevCb, UnionFragments::SameContainingBlockOnly,
+        ApplyTransform::No);
     const auto inkOverflowSize = InkOverflowSize(prevCb);
     const auto prevCBBSize = BSizeFromPhysicalSize(inkOverflowSize, cbwm);
 
@@ -1426,13 +1487,15 @@ nsRect AnchorPositioningUtils::ReassembleAnchorRect(
 
   // Assemble fragments in the next block flow fragment.
   const auto* next = fragRect.mSkippedNextContinuation;
-  const auto* nextCb = aContainingBlock->GetNextContinuation();
+  const auto* nextCb = matchingCB->GetNextContinuation();
   while (next) {
     MOZ_ASSERT(
         unfragmentedAnchorRect.BEnd(cbwm) == relevantCbSize.BSize(cbwm),
         "Next continuation exists this continuation didn't hit block-end?");
     MOZ_ASSERT(nsLayoutUtils::IsProperAncestorFrame(nextCb, next));
-    const auto r = nsLayoutUtils::GetCombinedFragmentRects(next, nextCb);
+    const auto r = GetCombinedFragmentRects(
+        next, nextCb, UnionFragments::SameContainingBlockOnly,
+        ApplyTransform::No);
 
     const auto inkOverflowSize = InkOverflowSize(nextCb);
     relevantCbSize.BSize(cbwm) += BSizeFromPhysicalSize(inkOverflowSize, cbwm);

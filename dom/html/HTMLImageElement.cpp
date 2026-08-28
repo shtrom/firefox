@@ -70,7 +70,7 @@ static bool IsPreviousSibling(const nsINode* aSubject, const nsINode* aNode) {
 namespace mozilla::dom {
 
 HTMLImageElement::HTMLImageElement(
-    already_AddRefed<mozilla::dom::NodeInfo>&& aNodeInfo)
+    already_AddRefed<mozilla::dom::NodeInfo> aNodeInfo)
     : nsGenericHTMLElement(std::move(aNodeInfo)) {
   // We start out broken
   AddStatesSilently(ElementState::BROKEN);
@@ -121,14 +121,16 @@ bool HTMLImageElement::Draggable() const {
                       nsGkAtoms::_false, eIgnoreCase);
 }
 
-bool HTMLImageElement::Complete() {
-  // It is still not clear what value should img.complete return in various
-  // cases, see https://github.com/whatwg/html/issues/4884
+// https://html.spec.whatwg.org/#dom-img-complete
+//
+// It is still not clear what value should img.complete return in various
+// cases, see https://github.com/whatwg/html/issues/4884
+bool HTMLImageElement::Complete() const {
   if (!HasAttr(nsGkAtoms::srcset) && !HasNonEmptyAttr(nsGkAtoms::src)) {
     return true;
   }
 
-  if (mPendingRequest || mPendingImageLoadTask) {
+  if (mPendingRequest || HasPendingAlwaysLoadImageTask()) {
     return false;
   }
 
@@ -436,6 +438,8 @@ bool HTMLImageElement::IsHTMLFocusable(IsFocusableFlags aFlags,
 }
 
 nsresult HTMLImageElement::BindToTree(BindContext& aContext, nsINode& aParent) {
+  const bool wasInPicture = IsInPicture();
+
   MOZ_TRY(nsGenericHTMLElement::BindToTree(aContext, aParent));
 
   nsImageLoadingContent::BindToTree(aContext, aParent);
@@ -443,13 +447,13 @@ nsresult HTMLImageElement::BindToTree(BindContext& aContext, nsINode& aParent) {
   UpdateFormOwner();
 
   UpdateAutoSizeObserver();
-  // Mark channel as urgent-start before load image if the image load is
-  // initiated by a user interaction.
-  if (IsInPicture()) {
+  if (IsInPicture() && !wasInPicture) {
     if (!mInDocResponsiveContent) {
       aContext.OwnerDoc().AddResponsiveContent(this);
       mInDocResponsiveContent = true;
     }
+    // Mark channel as urgent-start before load image if the image load is
+    // initiated by a user interaction.
     mUseUrgentStartForChannel = UserActivation::IsHandlingUserInput();
     UpdateSourceSyncAndQueueImageTask(false, /* aNotify = */ false);
   }
@@ -606,14 +610,10 @@ JSObject* HTMLImageElement::WrapNode(JSContext* aCx,
   return HTMLImageElement_Binding::Wrap(aCx, this, aGivenProto);
 }
 
-#ifdef DEBUG
-HTMLFormElement* HTMLImageElement::GetFormInternal() const { return mForm; }
-#endif
-
 void HTMLImageElement::SetForm(HTMLFormElement* aForm) {
   MOZ_ASSERT(aForm, "Don't pass null here");
-  NS_ASSERTION(!mForm,
-               "We don't support switching from one non-null form to another.");
+  MOZ_ASSERT(!mForm && !HasFlag(ADDED_TO_FORM),
+             "We don't support switching from one non-null form to another.");
 
   mForm = aForm;
 }

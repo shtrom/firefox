@@ -2,33 +2,30 @@
   "background": {
     "color": {
       "@base": {
-        "value": "{background.color.box.@base}"
+        "value": {
+          "nativeTheme": "Field",
+          "default": "{popup.background.color}"
+        }
       }
     }
   },
   "border": {
     "color": {
       "value": {
-        "light": "{color.gray.10}",
-        "dark": "{color.gray.60}",
-        "forcedColors": "{border.color.@base}"
+        "nativeTheme": "{border.color.deemphasized.@base}",
+        "default": "{popup.border.color}"
       }
     },
     "radius": {
-      "value": "16px"
-    }
-  },
-  "padding": {
-    "@base": {
-      "value": "{panel.padding.block}"
-    },
-    "block": {
-      "value": "8px"
+      "value": "{popup.border.radius}"
     }
   },
   "text": {
     "color": {
-      "value": "{text.color.@base}"
+      "value": {
+        "nativeTheme": "FieldText",
+        "default": "{text.color.@base}"
+      }
     }
   }
 }

@@ -97,6 +97,10 @@ void MacroAssembler::andPtr(Imm32 imm, Register src, Register dest) {
   andPtr(imm, dest);
 }
 
+void MacroAssembler::andPtr(Imm32 imm, const Address& dest) {
+  andq(imm, Operand(dest));
+}
+
 void MacroAssembler::and64(Imm64 imm, Register64 dest) {
   if (INT32_MIN <= int64_t(imm.value) && int64_t(imm.value) <= INT32_MAX) {
     if (int32_t(imm.value) >= 0) {
@@ -406,6 +410,11 @@ void MacroAssembler::lshift64(Imm32 imm, Register64 dest) {
   lshiftPtr(imm, dest.reg);
 }
 
+void MacroAssembler::lshift64(Imm32 imm, Register64 src, Register64 dest) {
+  MOZ_ASSERT(0 <= imm.value && imm.value < 64);
+  lshiftPtr(imm, src.reg, dest.reg);
+}
+
 void MacroAssembler::lshift64(Register shift, Register64 srcDest) {
   if (Assembler::HasBMI2()) {
     shlxq(srcDest.reg, shift, srcDest.reg);
@@ -454,6 +463,11 @@ void MacroAssembler::flexibleRshiftPtr(Register shift, Register srcDest) {
 
 void MacroAssembler::rshift64(Imm32 imm, Register64 dest) {
   rshiftPtr(imm, dest.reg);
+}
+
+void MacroAssembler::rshift64(Imm32 imm, Register64 src, Register64 dest) {
+  MOZ_ASSERT(0 <= imm.value && imm.value < 64);
+  rshiftPtr(imm, src.reg, dest.reg);
 }
 
 void MacroAssembler::rshift64(Register shift, Register64 srcDest) {
@@ -507,6 +521,12 @@ void MacroAssembler::flexibleRshiftPtrArithmetic(Register shift,
 void MacroAssembler::rshift64Arithmetic(Imm32 imm, Register64 dest) {
   MOZ_ASSERT(0 <= imm.value && imm.value < 64);
   rshiftPtrArithmetic(imm, dest.reg);
+}
+
+void MacroAssembler::rshift64Arithmetic(Imm32 imm, Register64 src,
+                                        Register64 dest) {
+  MOZ_ASSERT(0 <= imm.value && imm.value < 64);
+  rshiftPtrArithmetic(imm, src.reg, dest.reg);
 }
 
 void MacroAssembler::rshift64Arithmetic(Register shift, Register64 srcDest) {
@@ -1139,25 +1159,60 @@ void MacroAssembler::wasmAddSubI128HI64(Register lhsLo, Register lhsHi,
   }
 }
 
-// Produces the top 64 bits of the 128-bit value `RAX *widen rhs`.  The result
-// will be in RAX.  RDX is trashed.  `rhs` may not be RAX or RDX.  Callers
-// must preserve live values in RAX and RDX themselves.
-void MacroAssembler::wasmMulI64WideHI64(Register rhs, bool isSigned) {
-  MOZ_RELEASE_ASSERT(rhs != rax && rhs != rdx);
-  if (isSigned) {
-    imulq(rhs);
-  } else {
-    umulq(rhs);
+void MacroAssembler::wasmMulI64WideHI64(Register lhs, Register rhs,
+                                        Register temp0, Register temp1,
+                                        Register output, bool isSigned) {
+  // Require: lhs, rhs, temp0, temp1 and output are distinct
+  const Register regs[5] = {lhs, rhs, temp0, temp1, output};
+  for (uint32_t i = 0; i < 5; i++) {
+    for (uint32_t j = 0; j < i; j++) {
+      MOZ_RELEASE_ASSERT(regs[i] != regs[j]);
+    }
   }
-  // Currently we have a 128-bit result in RDX(hi64):RAX(lo64).  But we need the
-  // top 64 bits to be in RAX.  The reason for this last-minute move is so as to
-  // make the associated LIR's register constraints describable to the register
-  // allocator, since it appears impossible to describe a LIR with "one arg in
-  // RAX, the other arg in any-reg (not RAX or RDX), result in RDX".  But
-  // specifying the result to be in RAX does make it describable, providing we
-  // also say that RDX is trashed.  This of course does unfortunately put an
-  // extra move on the critical path.
-  movq(rdx, rax);
+  // Require: lhs is in RAX and rhs is in RDX.
+  MOZ_RELEASE_ASSERT(lhs == rax);
+  MOZ_RELEASE_ASSERT(rhs == rdx);
+  // Hence we are also assured that output != RDX and output != RAX.
+
+  // Generate absurd hoop-jumping as required by x86_64:
+  //   movq rax, temp0
+  //       temp0   holds  original RAX
+  //   movq rdx, temp1
+  //       temp0   holds  original RAX
+  //       temp1   holds  original RDX
+  //   {i}mulq rdx
+  //       temp0   holds  original RAX
+  //       temp1   holds  original RDX
+  //       rdx     holds  resultHI
+  //       rax     holds  resultLO
+  //   movq rdx, output
+  //       temp0   holds  original RAX
+  //       temp1   holds  original RDX
+  //       rdx     holds  resultHI
+  //       rax     holds  resultLO
+  //       output  holds  resultHI
+  //   movq temp0, rax
+  //       temp0   holds  original RAX
+  //       temp1   holds  original RDX
+  //       rdx     holds  resultHI
+  //       rax     holds  original RAX
+  //       output  holds  resultHI
+  //   movq temp1, rdx
+  //       temp0   holds  original RAX
+  //       temp1   holds  original RDX
+  //       rdx     holds  original RDX
+  //       rax     holds  original RAX
+  //       output  holds  resultHI
+  movq(rax, temp0);
+  movq(rdx, temp1);
+  if (isSigned) {
+    imulq(rdx);
+  } else {
+    umulq(rdx);
+  }
+  movq(rdx, output);
+  movq(temp0, rax);
+  movq(temp1, rdx);
 }
 
 // ========================================================================

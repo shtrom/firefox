@@ -1,4 +1,5 @@
 ---
+name: documentation
 description: Use this skill when working with Firefox documentation,
   including building documentation with `./mach doc`,
   fixing Sphinx build errors or warnings, modifying existing
@@ -9,8 +10,7 @@ description: Use this skill when working with Firefox documentation,
 
 Firefox documentation is built using **Sphinx**
 through the `./mach doc` command. Documentation sources are distributed
-throughout the repository and can be written in **reStructuredText
-(`.rst`)** or **Markdown (`.md`)**.
+throughout the repository and are written in **Markdown (`.md`)**.
 
 The documentation system integrates:
 
@@ -127,7 +127,7 @@ This file controls several critical aspects of the documentation build:
 
 Typical process:
 
-1.  Create a `.rst` or `.md` file in the appropriate directory. Prefer Markdown.
+1.  Create a `.md` file in the appropriate directory.
 2.  Add the document to a parent `toctree`.
 3.  Add the documentation path to the appropriate category in `docs/config.yml`.
 4.  If adding docs in a new directory, ensure `SPHINX_TREES` is set in the
@@ -144,6 +144,26 @@ is included in a toctree.
 
 When moving documentation to a new URL, add an entry to the `redirects`
 section of `docs/config.yml` so old links continue to work.
+
+## Cross-references between documents
+
+Link to the **source file**, not to the generated URL:
+
+-   Good: `[mots](/mots/index.md)`, `[Coding style](/code-quality/coding-style/index.rst)`
+-   Bad: `[mots](/mots/index.html)` -- produces
+    `WARNING: 'myst' cross-reference target not found: '/mots/index.html' [myst.xref_missing]`
+-   Bad: a full `https://firefox-source-docs.mozilla.org/...` URL for in-tree
+    documentation -- it bypasses link validation and breaks when pages move.
+
+The path is rooted at the documentation tree (leading `/`), and the extension
+must match the actual source file (`.md` or `.rst`). To link to a section, append
+the anchor: `/mots/index.md#desktop-theme`.
+
+An API reference generated from source comments renders their descriptions as
+reStructuredText, where the `[text](/path/index.md)` form above comes out
+literally, with only the bare URL autolinked. Write the link as a role instead:
+
+    :doc:`Places </browser/places/index>`
 
 ## Best Practices
 

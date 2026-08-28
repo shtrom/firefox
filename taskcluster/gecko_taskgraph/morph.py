@@ -21,6 +21,7 @@ import copy
 import logging
 import os
 import re
+from collections import defaultdict
 
 from slugid import nice as slugid
 from taskgraph.graph import Graph
@@ -329,15 +330,32 @@ def add_try_task_duplicates(taskgraph, label_to_taskid, parameters, graph_config
 
     rebuild = try_config.get("rebuild")
     if rebuild:
+        if isinstance(rebuild, int):
+            rebuild = defaultdict(lambda n=rebuild: n)
+        else:
+            rebuild = defaultdict(lambda: 1, rebuild)
         for task in taskgraph.tasks.values():
+            count = rebuild[task.label]
+
+            if count == 1:
+                continue
+
             chunk_index = -1
             if task.label.endswith("-cf"):
                 chunk_index = -2
             label_parts = task.label.split("-")
             label_no_chunk = "-".join(label_parts[:chunk_index])
+            label_no_cf = (
+                "-".join(label_parts[:-1]) if chunk_index == -2 else task.label
+            )
 
             if label_parts[chunk_index].isnumeric() and label_no_chunk in glob_tasks:
-                task.attributes["task_duplicates"] = rebuild
+                task.attributes["task_duplicates"] = count
             elif task.label in tasks:
-                task.attributes["task_duplicates"] = rebuild
+                task.attributes["task_duplicates"] = count
+            elif label_no_cf in glob_tasks:
+                # When dynamic chunking produces 1 chunk, the label has no
+                # numeric suffix to match the chunked-glob branch above, so
+                # match the unchunked name against the selected glob too.
+                task.attributes["task_duplicates"] = count
     return taskgraph, label_to_taskid

@@ -1,23 +1,31 @@
 From: Michael Froman <mfroman@mozilla.com>
-Date: Wed, 8 Oct 2025 16:39:00 -0500
-Subject: Bug 1993083 - (fix-032f8c223e) add missing stub implementation for
- SSLStreamAdapter static method.
+Date: Mon, 29 Dec 2025 13:18:00 -0600
+Subject: Bug 2006933 - (fix-932f274e86) don't include rtc_error.h, forward
+ declare RTCError
 
-Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/293f1877fead30723696b8f5cb354bdf819af5d3
+Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/fb61f91d422c3d77545d0d10778314eb958fc8c6
 ---
- rtc_base/ssl_stream_adapter.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ api/rtp_parameters.h | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/rtc_base/ssl_stream_adapter.h b/rtc_base/ssl_stream_adapter.h
-index 16d424ed65..ac09e9198a 100644
---- a/rtc_base/ssl_stream_adapter.h
-+++ b/rtc_base/ssl_stream_adapter.h
-@@ -260,7 +260,7 @@ class SSLStreamAdapter : public StreamInterface {
-   static std::set<uint16_t> GetSupportedEphemeralKeyExchangeCipherGroups()
-       { return {}; }
-   static std::optional<std::string> GetEphemeralKeyExchangeCipherGroupName(
--      uint16_t group_id);
-+      uint16_t group_id) { return std::nullopt; }
-   static std::vector<uint16_t> GetDefaultEphemeralKeyExchangeCipherGroups(
-       const FieldTrialsView* field_trials) { return {}; }
+diff --git a/api/rtp_parameters.h b/api/rtp_parameters.h
+index bd48e7db34..c68178bef3 100644
+--- a/api/rtp_parameters.h
++++ b/api/rtp_parameters.h
+@@ -36,7 +36,6 @@
+ #include "absl/strings/string_view.h"
+ #include "api/media_types.h"
+ #include "api/priority.h"
+-#include "api/rtc_error.h"
+ #include "api/rtp_header_extension_id.h"
+ #include "api/rtp_transceiver_direction.h"
+ #include "api/video/resolution.h"
+@@ -46,7 +45,7 @@
+ #include "rtc_base/system/rtc_export.h"
  
+ namespace webrtc {
+-
++class RTCError;
+ class StringBuilder;
+ 
+ struct RTC_EXPORT CodecParameterMap

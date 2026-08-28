@@ -14,18 +14,19 @@
 #include "mozilla/MouseEvents.h"
 #include "mozilla/StaticPrefs_intl.h"
 #include "mozilla/StaticPrefs_widget.h"
-#include "mozilla/glean/WidgetCocoaMetrics.h"
 #include "mozilla/TextEventDispatcher.h"
 #include "mozilla/TextEvents.h"
 #include "mozilla/ToString.h"
+#include "mozilla/Utf16.h"
+#include "mozilla/glean/WidgetCocoaMetrics.h"
 
+#include "WidgetUtils.h"
+#include "nsBidiUtils.h"
+#include "nsCocoaUtils.h"
 #include "nsCocoaWindow.h"
 #include "nsObjCExceptions.h"
-#include "nsBidiUtils.h"
-#include "nsToolkit.h"
-#include "nsCocoaUtils.h"
-#include "WidgetUtils.h"
 #include "nsPrintfCString.h"
+#include "nsToolkit.h"
 
 using namespace mozilla;
 using namespace mozilla::widget;
@@ -34,13 +35,13 @@ using namespace mozilla::widget;
 // rather than `MOZ_LOG=IMEHandler:5,sync` since using `5` may create too
 // big file.
 // Therefore you shouldn't use `LogLevel::Verbose` for logging usual behavior.
-mozilla::LazyLogModule gIMELog("IMEHandler");
+LazyLogModule gIMELog("IMEHandler");
 
 // For collecting other people's log, tell them `MOZ_LOG=KeyboardHandler:4,sync`
 // rather than `MOZ_LOG=KeyboardHandler:5,sync` since using `5` may create too
 // big file.
 // Therefore you shouldn't use `LogLevel::Verbose` for logging usual behavior.
-mozilla::LazyLogModule gKeyLog("KeyboardHandler");
+LazyLogModule gKeyLog("KeyboardHandler");
 
 // The behavior of `TextInputHandler` class is important both for logging
 // keyboard handler and IME handler.  Therefore, the behavior is logged when
@@ -677,8 +678,8 @@ void TISInputSourceWrapper::InitByInputSourceID(const CFStringRef aID) {
   if (!aID) return;
   const void* keys[] = {kTISPropertyInputSourceID};
   const void* values[] = {aID};
-  CFDictionaryRef filter =
-      ::CFDictionaryCreate(kCFAllocatorDefault, keys, values, 1, NULL, NULL);
+  CFDictionaryRef filter = ::CFDictionaryCreate(kCFAllocatorDefault, keys,
+                                                values, 1, nullptr, nullptr);
   NS_ASSERTION(filter, "failed to create the filter");
   mInputSourceList = ::TISCreateInputSourceList(filter, true);
   ::CFRelease(filter);
@@ -1743,8 +1744,8 @@ NSUInteger TextInputHandler::sLastModifierState = 0;
 CFArrayRef TextInputHandler::CreateAllKeyboardLayoutList() {
   const void* keys[] = {kTISPropertyInputSourceType};
   const void* values[] = {kTISTypeKeyboardLayout};
-  CFDictionaryRef filter =
-      ::CFDictionaryCreate(kCFAllocatorDefault, keys, values, 1, NULL, NULL);
+  CFDictionaryRef filter = ::CFDictionaryCreate(kCFAllocatorDefault, keys,
+                                                values, 1, nullptr, nullptr);
   NS_ASSERTION(filter, "failed to create the filter");
   CFArrayRef list = ::TISCreateInputSourceList(filter, true);
   ::CFRelease(filter);
@@ -3218,12 +3219,13 @@ void IMEInputHandler::InitStaticMembers() {
   // Mac Dev Center's document doesn't say how to remove the observer if
   // the second parameter is NULL.
   ::CFNotificationCenterAddObserver(
-      center, NULL, OnCurrentTextInputSourceChange,
-      kTISNotifySelectedKeyboardInputSourceChanged, NULL,
+      center, nullptr, OnCurrentTextInputSourceChange,
+      kTISNotifySelectedKeyboardInputSourceChanged, nullptr,
       CFNotificationSuspensionBehaviorDeliverImmediately);
   // Initiailize with the current keyboard layout
-  OnCurrentTextInputSourceChange(
-      NULL, NULL, kTISNotifySelectedKeyboardInputSourceChanged, NULL, NULL);
+  OnCurrentTextInputSourceChange(nullptr, nullptr,
+                                 kTISNotifySelectedKeyboardInputSourceChanged,
+                                 nullptr, nullptr);
 }
 
 // static
@@ -3253,7 +3255,7 @@ void IMEInputHandler::OnCurrentTextInputSourceChange(
     }
     // 72 is kMaximumKeyStringLength in TelemetryScalar.cpp
     if (key.Length() > 72) {
-      if (NS_IS_SURROGATE_PAIR(key[72 - 2], key[72 - 1])) {
+      if (IsSurrogatePair(key[72 - 2], key[72 - 1])) {
         key.Truncate(72 - 2);
       } else {
         key.Truncate(72 - 1);
@@ -3333,8 +3335,8 @@ void IMEInputHandler::FlushPendingMethods(nsITimer* aTimer, void* aClosure) {
 CFArrayRef IMEInputHandler::CreateAllIMEModeList() {
   const void* keys[] = {kTISPropertyInputSourceType};
   const void* values[] = {kTISTypeKeyboardInputMode};
-  CFDictionaryRef filter =
-      ::CFDictionaryCreate(kCFAllocatorDefault, keys, values, 1, NULL, NULL);
+  CFDictionaryRef filter = ::CFDictionaryCreate(kCFAllocatorDefault, keys,
+                                                values, 1, nullptr, nullptr);
   NS_ASSERTION(filter, "failed to create the filter");
   CFArrayRef list = ::TISCreateInputSourceList(filter, true);
   ::CFRelease(filter);
@@ -3704,8 +3706,7 @@ already_AddRefed<mozilla::TextRangeArray> IMEInputHandler::CreateTextRangeArray(
     NSAttributedString* aAttrString, NSRange& aSelectedRange) {
   NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
-  RefPtr<mozilla::TextRangeArray> textRangeArray =
-      new mozilla::TextRangeArray();
+  auto textRangeArray = MakeRefPtr<mozilla::TextRangeArray>();
 
   // Note that we shouldn't append ranges when composition string
   // is empty because it may cause TextComposition confused.
@@ -4750,6 +4751,21 @@ bool IMEInputHandler::OnDestroyWidget(nsCocoaWindow* aDestroyingWidget) {
     return false;
   }
 
+  // If the focused widget is being destroyed without a preceding resign-key or
+  // blur (e.g. a popup or window closed while a password field is focused while
+  // the app stays active), release Secure Event Input here.  Otherwise it can
+  // stay enabled process-wide and lock other apps out of keyboard input (bug
+  // 2050794, bug 556873).  Only the focused widget can own Secure Event Input,
+  // so scope the drain to it to avoid disabling input that another window
+  // holds.
+  if (sFocusedIMEHandler == this) {
+    EnsureSecureEventInputDisabled();
+    // The normal blur/resign-key path that would clear sFocusedIMEHandler via
+    // OnFocusChangeInGecko(false) was skipped, so clear it here too.  Otherwise
+    // it keeps pointing at this handler after its widget is gone.
+    sFocusedIMEHandler = nullptr;
+  }
+
   if (IsIMEComposing()) {
     // If our view is in the composition, we should clean up it.
     CancelIMEComposition();
@@ -5152,7 +5168,7 @@ void IMEInputHandler::OnTextSubstitution(uint32_t aStartOffset) {
 
   NSString* str;
   if (!queryTextContentEvent.mReply->DataRef().IsEmpty() &&
-      NS_IS_LOW_SURROGATE(queryTextContentEvent.mReply->DataRef().CharAt(0))) {
+      IsLowSurrogate(queryTextContentEvent.mReply->DataRef().CharAt(0))) {
     str = nsCocoaUtils::ToNSString(
         Substring(queryTextContentEvent.mReply->DataRef(), 1));
   } else {
@@ -5453,13 +5469,12 @@ void TextInputHandlerBase::InitKeyEvent(NSEvent* aNativeKeyEvent,
 
 nsresult TextInputHandlerBase::SynthesizeNativeKeyEvent(
     int32_t aNativeKeyboardLayout, int32_t aNativeKeyCode,
-    uint32_t aModifierFlags, const nsAString& aCharacters,
+    nsIWidget::NativeModifiers aModifierFlags, const nsAString& aCharacters,
     const nsAString& aUnmodifiedCharacters) {
   NS_OBJC_BEGIN_TRY_BLOCK_RETURN;
 
   uint32_t modifierFlags =
-      nsCocoaUtils::ConvertWidgetModifiersToMacModifierFlags(
-          static_cast<nsIWidget::Modifiers>(aModifierFlags));
+      nsCocoaUtils::ConvertWidgetModifiersToMacModifierFlags(aModifierFlags);
   NSInteger windowNumber = [[mView window] windowNumber];
   bool sendFlagsChangedEvent = IsModifierKey(aNativeKeyCode);
   NSEventType eventType =

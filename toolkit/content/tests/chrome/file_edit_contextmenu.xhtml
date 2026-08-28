@@ -9,11 +9,35 @@ customElements.define("shadow-input", class extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this.shadowRoot.appendChild(document.createElement("input"));
   }
+  connectedCallback() {
+    // Not in the constructor: attributes aren't set yet for parser-created
+    // custom elements.
+    this.shadowRoot.querySelector("input").type =
+      this.getAttribute("type") || "text";
+  }
 });
 </script>
 <script type="application/javascript" src="chrome://global/content/globalOverlay.js"/>
 <!-- Copied from toolkit/content/editMenuCommands.inc.xul -->
 <script type="application/javascript" src="chrome://global/content/editMenuOverlay.js"/>
+<script>
+// A consumer of EditContextMenu.addItems(), for the test to check against.
+EditContextMenu.addItems({
+  matches: input => input.localName == "textarea",
+  createItems() {
+    let fragment = document.createDocumentFragment();
+    let item = document.createXULElement("menuitem");
+    item.id = "test-item";
+    item.setAttribute("label", "Test");
+    fragment.appendChild(item);
+    return fragment;
+  },
+  onShowing(input, [item]) {
+    item.setAttribute("data-shown-for", input.localName);
+  },
+  after: "edit-contextmenu-paste",
+});
+</script>
 <commandset id="editMenuCommands">
   <commandset id="editMenuCommandSetAll" commandupdater="true" events="focus,select"
               oncommandupdate="goUpdateGlobalEditMenuItems()"/>
@@ -41,6 +65,7 @@ customElements.define("shadow-input", class extends HTMLElement {
 <html:input />
 <html:input type="password" />
 <html:shadow-input />
+<html:shadow-input type="password" />
 </hbox>
 
 </window>

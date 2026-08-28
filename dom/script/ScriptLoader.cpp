@@ -36,6 +36,8 @@
 #include "mozilla/Logging.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/Mutex.h"  // mozilla::Mutex
+#include "mozilla/PreloadHashKey.h"
+#include "mozilla/ProfilerMarkers.h"
 #include "mozilla/ScopeExit.h"
 #include "mozilla/StaticPrefs_browser.h"
 #include "mozilla/StaticPrefs_dom.h"
@@ -51,19 +53,22 @@
 #include "mozilla/dom/DocumentInlines.h"  // Document::GetPresContext
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/FetchPriority.h"
+#include "mozilla/dom/SpeculationRules.h"
 #ifdef NIGHTLY_BUILD
 #  include "mozilla/dom/IntegrityPolicyWAICT.h"
 #endif
+#include "mozilla/FlowMarkers.h"
 #include "mozilla/dom/JSExecutionUtils.h"  // mozilla::dom::Compile, mozilla::dom::InstantiateStencil, mozilla::dom::EvaluationExceptionToNSResult
 #include "mozilla/dom/PolicyContainer.h"
 #include "mozilla/dom/RequestBinding.h"
 #include "mozilla/dom/SRILogHelper.h"
 #include "mozilla/dom/ScriptDecoding.h"  // mozilla::dom::ScriptDecoding
 #include "mozilla/dom/ScriptSettings.h"
+#include "mozilla/dom/SpeculationRuleSet.h"
 #include "mozilla/dom/WindowContext.h"
 #include "mozilla/glean/DomMetrics.h"
+#include "mozilla/net/ChannelClassifierUtils.h"
 #include "mozilla/net/HttpBaseChannel.h"
-#include "mozilla/net/UrlClassifierFeatureFactory.h"
 #include "nsAboutProtocolUtils.h"
 #include "nsCRT.h"
 #include "nsContentCreatorFunctions.h"
@@ -697,11 +702,39 @@ static nsSecurityFlags CORSModeToSecurityFlags(CORSMode aCORSMode) {
   return securityFlags;
 }
 
+void ScriptLoader::OnDelayedReady(
+    ScriptLoadRequest* aRequest,
+    const Maybe<nsAutoString>& aCharsetForPreload) {
+  if (!mDocument) {
+    return;
+  }
+
+  if (aRequest->IsCanceled()) {
+    return;
+  }
+
+  MOZ_ASSERT(aRequest->IsRetrievedFromMemoryCache());
+  MOZ_ASSERT(aRequest->IsDelayingReady());
+
+  aRequest->SetReady();
+  MaybeMoveToLoadedList(aRequest);
+  ProcessPendingRequests();
+}
+
 nsresult ScriptLoader::StartClassicLoad(
     ScriptLoadRequest* aRequest,
     const Maybe<nsAutoString>& aCharsetForPreload) {
   if (aRequest->IsRetrievedFromMemoryCache()) {
+    // NOTE: The network event need to be dispatched in the current call stack,
+    //       in order to reflect it in the DevTools Network Monitor.
     EmulateNetworkEvents(aRequest, aCharsetForPreload);
+
+    nsCOMPtr<nsIRunnable> runnable =
+        mozilla::NewRunnableMethod<RefPtr<ScriptLoadRequest>,
+                                   const Maybe<nsAutoString>>(
+            "ScriptLoader::OnDelayedReady", this, &ScriptLoader::OnDelayedReady,
+            aRequest, aCharsetForPreload);
+    mDocument->Dispatch(runnable.forget());
     return NS_OK;
   }
 
@@ -1022,6 +1055,20 @@ nsresult ScriptLoader::PrepareIncrementalStreamLoader(
   return rv;
 }
 
+void ScriptLoader::NotifyPreloadCoalescing(ModuleLoadRequest* aRequest) {
+  ScriptLoadContext* context = aRequest->GetScriptLoadContext();
+  MOZ_ASSERT(aRequest->IsTopLevel());
+  MOZ_ASSERT(context->IsLinkPreloadScript());
+  MOZ_ASSERT(!context->Channel());
+
+  auto key = PreloadHashKey::CreateAsScript(
+      aRequest->URI(), aRequest->CORSMode(), JS::loader::ScriptKind::eModule);
+  context->SetIsCoalescedModulePreload();
+  context->NotifyOpen(key, mDocument, /* aIsPreload = */ true,
+                      /* aIsModule = */ true);
+  context->NotifyPreloadCoalescingResult();
+}
+
 nsresult ScriptLoader::StartLoadInternal(
     ScriptLoadRequest* aRequest, nsSecurityFlags securityFlags,
     const Maybe<nsAutoString>& aCharsetForPreload) {
@@ -1058,7 +1105,7 @@ nsresult ScriptLoader::StartLoadInternal(
 
   LOG(("ScriptLoadRequest (%p): mode=%u tracking=%d", aRequest,
        unsigned(aRequest->GetScriptLoadContext()->mScriptMode),
-       net::UrlClassifierCommon::IsTrackingClassificationFlag(
+       net::ChannelClassifierUtils::IsTrackingClassificationFlag(
            aRequest->GetScriptLoadContext()
                ->GetClassificationFlags()
                .thirdPartyFlags,
@@ -1229,7 +1276,9 @@ already_AddRefed<ScriptLoadRequest> ScriptLoader::CreateLoadRequest(
     return request.forget();
   }
 
-  MOZ_ASSERT(aKind == ScriptKind::eClassic || aKind == ScriptKind::eImportMap);
+  MOZ_ASSERT(aKind == ScriptKind::eClassic || aKind == ScriptKind::eImportMap ||
+             (StaticPrefs::dom_speculation_rules_enabled() &&
+              aKind == ScriptKind::eSpeculationRules));
 
   RefPtr<ScriptLoadRequest> request =
       new ScriptLoadRequest(aKind, aIntegrity, referrer, context);
@@ -1342,6 +1391,8 @@ void ScriptLoader::TryUseCache(ReferrerPolicy aReferrerPolicy,
   AddMemoryCacheRefCountTelemetry(cacheResult.mCompleteValue);
 
   aRequest->CacheEntryFound(cacheResult.mCompleteValue, aFetchOptions);
+  MOZ_ASSERT_IF(!aRequest->IsModuleRequest(), aRequest->IsDelayingReady());
+  MOZ_ASSERT_IF(aRequest->IsModuleRequest(), aRequest->IsFetching());
   LOG(
       ("ScriptLoader (%p): Found in-memory cache LoadedScript (%p) for "
        "ScriptLoadRequest(%p) %s.",
@@ -1395,6 +1446,8 @@ bool ScriptLoader::ProcessScriptElement(nsIScriptElement* aElement,
     scriptKind = ScriptKind::eModule;
   } else if (aElement->GetScriptIsImportMap()) {
     scriptKind = ScriptKind::eImportMap;
+  } else if (aElement->GetScriptIsSpeculationRules()) {
+    scriptKind = ScriptKind::eSpeculationRules;
   } else {
     scriptKind = ScriptKind::eClassic;
   }
@@ -1434,16 +1487,20 @@ bool ScriptLoader::ProcessExternalScript(nsIScriptElement* aElement,
        aElement));
 
   // https://html.spec.whatwg.org/multipage/scripting.html#prepare-the-script-element
-  // Step 30.1. If el's type is "importmap", then queue an element task on the
-  // DOM manipulation task source given el to fire an event named error at el,
-  // and return.
-  if (aScriptKind == ScriptKind::eImportMap) {
+  // Step 33.1. If el's type is "importmap" or "speculationrules", then queue an
+  // element task on the DOM manipulation task source given el to fire an event
+  // named error at el, and return.
+  if (aScriptKind == ScriptKind::eImportMap ||
+      aScriptKind == ScriptKind::eSpeculationRules) {
     NS_DispatchToCurrentThread(
         NewRunnableMethod("nsIScriptElement::FireErrorEvent", aElement,
                           &nsIScriptElement::FireErrorEvent));
     nsContentUtils::ReportToConsole(
         nsIScriptError::warningFlag, "Script Loader"_ns, mDocument,
-        PropertiesFile::DOM_PROPERTIES, "ImportMapExternalNotSupported");
+        PropertiesFile::DOM_PROPERTIES,
+        aScriptKind == ScriptKind::eImportMap
+            ? "ImportMapExternalNotSupported"
+            : "SpeculationRulesExternalNotSupported");
     return false;
   }
 
@@ -1478,6 +1535,10 @@ bool ScriptLoader::ProcessExternalScript(nsIScriptElement* aElement,
   RefPtr<ScriptLoadRequest> request =
       LookupPreloadRequest(aElement, aScriptKind, sriMetadata);
   if (request) {
+    PROFILER_MARKER("ScriptLoader::ProcessExternalScript PreloadRequest", JS,
+                    {mozilla::MarkerStack::Capture()}, FlowMarker,
+                    Flow::FromPointer(request.get()));
+
     if (NS_FAILED(CheckContentPolicy(aElement, nonce, request,
                                      request->FetchOptions(),
                                      request->URI()))) {
@@ -1531,6 +1592,11 @@ bool ScriptLoader::ProcessExternalScript(nsIScriptElement* aElement,
         aScriptKind, scriptURI, aElement, VoidString(), principal, ourCORSMode,
         nonce, FetchPriorityToRequestPriority(fetchPriority), sriMetadata,
         referrerPolicy, parserMetadata, ScriptLoadRequestType::External);
+
+    PROFILER_MARKER("ScriptLoader::ProcessExternalScript CreateLoadRequest", JS,
+                    {mozilla::MarkerStack::Capture()}, FlowMarker,
+                    Flow::FromPointer(request.get()));
+
     request->GetScriptLoadContext()->mIsInline = false;
     request->GetScriptLoadContext()->SetScriptMode(
         aElement->GetScriptDeferred(), aElement->GetScriptAsync(), false);
@@ -1867,6 +1933,47 @@ bool ScriptLoader::ProcessInlineScript(nsIScriptElement* aElement,
     // 'preparation-time document check' will never fail for import maps.
     // So we simply call 'register an import map' here.
     mModuleLoader->RegisterImportMap(std::move(importMap), request);
+    return false;
+  }
+
+  if (request->IsSpeculationRulesRequest()) {
+    MOZ_ASSERT(StaticPrefs::dom_speculation_rules_enabled());
+    mDocument->SetUseCounter(eUseCounter_custom_SpeculationRulesScriptTag);
+
+    // https://html.spec.whatwg.org/#prepare-the-script-element
+    // Step 34.2. Switch on el's type:
+    //  ...
+    //  "speculationrules":
+    //    1. Let result be the result of creating a speculation rules parse
+    //    result given source text and el's node document.
+    nsAutoString source;
+    aElement->GetScriptText(source);
+    auto speculationRuleSetResult = SpeculationRuleSet::Parse(
+        NS_ConvertUTF16toUTF8(source), request->BaseURL(), request->BaseURL());
+
+    // Like in the import map case above, we register the speculation rules here
+    // instead of later in EvaluateScriptElement.
+
+    // https://html.spec.whatwg.org/#execute-the-script-element
+    // Step 6. Switch on el's type:
+    //  ...
+    //  "speculationrules":
+    //    1. Register speculation rules given el's relevant global object and
+    //    el's result.
+    if (speculationRuleSetResult.isErr()) {
+      // https://html.spec.whatwg.org/#register-speculation-rules
+      // Step 1.2.
+      nsCOMPtr<nsIScriptGlobalObject> global = GetScriptGlobalObject();
+      if (!global) {
+        return false;
+      }
+      SpeculationRuleSet::ReportParseError(
+          global, speculationRuleSetResult.unwrapErr());
+      return false;
+    }
+
+    mDocument->SpeculationRules().RegisterFromScript(
+        aElement, speculationRuleSetResult.unwrap());
     return false;
   }
 
@@ -2362,7 +2469,6 @@ class ScriptOrModuleCompileTask final : public CompileOrDecodeTask {
     if (IsCancelled(lock)) {
       return TaskResult::Complete;
     }
-
     RefPtr<JS::Stencil> stencil = Compile();
 
     DidRunTask(lock, std::move(stencil));
@@ -2537,6 +2643,10 @@ nsresult ScriptLoader::ProcessOffThreadRequest(ScriptLoadRequest* aRequest) {
   MOZ_ASSERT(aRequest->IsCompiling());
   MOZ_ASSERT(!aRequest->GetScriptLoadContext()->mWasCompiledOMT);
 
+  PROFILER_MARKER("ScriptLoader::ProcessOffThreadRequest", JS,
+                  {mozilla::MarkerStack::Capture()}, FlowMarker,
+                  Flow::FromPointer(aRequest));
+
   if (aRequest->IsCanceled()) {
     return NS_OK;
   }
@@ -2584,6 +2694,11 @@ nsresult ScriptLoader::ProcessOffThreadRequest(ScriptLoadRequest* aRequest) {
           "request should not run synchronously but added to some queue.");
       return ProcessRequest(aRequest);
     }
+  } else if (aRequest->GetScriptLoadContext()->mInAsyncList) {
+    // This async request may already be in mLoadingAsyncRequests while its
+    // off-thread compilation finishes. Now that it is ready, move it to
+    // mLoadedAsyncRequests so ProcessPendingRequests can execute it.
+    MaybeMoveToLoadedList(aRequest);
   }
 
   // Process other scripts in the proper order.
@@ -2966,6 +3081,26 @@ void ScriptLoader::CalculateCacheFlag(ScriptLoadRequest* aRequest) {
     return;
   }
 
+  if (strcmp(aRequest->URI()->GetSpecOrDefault().get(),
+             "https://snap.licdn.com/li.lms-analytics/insight.min.js") == 0) {
+    // See bug 2042605 and
+    // https://github.com/linkedin/linkedin-gtm-community-template/commit/d6d31ee6f8880ffd8037e4aea7146ccd7cbba27b
+    //
+    // There are outdated copies of the above template, which reloads the same
+    // script infinitely and recursively in the onload event handler for the
+    // same script.
+    //
+    // Applying cache reduces the turnaround time between the next load and the
+    // onload handler, and especially the in-memory cache makes it immediate
+    // recursion. As a workaround for this issue, we do not apply any cache
+    // for this script.
+    LOG(("ScriptLoadRequest (%p): Bytecode-cache: Skip all: bug 2042605",
+         aRequest));
+    aRequest->MarkNotCacheable();
+    aRequest->getLoadedScript()->DropDiskCacheReferenceAndSRI();
+    return;
+  }
+
   if (mCache) {
     if (mCache->IsLowMemory()) {
       // During the low-memory situation, we avoid creating another cache,
@@ -3200,7 +3335,9 @@ nsresult ScriptLoader::EvaluateScriptElement(ScriptLoadRequest* aRequest) {
       !aRequest->GetScriptLoadContext()->mIsInline ||
       aRequest->IsModuleRequest();
   if (ignoreDestructiveWrites) {
-    ownerDoc->IncrementIgnoreDestructiveWritesCounter();
+    if (mDocument) {
+      mDocument->IncrementIgnoreDestructiveWritesCounter();
+    }
   }
 
   auto afterScript = MakeScopeExit([&] {
@@ -3221,7 +3358,9 @@ nsresult ScriptLoader::EvaluateScriptElement(ScriptLoadRequest* aRequest) {
     // 7. Decrement the ignore-destructive-writes counter of document, if it was
     // incremented in the earlier step.
     if (ignoreDestructiveWrites) {
-      ownerDoc->DecrementIgnoreDestructiveWritesCounter();
+      if (mDocument) {
+        mDocument->DecrementIgnoreDestructiveWritesCounter();
+      }
     }
   });
 
@@ -3630,8 +3769,8 @@ void ScriptLoader::TryCacheRequest(ScriptLoadRequest* aRequest) {
   }
 
   if (!JS::IsStencilCacheable(aRequest->GetStencil())) {
-    // If the stencil is not compatible with the cache (e.g. contains asm.js),
-    // this should also evict any the existing cache if any.
+    // If the stencil is not compatible with the cache, this should also evict
+    // any existing cache.
     cacheBehavior = CacheBehavior::Evict;
   }
 
@@ -3810,9 +3949,9 @@ nsresult ScriptLoader::EvaluateScript(nsIGlobalObject* aGlobalObject,
 
   if (!erv.Failed()) {
     LOG(("ScriptLoadRequest (%p): Evaluate Script", aRequest));
-    AUTO_PROFILER_MARKER_TEXT("ScriptExecution", JS,
-                              MarkerInnerWindowIdFromJSContext(cx),
-                              profilerLabelString);
+    AUTO_PROFILER_FLOW_MARKER_TEXT(
+        "ScriptExecution", JS, MarkerInnerWindowIdFromJSContext(cx),
+        profilerLabelString, Flow::FromPointer(aRequest));
 
     MOZ_ASSERT(options.noScriptRval);
     TRACE_FOR_TEST(aRequest, "evaluate:classic");
@@ -4071,8 +4210,7 @@ bool ScriptLoader::EncodeAndCompress(
       JS::EncodeStencil(aFc, aStencil, SRIAndSerializedStencil);
 
   if (result != JS::TranscodeResult::Ok) {
-    // Encoding can be aborted for non-supported syntax (e.g. asm.js), or
-    // any other internal error.
+    // Encoding can be aborted for any internal error.
     // We don't care the error and just give up encoding.
     JS::ClearFrontendErrors(aFc);
 
@@ -4542,6 +4680,8 @@ nsresult ScriptLoader::OnStreamComplete(
             // non-dirty cache.
             aRequest->CacheEntryRevived(cacheResult.mCompleteValue);
 
+            MOZ_ASSERT(aRequest->IsFetching());
+
             cacheResult.mCompleteValue->AddFetchCount();
 
             TRACE_FOR_TEST(aRequest, "memorycache:dirty:revived");
@@ -4716,7 +4856,7 @@ void ScriptLoader::ReportErrorToConsole(ScriptLoadRequest* aRequest,
   } else if (aResult == NS_ERROR_DOM_WEBEXT_CONTENT_SCRIPT_URI) {
     MOZ_ASSERT(!isScript);
     message = "WebExtContentScriptModuleSourceNotAllowed";
-  } else if (net::UrlClassifierFeatureFactory::IsClassifierBlockingErrorCode(
+  } else if (net::ChannelClassifierUtils::IsClassifierBlockingErrorCode(
                  aResult)) {
     // Blocking classifier error codes already show their own console messages.
     return;
@@ -4779,8 +4919,7 @@ void ScriptLoader::HandleLoadError(ScriptLoadRequest* aRequest,
    * We make a note of this script node by including it in a dedicated
    * array of blocked tracking nodes under its parent document.
    */
-  if (net::UrlClassifierFeatureFactory::IsClassifierBlockingErrorCode(
-          aResult)) {
+  if (net::ChannelClassifierUtils::IsClassifierBlockingErrorCode(aResult)) {
     nsCOMPtr<nsIContent> cont = do_QueryInterface(
         aRequest->GetScriptLoadContext()->GetScriptElementForUrlClassifier());
     mDocument->AddBlockedNodeByClassifier(cont);
@@ -5031,6 +5170,10 @@ static bool MimeTypeMatchesExpectedModuleType(
 nsresult ScriptLoader::PrepareLoadedRequest(ScriptLoadRequest* aRequest,
                                             nsIChannel* aChannel,
                                             nsresult aStatus) {
+  PROFILER_MARKER("ScriptLoader::PrepareLoadedRequest", JS,
+                  {mozilla::MarkerStack::Capture()}, FlowMarker,
+                  Flow::FromPointer(aRequest));
+
   if (NS_FAILED(aStatus)) {
     return aStatus;
   }
@@ -5252,6 +5395,23 @@ void ScriptLoader::PreloadURI(
   nsresult rv = StartLoad(request, Some(charset));
   if (NS_FAILED(rv)) {
     return;
+  }
+
+  // For a <link rel="modulepreload">, if the module is already fetching,
+  // fetched, or in the in-memory navigation cache, no channel is created for a
+  // network request, and so StartLoadInternal has not registered the request
+  // with the PreloadService. We use context->Channel() to identify these cases,
+  // and have to register before we return: PreloadService::PreloadOrCoalesce
+  // looks the preload up by key right after this and would otherwise find
+  // nothing and fire a spurious error event.
+  if (request->IsModuleRequest()) {
+    ModuleLoadRequest* moduleRequest = request->AsModuleRequest();
+    ScriptLoadContext* context = moduleRequest->GetScriptLoadContext();
+    MOZ_ASSERT_IF(moduleRequest->IsRetrievedFromMemoryCache(),
+                  !context->Channel());
+    if (context->IsLinkPreloadScript() && !context->Channel()) {
+      NotifyPreloadCoalescing(moduleRequest);
+    }
   }
 
   PreloadInfo* pi = mPreloads.AppendElement();

@@ -24,7 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.fenix.GleanMetrics.Metrics
 import org.mozilla.fenix.R
-import org.mozilla.fenix.ext.settings
+import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.helpers.FenixGleanTestRule
 import org.mozilla.fenix.utils.Settings
 import org.mozilla.gecko.search.SearchWidgetProvider
@@ -33,24 +33,24 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class SearchWidgetProviderTest {
-    @get:Rule
-    val gleanRule = FenixGleanTestRule(testContext)
+    @get:Rule val gleanRule = FenixGleanTestRule(testContext)
 
     @Test
     fun testGetLayoutSize() {
-        val sizes = mapOf(
-            0 to SearchWidgetProviderSize.EXTRA_SMALL_V1,
-            10 to SearchWidgetProviderSize.EXTRA_SMALL_V1,
-            63 to SearchWidgetProviderSize.EXTRA_SMALL_V1,
-            64 to SearchWidgetProviderSize.EXTRA_SMALL_V2,
-            99 to SearchWidgetProviderSize.EXTRA_SMALL_V2,
-            100 to SearchWidgetProviderSize.SMALL,
-            191 to SearchWidgetProviderSize.SMALL,
-            192 to SearchWidgetProviderSize.MEDIUM,
-            255 to SearchWidgetProviderSize.MEDIUM,
-            256 to SearchWidgetProviderSize.LARGE,
-            1000 to SearchWidgetProviderSize.LARGE,
-        )
+        val sizes =
+            mapOf(
+                0 to SearchWidgetProviderSize.EXTRA_SMALL_V1,
+                10 to SearchWidgetProviderSize.EXTRA_SMALL_V1,
+                63 to SearchWidgetProviderSize.EXTRA_SMALL_V1,
+                64 to SearchWidgetProviderSize.EXTRA_SMALL_V2,
+                99 to SearchWidgetProviderSize.EXTRA_SMALL_V2,
+                100 to SearchWidgetProviderSize.SMALL,
+                191 to SearchWidgetProviderSize.SMALL,
+                192 to SearchWidgetProviderSize.MEDIUM,
+                255 to SearchWidgetProviderSize.MEDIUM,
+                256 to SearchWidgetProviderSize.LARGE,
+                1000 to SearchWidgetProviderSize.LARGE,
+            )
 
         for ((dp, layoutSize) in sizes) {
             assertEquals(layoutSize, SearchWidgetProvider.getLayoutSize(dp))
@@ -140,7 +140,7 @@ class SearchWidgetProviderTest {
     fun `GIVEN voice search is disabled WHEN createVoiceSearchIntent is called THEN it returns null`() {
         val widgetProvider = SearchWidgetProvider()
         val context: Context = mockk {
-            every { settings().shouldShowVoiceSearch } returns false
+            every { components.settings.shouldShowVoiceSearch } returns false
         }
 
         val result = widgetProvider.createVoiceSearchIntent(context)
@@ -192,7 +192,7 @@ class SearchWidgetProviderTest {
     @Test
     fun `WHEN the search widget is added on homescreen THEN record telemetry and persist that the widget is installed`() {
         val settings = Settings(testContext)
-        every { testContext.settings() } returns settings
+        every { testContext.components.settings } returns settings
         val widgetProvider = SearchWidgetProvider()
         assertFalse(settings.searchWidgetInstalled)
 
@@ -205,26 +205,26 @@ class SearchWidgetProviderTest {
     @Test
     fun `WHEN the search widget is removed from the homescreen THEN record telemetry and persist that the widget is uninstalled`() {
         val settings = Settings(testContext)
-        every { testContext.settings() } returns settings
+        every { testContext.components.settings } returns settings
         val widgetProvider = SearchWidgetProvider()
         settings.searchWidgetInstalled = true
 
         widgetProvider.onDisabled(testContext)
 
-        assertFalse(testContext.settings().searchWidgetInstalled)
+        assertFalse(testContext.components.settings.searchWidgetInstalled)
         assertEquals(false, Metrics.searchWidgetInstalled.testGetValue())
     }
 
     @Test
     fun `GIVEN not knowing search widget is installed WHEN a widget is updated THEN record telemetry and persist that the widget is installed`() {
         val settings = Settings(testContext)
-        every { testContext.settings() } returns settings
+        every { testContext.components.settings } returns settings
         val widgetProvider = SearchWidgetProvider()
         assertFalse(settings.searchWidgetInstalled)
 
         widgetProvider.onUpdate(testContext, mockk(), intArrayOf())
 
-        assertTrue(testContext.settings().searchWidgetInstalled)
+        assertTrue(testContext.components.settings.searchWidgetInstalled)
         assertEquals(true, Metrics.searchWidgetInstalled.testGetValue())
     }
 }

@@ -555,6 +555,7 @@ support-files = [
   "output_hevc.mkv",
   "output_mp3.mkv",
   "output_opus.mkv",
+  "output_opus_surround.mkv",
   "output_pcm.mkv",
   "output_vorbis.mkv",
   "output_vp8.mkv",
@@ -600,6 +601,7 @@ support-files = [
   "referer.sjs",
   "resolution-change.webm",
   "resolution-change.webm^headers^",
+  "rms-utils.js",
   "sample.3gp",
   "sample.3g2",
   "sample-encrypted-sgpdstbl-sbgptraf.mp4",
@@ -686,6 +688,8 @@ support-files = [
   "test-stereo-phase-inversion-180.opus",
   "test-stereo-phase-inversion-180.opus^headers^",
   "tone_1s_nosilence.mp3",
+  "two-colr.mp4",
+  "two-colr.mp4^headers^",
   "variable-channel.ogg",
   "variable-channel.ogg^headers^",
   "variable-channel.opus",
@@ -972,6 +976,11 @@ skip-if = [
   "os == 'linux' && os_version == '24.04' && arch == 'x86_64' && display == 'x11' && !fission",
   "os == 'mac' && os_version == '15.30' && arch == 'aarch64' && debug", # Bug 1961557
 ]
+
+["test_blob_from_arraybuffer_video_plays.html"]
+
+["test_blob_from_cachestorage_audio_seeks.html"]
+scheme = "https" # CacheStorage requires a secure context
 
 ["test_temporary_file_blob_video_plays.html"]
 skip-if = [

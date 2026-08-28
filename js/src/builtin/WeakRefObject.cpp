@@ -66,9 +66,7 @@ bool WeakRefObject::construct(JSContext* cx, unsigned argc, Value* vp) {
     target = ObjectValue(*object);
 
     // If the target is a DOM wrapper, preserve it.
-    if (!preserveDOMWrapper(cx, object)) {
-      return false;
-    }
+    MaybePreserveDOMWrapper(cx, object);
   } else {
     JS::Symbol* symbol = target.toSymbol();
     isPermanent = symbol->isPermanentAndMayBeShared();
@@ -97,17 +95,6 @@ bool WeakRefObject::construct(JSContext* cx, unsigned argc, Value* vp) {
 
   // 6. Return weakRef.
   args.rval().setObject(*weakRef);
-
-  return true;
-}
-
-/* static */
-bool WeakRefObject::preserveDOMWrapper(JSContext* cx, HandleObject obj) {
-  if (!MaybePreserveDOMWrapper(cx, obj)) {
-    JS_ReportErrorNumberASCII(cx, GetErrorMessage, nullptr,
-                              JSMSG_BAD_WEAKREF_TARGET);
-    return false;
-  }
 
   return true;
 }
@@ -239,6 +226,9 @@ bool WeakRefObject::deref(JSContext* cx, unsigned argc, Value* vp) {
   return true;
 }
 
+void WeakRefObject::setTarget(Value target) {
+  setReservedSlotGCThingAsPrivate(TargetSlot, target.toGCThing());
+}
 void WeakRefObject::setTargetUnbarriered(Value target) {
   setReservedSlotGCThingAsPrivateUnbarriered(TargetSlot, target.toGCThing());
 }

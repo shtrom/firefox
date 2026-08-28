@@ -108,10 +108,7 @@ struct FlacCodecSpecificData {
 };
 
 struct Mp3CodecSpecificData final {
-  bool operator==(const Mp3CodecSpecificData& rhs) const {
-    return mEncoderDelayFrames == rhs.mEncoderDelayFrames &&
-           mEncoderPaddingFrames == rhs.mEncoderPaddingFrames;
-  }
+  bool operator==(const Mp3CodecSpecificData& rhs) const = default;
 
   auto MutTiedFields() {
     return std::tie(mEncoderDelayFrames, mEncoderPaddingFrames);
@@ -403,6 +400,16 @@ class VideoInfo : public TrackInfo {
 
   void SetImageRect(const gfx::IntRect& aRect) { mImageRect = Some(aRect); }
   void ResetImageRect() { mImageRect.reset(); }
+
+  // Adopts an image size decoded from the bitstream. The picture rectangle is
+  // expressed relative to the image size, so a change in size invalidates it
+  // and it is discarded; an unchanged size keeps the existing rectangle.
+  void AdoptImageSize(const gfx::IntSize& aImage) {
+    if (mImage != aImage) {
+      ResetImageRect();
+    }
+    mImage = aImage;
+  }
 
   // Returned the crop rectangle scaled to aWidth/aHeight size relative to
   // mImage size.

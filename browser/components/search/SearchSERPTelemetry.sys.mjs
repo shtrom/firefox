@@ -197,6 +197,17 @@ const AD_COMPONENTS = [
  *   The configuration for possible page type parameters.
  * @property {string[]} queryParamNames
  *   An array of query parameters that may be used for the user's search string.
+ * @property {boolean} [requireTopLevelImpressionOrigin=false]
+ *   If true, a same-document navigation is only allowed to start tracking a
+ *   browser if the document that browser actually loaded over the network was
+ *   itself a SERP for this provider. Since same-document navigations don't
+ *   change the loaded document, this remains true across intermediate
+ *   same-document navigations to untracked page types (e.g. an
+ *   "All" -> "Maps" -> "All" trip stays trackable), but never allows a
+ *   same-document URL change to originate tracking on a browser that never
+ *   loaded a SERP to begin with. Use this when a same-document URL change can
+ *   be an artifact of a redirect (e.g. an ad click or an organic outbound
+ *   link) rather than a genuine in-app navigation to a new SERP.
  * @property {SignedInCookies[]} signedInCookies
  *   An array of cookie details that are used to determine whether a client is
  *   signed in to a provider's account.
@@ -858,7 +869,9 @@ class TelemetryHandler {
     // Step 3: Maybe track the browser.
     if (
       this._isTrackablePageType(pageType, providerInfo) &&
-      !browserIsTracked
+      !browserIsTracked &&
+      (!providerInfo.requireTopLevelImpressionOrigin ||
+        !!this._checkURLForSerpMatch(browser.originalURI?.spec))
     ) {
       this.updateTrackingStatus(browser, Services.io.newURI(url), webProgress);
       let actor = browser.browsingContext.currentWindowGlobal.getActor(
@@ -1206,7 +1219,9 @@ class TelemetryHandler {
    *   Returns a provider or undefined if no provider was found for the url.
    */
   _getProviderInfoForURL(url) {
-    return this._searchProviderInfo.find(info =>
+    // Provider info is populated asynchronously from Remote Settings during
+    // init, so it may not be available yet for early page loads.
+    return this._searchProviderInfo?.find(info =>
       info.searchPageRegexp.test(url)
     );
   }
@@ -1394,7 +1409,14 @@ class TelemetryHandler {
   _reportSerpPage(info, source, url) {
     let payload = `${info.provider}:${info.type}:${info.code || "none"}`;
     let name = source.replace(/_([a-z])/g, (m, p) => p.toUpperCase());
-    Glean.browserSearchContent[name][payload].add(1);
+    // This probe is recorded to both legacy and Glean telemetry, however
+    // we are not adding new sources to legacy telemetry. Hence fallback to
+    // the "unknown" source for the newer sources.
+    if (name in Glean.browserSearchContent) {
+      Glean.browserSearchContent[name][payload].add(1);
+    } else {
+      Glean.browserSearchContent.unknown[payload].add(1);
+    }
     lazy.logConsole.debug("Impression:", payload, url);
   }
 
@@ -1666,7 +1688,7 @@ class ContentHandler {
       }
 
       let url = wrappedChannel.finalURL;
-      let info = this._searchProviderInfo.find(provider => {
+      let info = this._searchProviderInfo?.find(provider => {
         return provider.telemetryId == item.info.provider;
       });
 
@@ -1704,15 +1726,24 @@ class ContentHandler {
         }
       }
 
-      if (!info.extraAdServersRegexps?.some(regex => regex.test(url))) {
+      if (!info?.extraAdServersRegexps?.some(regex => regex.test(url))) {
         return;
       }
 
       try {
         let name = item.source.replace(/_([a-z])/g, (m, p) => p.toUpperCase());
-        Glean.browserSearchAdclicks[name][
-          `${info.telemetryId}:${item.info.type}`
-        ].add(1);
+        // This probe is recorded to both legacy and Glean telemetry, however
+        // we are not adding new sources to legacy telemetry. Hence fallback to
+        // the "unknown" source for the newer sources.
+        if (name in Glean.browserSearchAdclicks) {
+          Glean.browserSearchAdclicks[name][
+            `${info.telemetryId}:${item.info.type}`
+          ].add(1);
+        } else {
+          Glean.browserSearchAdclicks.unknown[
+            `${info.telemetryId}:${item.info.type}`
+          ].add(1);
+        }
         wrappedChannel._adClickRecorded = true;
         if (item.newtabSessionId) {
           Glean.newtabSearchAd.click.record({
@@ -1969,9 +2000,18 @@ class ContentHandler {
       info.url
     );
     let name = item.source.replace(/_([a-z])/g, (m, p) => p.toUpperCase());
-    Glean.browserSearchWithads[name][
-      `${item.info.provider}:${item.info.type}`
-    ].add(1);
+    // This probe is recorded to both legacy and Glean telemetry, however
+    // we are not adding new sources to legacy telemetry. Hence fallback to
+    // the "unknown" source for the newer sources.
+    if (name in Glean.browserSearchWithads) {
+      Glean.browserSearchWithads[name][
+        `${item.info.provider}:${item.info.type}`
+      ].add(1);
+    } else {
+      Glean.browserSearchWithads.unknown[
+        `${item.info.provider}:${item.info.type}`
+      ].add(1);
+    }
     Services.obs.notifyObservers(null, "reported-page-with-ads");
 
     telemetryState.adsReported = true;

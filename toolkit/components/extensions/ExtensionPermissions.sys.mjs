@@ -15,7 +15,7 @@ const lazy = XPCOMUtils.declareLazy({
   ExtensionParent: "resource://gre/modules/ExtensionParent.sys.mjs",
   FileUtils: "resource://gre/modules/FileUtils.sys.mjs",
   JSONFile: "resource://gre/modules/JSONFile.sys.mjs",
-  KeyValueService: "resource://gre/modules/kvstore.sys.mjs",
+  KeyValueService: "moz-src:///toolkit/components/kvstore/kvstore.sys.mjs",
   StartupCache: "resource://gre/modules/ExtensionParent.sys.mjs",
   Management: () => lazy.ExtensionParent.apiManager,
 });
@@ -422,7 +422,7 @@ export var ExtensionPermissions = {
    * Add new permissions for the given extension.  `permissions` is
    * in the format that is passed to browser.permissions.request().
    *
-   * @typedef {import("ExtensionCommon.sys.mjs").EventEmitter} EventEmitter
+   * @typedef {import("./ExtensionCommon.sys.mjs").EventEmitter} EventEmitter
    *
    * @param {string} extensionId The extension id
    * @param {Perms} perms Object with permissions and origins array.
@@ -669,6 +669,13 @@ export var OriginControls = {
       return { noAccess: true };
     }
 
+    // Suppress whenClicked for URIs covered by required manifest origins on
+    // policy-managed extensions, since switching modes would revoke the
+    // policy grant.
+    let isPolicyRequiredOrigin =
+      Services.policies?.isAddonRequiredByPolicy(policy.extension?.id) &&
+      policy.extension?.getManifestOriginsMatchPatternSet()?.matches(uri);
+
     // activeTab and the resulting whenClicked state is only applicable for MV2
     // extensions with a browser action and MV3 extensions (with or without).
     let activeTab =
@@ -716,7 +723,7 @@ export var OriginControls = {
     }
 
     return {
-      whenClicked: true,
+      whenClicked: !isPolicyRequiredOrigin,
       alwaysOn: true,
       temporaryAccess,
       hasAccess,
@@ -824,6 +831,15 @@ export var OriginControls = {
     // Return earlier if the extension doesn't really have access to the
     // given url.
     if (!policy.allowedOrigins.matches(uri)) {
+      return;
+    }
+
+    // Return earlier if the url matches host_permissions locked through the
+    // enterprise policies.
+    if (
+      Services.policies?.isAddonRequiredByPolicy(policy.extension?.id) &&
+      policy.extension.getManifestOriginsMatchPatternSet()?.matches(uri)
+    ) {
       return;
     }
 

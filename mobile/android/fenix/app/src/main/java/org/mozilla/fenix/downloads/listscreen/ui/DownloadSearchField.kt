@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.delete
@@ -36,11 +35,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import mozilla.components.compose.base.button.IconButton
+import mozilla.components.ui.icons.R as iconsR
 import org.mozilla.fenix.R
 import org.mozilla.fenix.theme.FirefoxTheme
 import org.mozilla.fenix.theme.PreviewThemeProvider
 import org.mozilla.fenix.theme.Theme
-import mozilla.components.ui.icons.R as iconsR
 
 /**
  * A search text field for the download list screen.
@@ -63,10 +62,10 @@ fun DownloadSearchField(
     Surface {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(horizontal = 8.dp, vertical = 8.dp)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(8.dp))
-                .fillMaxWidth(),
+            modifier =
+                Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small)
+                    .fillMaxWidth(),
         ) {
             IconButton(
                 onClick = onSearchDismissRequest,
@@ -92,9 +91,7 @@ fun DownloadSearchField(
                     textStyle = FirefoxTheme.typography.body2.copy(color = LocalContentColor.current),
                     lineLimits = TextFieldLineLimits.SingleLine,
                     cursorBrush = SolidColor(LocalContentColor.current),
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester),
+                    modifier = modifier.fillMaxWidth().focusRequester(focusRequester),
                 )
             }
 
@@ -137,18 +134,14 @@ private fun PlaceholderText() {
 
 @Preview
 @Composable
-private fun DownloadSearchFieldPreview(
-    @PreviewParameter(PreviewThemeProvider::class) theme: Theme,
-) {
+private fun DownloadSearchFieldPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
     FirefoxTheme(theme) {
         Surface {
             DownloadSearchField(
                 initialText = "",
                 onValueChange = {},
                 onSearchDismissRequest = {},
-                modifier = Modifier
-                    .height(56.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.height(56.dp).fillMaxWidth(),
             )
         }
     }

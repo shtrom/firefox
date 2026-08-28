@@ -6,18 +6,17 @@
 
 #include <cstdlib>
 
-#include "gfxPlatform.h"
-
 #include "ImageFactory.h"
+#include "gfxPlatform.h"
 #include "imgITools.h"
 #include "mozilla/Preferences.h"
+#include "mozilla/RefPtr.h"
 #include "nsComponentManagerUtils.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsIFile.h"
 #include "nsIInputStream.h"
 #include "nsIProperties.h"
 #include "nsNetUtil.h"
-#include "mozilla/RefPtr.h"
 #include "nsStreamUtils.h"
 #include "nsString.h"
 
@@ -1088,10 +1087,28 @@ ImageTestCase PerfRgbAlphaLossyJXLTestCase() {
   return ImageTestCase("perf_srgb_alpha_lossy.jxl", "image/jxl",
                        IntSize(1000, 1000), TEST_CASE_IS_TRANSPARENT);
 }
+
+// Progressive (multi-pass) lossy RGBA encoding spanning more than one
+// 256px coded group; regression test for bug 2054317 (a group's already-
+// finalized modular alpha buffer being incorrectly re-flushed once later
+// passes for the same group arrive).
+ImageTestCase ProgressiveAlphaMultiGroupJXLTestCase() {
+  return ImageTestCase("progressive_alpha_multigroup.jxl", "image/jxl",
+                       IntSize(257, 64),
+                       TEST_CASE_IGNORE_OUTPUT | TEST_CASE_IS_TRANSPARENT);
+}
 #endif
 
 ImageTestCase ExifResolutionTestCase() {
   return ImageTestCase("exif_resolution.jpg", "image/jpeg", IntSize(100, 50));
+}
+
+ImageTestCase ExifOrientationDownscaleJPGTestCase() {
+  // EXIF orientation 6 (rotate 90 CW): stored 48x160, oriented 160x48. The
+  // 8x32 output is a non-aspect-preserving downscale exercising libjpeg-turbo
+  // IDCT scale-factor selection across the orientation axis swap (bug 2033250).
+  return ImageTestCase("green-exif-orient6.jpg", "image/jpeg", IntSize(160, 48),
+                       IntSize(8, 32), TEST_CASE_IS_FUZZY);
 }
 
 RefPtr<Image> TestCaseToDecodedImage(const ImageTestCase& aTestCase) {

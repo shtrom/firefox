@@ -30,6 +30,7 @@
 #include "nsNetUtil.h"
 #include "nsMixedContentBlocker.h"
 #include "nsPIDOMWindow.h"
+#include "nsPIDOMWindowInlines.h"
 #include "nsQueryObject.h"
 #include "nsRFPService.h"
 #include "nsSandboxFlags.h"
@@ -427,7 +428,7 @@ AntiTrackingUtils::GetStoragePermissionStateInParent(nsIChannel* aChannel) {
   int32_t cookieBehavior = cookieJarSettings->GetCookieBehavior();
 
   // We only need to check the storage permission if the cookie behavior is
-  // BEHAVIOR_REJECT_TRACKER, BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN or
+  // BEHAVIOR_REJECT_TRACKER, BEHAVIOR_PARTITION_FOREIGN or
   // BEHAVIOR_REJECT_FOREIGN with exceptions. Because ContentBlocking wouldn't
   // update or check the storage permission if the cookie behavior is not
   // belongs to these three.
@@ -555,12 +556,6 @@ AntiTrackingUtils::GetStoragePermissionStateInParent(nsIChannel* aChannel) {
     if (NS_WARN_IF(NS_FAILED(rv))) {
       return nsILoadInfo::NoStoragePermission;
     }
-    bool triggeringWindowHasStorageAccess;
-    rv =
-        loadInfo->GetTriggeringStorageAccess(&triggeringWindowHasStorageAccess);
-    if (NS_WARN_IF(NS_FAILED(rv))) {
-      return nsILoadInfo::NoStoragePermission;
-    }
 
     nsIScriptSecurityManager* ssm = nsContentUtils::GetSecurityManager();
     RefPtr<nsIPrincipal> channelResultPrincipal;
@@ -571,6 +566,7 @@ AntiTrackingUtils::GetStoragePermissionStateInParent(nsIChannel* aChannel) {
     }
     RefPtr<net::HttpBaseChannel> httpChannel = do_QueryObject(aChannel);
     bool crossSiteInitiated = false;
+    bool triggeringWindowHasStorageAccess = false;
     if (bc && bc->GetParent()->GetCurrentWindowContext()) {
       RefPtr<WindowGlobalParent> triggeringWGP =
           WindowGlobalParent::GetByInnerWindowId(triggeringWindowId);
@@ -580,6 +576,8 @@ AntiTrackingUtils::GetStoragePermissionStateInParent(nsIChannel* aChannel) {
         if (NS_FAILED(rv)) {
           crossSiteInitiated = false;
         }
+        triggeringWindowHasStorageAccess =
+            triggeringWGP->GetUsingStorageAccess();
       }
     }
 
@@ -790,7 +788,7 @@ uint64_t AntiTrackingUtils::GetTopLevelAntiTrackingWindowId(
     return 0;
   }
 
-  // Do not check BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN her because when
+  // Do not check BEHAVIOR_PARTITION_FOREIGN her because when
   // a third-party subresource is inside the main frame, we need to return the
   // top-level window id to partition its cookies correctly.
   uint32_t behavior = *winContext->GetCookieBehavior();

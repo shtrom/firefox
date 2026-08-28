@@ -11,14 +11,13 @@
 #include "mozilla/Logging.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/Mutex.h"
+#include "mozilla/Queue.h"
 #include "mozilla/RWLock.h"
 #include "mozilla/TimeStamp.h"
-#include "mozilla/Queue.h"
-
 #include "mozilla/UniquePtr.h"
 #include "mozilla/net/DashboardTypes.h"
-#include "nsCOMPtr.h"
 #include "nsASocketHandler.h"
+#include "nsCOMPtr.h"
 #include "nsIDirectTaskDispatcher.h"
 #include "nsIObserver.h"
 #include "nsIRunnable.h"
@@ -201,8 +200,7 @@ class nsSocketTransportService final : public nsPISocketTransportService,
 
   class SocketContext {
    public:
-    SocketContext(PRFileDesc* aFD,
-                  already_AddRefed<nsASocketHandler>&& aHandler,
+    SocketContext(PRFileDesc* aFD, already_AddRefed<nsASocketHandler> aHandler,
                   PRIntervalTime aPollStartEpoch)
         : mFD(aFD), mHandler(aHandler), mPollStartEpoch(aPollStartEpoch) {}
     SocketContext(PRFileDesc* aFD, nsASocketHandler* aHandler,

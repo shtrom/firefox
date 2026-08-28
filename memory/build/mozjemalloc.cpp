@@ -51,43 +51,51 @@
 // Allocation requests are rounded up to the nearest size class, and no record
 // of the original request size is maintained.  Allocations are broken into
 // categories according to size class.  Assuming runtime defaults, the size
-// classes in each category are as follows.  These are generally true across OSs
-// and architectures because mozjemalloc uses 4KiB pages internally.
+// classes in each category are as follows (for x86, x86_64 and Apple Silicon):
 //
-//   |==========================================|
-//   | Small    | Quantum-spaced |           16 |
-//   |          |                |           32 |
-//   |          |                |           48 |
-//   |          |                |          ... |
-//   |          |                |          480 |
-//   |          |                |          496 |
-//   |          |----------------+--------------|
-//   |          | Quantum-wide-  |          512 |
-//   |          | spaced         |          768 |
-//   |          |                |          ... |
-//   |          |                |         3584 |
-//   |          |                |         3840 |
-//   |==========================================|
-//   | Large                     |         4 kB |
-//   |                           |         8 kB |
-//   |                           |        12 kB |
-//   |                           |        16 kB |
-//   |                           |          ... |
-//   |                           |        32 kB |
-//   |                           |          ... |
-//   |                           |      1008 kB |
-//   |                           |      1012 kB |
-//   |                           |      1016 kB |
-//   |                           |      1020 kB |
-//   |==========================================|
-//   | Huge                      |         1 MB |
-//   |                           |         2 MB |
-//   |                           |         3 MB |
-//   |                           |          ... |
-//   |==========================================|
+//   |=========================================================|
+//   | Category | Subcategory    |     x86 |  x86_64 | Mac ARM |
+//   |---------------------------+---------+---------+---------|
+//   | Word size                 |  32 bit |  64 bit |  64 bit |
+//   | Page size                 |    4 Kb |    4 Kb |   16 Kb |
+//   |=========================================================|
+//   | Small    | Quantum-spaced |      16 |      16 |      16 |
+//   |          |                |      32 |      32 |      32 |
+//   |          |                |      48 |      48 |      48 |
+//   |          |                |     ... |     ... |     ... |
+//   |          |                |     480 |     480 |     480 |
+//   |          |                |     496 |     496 |     496 |
+//   |          |----------------+---------|---------|---------|
+//   |          | Quantum-wide-  |     512 |     512 |     512 |
+//   |          | spaced         |     768 |     768 |     768 |
+//   |          |                |     ... |     ... |     ... |
+//   |          |                |    3584 |    3584 |    3584 |
+//   |          |                |    3840 |    3840 |    3840 |
+//   |          |----------------+---------|---------|---------|
+//   |          | Sub-page       |       - |       - |    4096 |
+//   |          |                |       - |       - |    8 kB |
+//   |=========================================================|
+//   | Large                     |    4 kB |    4 kB |       - |
+//   |                           |    8 kB |    8 kB |       - |
+//   |                           |   12 kB |   12 kB |       - |
+//   |                           |   16 kB |   16 kB |   16 kB |
+//   |                           |     ... |     ... |       - |
+//   |                           |   32 kB |   32 kB |   32 kB |
+//   |                           |     ... |     ... |     ... |
+//   |                           | 1008 kB | 1008 kB | 1008 kB |
+//   |                           | 1012 kB | 1012 kB |       - |
+//   |                           | 1016 kB | 1016 kB |       - |
+//   |                           | 1020 kB | 1020 kB |       - |
+//   |=========================================================|
+//   | Huge                      |    1 MB |    1 MB |    1 MB |
+//   |                           |    2 MB |    2 MB |    2 MB |
+//   |                           |    3 MB |    3 MB |    3 MB |
+//   |                           |     ... |     ... |     ... |
+//   |=========================================================|
 //
 // Legend:
 //   n:    Size class exists for this platform.
+//   -:    This size class doesn't exist for this platform.
 //   ...:  Size classes follow a pattern here.
 //
 // A different mechanism is used for each category:
@@ -259,7 +267,6 @@ class ArenaCollection {
     mDefaultArena =
         mLock.Init() ? CreateArena(/* aIsPrivate = */ false, &params) : nullptr;
     mPurgeListLock.Init();
-    mIsDeferredPurgeEnabled = false;
     return bool(mDefaultArena);
   }
 
@@ -278,14 +285,10 @@ class ArenaCollection {
 
     {
       MutexAutoLock lock(mLock);
-      Tree& tree =
-#ifndef NON_RANDOM_ARENA_IDS
-          aArena->IsMainThreadOnly() ? mMainThreadArenas :
-#endif
-                                     mPrivateArenas;
 
-      MOZ_RELEASE_ASSERT(tree.Search(aArena->mId), "Arena not in tree");
-      tree.Remove(aArena);
+      MOZ_RELEASE_ASSERT(mPrivateArenas.Search(aArena->mId),
+                         "Arena not in tree");
+      mPrivateArenas.Remove(aArena);
       mNumOperationsDisposedArenas += aArena->Operations();
     }
     {
@@ -407,11 +410,7 @@ class ArenaCollection {
   };
 
   Iterator iter() MOZ_REQUIRES(mLock) {
-#ifdef NON_RANDOM_ARENA_IDS
     return Iterator(&mArenas, &mPrivateArenas);
-#else
-    return Iterator(&mArenas, &mPrivateArenas, &mMainThreadArenas);
-#endif
   }
 
   inline arena_t* GetDefault() { return mDefaultArena; }
@@ -464,22 +463,32 @@ class ArenaCollection {
   bool SetDeferredPurge(bool aEnable) {
     MOZ_ASSERT(IsOnMainThreadWeak());
 
-    bool ret = mIsDeferredPurgeEnabled;
+    // We must hold the arena collection lock while updating the status
+    // globally AND on each arena.
+    bool previous;
     {
       MutexAutoLock lock(mLock);
+      previous = mIsDeferredPurgeEnabled;
+      if (previous == aEnable) {
+        // There's nothing more to do.
+        return previous;
+      }
+
       mIsDeferredPurgeEnabled = aEnable;
       for (auto* arena : iter()) {
         MaybeMutexAutoLock lock(arena->mLock);
         arena->mIsDeferredPurgeEnabled = aEnable;
       }
     }
-    if (ret != aEnable) {
-      MayPurgeAll(PurgeIfThreshold, __func__);
-    }
-    return ret;
+
+    MayPurgeAll(PurgeIfThreshold, __func__);
+
+    return previous;
   }
 
-  bool IsDeferredPurgeEnabled() { return mIsDeferredPurgeEnabled; }
+  bool IsDeferredPurgeEnabled() MOZ_REQUIRES(mLock) {
+    return mIsDeferredPurgeEnabled;
+  }
 
   // Set aside a new purge request for aArena.
   void AddToOutstandingPurges(arena_t* aArena) MOZ_EXCLUDES(mPurgeListLock);
@@ -519,9 +528,6 @@ class ArenaCollection {
  private:
   const static arena_id_t MAIN_THREAD_ARENA_BIT = 0x1;
 
-#ifndef NON_RANDOM_ARENA_IDS
-  arena_id_t MakeRandArenaId(bool aIsMainThreadOnly) const MOZ_REQUIRES(mLock);
-#endif
   static bool ArenaIdIsMainThreadOnly(arena_id_t aArenaId) {
     return aArenaId & MAIN_THREAD_ARENA_BIT;
   }
@@ -533,16 +539,10 @@ class ArenaCollection {
   Tree mArenas MOZ_GUARDED_BY(mLock);
   Tree mPrivateArenas MOZ_GUARDED_BY(mLock);
 
-#ifdef NON_RANDOM_ARENA_IDS
   // Arena ids are pseudo-obfuscated/deobfuscated based on these values randomly
   // initialized on first use.
   arena_id_t mArenaIdKey = 0;
   int8_t mArenaIdRotation = 0;
-#else
-  // Some mMainThreadArenas accesses to mMainThreadArenas can (and should) elude
-  // the lock, see GetById().
-  Tree mMainThreadArenas MOZ_GUARDED_BY(mLock);
-#endif
 
   // Set only rarely and then propagated on the same thread to all arenas via
   // UpdateMaxDirty(). But also read in ExtraCommitPages on arbitrary threads.
@@ -562,9 +562,9 @@ class ArenaCollection {
   // as this would prevent any future purges for this arena (except for during
   // MayPurgeStep or Purge).
   DoublyLinkedList<arena_t> mOutstandingPurges MOZ_GUARDED_BY(mPurgeListLock);
-  // Flag if we should defer purge to later. Only ever set when holding the
-  // collection lock. Read only during arena_t ctor.
-  Atomic<bool> mIsDeferredPurgeEnabled;
+
+  // Flag if we should defer purge to later.
+  bool mIsDeferredPurgeEnabled MOZ_GUARDED_BY(mLock) = false;
 };
 
 constinit static ArenaCollection gArenas;
@@ -1106,10 +1106,7 @@ bool arena_t::RemoveChunk(arena_chunk_t* aChunk) {
   size_t fresh = 0;
   for (size_t i = gChunkHeaderNumPages; i < gChunkNumPages - gPagesPerRealPage;
        i++) {
-    // There must not be any pages that are not fresh, madvised, decommitted or
-    // dirty.
-    MOZ_ASSERT(aChunk->mPageMap[i].bits &
-               (CHUNK_MAP_FRESH_MADVISED_OR_DECOMMITTED | CHUNK_MAP_DIRTY));
+    MOZ_ASSERT((aChunk->mPageMap[i].bits & CHUNK_MAP_ALLOCATED) == 0);
     MOZ_ASSERT((aChunk->mPageMap[i].bits & CHUNK_MAP_BUSY) == 0);
 
     if (aChunk->mPageMap[i].bits & CHUNK_MAP_MADVISED) {
@@ -1301,8 +1298,7 @@ ArenaPurgeResult arena_t::Purge(
     const Maybe<std::function<bool()>>& aKeepGoing) {
   arena_chunk_t* chunk = nullptr;
 
-  // The first critical section will find a chunk and mark dirty pages in it as
-  // busy.
+  // The first critical section will find a chunk with dirty pages.
   {
     MaybeMutexAutoLock lock(mLock);
 
@@ -1406,7 +1402,7 @@ ArenaPurgeResult arena_t::Purge(
       chunk_is_dying = chunk->mDying;
 
       // The code below will exit returning ReachedThresholdOrBusy if these are
-      // both false, so clear mIsDeferredPurgeNeeded while we still hold the
+      // both false, so clear mIsPurgePending while we still hold the
       // lock.
       if (!continue_purge_chunk && !continue_purge_arena) {
         purge_info.mArena.mIsPurgePending = false;
@@ -1503,11 +1499,11 @@ ArenaPurgeResult arena_t::PurgeLoop(PurgeCondition aCond, const char* aCaller,
 #endif
 
   uint64_t reuseGraceNS = (uint64_t)aReuseGraceMS * 1000 * 1000;
-  uint64_t now = aReuseGraceMS ? 0 : GetTimestampNS();
+  uint64_t now;
   ArenaPurgeResult pr;
   do {
     pr = Purge(aCond, purge_stats, aKeepGoing);
-    now = aReuseGraceMS ? 0 : GetTimestampNS();
+    now = aReuseGraceMS ? GetTimestampNS() : 0;
   } while (
       pr == NotDone &&
       (!aReuseGraceMS || (now - mLastSignificantReuseNS >= reuseGraceNS)) &&
@@ -2047,7 +2043,7 @@ arena_bin_t::arena_bin_t(SizeClass aSizeClass) : mSizeClass(aSizeClass.Size()) {
 
   MOZ_ASSERT(aSizeClass.Size() <= gMaxBinClass);
 
-  try_run_size = gPageSize;
+  try_run_size = gMinimumRunSize;
 
   // Run size expansion loop.
   while (true) {
@@ -2172,6 +2168,10 @@ void* arena_t::MallocSmall(size_t aSize, bool aZero) {
     case SizeClass::QuantumWide:
       bin = &mBins[kNumQuantumClasses + (aSize / kQuantumWide) -
                    (kMinQuantumWideClass / kQuantumWide)];
+      break;
+    case SizeClass::SubPage:
+      bin = &mBins[kNumQuantumClasses + kNumQuantumWideClasses +
+                   (FloorLog2(aSize) - LOG2(kMinSubPageClass))];
       break;
     default:
       MOZ_MAKE_COMPILER_ASSUME_IS_UNREACHABLE("Unexpected size class type");
@@ -2490,13 +2490,12 @@ class AllocInfo {
     if (mSize <= gMaxLargeClass) {
       return mChunk->mArena;
     }
+
     // Best effort detection that we're not trying to access an already
-    // disposed arena. In the case of a disposed arena, the memory location
-    // pointed by mNode->mArena is either free (but still a valid memory
-    // region, per TypedBaseAlloc<arena_t>), in which case its id was reset,
-    // or has been reallocated for a new region, and its id is very likely
-    // different (per randomness). In both cases, the id is unlikely to
-    // match what it was for the disposed arena.
+    // disposed arena.  arena_t's destructor will clear mMagic and mId;
+    // any other use of the same memory will usually set them to some other
+    // value.
+    MOZ_DIAGNOSTIC_ASSERT(mNode->mArena->mMagic == ARENA_MAGIC);
     MOZ_RELEASE_ASSERT(mNode->mArenaId == mNode->mArena->mId);
     return mNode->mArena;
   }
@@ -2777,7 +2776,7 @@ inline void arena_t::MayDoOrQueuePurge(purge_action_t aAction,
   switch (aAction) {
     case purge_action_t::Queue:
       // Note that this thread committed earlier by setting
-      // mIsDeferredPurgePending to add us to the list. There is a low
+      // mIsPurgePending to add us to the list. There is a low
       // chance that in the meantime another thread ran Purge() and cleared
       // the flag, but that is fine, we'll adjust our bookkeeping when calling
       // ShouldStartPurge() or Purge() next time.
@@ -2964,7 +2963,6 @@ arena_t::arena_t(arena_params_t* aParams, bool aIsPrivate)
       mMaxDirtyBase((aParams && aParams->mMaxDirty) ? aParams->mMaxDirty
                                                     : (opt_dirty_max / 8)),
       mLastSignificantReuseNS(GetTimestampNS()),
-      mIsDeferredPurgeEnabled(gArenas.IsDeferredPurgeEnabled()),
       mChunkAllocator(&gSystemChunkAllocator) {
   MaybeMutex::DoLock doLock = MaybeMutex::MUST_LOCK;
   if (aParams) {
@@ -3064,11 +3062,16 @@ arena_t::~arena_t() {
     }
   }
 #endif
+#ifdef MOZ_DIAGNOSTIC_ASSERT_ENABLED
+  mMagic = 0;
+#endif
   mId = 0;
 }
 
 arena_t* ArenaCollection::CreateArena(bool aIsPrivate,
                                       arena_params_t* aParams) {
+  // Allocate the memory for the arena before taking any locks, since it
+  // will use the base allocator locks and could run a system call.
   arena_t* ret = new (fallible) arena_t(aParams, aIsPrivate);
   if (!ret) {
     // Only reached if there is an OOM error.
@@ -3084,6 +3087,17 @@ arena_t* ArenaCollection::CreateArena(bool aIsPrivate,
 
   MutexAutoLock lock(mLock);
 
+  // Updating the arena's mIsDeferredPurgeEnabled needs to happen in the
+  // same critical section as enrolling the arena in the collection, which
+  // is why it's set here and not by arena_t's constructor.
+  {
+    // The arena lock here isn't necessary because nothing else has a
+    // pointer to the arena yet, but the alternative is
+    // MOZ_PUSH_IGNORE_THREAD_SAFETY.
+    MaybeMutexAutoLock arena_lock(ret->mLock);
+    ret->mIsDeferredPurgeEnabled = mIsDeferredPurgeEnabled;
+  }
+
   // For public arenas, it's fine to just use incrementing arena id
   if (!aIsPrivate) {
     ret->mId = mLastPublicArenaId++;
@@ -3091,7 +3105,6 @@ arena_t* ArenaCollection::CreateArena(bool aIsPrivate,
     return ret;
   }
 
-#ifdef NON_RANDOM_ARENA_IDS
   // For private arenas, slightly obfuscate the id by XORing a key generated
   // once, and rotate the bits by an amount also generated once.
   if (mArenaIdKey == 0) {
@@ -3107,48 +3120,7 @@ arena_t* ArenaCollection::CreateArena(bool aIsPrivate,
       (id >> mArenaIdRotation) | (id << (sizeof(void*) * 8 - mArenaIdRotation));
   mPrivateArenas.Insert(ret);
   return ret;
-#else
-  // For private arenas, generate a cryptographically-secure random id for the
-  // new arena. If an attacker manages to get control of the process, this
-  // should make it more difficult for them to "guess" the ID of a memory
-  // arena, stopping them from getting data they may want
-  Tree& tree = (ret->IsMainThreadOnly()) ? mMainThreadArenas : mPrivateArenas;
-  arena_id_t arena_id;
-  do {
-    arena_id = MakeRandArenaId(ret->IsMainThreadOnly());
-    // Keep looping until we ensure that the random number we just generated
-    // isn't already in use by another active arena
-  } while (tree.Search(arena_id));
-
-  ret->mId = arena_id;
-  tree.Insert(ret);
-  return ret;
-#endif
 }
-
-#ifndef NON_RANDOM_ARENA_IDS
-arena_id_t ArenaCollection::MakeRandArenaId(bool aIsMainThreadOnly) const {
-  uint64_t rand;
-  do {
-    mozilla::Maybe<uint64_t> maybeRandomId = mozilla::RandomUint64();
-    MOZ_RELEASE_ASSERT(maybeRandomId.isSome());
-
-    rand = maybeRandomId.value();
-
-    // Set or clear the least significant bit depending on if this is a
-    // main-thread-only arena.  We use this in GetById.
-    if (aIsMainThreadOnly) {
-      rand = rand | MAIN_THREAD_ARENA_BIT;
-    } else {
-      rand = rand & ~MAIN_THREAD_ARENA_BIT;
-    }
-
-    // Avoid 0 as an arena Id. We use 0 for disposed arenas.
-  } while (rand == 0);
-
-  return arena_id_t(rand);
-}
-#endif
 
 // End arena.
 // ***************************************************************************
@@ -3375,7 +3347,7 @@ static bool malloc_init_hard() {
   }
 #else
   gRealPageSize = page_size;
-  gPageSize = std::min(4_KiB, page_size);
+  gPageSize = page_size;
 #endif
 
   // Get runtime configuration.
@@ -3727,12 +3699,13 @@ inline void MozJemalloc::jemalloc_stats_internal(
   aStats->quantum_max = kMaxQuantumClass;
   aStats->quantum_wide = kQuantumWide;
   aStats->quantum_wide_max = kMaxQuantumWideClass;
-  aStats->unused = kMaxQuantumWideClass;
+  aStats->subpage_max = gMaxSubPageClass;
   aStats->large_max = gMaxLargeClass;
   aStats->chunksize = kChunkSize;
   aStats->page_size = gPageSize;
   aStats->real_page_size = gRealPageSize;
   aStats->dirty_max = opt_dirty_max;
+  aStats->arena_run_header = offsetof(arena_run_t, mRegionsMask);
 
   // Gather current memory usage statistics.
   aStats->narenas = 0;
@@ -3990,7 +3963,6 @@ inline arena_t* ArenaCollection::GetById(arena_id_t aArenaId, bool aIsPrivate) {
     return nullptr;
   }
 
-#ifdef NON_RANDOM_ARENA_IDS
   // This function is never called with aIsPrivate = false, let's make sure it
   // doesn't silently change while we're making that assumption below because
   // we can't resolve non-private arenas this way.
@@ -4002,33 +3974,8 @@ inline arena_t* ArenaCollection::GetById(arena_id_t aArenaId, bool aIsPrivate) {
   arena_id_t id = (aArenaId << mArenaIdRotation) |
                   (aArenaId >> (sizeof(void*) * 8 - mArenaIdRotation));
   arena_t* result = reinterpret_cast<arena_t*>(id ^ mArenaIdKey);
-#else
-  Tree* tree = nullptr;
-  if (aIsPrivate) {
-    if (ArenaIdIsMainThreadOnly(aArenaId)) {
-      // The main thread only arenas support lock free access, so it's desirable
-      // to do GetById without taking mLock either.
-      //
-      // Races can occur between writers and writers, or between writers and
-      // readers.  The only writer is the main thread and it will never race
-      // against itself so we can elude the lock when the main thread is
-      // reading.
-      MOZ_ASSERT(IsOnMainThread());
-      MOZ_PUSH_IGNORE_THREAD_SAFETY
-      arena_t* result = mMainThreadArenas.Search(aArenaId);
-      MOZ_POP_THREAD_SAFETY
-      MOZ_RELEASE_ASSERT(result);
-      return result;
-    }
-    tree = &mPrivateArenas;
-  } else {
-    tree = &mArenas;
-  }
-
-  MutexAutoLock lock(mLock);
-  arena_t* result = tree->Search(aArenaId);
-#endif
   MOZ_RELEASE_ASSERT(result);
+  MOZ_DIAGNOSTIC_ASSERT(result->mMagic == ARENA_MAGIC);
   MOZ_RELEASE_ASSERT(result->mId == aArenaId);
   return result;
 }
@@ -4044,7 +3991,6 @@ inline arena_id_t MozJemalloc::moz_create_arena_with_params(
 
 inline void MozJemalloc::moz_dispose_arena(arena_id_t aArenaId) {
   arena_t* arena = gArenas.GetById(aArenaId, /* IsPrivate = */ true);
-  MOZ_RELEASE_ASSERT(arena);
   gArenas.DisposeArena(arena);
 }
 
@@ -4155,7 +4101,7 @@ may_purge_now_result_t ArenaCollection::MayPurgeSteps(
       return may_purge_now_result_t::NeedsMore;
     }
 
-    // We need to avoid the invalid state where mIsDeferredPurgePending is set
+    // We need to avoid the invalid state where mIsPurgePending is set
     // but the arena is not in the list or about to be added. So remove the
     // arena from the list before calling Purge().
     mOutstandingPurges.remove(found);
@@ -4171,7 +4117,7 @@ may_purge_now_result_t ArenaCollection::MayPurgeSteps(
 
     // Note that after the above Purge() and taking the lock below there's a
     // chance another thread may be purging the arena and clear
-    // mIsDeferredPurgePending.  Resulting in the state of being in the list
+    // mIsPurgePending.  Resulting in the state of being in the list
     // with that flag clear.  That's okay since the next time a purge occurs
     // (and one will because it's in the list) it'll clear the flag and the
     // state will be consistent again.

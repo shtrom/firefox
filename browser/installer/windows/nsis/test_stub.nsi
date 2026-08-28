@@ -21,6 +21,7 @@ OutFile "test_stub_installer.exe"
 Var Stdout
 Var FailureMessage
 Var TestBreakpointNumber
+Var ExpectedLegacyUninstallKey
 
 ; For building the test exectuable, this version of the IsTestBreakpointSet macro
 ; checks the value of the TestBreakpointNumber. For real installer executables,
@@ -95,6 +96,13 @@ FunctionEnd
     ${EndIf}
 !macroend
 !define AssertEqual "!insertmacro AssertEqual"
+
+!macro AssertNoErrors
+  ${If} ${Errors}
+    ${Fail} "Expected the errors flag to be unset"
+  ${EndIf}
+!macroend
+!define AssertNoErrors "!insertmacro AssertNoErrors"
 
 Var TestFailureCount
 
@@ -176,6 +184,9 @@ Function .onInit
     ${UnitTest} TestGetHadExistingProfileFailure
     ${UnitTest} TestGetHadExistingProfileSuccess
 
+    ${UnitTest} TestGetProfileDirExistedFailure
+    ${UnitTest} TestGetProfileDirExistedSuccess
+
     ${UnitTest} TestIsInstallerLaunchedByDesktopLauncherNoParameter
     ${UnitTest} TestIsInstallerLaunchedByDesktopLauncherUnknownParameter
     ${UnitTest} TestIsInstallerLaunchedByDesktopLauncherSuccess
@@ -201,6 +212,9 @@ Function .onInit
 
     ${UnitTest} TestShouldInstallDesktopLauncherFailure
     ${UnitTest} TestShouldInstallDesktopLauncherSuccess
+
+    ${UnitTest} TestPostUpdateTargetArgs
+    ${UnitTest} TestPostUpdateTargetGuess
 
     Call TelemetryTests
 
@@ -333,8 +347,26 @@ FunctionEnd
 
 !include postupdate_helper.nsh
 
+Function GetExpectedLegacyUninstallKey
+  Push $0
+  Push $1
+  StrCpy $0 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} ${AppVersion}"
+  ${WordFind} "${UpdateChannel}" "esr" "E#" $1
+  ${IfNot} ${Errors}
+    StrCpy $0 "$0 ESR"
+  ${EndIf}
+  StrCpy $0 "$0 (${ARCH} ${AB_CD})"
+  ClearErrors
+  Pop $1
+  Exch $0
+FunctionEnd
+
 Function TestUninstallRegKey
     Call CommonOnInit
+
+    Call GetExpectedLegacyUninstallKey
+    Pop $ExpectedLegacyUninstallKey
+
     Push $R0 ; We will locally use $R0, ensuring that we can restore it later.
 
     Call findUninstallKey
@@ -348,8 +380,7 @@ Function TestUninstallRegKey
 
     Call getLegacyUninstallKey
     Pop $R0
-    !insertmacro AssertEqual R0 \
-        "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} ${AppVersion} (${ARCH} ${AB_CD})"
+    !insertmacro AssertEqual R0 "$ExpectedLegacyUninstallKey"
 
     ; Ensure that the getDefaultInstallDir function does not modify the
     ; contents of $1.
@@ -384,8 +415,7 @@ Function TestUninstallRegKey
     Push ${buildNumWin10}
     Call getUninstallKey
     Pop $INSTDIR ; reuse INSTDIR for the return value
-    !insertmacro AssertEqual INSTDIR \
-        "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} ${AppVersion} (${ARCH} ${AB_CD})"
+    !insertmacro AssertEqual INSTDIR "$ExpectedLegacyUninstallKey"
     ClearErrors
 
     ; ----
@@ -394,8 +424,7 @@ Function TestUninstallRegKey
     Push ${buildNumWin10}
     Call getUninstallKey
     Pop $INSTDIR ; reuse INSTDIR for the return value
-    !insertmacro AssertEqual INSTDIR \
-        "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} ${AppVersion} (${ARCH} ${AB_CD})"
+    !insertmacro AssertEqual INSTDIR "$ExpectedLegacyUninstallKey"
     ClearErrors
 
     ; ----
@@ -404,8 +433,7 @@ Function TestUninstallRegKey
     Push ${buildNumWin10}
     Call getUninstallKey
     Pop $INSTDIR ; reuse INSTDIR for the return value
-    !insertmacro AssertEqual INSTDIR \
-        "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} ${AppVersion} (${ARCH} ${AB_CD})"
+    !insertmacro AssertEqual INSTDIR "$ExpectedLegacyUninstallKey"
     ClearErrors
 
     ; ----
@@ -480,8 +508,7 @@ Function TestUninstallRegKey
     Push 10240 ; Simulate Windows 10
     Call getUninstallKey
     Pop $0
-    !insertmacro AssertEqual 0  \
-        "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} ${AppVersion} (${ARCH} ${AB_CD})"
+    !insertmacro AssertEqual 0 "$ExpectedLegacyUninstallKey"
     ClearErrors
     Pop $0 ; restore $0
 
@@ -652,6 +679,32 @@ Function TestGetHadExistingProfileSuccess
   Call GetHadExistingProfile
   Pop $0
   ${AssertEqual} 0 "1"
+
+  RMDir /r $MockLocalAppDataFolder
+FunctionEnd
+
+Function TestGetProfileDirExistedFailure
+  GetTempFileName $0
+  Delete $0
+  CreateDirectory $0
+  StrCpy $MockLocalAppDataFolder $0
+
+  Call GetProfileDirExisted
+  Pop $0
+  ${AssertEqual} 0 "false"
+
+  RMDir $MockLocalAppDataFolder
+FunctionEnd
+
+Function TestGetProfileDirExistedSuccess
+  GetTempFileName $0
+  Delete $0
+  CreateDirectory "$0\Mozilla\Firefox"
+  StrCpy $MockLocalAppDataFolder $0
+
+  Call GetProfileDirExisted
+  Pop $0
+  ${AssertEqual} 0 "true"
 
   RMDir /r $MockLocalAppDataFolder
 FunctionEnd
@@ -873,6 +926,70 @@ Function TestShouldInstallDesktopLauncherSuccess
   Call ShouldInstallDesktopLauncher
   Pop $0
   ${AssertEqual} 0 "1"
+FunctionEnd
+
+Function TestPostUpdateTargetArgs
+  StrCpy $MockParameters "/PostUpdateTarget:Installation"
+  Call GetPostUpdateTarget
+  ${AssertNoErrors}
+  Pop $0
+  ${AssertEqual} 0 "Installation"
+
+  StrCpy $MockParameters "/PostUpdateTarget:CurrentUser"
+  Call GetPostUpdateTarget
+  ${AssertNoErrors}
+  Pop $0
+  ${AssertEqual} 0 "CurrentUser"
+
+  StrCpy $MockParameters "/PostUpdateTarget:somethingELSE"
+  Call GetPostUpdateTarget
+  ${AssertNoErrors}
+  Pop $0
+  ${AssertEqual} 0 "somethingELSE"
+FunctionEnd
+
+Function TestPostUpdateTargetGuess
+  StrCpy $MockParameters ""
+
+  GetTempFileName $0
+  Delete $0
+  CreateDirectory $0
+
+  Push $INSTDIR
+  StrCpy $INSTDIR $0
+
+  ; We _do_ have write access, so it should attempt Installation.
+  Call GetPostUpdateTarget
+  ${AssertNoErrors}
+  Pop $0
+  ${AssertEqual} 0 "Installation"
+
+  ; (WD) is 'SDDL_EVERYONE', so no-one can write.
+  AccessControl::DenyOnFile "$INSTDIR" "(WD)" "GenericWrite"
+  Pop $0
+  ${If} $0 == "error"
+    Pop $0
+    ${Fail} "AccessControl::DenyOnFile failed: $0"
+  ${EndIf}
+
+  ; Now that there is no write access, it should go for CurrentUser.
+  Call GetPostUpdateTarget
+  ${AssertNoErrors}
+  Pop $0
+  ${AssertEqual} 0 "CurrentUser"
+
+  AccessControl::GrantOnFile "$INSTDIR" "(WD)" "GenericWrite"
+  Pop $0
+  ${If} $0 == "error"
+    Pop $0
+    ${Fail} "AccessControl::DenyOnFile failed: $0"
+  ${EndIf}
+
+  RMDir $INSTDIR
+  ; This also catches files that were left over from the guessing.
+  ${AssertNoErrors}
+
+  Pop $INSTDIR
 FunctionEnd
 
 Section

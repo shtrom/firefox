@@ -996,30 +996,42 @@ void CodeGeneratorX64::wasmStore(const wasm::MemoryAccessDesc& access,
 
     switch (access.type()) {
       case Scalar::Int8:
-      case Scalar::Uint8:
-        masm.append(access, wasm::TrapMachineInsn::Store8,
-                    FaultingCodeOffset(masm.currentOffset()));
+      case Scalar::Uint8: {
+        auto before = masm.currentOffset();
         masm.movb(cst, dstAddr);
+        auto after = masm.currentOffset();
+        masm.appendAndVerify(access, wasm::TrapMachineInsn::Store8,
+                             FaultingCodeRange(before, after));
         break;
+      }
       case Scalar::Int16:
-      case Scalar::Uint16:
-        masm.append(access, wasm::TrapMachineInsn::Store16,
-                    FaultingCodeOffset(masm.currentOffset()));
+      case Scalar::Uint16: {
+        auto before = masm.currentOffset();
         masm.movw(cst, dstAddr);
+        auto after = masm.currentOffset();
+        masm.appendAndVerify(access, wasm::TrapMachineInsn::Store16,
+                             FaultingCodeRange(before, after));
         break;
+      }
       case Scalar::Int32:
-      case Scalar::Uint32:
-        masm.append(access, wasm::TrapMachineInsn::Store32,
-                    FaultingCodeOffset(masm.currentOffset()));
+      case Scalar::Uint32: {
+        auto before = masm.currentOffset();
         masm.movl(cst, dstAddr);
+        auto after = masm.currentOffset();
+        masm.appendAndVerify(access, wasm::TrapMachineInsn::Store32,
+                             FaultingCodeRange(before, after));
         break;
-      case Scalar::Int64:
+      }
+      case Scalar::Int64: {
         MOZ_ASSERT_IF(mir->type() == MIRType::Int64,
                       mozilla::CheckedInt32(mir->toInt64()).isValid());
-        masm.append(access, wasm::TrapMachineInsn::Store64,
-                    FaultingCodeOffset(masm.currentOffset()));
+        auto before = masm.currentOffset();
         masm.movq(cst, dstAddr);
+        auto after = masm.currentOffset();
+        masm.appendAndVerify(access, wasm::TrapMachineInsn::Store64,
+                             FaultingCodeRange(before, after));
         break;
+      }
       case Scalar::Simd128:
       case Scalar::Float16:
       case Scalar::Float32:
@@ -1514,20 +1526,13 @@ void CodeGenerator::visitMulIntPtr(LMulIntPtr* ins) {
 }
 
 void CodeGenerator::visitWasmMulI64WideHI64(LWasmMulI64WideHI64* lir) {
-  // See comment at LIRGenerator::visitWasmMulI64WideHI64.
-  Register rhs = ToRegister(lir->rhs());
-#ifdef DEBUG
   Register lhs = ToRegister(lir->lhs());
-  Register tempRDX = ToRegister(lir->temp0());
-  Register outputRAX = ToRegister(lir->output());
-#endif
-
-  MOZ_ASSERT(lhs == rax);
-  MOZ_ASSERT(rhs != rax && rhs != rdx);
-  MOZ_ASSERT(tempRDX == rdx);
-  MOZ_ASSERT(outputRAX == rax);
-
-  // `lhs` is hardwired to RAX and the result will be in RAX, so we only need to
-  // supply `rhs` here.`
-  masm.wasmMulI64WideHI64(rhs, lir->isSigned());
+  Register rhs = ToRegister(lir->rhs());
+  Register temp0 = ToRegister(lir->temp0());
+  Register temp1 = ToRegister(lir->temp1());
+  Register output = ToRegister(lir->output());
+  // This holds because both operands are non-AtStart variants.
+  MOZ_ASSERT(output != lhs && output != rhs);
+  MOZ_ASSERT(output != temp0 && output != temp1);
+  masm.wasmMulI64WideHI64(lhs, rhs, temp0, temp1, output, lir->isSigned());
 }

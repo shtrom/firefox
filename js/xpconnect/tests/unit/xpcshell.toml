@@ -187,6 +187,8 @@ support-files = [
 
 ["test_cenums.js"]
 
+["test_classinfo_too_many_interfaces.js"]
+
 ["test_compileScript.js"]
 
 ["test_components.js"]
@@ -233,9 +235,6 @@ skip-if = [
 ["test_getObjectPrincipal.js"]
 
 ["test_import_attributes.js"]
-prefs = [
-  "javascript.options.experimental.import_text=true",
-]
 
 ["test_import_attributes_worker.js"]
 skip-if = [

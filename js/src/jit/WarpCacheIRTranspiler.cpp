@@ -949,16 +949,6 @@ bool WarpCacheIRTranspiler::emitGuardIsNotArrayBufferMaybeShared(
   return true;
 }
 
-bool WarpCacheIRTranspiler::emitGuardIsTypedArray(ObjOperandId objId) {
-  MDefinition* obj = getOperand(objId);
-
-  auto* ins = MGuardIsTypedArray::New(alloc(), obj);
-  add(ins);
-
-  setOperand(objId, ins);
-  return true;
-}
-
 bool WarpCacheIRTranspiler::emitGuardIsNonResizableTypedArray(
     ObjOperandId objId) {
   MDefinition* obj = getOperand(objId);
@@ -1377,6 +1367,15 @@ bool WarpCacheIRTranspiler::emitGuardNonDoubleType(ValOperandId inputId,
   }
 
   MOZ_CRASH("unexpected type");
+}
+
+bool WarpCacheIRTranspiler::emitGuardIsNotObject(ValOperandId inputId) {
+  MDefinition* input = getOperand(inputId);
+
+  auto* ins = MGuardIsNotObject::New(alloc(), input);
+  add(ins);
+  setOperand(inputId, ins);
+  return true;
 }
 
 bool WarpCacheIRTranspiler::emitGuardTo(ValOperandId inputId, MIRType type) {
@@ -2563,6 +2562,10 @@ bool WarpCacheIRTranspiler::emitLoadTypedArrayElementResult(
     result = MInt64ToBigInt::New(alloc(), load,
                                  Scalar::isSignedIntType(elementType));
     add(result);
+  } else if (Scalar::isFloatingType(elementType) &&
+             JitOptions.disableCanonicalizeNaNAtUses) {
+    result = MCanonicalizeNaN::New(alloc(), load);
+    add(result);
   }
 
   pushResult(result);
@@ -3333,6 +3336,10 @@ bool WarpCacheIRTranspiler::emitLoadDataViewValueResult(
   if (Scalar::isBigIntType(elementType)) {
     result = MInt64ToBigInt::New(alloc(), load,
                                  Scalar::isSignedIntType(elementType));
+    add(result);
+  } else if (Scalar::isFloatingType(elementType) &&
+             JitOptions.disableCanonicalizeNaNAtUses) {
+    result = MCanonicalizeNaN::New(alloc(), load);
     add(result);
   }
 
@@ -4680,6 +4687,14 @@ bool WarpCacheIRTranspiler::emitIsObjectResult(ValOperandId inputId) {
     pushResult(isObject);
   }
 
+  return true;
+}
+
+bool WarpCacheIRTranspiler::emitIsSuspendedGeneratorResult(ObjOperandId objId) {
+  MDefinition* obj = getOperand(objId);
+  auto* ins = MIsSuspendedGenerator::New(alloc(), obj);
+  add(ins);
+  pushResult(ins);
   return true;
 }
 
@@ -6307,9 +6322,10 @@ bool WarpCacheIRTranspiler::maybeCreateThis(MDefinition* callee,
   if (kind == CallKind::Native) {
     // Native functions keep the is-constructing MagicValue as |this|.
     // If one of the arguments uses spread syntax this can be a loop phi with
-    // MIRType::Value.
+    // MIRType::Value. If one of the arguments uses |yield|, this can be a
+    // LoadElement to restore |this| from the generator's stack storage array.
     MOZ_ASSERT(thisArg->type() == MIRType::MagicIsConstructing ||
-               thisArg->isPhi());
+               thisArg->isPhi() || thisArg->isLoadElement());
     return false;
   }
   MOZ_ASSERT(kind == CallKind::Scripted);
@@ -6327,7 +6343,7 @@ bool WarpCacheIRTranspiler::maybeCreateThis(MDefinition* callee,
   }
   // See the Native case above.
   MOZ_ASSERT(thisArg->type() == MIRType::MagicIsConstructing ||
-             thisArg->isPhi());
+             thisArg->isPhi() || thisArg->isLoadElement());
 
   auto* newTarget = unboxObjectInfallible(callInfo_->getNewTarget());
   auto* createThis = MCreateThis::New(alloc(), callee, newTarget);
@@ -7114,8 +7130,6 @@ bool WarpCacheIRTranspiler::emitMetaCreateThis(uint32_t numFixedSlots,
   callInfo_->setThis(createThis);
   return true;
 }
-
-bool WarpCacheIRTranspiler::emitReturnFromIC() { return true; }
 
 bool WarpCacheIRTranspiler::emitBailout() {
   auto* bail = MBail::New(alloc());

@@ -85,8 +85,8 @@ pane-appearance-title = Appearance
 pane-downloads-title2 = Downloads
   .title = Downloads
 
-pane-downloads2 =
-    .heading = { pane-downloads-title2 }
+pane-downloads3 =
+    .heading = Downloads
 
 pane-accessibility-title = Accessibility
   .title = { pane-accessibility-title }
@@ -94,8 +94,8 @@ pane-accessibility-title = Accessibility
 pane-languages-title2 = Languages
   .title = Languages
 
-preferences-languages-header2 =
-    .heading = { pane-languages-title2 }
+preferences-languages-header3 =
+    .heading = Languages
 
 settings-pane-labs-title2 = { -firefoxlabs-brand-name }
   .title = { -firefoxlabs-brand-name }
@@ -199,6 +199,11 @@ windows-launch-on-login =
     .label = Open { -brand-short-name } automatically when your computer starts up
     .accesskey = O
 windows-launch-on-login-disabled = This preference has been disabled in Windows. To change, visit <a data-l10n-name="startup-link">Startup Apps</a> in System settings.
+
+# Option to also opens a new tab, in addition to restoring previous tabs and windows
+windows-launch-on-login-open-new-tab =
+    .label = Also open a new tab
+    .accesskey = n
 
 disable-extension =
     .label = Disable Extension
@@ -411,8 +416,8 @@ preferences-contrast-control-custom =
     .label = Custom
     .accesskey = C
 
-preferences-colors-manage-button =
-    .label = Manage Colors…
+preferences-colors-manage-button2 =
+    .label = Manage colors
     .accesskey = C
 
 preferences-fonts-header2 =
@@ -795,7 +800,7 @@ update-setting-write-failure-title2 = Error saving Update settings
 # The newlines between the main text and the line containing the path is
 # intentional so the path is easier to identify.
 update-setting-write-failure-message2 =
-    { -brand-short-name } encountered an error and didn’t save this change. Note that changing this update setting requires permission to write to the file below. You or a system administrator may be able resolve the error by granting the Users group full control to this file.
+    { -brand-short-name } encountered an error and didn’t save this change. Note that changing this update setting requires permission to write to the file below. You or a system administrator may be able to resolve the error by granting the Users group full control to this file.
 
     Could not write to file: { $path }
 
@@ -880,6 +885,12 @@ browsing-search-on-start-typing =
     .label = Search for text when you start typing
     .accesskey = x
 
+settings-keyboard-shortcuts-group =
+    .label = Keyboard shortcuts
+    .description = Control how you move around and interact with { -brand-short-name }.
+settings-keyboard-shortcuts-customkeys-link =
+    .label = Customize keyboard shortcuts
+
 settings-media-group =
     .label = Media
 
@@ -942,18 +953,9 @@ set-as-my-default-browser-2 =
 
 ## Home Section - Home Page Customization
 
-home-homepage-title =
-    .label = Homepage
-
 home-homepage-mode-label = Homepage and new windows
 
-home-homepage-new-windows =
-    .label = New windows
-
 home-newtabs-mode-label = New tabs
-
-home-homepage-new-tabs =
-    .label = New tabs
 
 home-restore-defaults =
     .label = Restore Defaults
@@ -975,16 +977,41 @@ home-homepage-custom-url =
 home-homepage-manage-extension-button =
     .label = Manage extension
 
-# This option leads to the "Custom Homepage" subpage
-home-homepage-custom-homepage-button =
-    .label = Choose a specific site
-
 ## Custom Homepage subpage
 
 home-custom-homepage-header = Custom Homepage
 
 home-custom-homepage-subpage =
     .heading = Custom Homepage
+
+# This string has a special case for '1' and [other] (default). If necessary for
+# your language, you can add {$tabCount} to your translations and use the
+# standard CLDR forms, or only use the form for [other] if both strings should
+# be identical.
+use-current-pages =
+    .label =
+        { $tabCount ->
+            [1] Use Current Page
+           *[other] Use Current Pages
+        }
+    .accesskey = C
+
+choose-bookmark =
+    .label = Use Bookmark…
+    .accesskey = B
+
+home-homepage-title =
+    .label = Homepage
+
+home-homepage-new-windows =
+    .label = New windows
+
+home-homepage-new-tabs =
+    .label = New tabs
+
+# This option leads to the "Custom Homepage" subpage
+home-homepage-custom-homepage-button =
+    .label = Choose a specific site
 
 # Subheader on the Custom Homepage subpage. Followed by a form to enter URLs and a list of URLs already saved, if any.
 home-custom-homepage-card-header =
@@ -1016,33 +1043,19 @@ home-custom-homepage-current-pages-button =
 home-custom-homepage-bookmarks-button =
     .label = Bookmarks…
 
-# This string has a special case for '1' and [other] (default). If necessary for
-# your language, you can add {$tabCount} to your translations and use the
-# standard CLDR forms, or only use the form for [other] if both strings should
-# be identical.
-use-current-pages =
-    .label =
-        { $tabCount ->
-            [1] Use Current Page
-           *[other] Use Current Pages
-        }
-    .accesskey = C
-
-choose-bookmark =
-    .label = Use Bookmark…
-    .accesskey = B
+# Dropdown option shown when an extension replaces the contents of new windows or tabs.
+# Variables:
+#   $extension (string) - Name of the extension
+home-prefs-homepage-extension-option =
+    .label = Extension ({ $extension })
 
 ## Home Section - Firefox Home Content Customization
 
-home-prefs-content-header =
-    .label = { -firefox-home-brand-name }
 home-prefs-content-header2 = { -firefox-home-brand-name } Content
 home-prefs-content-description2 = Choose what content you want on your { -firefox-home-brand-name } screen.
 
 home-prefs-search-header =
     .label = Web Search
-home-prefs-search-header2 =
-    .label = Search
 home-prefs-shortcuts-header =
     .label = Shortcuts
 home-prefs-shortcuts-description = Sites you save or visit
@@ -1056,10 +1069,6 @@ home-prefs-recommended-by-description-generic = Exceptional content curated by t
 home-prefs-stories-header =
     .label = Stories
 home-prefs-stories-description = Personalized stories based on your activity
-
-home-prefs-stories-header2 =
-    .label = Stories
-    .description = Exceptional content curated by the { -brand-product-name } family
 
 ##
 
@@ -1077,61 +1086,6 @@ home-prefs-highlights-option-most-recent-download =
 home-prefs-recent-activity-header =
     .label = Recent activity
 home-prefs-recent-activity-description = A selection of recent sites and content
-home-prefs-weather-header =
-  .label = Weather
-home-prefs-weather-description = Today’s forecast at a glance
-home-prefs-weather-learn-more-link = Learn more
-
-home-prefs-widgets-header =
-    .label = Widgets
-
-# Lists is a widget on New Tab, similar to a to-do widget
-home-prefs-lists-header =
-    .label = Lists
-
-# Timer is a widget on New Tab, similar to the Pomodoro timer.
-home-prefs-timer-header =
-    .label = Timer
-
-# Sports is a widget on New Tab showing sports scores and schedules.
-home-prefs-sports-widget-header =
-    .label = Sports
-
-# Clock is a widget on New Tab that displays time zones around the world.
-home-prefs-clocks-header =
-    .label = Clock
-
-# "Support" here means to help sustain or contribute to something, especially through funding or sponsorship.
-home-prefs-support-firefox-header =
-    .label = Support { -brand-product-name }
-
-home-prefs-mission-message = Our sponsors support our mission to build a better web
-home-prefs-mission-message-learn-more-link = Find out how
-
-home-prefs-mission-message2 =
-    .message = Our sponsors support our mission to build a better web.
-
-home-prefs-manage-topics-link = Manage topics
-
-home-prefs-manage-topics-link2 =
-    .label = Manage topics
-
-home-prefs-choose-wallpaper-link = Choose a wallpaper
-
-home-prefs-choose-wallpaper-link2 =
-    .label = Choose a wallpaper
-
-# Informational message bar that appears in the Firefox Home section when the options are disabled.
-# The user must select Firefox Home as their homepage for either new tabs or new windows to enable
-# the features in settings.
-home-prefs-firefox-home-disabled-notice =
-    .message = To use these features, set new tabs or new windows to { -firefox-home-brand-name }.
-
-# Dropdown option shown when an extension replaces the contents of new windows or tabs.
-# Variables:
-#   $extension (string) - Name of the extension
-home-prefs-homepage-extension-option =
-    .label = Extension ({ $extension })
 
 # Variables:
 #   $num (number) - Number of rows displayed
@@ -1141,6 +1095,21 @@ home-prefs-sections-rows-option =
             [one] { $num } row
            *[other] { $num } rows
         }
+home-prefs-weather-header =
+  .label = Weather
+home-prefs-weather-description = Today’s forecast at a glance
+home-prefs-weather-learn-more-link = Learn more
+
+# "Support" here means to help sustain or contribute to something, especially through funding or sponsorship.
+home-prefs-support-firefox-header =
+    .label = Support { -brand-product-name }
+
+home-prefs-mission-message = Our sponsors support our mission to build a better web
+home-prefs-mission-message-learn-more-link = Find out how
+
+home-prefs-manage-topics-link = Manage topics
+
+home-prefs-choose-wallpaper-link = Choose a wallpaper
 
 ## Search Section
 
@@ -1318,23 +1287,45 @@ remove-addon-engine-alert = To remove this search engine, remove the associated 
 
 ## Containers Section
 
-containers-back-button2 =
-    .aria-label = Back to Settings
-containers-header = Container Tabs
-containers-section-header =
-    .heading = Container Tabs
-containers-add-button =
-    .label = Add New Container
+containers-section-header2 =
+    .heading = Container settings
+containers-card-header2 =
+    .label = Containers
+    .description = Separate cookies by container so you can use different accounts on the same site and limit cross-site tracking.
+containers-add-button2 =
+    .label = Add new container
     .accesskey = A
 
-containers-new-tab-check =
+containers-new-tab-check3 =
     .label = Select a container for each new tab
     .accesskey = S
 
-containers-settings-button =
-    .label = Settings
-containers-remove-button =
-    .label = Remove
+# Checkbox in the Containers settings. By default, when a link is opened from
+# another application, Firefox tries to pick a matching container for it. When
+# this checkbox is checked, such links always open outside of any container.
+containers-external-links-check =
+    .label = Don’t use containers for links opened from external apps
+    .accesskey = D
+
+containers-settings-button2 =
+    .title = Settings
+containers-remove-button3 =
+    .title = Delete
+
+containers-sites-card-header =
+    .label = Site-specific containers
+    .description = Choose a container for a site and { -brand-short-name } will use it every time the site opens.
+containers-sites-add-button =
+    .label = Add website
+    .accesskey = w
+
+# The dropdown that picks which container a site opens in.
+# Variables:
+#   $site (string) - Domain of the website, for example “example.com”.
+containers-site-container-select = Container for { $site }
+
+containers-site-remove-button =
+    .title = Delete
 
 ## Account and sync
 
@@ -1349,6 +1340,10 @@ sync-group-label =
 
 account-group-label2 =
     .label = Account
+
+account-disabled-group =
+    .label = Account
+    .description = Account settings are unavailable.
 
 account-placeholder2 =
     .label = You’re not signed in
@@ -1671,8 +1666,7 @@ forms-primary-pw-use-2 =
     .accesskey = U
 forms-primary-pw-set =
     .label = Set primary password
-forms-primary-pw-on =
-    .label = Primary password is ON
+forms-primary-pw-on-2 = Primary password is <strong>ON</strong>
 forms-primary-pw-change-2 =
     .label = Change primary password
 # Label for button to disable primary password.
@@ -1795,13 +1789,28 @@ autofill-addresses-manage-addresses-title =
 addresses-no-addresses-stored-message =
     .label = No addresses added
 
-# These values are displayed for each address record listed on the "Manage addresses and more" subpage.
-# Variables:
-#   $name (string) - The name associated with the address
-#   $address (string) - The address
-address-moz-box-item =
-  .label = { $name }
-  .description = { $address }
+personal-info-group =
+    .label = Personal info
+autofill-personal-info-checkbox-message =
+    .label = Save and autofill personal info
+autofill-personal-info-manage-button =
+    .label = Manage personal info
+passports-list-header =
+    .label = Passports
+passports-delete-passport-button-label =
+    .aria-label = Delete
+passports-edit-passport-button-label =
+    .aria-label = Edit
+passports-delete-passport-prompt-title = Delete this passport?
+passports-delete-passport-prompt-confirm-button = Delete
+passports-delete-passport-prompt-cancel-button = Cancel
+autofill-passports-add-button = Add new passport
+autofill-personal-info-manage-title =
+    .heading = Manage personal info
+
+# This message is displayed when no passports are stored in Firefox
+passports-no-passports-stored-message =
+    .label = No passports added
 
 pane-passwords-autofill-title2 = Passwords and autofill
   .title = Passwords and autofill
@@ -1852,6 +1861,10 @@ history-clear-on-close-option =
 history-clear-on-close-settings =
     .label = Settings…
     .accesskey = t
+
+history-shutdown-exceptions =
+    .label = Manage Exceptions
+    .accesskey = x
 
 history-clear-button =
     .label = Clear History…
@@ -1938,14 +1951,6 @@ sitedata-cookies-exceptions3 =
     .label = Manage exceptions
     .accesskey = x
     .description = Choose how specific sites handle cookies and site data.
-
-## Privacy Section - Cookie Banner Blocking
-
-cookie-banner-blocker-header = Cookie Banner Blocker
-cookie-banner-blocker-description = When a site asks if they can use cookies in private browsing mode, { -brand-short-name } automatically refuses for you. Only on supported sites.
-cookie-banner-learn-more = Learn more
-cookie-banner-blocker-checkbox-label =
-    .label = Automatically refuse cookie banners
 
 ## Privacy Section - Content Blocking
 
@@ -2192,13 +2197,6 @@ collection-backlogged-crash-reports2 =
     .label = Automatically send crash reports
     .accesskey = c
 collection-backlogged-crash-reports-description = This helps { -vendor-short-name } diagnose and fix issues with the browser. Reports may include personal or sensitive data.
-
-# Promotional message displayed in the Settings panes to inform users of the new redesign
-settings-redesign-promo =
-    .heading = Same settings, new look!
-    .message = We reorganized this page so it’s easier to scan and explore. Your personal settings haven’t changed, and everything’s still here. Tip: use search to jump straight to what you need.
-settings-redesign-promo-dismiss-button =
-    .label = Got it
 
 privacy-segmentation-section-header = New features that enhance your browsing
 
@@ -2467,6 +2465,36 @@ browser-theme-group =
 browser-theme-manage-link =
     .label = Manage { -brand-short-name } themes
 
+appearance-window-density-group =
+    .label = Window density
+    .description = Adjust the spacing around window elements like toolbar, tabs, and sidebar.
+
+appearance-window-density-radio-group =
+    .aria-label = Window density
+
+appearance-window-density-automatic =
+    .label = Automatic (default)
+    .description = Standard, compact, or touch spacing is applied automatically
+
+appearance-window-density-automatic-no-touch =
+    .label = Automatic (default)
+    .description = Standard or compact spacing is applied automatically
+
+appearance-window-density-standard =
+    .label = Standard
+    .description = Balanced spacing for most screens
+
+appearance-window-density-auto-touch-mode =
+    .label = Use touch spacing for tablet mode
+
+appearance-window-density-compact =
+    .label = Compact
+    .description = Reduced spacing for smaller screens
+
+appearance-window-density-touch =
+    .label = Touch
+    .description = Larger window elements and click targets, optimized for touch screens
+
 related-settings-group =
     .label = Related settings
 
@@ -2511,8 +2539,8 @@ motion-and-link-group =
 
 ## AI controls page
 
-preferences-ai-controls-header2 =
-    .heading = { pane-ai-controls-title2 }
+preferences-ai-controls-header3 =
+    .heading = AI controls
 
 preferences-ai-controls-description = You always have a choice in { -brand-short-name }, including whether to use features enhanced with AI. More controls coming soon.
 
@@ -2545,9 +2573,9 @@ preferences-ai-controls-key-points-control =
     .label = Key points in link previews
     .description = See a quick summary before opening a link.
 
-preferences-ai-controls-sidebar-chatbot-group =
+preferences-ai-controls-sidebar-chatbot-group-2 =
     .label = AI chatbot providers in sidebar
-    .description = Keep a chatbot in view as you browse. Choose from Anthropic Claude, ChatGPT, Copilot, Google Gemini, and Le Chat Mistral.
+    .description = Keep a chatbot in view as you browse. Choose from Anthropic Claude, ChatGPT, Copilot, Google Gemini, and Mistral Vibe.
 
 preferences-ai-controls-sidebar-chatbot-control =
     .label = Chatbot in sidebar
@@ -2647,6 +2675,9 @@ preferences-etp-level-custom =
 preferences-etp-status-advanced-button =
     .label = Advanced settings
 
+preferences-etp-tracker-count-enabled =
+    .label = Show trackers blocked in address bar
+
 preferences-etp-status-protections-dashboard-link =
         .label = View your personalized protections dashboard
         .description = See how many sneaky trackers { -brand-short-name } has blocked for you, including social media trackers, fingerprinters, and cryptominers.
@@ -2700,8 +2731,18 @@ preferences-etp-custom-cookies-enabled =
 preferences-etp-custom-cookie-behavior =
     .aria-label = Cookies
 
-preferences-etpc-custom-cookie-behavior-accept-all =
+preferences-etp-custom-cookie-behavior-accept-all =
     .label = Allow all cookies
+preferences-etp-custom-cookie-behavior-block-cross-site-cookies =
+    .label = Block cross-site cookies
+preferences-etp-custom-cookie-behavior-isolate-cross-site-cookies =
+    .label = Isolate cross-site cookies
+preferences-etp-custom-cookie-behavior-block-unvisited =
+    .label = Block cookies from unvisited websites
+preferences-etp-custom-cookie-behavior-block-all-cross-site-cookies =
+    .label = Block all cross-site cookies (may cause websites to break)
+preferences-etp-custom-cookie-behavior-block-all =
+    .label = Block all cookies (will cause websites to break)
 
 preferences-etp-custom-tracking-protection-enabled =
     .label = Tracking content
@@ -2747,14 +2788,27 @@ security-privacy-issue-warning-safe-browsing =
   .label = Dangerous and deceptive content is not blocked
   .description = Your exposure to scams and malware from websites is increased.
 
-security-privacy-issue-warning-doh =
+security-privacy-issue-warning-doh2 =
   .label = DNS over HTTPS is disabled
-  .description = DNS over HTTPS hides what sites you visit from your network provider.
+  .description = DNS over HTTPS helps hide what sites you’re about to visit from your network provider.
 
-security-privacy-issue-warning-ech =
+security-privacy-issue-warning-ech2 =
   .label = Encrypted Client Hello is disabled
-  .description = Encrypted Client Hello hides what sites you visit from your network provider.
+  .description = Encrypted Client Hello helps hide what sites you’re about to visit from your network provider.
 
 security-privacy-issue-warning-proxy-autodetection =
   .label = Proxy auto-configuration is enabled
   .description = Proxy auto-configuration could let untrusted networks to monitor your activity.
+
+## Referrals Section
+
+# The header in settings with link to the referral page, where the user can invite others to
+# use the browser. "Share" here means recommending or referring the browser
+referrals-section-header2 =
+  .label = Share { -brand-product-name }
+  .description = Invite someone to choose the browser that puts privacy first.
+
+# Link that opens the referral page, where the user can invite others to
+# use the browser. "Share" here means recommending or referring the browser
+referrals-link2 =
+  .label = Share { -brand-product-name }

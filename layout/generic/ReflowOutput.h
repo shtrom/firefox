@@ -65,8 +65,6 @@ struct OverflowAreas {
            ScrollableOverflow().IsEqualEdges(aOther.ScrollableOverflow());
   }
 
-  bool operator!=(const OverflowAreas&) const = default;
-
   OverflowAreas operator+(const nsPoint& aPoint) const {
     OverflowAreas result(*this);
     result += aPoint;
@@ -135,7 +133,6 @@ struct OverflowAreas {
 class CollapsingMargin final {
  public:
   bool operator==(const CollapsingMargin&) const = default;
-  bool operator!=(const CollapsingMargin&) const = default;
 
   void Include(nscoord aCoord) {
     if (aCoord > mMostPos) {
@@ -243,6 +240,10 @@ class ReflowOutput {
   // Carried out block-end margin values. This is the collapsed
   // (generational) block-end margin value.
   CollapsingMargin mCarriedOutBEndMargin;
+
+  // Set when the frame needs to retry reflow to apply text-box-trim-end
+  // at a fragment boundary.
+  bool mNeedsTextBoxTrimAtFragmentEndRetry = false;
 
   // For frames that have content that overflow their content area
   // (HasOverflowAreas() is true) these rectangles represent the total

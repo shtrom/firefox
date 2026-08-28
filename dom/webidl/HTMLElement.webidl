@@ -25,9 +25,9 @@ interface HTMLElement : Element {
   [CEReactions, SetterThrows, Pure]
            attribute DOMString dir;
 
-  [CEReactions, GetterThrows, Pure]
+  [CEReactions, GetterThrows]
            attribute [LegacyNullToEmptyString] DOMString innerText;
-  [CEReactions, GetterThrows, SetterThrows, Pure]
+  [CEReactions, GetterThrows, SetterThrows]
            attribute [LegacyNullToEmptyString] DOMString outerText;
 
   // user interaction
@@ -80,6 +80,12 @@ interface HTMLElement : Element {
   [Throws] undefined showPopover(optional ShowPopoverOptions options = {});
   [Throws] undefined hidePopover();
   [Throws] boolean togglePopover(optional (TogglePopoverOptions or boolean) options = {});
+
+  [CEReactions, SetterThrows, Pref="dom.headingoffset.enabled"]
+  attribute unsigned long headingOffset;
+
+  [CEReactions, Pref="dom.headingoffset.enabled"]
+  attribute boolean headingReset;
 };
 
 dictionary ShowPopoverOptions {
@@ -126,6 +132,14 @@ HTMLElement includes HTMLOrSVGOrMathMLElement;
 HTMLElement includes ElementCSSInlineStyle;
 HTMLElement includes TouchEventHandlers;
 HTMLElement includes OnErrorEventHandlerForNodes;
+
+// https://wicg.github.io/container-timing/#extensions-to-element
+partial interface HTMLElement {
+  [CEReactions, Pref="dom.enable_container_timing"]
+  attribute DOMString containerTiming;
+  [CEReactions, Pref="dom.enable_container_timing"]
+  attribute boolean containerTimingIgnore;
+};
 
 [Exposed=Window]
 interface HTMLUnknownElement : HTMLElement {};

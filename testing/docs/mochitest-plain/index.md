@@ -3,7 +3,7 @@
 ## DISCLAIMER
 
 If you are testing web platform code, prefer using use a [wpt
-test](/web-platform/index.rst) (preferably upstreamable ones).
+test](/web-platform/index.md) (preferably upstreamable ones).
 
 ## Introduction
 
@@ -14,7 +14,7 @@ Only things that can be tested using JavaScript (with chrome privileges!) can be
 tested with this framework. Given some creativity, that's actually much more
 than you might first think, but it's not possible to write Mochitest tests to
 directly test a non-scripted C++ component, for example. (Use a compiled-code
-test like [GTest](/gtest/index.rst) to do that.)
+test like [GTest](/gtest/index.md) to do that.)
 
 ## Running tests
 
@@ -56,7 +56,7 @@ The Mochitest flavors are:
 
   * **chrome** - These run in chrome scope and are typically used for testing
     privileged JavaScript APIs. More information can be found
-    [here](../chrome-tests/index.rst).
+    [here](../chrome-tests/index.md).
 
   * **a11y** - These test the accessibility interfaces. They can be found under
     the top `accessible` directory and run in chrome scope. Note that these run
@@ -276,7 +276,7 @@ test on certain platforms:
 skip-if = ["os == 'win'"]
 ```
 
-The [mochitest.toml format](/build/buildsystem/test_manifests.rst), which is
+The [mochitest.toml format](/build/buildsystem/test_manifests.md), which is
 recognized by the parser, defines a long list of metadata.
 
 ### Adding a new mochitest.toml or chrome.toml file
@@ -287,8 +287,8 @@ directory for your test. For example, in `gfx/layers/moz.build`, we add
 these two manifest files:
 
 ```python
-MOCHITEST_MANIFESTS += ['apz/test/mochitest.toml']
-MOCHITEST_CHROME_MANIFESTS += ['apz/test/chrome.toml']
+MOCHITEST_MANIFESTS += ["apz/test/mochitest.toml"]
+MOCHITEST_CHROME_MANIFESTS += ["apz/test/chrome.toml"]
 ```
 
 <!--  TODO: This might be outdated.*
@@ -311,3 +311,10 @@ to generate the requisite symbol files.
 See the [Mochitest FAQ page](faq.md) for other features and such that you may
 want to use, such as SSL-enabled tests, custom http headers, async tests, leak
 debugging, prefs...
+
+```{toctree}
+:hidden:
+:maxdepth: 1
+
+faq
+```

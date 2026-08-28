@@ -415,8 +415,10 @@ void NavigateEvent::PotentiallyResetFocus() {
   // Step 11, step 12
   FocusOptions options;
   options.mPreventScroll = true;
-  focusTarget = nsFocusManager::GetTheFocusableArea(
-      focusTarget, nsFocusManager::ProgrammaticFocusFlags(options));
+  if (focusTarget) {
+    focusTarget = nsFocusManager::GetTheFocusableArea(
+        focusTarget, nsFocusManager::ProgrammaticFocusFlags(options));
+  }
 
   if (focusTarget) {
     LOG_FMT("Reset focus to {}", *focusTarget->AsNode());
@@ -433,7 +435,7 @@ void NavigateEvent::PotentiallyResetFocus() {
       }
     }
     // Step 12
-    document->SetFocusNavigationStartingPoint(nullptr);
+    document->SetPreviouslyFocusedContent(nullptr);
   }
 }
 

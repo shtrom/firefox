@@ -3,8 +3,16 @@
     "@base": {
       "value": {
         "light": "{color.gray.70}",
-        "dark": "{color.gray.05}",
+        "dark": "{color.gray.0}",
         "prefersContrast": "{text.color.@base}"
+      }
+    },
+    "accent": {
+      "primary": {
+        "desaturated": {
+          "override": true,
+          "value": "unset"
+        }
       }
     },
     "information": {
@@ -54,6 +62,9 @@
     },
     "xlarge": {
       "value": "{dimension.32}"
+    },
+    "xxlarge": {
+      "value": "{size.item.xlarge}"
     }
   }
 }

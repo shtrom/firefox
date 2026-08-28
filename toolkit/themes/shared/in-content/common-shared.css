@@ -18,24 +18,7 @@
    */
 
   --categories-width: var(--size-sidebar);
-
-  --dialog-warning-text-color: light-dark(var(--red-60), var(--red-40));
-
-  --blue-40: #45a1ff;
-  --blue-50: #0a84ff;
-  --blue-60: #0060df;
-  --grey-30: #d7d7db;
-  --grey-90-a10: rgba(12, 12, 13, 0.1);
-  --grey-90-a20: rgba(12, 12, 13, 0.2);
-  --green-70: #058b00;
-  --orange-50: #ff9400;
-  --red-40: #ff4f5e;
-  --red-60: #d70022;
-  --yellow-50: #ffe900;
-  --yellow-60: #d7b600;
-  --yellow-60-a30: rgba(215, 182, 0, 0.3);
-  --yellow-90: #3e2800;
-
+  --dialog-warning-text-color: var(--text-color-error);
   --message-bar-button-background-color: oklch(from var(--color-gray-100) l c h / 10%);
   --message-bar-button-background-color-hover: oklch(from var(--color-gray-100) l c h / 20%);
   --message-bar-button-background-color-active: oklch(from var(--color-gray-100) l c h / 30%);
@@ -57,7 +40,7 @@
    * this in forced colors mode, as we should be using system colours then.
    */
   :root[dialogroot] {
-    --background-color-canvas: #42414d;
+    --background-color-canvas: var(--color-gray-80);
   }
 }
 
@@ -72,10 +55,20 @@
   appearance: none;
   background-color: var(--background-color-canvas);
   color: var(--text-color);
+
+  &:not(.system-font-size) {
+    font-size: var(--font-size-root);
+  }
 }
 
-:root:not(.system-font-size) {
-  font-size: var(--font-size-root);
+/* `[hidden]` is implemented as a presentation attribute (see html.css), so any
+ * author rule setting `display` overrides it. This `!important` rule lets the
+ * attribute win regardless, so callers can set a `display` type unconditionally
+ * rather than guarding it with `:not([hidden])`. The `:where()` keeps the
+ * selector at zero specificity, so the rare element that must stay shown can
+ * override it with a plain `!important`. */
+:where([hidden]) {
+  display: none !important;
 }
 
 html|body {

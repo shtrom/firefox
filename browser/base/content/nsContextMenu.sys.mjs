@@ -12,7 +12,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   ContextualIdentityService:
-    "resource://gre/modules/ContextualIdentityService.sys.mjs",
+    "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   DevToolsShim: "chrome://devtools-startup/content/DevToolsShim.sys.mjs",
   E10SUtils: "resource://gre/modules/E10SUtils.sys.mjs",
   GenAI: "resource:///modules/GenAI.sys.mjs",
@@ -37,7 +37,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
-import { PdfjsContextMenu } from "resource://pdf.js/PdfjsContextMenu.sys.mjs";
+import { PdfJsContextMenu } from "resource://pdf.js/PdfJsContextMenu.sys.mjs";
 
 ChromeUtils.defineLazyGetter(lazy, "ReferrerInfo", () =>
   Components.Constructor(
@@ -96,6 +96,15 @@ const ALLOWED_CHROME_IMAGE_URLS = new Set([
   "chrome://global/skin/illustrations/security-error.svg",
   "chrome://global/skin/illustrations/no-connection.svg",
 ]);
+
+const IMAGE_ONLY_PROTOCOLS = [
+  "cached-favicon:",
+  "moz-icon:",
+  "moz-newtab-wallpaper:",
+  "moz-page-thumb:",
+  "moz-remote-image:",
+  "page-icon:",
+];
 
 export class nsContextMenu {
   /**
@@ -326,7 +335,7 @@ export class nsContextMenu {
     this.hasTextFragments = context.hasTextFragments;
     this.textFragmentURL = null;
 
-    this.pdfjsContextMenu = new PdfjsContextMenu(this, context);
+    this.pdfjsContextMenu = new PdfJsContextMenu(this, context);
   } // setContext
 
   hiding(aXulMenu) {
@@ -687,6 +696,12 @@ export class nsContextMenu {
       this.onImage && !this.onCompletedImage
     );
 
+    // Some protocols only return images in an image context and can no longer
+    // be loaded otherwise.
+    const mediaURL = URL.parse(this.mediaURL);
+    const isImageOnlyProtocol =
+      mediaURL && IMAGE_ONLY_PROTOCOLS.includes(mediaURL.protocol);
+
     // View image depends on having an image that's not standalone
     // (or is in a frame), or a canvas. If this isn't an image, check
     // if there is a background image.
@@ -706,10 +721,16 @@ export class nsContextMenu {
       !this.onAudio &&
       !this.onLink &&
       !this.onTextInput;
-    this.showItem("context-viewimage", showViewImage || showBGImage);
+    this.showItem(
+      "context-viewimage",
+      (showViewImage || showBGImage) && !isImageOnlyProtocol
+    );
 
     // Save image depends on having loaded its content.
-    this.showItem("context-saveimage", this.onLoadedImage || this.onCanvas);
+    this.showItem(
+      "context-saveimage",
+      (this.onLoadedImage && !isImageOnlyProtocol) || this.onCanvas
+    );
 
     if (Services.policies.status === Services.policies.ACTIVE) {
       // When file pickers are disallowed by enterprise policy,
@@ -762,8 +783,8 @@ export class nsContextMenu {
 
     this.showAndFormatVisualSearchContextItem();
 
-    // Set as Desktop background depends on whether an image was clicked on,
-    // and only works if we have a shell service.
+    // Set as Desktop background depends on whether an image or canvas was
+    // clicked on, and only works if we have a shell service.
     var haveSetDesktopBackground = false;
 
     if (
@@ -777,12 +798,12 @@ export class nsContextMenu {
       }
     }
 
-    this.showItem(
-      "context-setDesktopBackground",
-      haveSetDesktopBackground && this.onLoadedImage
-    );
+    let canSetDesktopBackground =
+      haveSetDesktopBackground && (this.onLoadedImage || this.onCanvas);
 
-    if (haveSetDesktopBackground && this.onLoadedImage) {
+    this.showItem("context-setDesktopBackground", canSetDesktopBackground);
+
+    if (canSetDesktopBackground) {
       this.document.getElementById("context-setDesktopBackground").disabled =
         this.contentData.disableSetDesktopBackground;
     }
@@ -1509,6 +1530,7 @@ export class nsContextMenu {
   openLinkInTab(event) {
     let params = {
       userContextId: parseInt(event.target.getAttribute("data-usercontextid")),
+      eventDetail: { containerSource: "content_context_menu" },
       ...this._getGlobalHistoryOptions(),
     };
 
@@ -1700,14 +1722,23 @@ export class nsContextMenu {
     this.actor.reloadImage(this.targetIdentifier);
   }
 
-  _canvasToBlobURL(targetIdentifier) {
-    return this.actor.canvasToBlobURL(targetIdentifier);
+  async #canvasToBlobURL(targetIdentifier) {
+    let blobURL = await this.actor.canvasToBlobURL(targetIdentifier);
+
+    if (!ChromeUtils.isBlobURLValid(this.principal, blobURL)) {
+      throw new Error("Invalid blob: URL: " + blobURL);
+    }
+
+    return blobURL;
   }
 
   copyCanvasImage() {
-    this.actor.copyCanvasImage(this.targetIdentifier).then(arrayBuffer => {
-      lazy.BrowserUtils.copyImageToClipboard(arrayBuffer);
-    }, console.error);
+    this.actor
+      .canvasToBlob(this.targetIdentifier)
+      .then(blob => blob.arrayBuffer())
+      .then(arrayBuffer => {
+        lazy.BrowserUtils.copyImageToClipboard(arrayBuffer);
+      }, console.error);
   }
 
   // Change current window to the URL of the image, video, or audio.
@@ -1719,7 +1750,7 @@ export class nsContextMenu {
     let referrerInfo = this.contentData.referrerInfo;
     let systemPrincipal = Services.scriptSecurityManager.getSystemPrincipal();
     if (this.onCanvas) {
-      this._canvasToBlobURL(this.targetIdentifier).then(blobURL => {
+      this.#canvasToBlobURL(this.targetIdentifier).then(blobURL => {
         this.window.openLinkIn(blobURL, where, {
           referrerInfo,
           triggeringPrincipal: systemPrincipal,
@@ -2106,14 +2137,14 @@ export class nsContextMenu {
     let cookieJarSettings = this.contentData.cookieJarSettings;
     if (this.onCanvas) {
       // Bypass cache, since it's a data: URL.
-      this._canvasToBlobURL(this.targetIdentifier).then(blobURL => {
+      this.#canvasToBlobURL(this.targetIdentifier).then(blobURL => {
         this.window.internalSave(
           blobURL,
           null, // originalURL
           null, // document
           "canvas.png",
           null, // content disposition
-          "image/png", // _canvasToBlobURL uses image/png by default.
+          "image/png", // #canvasToBlobURL uses image/png by default.
           true, // bypass cache
           "SaveImageTitle",
           null, // chosen data
@@ -2461,7 +2492,8 @@ export class nsContextMenu {
       this.onTextInput &&
       this.onSearchField &&
       !this.isLoginForm() &&
-      (uri.schemeIs("http") || uri.schemeIs("https"))
+      (uri.schemeIs("http") || uri.schemeIs("https")) &&
+      Services.policies.isAllowed("installSearchEngine")
     );
   }
 
@@ -2951,6 +2983,7 @@ export class nsContextMenu {
     let createMenuOptions = {
       isContextMenu: true,
       excludeUserContextId: this.contentData.userContextId,
+      containerSource: "content_context_menu",
     };
     return this.window.createUserContextMenu(aEvent, createMenuOptions);
   }

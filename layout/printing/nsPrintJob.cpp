@@ -84,6 +84,7 @@ static const char sPrintSettingsServiceContractID[] =
 #include "nsRange.h"
 
 #if defined(ACCESSIBILITY) && defined(MOZ_ENABLE_SKIA_PDF)
+#  include "mozilla/a11y/DocManager.h"
 #  include "mozilla/a11y/PdfStructTreeBuilder.h"
 #endif
 
@@ -832,6 +833,17 @@ nsresult nsPrintJob::SetupToPrintContent() {
     }
   }
 
+  // If the document is a PDF, then we will allow the user to scale the
+  // page up past 100% despite it having a CSS page size.
+  // This allows the page to increase in size on the sheet.
+  {
+    PresShell* const presShell = mPrintObject->mPresShell;
+    if (nsContentUtils::IsPDFJS(presShell->GetDocument()->GetPrincipal())) {
+      const float pageZoomRatio = std::max(mPrintObject->mZoomRatio, 1.0f);
+      presShell->GetPageSequenceFrame()->SetMaxPageZoomRatio(pageZoomRatio);
+    }
+  }
+
   // If the frames got reconstructed and reflowed the number of pages might
   // has changed.
   if (didReconstruction) {
@@ -886,11 +898,6 @@ nsresult nsPrintJob::SetupToPrintContent() {
     endPage = std::min(mNumPrintablePages, std::max(endPage, ranges[i + 1]));
   }
 
-  uint64_t browsingContextId = 0;
-  if (auto* bc = mPrintObject->mDocument->GetBrowsingContext()) {
-    browsingContextId = bc->Id();
-  }
-
   nsresult rv = NS_OK;
   // BeginDocument may pass back a FAILURE code
   // i.e. On Windows, if you are printing to a file and hit "Cancel"
@@ -899,18 +906,17 @@ nsresult nsPrintJob::SetupToPrintContent() {
   if (mIsDoingPrinting) {
 #if defined(ACCESSIBILITY) && defined(MOZ_ENABLE_SKIA_PDF)
     if (!mIsCreatingPrintPreview) {
-      if (nsAccessibilityService* serv = GetAccService()) {
-        serv->NotifyOfPrintDocument(mPrintObject->mDocument);
-        // XXX Out-of-process iframes inside a parent process document won't be
-        // accessible. We need to wait for the iframe accessibility trees to
-        // arrive asynchronously using
-        // a11y::PdfStructTreeBuilder::GetReadyPromise, but there's no clear
-        // place to do that right now when printing in-process.
-      }
+      a11y::DocManager::NotifyOfPrintDocument(mPrintObject->mDocument);
+      // XXX Out-of-process iframes inside a parent process document won't be
+      // accessible. We need to wait for the iframe accessibility trees to
+      // arrive asynchronously using
+      // a11y::PdfStructTreeBuilder::GetReadyPromise, but there's no clear
+      // place to do that right now when printing in-process.
     }
 #endif
     rv = printData->mPrintDC->BeginDocument(
-        docTitleStr, fileNameStr, browsingContextId, startPage, endPage);
+        docTitleStr, fileNameStr, mPrintObject->mDocument->GetWindowContext(),
+        startPage, endPage);
   }
 
   if (mIsCreatingPrintPreview) {
@@ -1256,9 +1262,11 @@ nsresult nsPrintJob::ReflowPrintObject(const UniquePtr<nsPrintObject>& aPO) {
       !aPO->mParent || !aPO->mParent->PrintingIsEnabled();
   auto* embedderFrame = [&]() -> nsSubDocumentFrame* {
     if (documentIsTopLevel) {
-      if (nsCOMPtr<nsIDocumentViewer> viewer =
-              do_QueryInterface(mDocViewerPrint)) {
-        return viewer->FindContainerFrame();
+      if (mIsCreatingPrintPreview) {
+        if (nsCOMPtr<nsIDocumentViewer> viewer =
+                do_QueryInterface(mDocViewerPrint)) {
+          return viewer->FindContainerFrame();
+        }
       }
     } else if (aPO->mContent) {
       return do_QueryFrame(aPO->mContent->GetPrimaryFrame());

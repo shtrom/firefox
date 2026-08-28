@@ -22,15 +22,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -40,21 +39,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import mozilla.components.feature.top.sites.TopSite
+import androidx.core.net.toUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import mozilla.components.support.ktx.android.net.hostWithoutCommonPrefixes
 import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.GleanMetrics.History
 import org.mozilla.fenix.GleanMetrics.HomeBookmarks
 import org.mozilla.fenix.GleanMetrics.RecentlyVisitedHomepage
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
+import org.mozilla.fenix.components.appstate.AppAction
+import org.mozilla.fenix.components.appstate.AppAction.ShortcutAction
 import org.mozilla.fenix.components.appstate.setup.checklist.SetupChecklistState
-import org.mozilla.fenix.components.appstate.sports.SportsWidgetState
 import org.mozilla.fenix.components.components
-import org.mozilla.fenix.components.toolbar.ToolbarPosition
 import org.mozilla.fenix.compose.MessageCard
 import org.mozilla.fenix.compose.home.HomeSectionHeader
-import org.mozilla.fenix.debugsettings.sportswidget.SportsWidgetDebugTool
-import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.home.bookmarks.Bookmark
 import org.mozilla.fenix.home.bookmarks.interactor.BookmarksInteractor
 import org.mozilla.fenix.home.bookmarks.view.Bookmarks
@@ -78,25 +78,31 @@ import org.mozilla.fenix.home.recentvisits.view.RecentlyVisited
 import org.mozilla.fenix.home.sessioncontrol.CollectionInteractor
 import org.mozilla.fenix.home.sessioncontrol.MessageCardInteractor
 import org.mozilla.fenix.home.setup.ui.SetupChecklist
-import org.mozilla.fenix.home.sports.CountrySelectorSource
-import org.mozilla.fenix.home.sports.ui.SportsCountrySelectorBottomSheet
-import org.mozilla.fenix.home.sports.ui.SportsWidget
 import org.mozilla.fenix.home.store.HeaderState
 import org.mozilla.fenix.home.store.HomepageState
+import org.mozilla.fenix.home.store.MiddleSearchState
 import org.mozilla.fenix.home.store.NimbusMessageState
+import org.mozilla.fenix.home.store.RecentSyncedTabSectionState
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBanner
 import org.mozilla.fenix.home.termsofuse.PrivacyNoticeBannerInteractor
-import org.mozilla.fenix.home.toolbar.HomeToolbarComposable
+import org.mozilla.fenix.home.topsites.AddShortcutEntryPoint
+import org.mozilla.fenix.home.topsites.AddShortcutSource
 import org.mozilla.fenix.home.topsites.TopSiteColors
+import org.mozilla.fenix.home.topsites.TopSiteState
 import org.mozilla.fenix.home.topsites.TopSites
 import org.mozilla.fenix.home.topsites.interactor.TopSiteInteractor
+import org.mozilla.fenix.home.topsites.store.DialogState
+import org.mozilla.fenix.home.topsites.store.toPopularSite
+import org.mozilla.fenix.home.topsites.ui.AddShortcutBottomSheet
+import org.mozilla.fenix.home.topsites.ui.AddShortcutDialog
 import org.mozilla.fenix.home.ui.HomepageTestTag.HOMEPAGE
 import org.mozilla.fenix.theme.FirefoxTheme
 import org.mozilla.fenix.theme.Theme
 import org.mozilla.fenix.trackingprotection.TrackersBlockedCard
 import org.mozilla.fenix.utils.isLargeScreenSize
-import org.mozilla.fenix.wallpapers.WallpaperState
-import mozilla.components.ui.icons.R as iconsR
+import org.mozilla.fenix.wallpapers.WallpaperTheme
+
+private const val POPULAR_SITES_TO_SHOW = 8
 
 /**
  * Top level composable for the homepage.
@@ -105,9 +111,6 @@ import mozilla.components.ui.icons.R as iconsR
  * @param interactor [HomepageInteractor] for interactions with the homepage UI.
  * @param onTopSitesItemBound Invoked during the composition of a top site item.
  * @param modifier [Modifier] to be applied to the layout.
- * @param navigationBarContent Optional composable rendered at the bottom of the homepage when the
- * toolbar is positioned at the top. When the toolbar is at the bottom, the navigation bar is
- * rendered by [HomeToolbarComposable] instead and this content is not shown.
  */
 @Suppress("LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod")
 @Composable
@@ -116,32 +119,28 @@ internal fun Homepage(
     interactor: HomepageInteractor,
     onTopSitesItemBound: () -> Unit,
     modifier: Modifier = Modifier,
-    navigationBarContent: (@Composable () -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
     val browsingModeChanged = interactor::onPrivateModeButtonClicked
-    var showSportsCountrySelector by remember { mutableStateOf(false) }
+    var shortcutsDialogState by remember { mutableStateOf<DialogState>(DialogState.Closed) }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize(),
-    ) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .semantics {
-                    testTagsAsResourceId = true
-                    testTag = HOMEPAGE
-                }
-                .pointerInput(state.isSearchInProgress) {
-                    if (state.isSearchInProgress) {
-                        awaitEachGesture {
-                            awaitFirstDown(false, PointerEventPass.Initial)
-                            interactor.onHomeContentFocusedWhileSearchIsActive()
+            modifier =
+                Modifier.fillMaxSize()
+                    .semantics {
+                        testTagsAsResourceId = true
+                        testTag = HOMEPAGE
+                    }
+                    .pointerInput(state.isSearchInProgress) {
+                        if (state.isSearchInProgress) {
+                            awaitEachGesture {
+                                awaitFirstDown(false, PointerEventPass.Initial)
+                                interactor.onHomeContentFocusedWhileSearchIsActive()
+                            }
                         }
                     }
-                }
-                .verticalScroll(scrollState),
+                    .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (state is HomepageState.Normal) {
@@ -158,40 +157,22 @@ internal fun Homepage(
                     val settings = components.settings
 
                     ExperimentalHomepageHeader(
-                        wordmarkTextColor = headerState.wordmarkTextColor,
                         showStoriesButton = headerState.showStoriesButton,
                         showButtonAnimation = headerState.showButtonAnimation,
-                        isSportsWidgetEnabled = settings.enableHomepageSportsWidget,
                         onPrivateModeTapped = { browsingModeChanged(BrowsingMode.Private) },
                         onStoriesTapped = { interactor.onDiscoverMoreClicked() },
                         onNewsAnimationShown = { settings.recordNewsButtonAnimationShown() },
-                        onLogoClicked = {
-                            if (settings.showHomepageSportsWidget) showSportsCountrySelector = true
-                        },
                     )
                 }
 
                 is HeaderState.Experimental.Private -> {
-                    ExperimentalPrivateHomepageHeader(
-                        onHomeTapped = { browsingModeChanged(BrowsingMode.Normal) },
-                    )
+                    ExperimentalPrivateHomepageHeader(onHomeTapped = { browsingModeChanged(BrowsingMode.Normal) })
                 }
 
                 is HeaderState.Normal -> {
-                    val settings = components.settings
-
                     HomepageHeader(
-                        wordmarkTextColor = headerState.wordmarkTextColor,
-                        privateBrowsingButtonColor = headerState.privateBrowsingButtonColor,
                         browsingMode = state.browsingMode,
                         browsingModeChanged = browsingModeChanged,
-                        isSportsWidgetEnabled = settings.enableHomepageSportsWidget,
-                        onLogoClicked = {
-                            if (settings.showHomepageSportsWidget) {
-                                interactor.onCountrySelectorShown(CountrySelectorSource.SPORTS_LOGO)
-                                showSportsCountrySelector = true
-                            }
-                        },
                     )
                 }
             }
@@ -200,163 +181,195 @@ internal fun Homepage(
                 with(state) {
                     when (this) {
                         is HomepageState.Private -> {
-                            PrivateBrowsingDescription(
-                                onLearnMoreClick = interactor::onLearnMoreClicked,
-                            )
+                            PrivateBrowsingDescription(onLearnMoreClick = interactor::onLearnMoreClicked)
                         }
 
                         is HomepageState.Normal -> {
-                            if (showTopSites) {
+                            val settings = components.settings
+                            val appStore = components.appStore
+                            LaunchedEffect(showLongfoxAnimation) {
+                                if (showLongfoxAnimation) {
+                                    settings.longfoxPeekAnimationShownCount++
+                                    appStore.dispatch(AppAction.UpdateShowFoxPeekAnimation(false))
+                                }
+                            }
+
+                            val longfoxEntryPointShown = longfoxEnabled && showPrivacyReport
+                            LaunchedEffect(longfoxEntryPointShown) {
+                                if (longfoxEntryPointShown) {
+                                    interactor.onLongfoxEntryPointShown()
+                                }
+                            }
+
+                            if (topSiteState != null) {
                                 TopSitesSection(
-                                    topSites = topSites,
-                                    topSiteColors = topSiteColors,
+                                    state = topSiteState,
                                     showHeader = showTopSitesHeader,
                                     interactor = interactor,
                                     onTopSitesItemBound = onTopSitesItemBound,
+                                    onAddShortcutClicked = {
+                                        appStore.dispatch(
+                                            ShortcutAction.AddShortcutSheetShown(
+                                                entryPoint = AddShortcutEntryPoint.HOMEPAGE
+                                            )
+                                        )
+                                        shortcutsDialogState = DialogState.AddShortcutBottomSheet
+                                    },
                                 )
                             }
 
                             if (showPrivacyReport) {
                                 TrackersBlockedCard(
                                     trackersBlockedCount = trackersBlockedCount,
-                                    interactor = interactor,
+                                    onPrivacyReportTapped = interactor::onPrivacyReportTapped,
+                                    onLongfoxEntryPointClicked = interactor::onLongfoxEntryPointClicked,
                                     modifier = Modifier.padding(top = 16.dp),
-                                    showLongfoxEntryPoint = showLongfoxEntryPoint,
-                                )
-                            }
-
-                            if (sportsWidgetState.isShown) {
-                                interactor.onSportsWidgetShown()
-                                SportsWidget(
-                                    sportsWidgetState = sportsWidgetState,
-                                    onDismiss = interactor::onSportsWidgetDismissed,
-                                    onCountdownWidgetDismiss = interactor::onCountdownWidgetDismissed,
-                                    onViewSchedule = interactor::onViewScheduleClicked,
-                                    onFollowTeam = { source ->
-                                        interactor.onCountrySelectorShown(source)
-                                        showSportsCountrySelector = true
-                                    },
-                                    onSkip = interactor::onSkippedFollowTeam,
-                                    onGetCustomWallpaper = interactor::onGetCustomWallpaperClicked,
-                                    onRefresh = { source ->
-                                        interactor.onRefreshClicked(source)
-                                    },
-                                    onMatchClicked = { homeTeam, awayTeam ->
-                                        interactor.onMatchClicked(homeTeam, awayTeam)
-                                    },
+                                    longfoxEnabled = longfoxEnabled,
+                                    showLongfoxAnimation = showLongfoxAnimation,
                                 )
                             }
 
                             MaybeAddSetupChecklist(setupChecklistState, interactor)
 
-                            if (showRecentTabs) {
+                            if (recentTabs != null) {
                                 RecentTabsSection(
                                     interactor = interactor,
-                                    cardBackgroundColor = cardBackgroundColor,
                                     recentTabs = recentTabs,
-                                    reducedTopSpacing = showPrivacyReport && showLongfoxEntryPoint,
+                                    reducedTopSpacing = showPrivacyReport && showLongfoxAnimation,
                                 )
 
-                                if (showRecentSyncedTab) {
-                                    Box(
-                                        modifier = Modifier.padding(
-                                            start = horizontalMargin,
-                                            end = horizontalMargin,
-                                            top = verticalMargin,
-                                        ),
-                                    ) {
-                                        RecentSyncedTab(
-                                            tab = syncedTab,
-                                            backgroundColor = cardBackgroundColor,
-                                            buttonBackgroundColor = if (syncedTab != null) {
-                                                buttonBackgroundColor
-                                            } else {
-                                                MaterialTheme.colorScheme.surfaceContainerHighest
-                                            },
-                                            buttonTextColor = buttonTextColor,
-                                            onRecentSyncedTabClick = interactor::onRecentSyncedTabClicked,
-                                            onSeeAllSyncedTabsButtonClick = interactor::onSyncedTabShowAllClicked,
-                                            onRemoveSyncedTab = interactor::onRemovedRecentSyncedTab,
-                                        )
+                                when (val syncedTabState = recentSyncedTabSectionState) {
+                                    RecentSyncedTabSectionState.Gone -> Unit
+                                    RecentSyncedTabSectionState.Loading,
+                                    is RecentSyncedTabSectionState.Visible -> {
+                                        val syncedTab = (syncedTabState as? RecentSyncedTabSectionState.Visible)?.tab
+                                        Box(
+                                            modifier =
+                                                Modifier.padding(
+                                                    start = horizontalMargin,
+                                                    end = horizontalMargin,
+                                                    top = verticalMargin,
+                                                )
+                                        ) {
+                                            RecentSyncedTab(
+                                                tab = syncedTab,
+                                                buttonBackgroundColor =
+                                                    if (syncedTab != null) {
+                                                        WallpaperTheme.buttonBackgroundColor
+                                                    } else {
+                                                        MaterialTheme.colorScheme.surfaceContainerHighest
+                                                    },
+                                                buttonTextColor = WallpaperTheme.buttonTextColor,
+                                                onRecentSyncedTabClick = interactor::onRecentSyncedTabClicked,
+                                                onSeeAllSyncedTabsButtonClick = interactor::onSyncedTabShowAllClicked,
+                                                onRemoveSyncedTab = interactor::onRemovedRecentSyncedTab,
+                                            )
+                                        }
                                     }
                                 }
                             }
 
-                            if (showBookmarks) {
+                            if (bookmarks != null) {
                                 BookmarksSection(
                                     bookmarks = bookmarks,
-                                    cardBackgroundColor = cardBackgroundColor,
                                     interactor = interactor,
                                 )
                             }
 
-                            if (showRecentlyVisited) {
+                            if (recentlyVisited != null) {
                                 RecentlyVisitedSection(
                                     recentVisits = recentlyVisited,
-                                    cardBackgroundColor = cardBackgroundColor,
                                     interactor = interactor,
                                 )
                             }
 
-                            if (showCollections) {
-                                CollectionsSection(
-                                    collectionsState = collectionsState,
-                                    interactor = interactor,
-                                )
-                            }
+                            CollectionsSection(
+                                collectionsState = collectionsState,
+                                interactor = interactor,
+                            )
 
-                            if (showPocketStoriesCarousel) {
+                            if (pocketState != null) {
                                 Spacer(
-                                    modifier = if (isMinimalLayout()) {
-                                        Modifier.weight(1f)
-                                    } else {
-                                        Modifier.padding(top = 72.dp)
-                                    },
+                                    modifier =
+                                        if (isMinimalLayout()) {
+                                            Modifier.weight(1f)
+                                        } else {
+                                            Modifier.padding(top = 72.dp)
+                                        }
                                 )
 
                                 PocketSection(
                                     state = pocketState,
-                                    cardBackgroundColor = cardBackgroundColor,
                                     interactor = interactor,
                                 )
                             }
 
                             Spacer(Modifier.height(bottomPadding.dp))
 
-                            if (showSportsCountrySelector) {
-                                val selectedCountryCode = sportsWidgetState.countriesSelected.firstOrNull()
-                                SportsCountrySelectorBottomSheet(
-                                    selectedCountryCode = selectedCountryCode,
-                                    eliminatedCountryCodes = sportsWidgetState.eliminatedCountries,
-                                    onCountrySelected = { countryCode ->
-                                        val selection = if (countryCode == selectedCountryCode) {
-                                            emptySet()
-                                        } else {
-                                            setOf(countryCode)
+                            when (shortcutsDialogState) {
+                                DialogState.AddShortcutBottomSheet -> {
+                                    val merinoManifestProvider = components.core.merinoManifestProvider
+                                    val popularSites by
+                                        produceState(
+                                            initialValue = emptyList(),
+                                            key1 = merinoManifestProvider,
+                                            key2 = topSiteState?.topSites,
+                                        ) {
+                                            value =
+                                                withContext(Dispatchers.IO) {
+                                                    merinoManifestProvider
+                                                        .getTopDomains(
+                                                            limit = POPULAR_SITES_TO_SHOW,
+                                                            excludedDomains =
+                                                                topSiteState?.topSites.orEmpty().mapNotNullTo(
+                                                                    mutableSetOf()
+                                                                ) {
+                                                                    it.url.toUri().hostWithoutCommonPrefixes
+                                                                },
+                                                        )
+                                                        .map { it.toPopularSite() }
+                                                }
                                         }
-                                        interactor.onCountriesSelected(selection)
-                                    },
-                                    onDismiss = { showSportsCountrySelector = false },
-                                )
-                            }
 
-                            if (sportsWidgetState.isDebugToolVisible) {
-                                SportsWidgetDebugTool(
-                                    state = sportsWidgetState,
-                                    appStore = components.appStore,
-                                )
+                                    AddShortcutBottomSheet(
+                                        popularSites = popularSites,
+                                        onDismiss = { shortcutsDialogState = DialogState.Closed },
+                                        onAddWebsiteClicked = {
+                                            appStore.dispatch(ShortcutAction.AddWebsiteDialogShown)
+                                            shortcutsDialogState = DialogState.AddShortcut
+                                        },
+                                        onAddPopularSiteClick = { site ->
+                                            interactor.onSaveShortcut(
+                                                title = site.title,
+                                                url = site.url,
+                                                source = AddShortcutSource.POPULAR,
+                                                entryPoint = AddShortcutEntryPoint.HOMEPAGE,
+                                            )
+                                            shortcutsDialogState = DialogState.Closed
+                                        },
+                                    )
+                                }
+
+                                DialogState.AddShortcut -> {
+                                    AddShortcutDialog(
+                                        onDismiss = { shortcutsDialogState = DialogState.Closed },
+                                        onConfirm = { title, url ->
+                                            interactor.onSaveShortcut(
+                                                title = title,
+                                                url = url,
+                                                source = AddShortcutSource.MANUAL,
+                                                entryPoint = AddShortcutEntryPoint.HOMEPAGE,
+                                            )
+                                            shortcutsDialogState = DialogState.Closed
+                                        },
+                                    )
+                                }
+
+                                DialogState.Closed -> Unit
                             }
                         }
                     }
                 }
-            }
-        }
-
-        if (navigationBarContent != null &&
-            components.settings.toolbarPosition == ToolbarPosition.TOP
-        ) {
-            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                navigationBarContent()
             }
         }
     }
@@ -405,36 +418,39 @@ private fun BannerCardSection(
 
 @Composable
 internal fun TopSitesSection(
-    topSites: List<TopSite>,
-    topSiteColors: TopSiteColors = TopSiteColors.colors(),
+    state: TopSiteState,
     showHeader: Boolean = true,
     interactor: TopSiteInteractor,
     onTopSitesItemBound: () -> Unit,
+    onAddShortcutClicked: () -> Unit,
 ) {
     if (showHeader) {
         HomeSectionHeader(
             headerText = stringResource(R.string.homepage_shortcuts_title),
             modifier = Modifier.padding(horizontal = horizontalMargin),
             description = stringResource(R.string.homepage_shortcuts_show_all_content_description),
-            onButtonClick = interactor::onShowAllTopSitesClicked,
+            onButtonClick =
+                if (state.showShortcutsLibraryButton) {
+                    interactor::onShowAllTopSitesClicked
+                } else {
+                    null
+                },
         )
 
         Spacer(Modifier.height(16.dp))
     }
 
     TopSites(
-        topSites = topSites,
+        state = state,
         interactor = interactor,
         onTopSitesItemBound = onTopSitesItemBound,
-        topSiteColors = topSiteColors,
-        isPager = LocalContext.current.settings().topSitesPager,
+        onAddShortcutClicked = onAddShortcutClicked,
     )
 }
 
 @Composable
 private fun RecentTabsSection(
     interactor: RecentTabInteractor,
-    cardBackgroundColor: Color,
     recentTabs: List<RecentTab>,
     reducedTopSpacing: Boolean = false,
 ) {
@@ -452,14 +468,14 @@ private fun RecentTabsSection(
 
         RecentTabs(
             recentTabs = recentTabs,
-            backgroundColor = cardBackgroundColor,
             onRecentTabClick = { interactor.onRecentTabClicked(it) },
-            menuItems = listOf(
-                RecentTabMenuItem(
-                    title = stringResource(id = R.string.recent_tab_menu_item_remove),
-                    onClick = interactor::onRemoveRecentTab,
+            menuItems =
+                listOf(
+                    RecentTabMenuItem(
+                        title = stringResource(id = R.string.recent_tab_menu_item_remove),
+                        onClick = interactor::onRemoveRecentTab,
+                    )
                 ),
-            ),
         )
     }
 }
@@ -467,7 +483,6 @@ private fun RecentTabsSection(
 @Composable
 private fun BookmarksSection(
     bookmarks: List<Bookmark>,
-    cardBackgroundColor: Color,
     interactor: BookmarksInteractor,
 ) {
     LaunchedEffect(Unit) {
@@ -487,13 +502,13 @@ private fun BookmarksSection(
 
     Bookmarks(
         bookmarks = bookmarks,
-        menuItems = listOf(
-            BookmarksMenuItem(
-                stringResource(id = R.string.home_bookmarks_menu_item_remove),
-                onClick = interactor::onBookmarkRemoved,
+        menuItems =
+            listOf(
+                BookmarksMenuItem(
+                    stringResource(id = R.string.home_bookmarks_menu_item_remove),
+                    onClick = interactor::onBookmarkRemoved,
+                )
             ),
-        ),
-        backgroundColor = cardBackgroundColor,
         onBookmarkClick = interactor::onBookmarkClicked,
     )
 }
@@ -501,7 +516,6 @@ private fun BookmarksSection(
 @Composable
 private fun RecentlyVisitedSection(
     recentVisits: List<RecentlyVisitedItem>,
-    cardBackgroundColor: Color,
     interactor: RecentVisitsInteractor,
 ) {
     Spacer(modifier = Modifier.height(40.dp))
@@ -518,20 +532,18 @@ private fun RecentlyVisitedSection(
 
     RecentlyVisited(
         recentVisits = recentVisits,
-        menuItems = listOfNotNull(
-            RecentVisitMenuItem(
-                title = stringResource(R.string.recently_visited_menu_item_remove),
-                onClick = { visit ->
-                    when (visit) {
-                        is RecentHistoryGroup -> interactor.onRemoveRecentHistoryGroup(visit.title)
-                        is RecentHistoryHighlight -> interactor.onRemoveRecentHistoryHighlight(
-                            visit.url,
-                        )
-                    }
-                },
+        menuItems =
+            listOfNotNull(
+                RecentVisitMenuItem(
+                    title = stringResource(R.string.recently_visited_menu_item_remove),
+                    onClick = { visit ->
+                        when (visit) {
+                            is RecentHistoryGroup -> interactor.onRemoveRecentHistoryGroup(visit.title)
+                            is RecentHistoryHighlight -> interactor.onRemoveRecentHistoryHighlight(visit.url)
+                        }
+                    },
+                )
             ),
-        ),
-        backgroundColor = cardBackgroundColor,
         onRecentVisitClick = { recentlyVisitedItem, pageNumber ->
             when (recentlyVisitedItem) {
                 is RecentHistoryHighlight -> {
@@ -541,11 +553,7 @@ private fun RecentlyVisitedSection(
 
                 is RecentHistoryGroup -> {
                     RecentlyVisitedHomepage.searchGroupOpened.record(NoExtras())
-                    History.recentSearchesTapped.record(
-                        History.RecentSearchesTappedExtra(
-                            pageNumber.toString(),
-                        ),
-                    )
+                    History.recentSearchesTapped.record(History.RecentSearchesTappedExtra(pageNumber.toString()))
                     interactor.onRecentHistoryGroupClicked(recentlyVisitedItem)
                 }
             }
@@ -579,23 +587,6 @@ private fun CollectionsSection(
         }
 
         CollectionsState.Gone -> {} // no-op. Nothing is shown where there are no collections.
-
-        is CollectionsState.Placeholder -> {
-            Box(
-                modifier = Modifier.padding(
-                    start = horizontalMargin,
-                    end = horizontalMargin,
-                    top = 40.dp,
-                    bottom = 12.dp,
-                ),
-            ) {
-                CollectionsPlaceholder(
-                    showAddTabsToCollection = collectionsState.showSaveTabsToCollection,
-                    colors = collectionsState.colors,
-                    interactor = interactor,
-                )
-            }
-        }
     }
 }
 
@@ -605,47 +596,34 @@ private fun HomepagePreview() {
     FirefoxTheme {
         Surface {
             Homepage(
-                state = HomepageState.Normal(
-                    shouldShowPrivacyNoticeBanner = false,
-                    nimbusMessage = null,
-                    topSites = FakeHomepagePreview.topSites(),
-                    recentTabs = FakeHomepagePreview.recentTabs(),
-                    syncedTab = FakeHomepagePreview.recentSyncedTab(),
-                    bookmarks = FakeHomepagePreview.bookmarks(),
-                    recentlyVisited = FakeHomepagePreview.recentHistory(),
-                    collectionsState = FakeHomepagePreview.collectionsPlaceholder(),
-                    pocketState = FakeHomepagePreview.pocketState(),
-                    showTopSites = true,
-                    showRecentTabs = true,
-                    showRecentSyncedTab = true,
-                    showBookmarks = true,
-                    showRecentlyVisited = true,
-                    showPocketStoriesCarousel = true,
-                    showCollections = true,
-                    showPrivacyReport = true,
-                    showLongfoxEntryPoint = false,
-                    trackersBlockedCount = 754,
-                    sportsWidgetState = SportsWidgetState(),
-                    headerState = HeaderState.Normal(
-                        wordmarkTextColor = null,
-                        privateBrowsingButtonColor = colorResource(
-                            getAttr(
-                                iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
+                state =
+                    HomepageState.Normal(
+                        shouldShowPrivacyNoticeBanner = false,
+                        nimbusMessage = null,
+                        topSiteState =
+                            TopSiteState(
+                                topSites = FakeHomepagePreview.topSites(),
+                                colors = TopSiteColors.colors(),
                             ),
-                        ),
+                        recentTabs = FakeHomepagePreview.recentTabs(),
+                        recentSyncedTabSectionState =
+                            RecentSyncedTabSectionState.Visible(FakeHomepagePreview.recentSyncedTab()),
+                        bookmarks = FakeHomepagePreview.bookmarks(),
+                        recentlyVisited = FakeHomepagePreview.recentHistory(),
+                        collectionsState = CollectionsState.Gone,
+                        pocketState = FakeHomepagePreview.pocketState(),
+                        showPrivacyReport = true,
+                        longfoxEnabled = false,
+                        showLongfoxAnimation = false,
+                        trackersBlockedCount = 754,
+                        headerState = HeaderState.Normal,
+                        middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = false),
+                        firstFrameDrawn = true,
+                        setupChecklistState = null,
+                        isSearchInProgress = false,
+                        bottomPadding = 68,
+                        showTopSitesHeader = true,
                     ),
-                    searchBarVisible = true,
-                    searchBarEnabled = false,
-                    firstFrameDrawn = true,
-                    setupChecklistState = null,
-                    topSiteColors = TopSiteColors.colors(),
-                    cardBackgroundColor = WallpaperState.default.cardBackgroundColor,
-                    buttonTextColor = WallpaperState.default.buttonTextColor,
-                    buttonBackgroundColor = WallpaperState.default.buttonBackgroundColor,
-                    isSearchInProgress = false,
-                    bottomPadding = 68,
-                    showTopSitesHeader = true,
-                ),
                 interactor = FakeHomepagePreview.homepageInteractor,
                 onTopSitesItemBound = {},
                 modifier = Modifier.fillMaxSize(),
@@ -660,47 +638,34 @@ private fun HomepageBannerPreview() {
     FirefoxTheme {
         Surface {
             Homepage(
-                state = HomepageState.Normal(
-                    shouldShowPrivacyNoticeBanner = true,
-                    nimbusMessage = null,
-                    topSites = FakeHomepagePreview.topSites(),
-                    recentTabs = FakeHomepagePreview.recentTabs(),
-                    syncedTab = FakeHomepagePreview.recentSyncedTab(),
-                    bookmarks = FakeHomepagePreview.bookmarks(),
-                    recentlyVisited = FakeHomepagePreview.recentHistory(),
-                    collectionsState = FakeHomepagePreview.collectionsPlaceholder(),
-                    pocketState = FakeHomepagePreview.pocketState(),
-                    showTopSites = true,
-                    showRecentTabs = true,
-                    showRecentSyncedTab = true,
-                    showBookmarks = true,
-                    showRecentlyVisited = true,
-                    showPocketStoriesCarousel = true,
-                    showCollections = true,
-                    showPrivacyReport = true,
-                    showLongfoxEntryPoint = false,
-                    trackersBlockedCount = 754,
-                    sportsWidgetState = SportsWidgetState(),
-                    headerState = HeaderState.Normal(
-                        wordmarkTextColor = null,
-                        privateBrowsingButtonColor = colorResource(
-                            getAttr(
-                                iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
+                state =
+                    HomepageState.Normal(
+                        shouldShowPrivacyNoticeBanner = true,
+                        nimbusMessage = null,
+                        topSiteState =
+                            TopSiteState(
+                                topSites = FakeHomepagePreview.topSites(),
+                                colors = TopSiteColors.colors(),
                             ),
-                        ),
+                        recentTabs = FakeHomepagePreview.recentTabs(),
+                        recentSyncedTabSectionState =
+                            RecentSyncedTabSectionState.Visible(FakeHomepagePreview.recentSyncedTab()),
+                        bookmarks = FakeHomepagePreview.bookmarks(),
+                        recentlyVisited = FakeHomepagePreview.recentHistory(),
+                        collectionsState = CollectionsState.Gone,
+                        pocketState = FakeHomepagePreview.pocketState(),
+                        showPrivacyReport = true,
+                        longfoxEnabled = false,
+                        showLongfoxAnimation = false,
+                        trackersBlockedCount = 754,
+                        headerState = HeaderState.Normal,
+                        middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = false),
+                        firstFrameDrawn = true,
+                        setupChecklistState = null,
+                        isSearchInProgress = false,
+                        bottomPadding = 68,
+                        showTopSitesHeader = true,
                     ),
-                    searchBarVisible = true,
-                    searchBarEnabled = false,
-                    firstFrameDrawn = true,
-                    setupChecklistState = null,
-                    topSiteColors = TopSiteColors.colors(),
-                    cardBackgroundColor = WallpaperState.default.cardBackgroundColor,
-                    buttonTextColor = WallpaperState.default.buttonTextColor,
-                    buttonBackgroundColor = WallpaperState.default.buttonBackgroundColor,
-                    isSearchInProgress = false,
-                    bottomPadding = 68,
-                    showTopSitesHeader = true,
-                ),
                 interactor = FakeHomepagePreview.homepageInteractor,
                 onTopSitesItemBound = {},
                 modifier = Modifier.fillMaxSize(),
@@ -715,47 +680,25 @@ private fun HomepagePreviewCollections() {
     FirefoxTheme {
         Surface {
             Homepage(
-                state = HomepageState.Normal(
-                    shouldShowPrivacyNoticeBanner = false,
-                    nimbusMessage = null,
-                    topSites = FakeHomepagePreview.topSites(),
-                    recentTabs = FakeHomepagePreview.recentTabs(),
-                    syncedTab = FakeHomepagePreview.recentSyncedTab(),
-                    bookmarks = FakeHomepagePreview.bookmarks(),
-                    recentlyVisited = FakeHomepagePreview.recentHistory(),
-                    collectionsState = FakeHomepagePreview.collectionState(),
-                    pocketState = FakeHomepagePreview.pocketState(),
-                    showTopSites = false,
-                    showRecentTabs = false,
-                    showRecentSyncedTab = false,
-                    showBookmarks = false,
-                    showRecentlyVisited = true,
-                    showPocketStoriesCarousel = true,
-                    showCollections = true,
-                    showPrivacyReport = true,
-                    showLongfoxEntryPoint = false,
-                    trackersBlockedCount = 754,
-                    sportsWidgetState = SportsWidgetState(),
-                    headerState = HeaderState.Normal(
-                        wordmarkTextColor = null,
-                        privateBrowsingButtonColor = colorResource(
-                            getAttr(
-                                iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
-                            ),
-                        ),
+                state =
+                    HomepageState.Normal(
+                        shouldShowPrivacyNoticeBanner = false,
+                        nimbusMessage = null,
+                        recentlyVisited = FakeHomepagePreview.recentHistory(),
+                        collectionsState = FakeHomepagePreview.collectionState(),
+                        pocketState = FakeHomepagePreview.pocketState(),
+                        showPrivacyReport = true,
+                        longfoxEnabled = false,
+                        showLongfoxAnimation = false,
+                        trackersBlockedCount = 754,
+                        headerState = HeaderState.Normal,
+                        middleSearchState = MiddleSearchState(searchBarVisible = true, searchBarEnabled = false),
+                        firstFrameDrawn = true,
+                        setupChecklistState = null,
+                        isSearchInProgress = false,
+                        bottomPadding = 68,
+                        showTopSitesHeader = true,
                     ),
-                    searchBarVisible = true,
-                    searchBarEnabled = false,
-                    firstFrameDrawn = true,
-                    setupChecklistState = null,
-                    topSiteColors = TopSiteColors.colors(),
-                    cardBackgroundColor = WallpaperState.default.cardBackgroundColor,
-                    buttonTextColor = WallpaperState.default.buttonTextColor,
-                    buttonBackgroundColor = WallpaperState.default.buttonBackgroundColor,
-                    isSearchInProgress = false,
-                    bottomPadding = 68,
-                    showTopSitesHeader = true,
-                ),
                 interactor = FakeHomepagePreview.homepageInteractor,
                 onTopSitesItemBound = {},
                 modifier = Modifier.fillMaxSize(),
@@ -770,47 +713,28 @@ private fun MinimalHomepagePreview() {
     FirefoxTheme {
         Surface {
             Homepage(
-                state = HomepageState.Normal(
-                    shouldShowPrivacyNoticeBanner = false,
-                    nimbusMessage = null,
-                    topSites = FakeHomepagePreview.topSites(),
-                    recentTabs = FakeHomepagePreview.recentTabs(),
-                    syncedTab = FakeHomepagePreview.recentSyncedTab(),
-                    bookmarks = FakeHomepagePreview.bookmarks(),
-                    recentlyVisited = FakeHomepagePreview.recentHistory(),
-                    collectionsState = FakeHomepagePreview.collectionState(),
-                    pocketState = FakeHomepagePreview.pocketState(),
-                    showTopSites = true,
-                    showRecentTabs = false,
-                    showRecentSyncedTab = false,
-                    showBookmarks = false,
-                    showRecentlyVisited = false,
-                    showPocketStoriesCarousel = true,
-                    showCollections = false,
-                    showPrivacyReport = true,
-                    showLongfoxEntryPoint = false,
-                    trackersBlockedCount = 754,
-                    sportsWidgetState = SportsWidgetState(),
-                    headerState = HeaderState.Normal(
-                        wordmarkTextColor = null,
-                        privateBrowsingButtonColor = colorResource(
-                            getAttr(
-                                iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
+                state =
+                    HomepageState.Normal(
+                        shouldShowPrivacyNoticeBanner = false,
+                        nimbusMessage = null,
+                        topSiteState =
+                            TopSiteState(
+                                topSites = FakeHomepagePreview.topSites(),
+                                colors = TopSiteColors.colors(),
                             ),
-                        ),
+                        collectionsState = CollectionsState.Gone,
+                        pocketState = FakeHomepagePreview.pocketState(),
+                        showPrivacyReport = true,
+                        longfoxEnabled = false,
+                        showLongfoxAnimation = false,
+                        trackersBlockedCount = 754,
+                        headerState = HeaderState.Normal,
+                        firstFrameDrawn = true,
+                        setupChecklistState = null,
+                        isSearchInProgress = false,
+                        bottomPadding = 68,
+                        showTopSitesHeader = true,
                     ),
-                    searchBarVisible = false,
-                    searchBarEnabled = false,
-                    firstFrameDrawn = true,
-                    setupChecklistState = null,
-                    topSiteColors = TopSiteColors.colors(),
-                    cardBackgroundColor = WallpaperState.default.cardBackgroundColor,
-                    buttonTextColor = WallpaperState.default.buttonTextColor,
-                    buttonBackgroundColor = WallpaperState.default.buttonBackgroundColor,
-                    isSearchInProgress = false,
-                    bottomPadding = 68,
-                    showTopSitesHeader = true,
-                ),
                 interactor = FakeHomepagePreview.homepageInteractor,
                 onTopSitesItemBound = {},
                 modifier = Modifier.fillMaxSize(),
@@ -824,18 +748,12 @@ private fun MinimalHomepagePreview() {
 private fun PrivateHomepagePreview() {
     FirefoxTheme(theme = Theme.Private) {
         Homepage(
-            state = HomepageState.Private(
-                headerState = HeaderState.Normal(
-                    wordmarkTextColor = null,
-                    privateBrowsingButtonColor = colorResource(
-                        getAttr(
-                            iconsR.attr.mozac_ic_private_mode_circle_fill_icon_color,
-                        ),
-                    ),
+            state =
+                HomepageState.Private(
+                    headerState = HeaderState.Normal,
+                    firstFrameDrawn = true,
+                    isSearchInProgress = false,
                 ),
-                firstFrameDrawn = true,
-                isSearchInProgress = false,
-            ),
             interactor = FakeHomepagePreview.homepageInteractor,
             onTopSitesItemBound = {},
             modifier = Modifier.fillMaxSize(),
@@ -844,11 +762,7 @@ private fun PrivateHomepagePreview() {
 }
 
 internal val horizontalMargin: Dp
-    @Composable
-    @ReadOnlyComposable
-    get() = dimensionResource(R.dimen.home_item_horizontal_margin)
+    @Composable @ReadOnlyComposable get() = dimensionResource(R.dimen.home_item_horizontal_margin)
 
 private val verticalMargin: Dp
-    @Composable
-    @ReadOnlyComposable
-    get() = dimensionResource(R.dimen.home_item_vertical_margin)
+    @Composable @ReadOnlyComposable get() = dimensionResource(R.dimen.home_item_vertical_margin)

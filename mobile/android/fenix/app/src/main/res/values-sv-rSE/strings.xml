@@ -23,12 +23,16 @@
   <string name="content_description_normal_browsing">Normal surfning</string>
   <!-- Placeholder text shown in the search bar before a user enters text for the default engine -->
   <string name="search_hint">Sök eller ange adress</string>
+  <!-- Shorter placeholder text shown in the search bar when an additional action (voice search) is rendered alongside the hint. -->
+  <string name="search_hint_short">Sök</string>
   <!-- Placeholder text shown in the search bar before a user enters text for a general engine -->
   <string name="search_hint_general_engine">Sök på webben</string>
   <!-- Placeholder text shown in search bar when using history search -->
   <string name="history_search_hint">Sökhistorik</string>
   <!-- Placeholder text shown in search bar when using bookmarks search -->
   <string name="bookmark_search_hint">Sök bokmärken</string>
+  <!-- Content description for the toolbar back button while searching bookmarks -->
+  <string name="bookmark_close_search_description">Gå tillbaka och stäng sökningen</string>
   <!-- Placeholder text shown in search bar when using tabs search -->
   <string name="tab_search_hint">Sök flikar</string>
   <!-- Placeholder text shown in the search bar when using application search engines -->
@@ -70,7 +74,7 @@
   <!-- Text for the menu button to remove a recently saved bookmark from the user's home screen -->
   <string name="home_bookmarks_menu_item_remove">Ta bort</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">%1$s produceras av Mozilla.</string>
+  <string name="about_content" tools:ignore="BrandUsage">%1$s produceras av Mozilla.</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">Vanliga myter om privat surfning</string>
   <!-- Text to be announced by the accessibility service to inform the user that the private browsing mode is currently active. -->
@@ -104,12 +108,6 @@
   <string name="open_in_app_cfr_negative_button_text">Ignorera</string>
   <!-- Private browsing erase action "contextual feature recommendation" (CFR) -->
 
-  <!--
-    Address bar swipe "contextual feature recommendation" (CFR)
-
-    Text for the message displayed in the contextual feature recommendation popup promoting swipe of address bar.
-  -->
-  <string name="address_bar_swipe_cfr_message_2">Dra verktygsfältet åt vänster eller höger för att växla mellan flikar.</string>
   <!-- Text for the info dialog when camera permissions have been denied but user tries to access a camera feature. -->
   <string name="camera_permissions_needed_message">Kameraåtkomst behövs. Gå till Android-inställningar, tryck på behörigheter och tryck på tillåt.</string>
   <!-- Text for the positive action button to go to Android Settings to grant permissions. -->
@@ -147,6 +145,8 @@
   <string name="home_screen_shortcut_open_new_private_tab_2">Ny privat flik</string>
   <!-- Shortcut action to open Passwords screen -->
   <string name="home_screen_shortcut_passwords">Lösenord</string>
+  <!-- Shortcut action to open uninstall survey -->
+  <string name="home_screen_shortcut_uninstall_survey">Avinstallera, varför?</string>
   <!--
     Recent Tabs
 
@@ -314,14 +314,6 @@
   <!-- Content description (not visible, for screen readers etc.) for recommended extensions in main menu -->
   <string name="browser_menu_recommended_extensions_content_description">Mer information</string>
   <!--
-    Menu "contextual feature recommendation" (CFR)
-
-    Text for the title in the contextual feature recommendation popup promoting the menu feature.
-  -->
-  <string name="menu_cfr_title">Nytt: effektiviserad meny</string>
-  <!-- Text for the message in the contextual feature recommendation popup promoting the menu feature. -->
-  <string name="menu_cfr_body">Hitta det du behöver snabbare, från privat surfning till åtgärder för att spara innehåll.</string>
-  <!--
     Extensions management fragment
 
     Text displayed when there are no extensions to be shown
@@ -330,21 +322,9 @@
   <!--
     Browser Toolbar
 
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">Startsidan</string>
-  <!--
-    Browser Toolbar
-
     Content description for the translate page toolbar button that opens the translations dialog when no translation has occurred.
   -->
   <string name="browser_toolbar_translate">Översätt sida</string>
-  <!--
-    Content description (not visible, for screen readers etc.) for the translate page toolbar button that opens the translations dialog when the page is translated successfully.
-    %1$s is the name of the language that is displayed in the original page. (For example: English)
-    %2$s is the name of the language which the page was translated to. (For example: French)
-  -->
-  <string name="browser_toolbar_translated_successfully">Sida översatt från %1$s till %2$s.</string>
   <!-- CFR description for the browser toolbar describing the "Shake to summarize feature" -->
   <string name="browser_toolbar_summarize_cfr_description">Skaka din enhet för att sammanfatta den här sidan på några sekunder. ⚡️</string>
   <!--
@@ -375,8 +355,6 @@
   <string name="ai_controls_banner_headline">Du har alltid ett val i %s</string>
   <!-- Supporting text for the AI controls banner. %s is a learn more link using ai_controls_learn_more as text. -->
   <string name="ai_controls_banner_supporting_text_2">Det inkluderar huruvida man ska använda funktioner som förbättrats med AI. %s</string>
-  <!-- Supporting text for the AI controls banner -->
-  <string name="ai_controls_banner_supporting_text">Det inkluderar om man ska använda funktioner förbättrade med AI.</string>
   <!-- Link text for learning more about AI controls -->
   <string name="ai_controls_learn_more">Läs mer</string>
   <!-- Title for the block AI enhancements toggle -->
@@ -424,12 +402,6 @@
   <!--
     Search Fragment
 
-    Button in the search view that lets a user search by scanning a QR code
-  -->
-  <string name="search_scan_button_2">Skanna QR-kod</string>
-  <!--
-    Search Fragment
-
     Button in the search view that lets a user navigate to the site in their clipboard
   -->
   <string name="awesomebar_clipboard_title">Fyll i länk från urklipp</string>
@@ -464,68 +436,14 @@
   <string name="search_suggestions_delete_history_item_snackbar">Tog bort %1$s från historiken</string>
   <!-- Content description (not visible, for screen readers etc.): Button shown near a history search result allowing to delete it from browsing history. -->
   <string name="mozac_browser_awesomebar_remove_suggestion" tools:ignore="UnusedResources">Ta bort den här historikposten</string>
+  <!-- Button in the app links prompt that keeps the user in the browser instead of opening the external app. %1$s is the name of the app (for example "Firefox"). -->
+  <string name="applinks_prompt_negative_button">Stanna i %1$s</string>
   <!--
     Home onboarding
 
     Content description (not visible, for screen readers etc.): Close button for the home onboarding dialog
   -->
   <string name="onboarding_home_content_description_close_button">Stäng</string>
-  <!--
-    Juno first user onboarding flow experiment, strings are marked unused as they are only referenced by Nimbus experiments.
-
-    Description for learning more about our privacy notice.
-  -->
-  <string name="juno_onboarding_privacy_notice_text" tools:ignore="BrandUsage">Firefox sekretessmeddelande</string>
-  <!-- Title for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_title_nimbus_2">Vi älskar att hålla dig säker</string>
-  <!-- Description for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_description_nimbus_3">Vår icke-vinstdrivande webbläsare hjälper till att hindra företag från att i hemlighet följa dig på webben.</string>
-  <!-- Text for the button to set firefox as default browser on the device -->
-  <string name="juno_onboarding_default_browser_positive_button" tools:ignore="UnusedResources">Ange som standardwebbläsare</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_default_browser_negative_button" tools:ignore="UnusedResources">Inte nu</string>
-  <!-- Title for sign in to sync screen. -->
-  <string name="juno_onboarding_sign_in_title_2">Håll dig krypterad när du byter enhet</string>
-  <!--
-    Description for sign in to sync screen. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_sign_in_description_3" tools:ignore="BrandUsage">Firefox krypterar dina lösenord, bokmärken och mer när du är synkroniserad.</string>
-  <!-- Text for the button to sign in to sync on the device -->
-  <string name="juno_onboarding_sign_in_positive_button" tools:ignore="UnusedResources">Logga in</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_sign_in_negative_button" tools:ignore="UnusedResources">Inte nu</string>
-  <!--
-    Title for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_title_nimbus_2" tools:ignore="BrandUsage">Aviseringar hjälper dig att vara säkrare med Firefox</string>
-  <!--
-    Description for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_description_nimbus_2" tools:ignore="BrandUsage">Skicka flikar säkert mellan dina enheter och upptäck andra sekretessfunktioner i Firefox.</string>
-  <!-- Text for the button to request notification permission on the device -->
-  <string name="juno_onboarding_enable_notifications_positive_button" tools:ignore="UnusedResources">Slå på aviseringar</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_enable_notifications_negative_button" tools:ignore="UnusedResources">Inte nu</string>
-  <!--
-    Title for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_title" tools:ignore="BrandUsage,UnusedResources">Prova Firefox sökwidget</string>
-  <!--
-    Description for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_description" tools:ignore="BrandUsage,UnusedResources">Med Firefox på din startskärm kan du enkelt komma åt den sekretessfokuserade webbläsaren som blockerar spårare på flera webbplatser.</string>
-  <!--
-    Text for the button to add search widget on the device used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_positive_button" tools:ignore="BrandUsage,UnusedResources">Lägg till Firefox widget</string>
-  <!-- Text for the button to dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_add_search_widget_negative_button" tools:ignore="UnusedResources">Inte nu</string>
   <!-- Title for the privacy preferences dialog shown during onboarding. Note: The word "Firefox" should NOT be translated. -->
   <string name="onboarding_preferences_dialog_title" tools:ignore="BrandUsage">Hjälp oss att göra Firefox bättre</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
@@ -545,17 +463,13 @@
   <!-- Button text to reopen firefox after the crash is processed %s is the name of the app (for example "Firefox") -->
   <string name="startup_crash_restart">Öppna %s igen</string>
   <!-- Title for the usage data option in the privacy preferences dialog shown during onboarding. Note: The word "Mozilla" should NOT be translated. -->
-  <string name="onboarding_preferences_dialog_usage_data_title">Skicka teknisk information och interaktionsdata till Mozilla</string>
+  <string name="onboarding_preferences_dialog_usage_data_title" tools:ignore="BrandUsage">Skicka teknisk information och interaktionsdata till Mozilla</string>
   <string name="onboarding_preferences_dialog_usage_data_description_2" tools:ignore="BrandUsage">Data om din enhet, hårdvarukonfiguration och hur du använder Firefox hjälper till att förbättra funktioner, prestanda och stabilitet för alla.</string>
   <string name="onboarding_preferences_dialog_usage_data_learn_more_2">Läs mer</string>
   <!-- Positive button label for the privacy preferences dialog shown during onboarding. -->
   <string name="onboarding_preferences_dialog_positive_button">Klar</string>
   <!-- Terms of service onboarding title card label. 'Firefox' intentionally hardcoded here -->
   <string name="onboarding_welcome_to_firefox" tools:ignore="BrandUsage">Välkommen till Firefox</string>
-  <!-- Terms of service sub header label. -->
-  <string name="onboarding_terms_of_service_sub_header_2">Snabb och säker webbläsning</string>
-  <!-- Terms of service onboarding page continue button label. -->
-  <string name="onboarding_term_of_service_agree_and_continue_button_label_2">Fortsätt</string>
   <!-- Line one of the terms of service onboarding page. %1$s is replaced by an active link, using onboarding_term_of_service_line_one_link_text_2 as text (“Firefox Terms of Use”). -->
   <string name="onboarding_term_of_service_line_one_2">Genom att fortsätta godkänner du %1$s.</string>
   <!-- Used as text for the link in onboarding_term_of_service_line_one_2. -->
@@ -623,16 +537,6 @@
   <string name="onboarding_redesign_sync_positive_button" tools:ignore="UnusedResources">Starta synkronisering</string>
   <!-- Sync onboarding redesign negative button text. -->
   <string name="onboarding_redesign_sync_negative_button" tools:ignore="UnusedResources">Inte nu</string>
-  <!-- Marketing onboarding page title. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_title" tools:ignore="BrandUsage,UnusedResources">Hjälp oss att utveckla Firefox</string>
-  <!-- Marketing onboarding page body. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_body" tools:ignore="BrandUsage,UnusedResources">När du delar med dig av hur du upptäckte Firefox och att du använder Firefox, hjälper du oss att introducera vår webbläsare för fler människor.</string>
-  <!-- Marketing onboarding page opt-out checkbox. Unchecking the box does not increase data collection. Our data practices remain the same. 'Mozilla' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_opt_out_checkbox">Dela data med Mozillas marknadsföringsteknikpartners. Denna data säljs eller används aldrig för att visa dig annonser.</string>
-  <!-- Marketing onboarding page clickable link text to "learn more" on how data is used. -->
-  <string name="onboarding_marketing_learn_more" tools:ignore="UnusedResources">Hur vi använder informationen</string>
-  <!-- Marketing onboarding page button label. Button to confirm choice and start browsing. -->
-  <string name="onboarding_marketing_positive_button" tools:ignore="UnusedResources">Bekräfta och börja surfa</string>
   <!-- Marketing onboarding page title variant. “One last thing” refers to the final step or action in the onboarding process that we’re asking users to take before they can start using the browser. -->
   <string name="onboarding_marketing_title_1" tools:ignore="UnusedResources">En sista sak</string>
   <!-- Marketing onboarding page body variant. 'Firefox' is intentionally hardcoded. -->
@@ -712,12 +616,12 @@
   <!-- Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded. -->
   <string name="nova_onboarding_marketing_body_2" tools:ignore="BrandUsage">Dela med dig av hur du upptäckte Firefox och att du använder det, med Mozillas marknadsföringspartners. Denna data säljs aldrig.</string>
   <!-- Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded. -->
-  <string name="nova_onboarding_marketing_body_3" tools:ignore="BrandUsage">Du kan hjälpa oss att nå fler genom att låta Mozilla informera de kanaler där vi marknadsför Firefox att du är en Firefox-användare.</string>
+  <string name="nova_onboarding_marketing_body_3" tools:ignore="BrandUsage,UnusedResources">Du kan hjälpa oss att nå fler genom att låta Mozilla informera de kanaler där vi marknadsför Firefox att du är en Firefox-användare.</string>
   <!--
     Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
     “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
   -->
-  <string name="nova_onboarding_marketing_body_4" tools:ignore="BrandUsage">Du kan hjälpa oss att nå fler genom att låta Mozilla informera plattformen du kom från att du använder Firefox.</string>
+  <string name="nova_onboarding_marketing_body_4" tools:ignore="BrandUsage,UnusedResources">Du kan hjälpa oss att nå fler genom att låta Mozilla informera plattformen du kom från att du använder Firefox.</string>
   <!--
     Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
     “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
@@ -729,12 +633,31 @@
     %1$s is replaced by an active link, using nova_onboarding_marketing_body_link_text as text (“How we use the data”).
   -->
   <string name="nova_onboarding_marketing_body_6" tools:ignore="BrandUsage,UnusedResources">Hjälp oss att nå fler genom att tillåta Mozilla att informera plattformen du kom från att du använder Firefox. %1$s</string>
+  <!--
+    Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
+    “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
+    %1$s is replaced by an active link, using nova_onboarding_marketing_body_link_text_1 as text (“Learn More”).
+  -->
+  <string name="nova_onboarding_marketing_body_7" tools:ignore="BrandUsage">Du kan hjälpa oss att nå fler genom att tillåta Mozilla att informera plattformen du kom från att du använder Firefox. %1$s</string>
+  <!-- Marketing onboarding additional body text. 'Firefox' is intentionally hardcoded. -->
+  <string name="nova_onboarding_marketing_body_line_two" tools:ignore="BrandUsage">Firefox är stolt oberoende och dedikerat till att försvara den öppna webben mot teknikmonopol.</string>
+  <!--
+    Marketing onboarding additional body text. 'Firefox' is intentionally hardcoded.
+    “Allowing” refers to the main button “Allow and Continue”; the ask for the user is to allow communicating back to the platform.
+  -->
+  <string name="nova_onboarding_marketing_body_line_three" tools:ignore="BrandUsage">Överväg att tillåta detta för att hjälpa Firefox att vinna.</string>
   <!-- Marketing onboarding body link text. -->
   <string name="nova_onboarding_marketing_body_link_text">Hur vi använder informationen</string>
+  <!-- Marketing onboarding body link text. -->
+  <string name="nova_onboarding_marketing_body_link_text_1">Läs mer</string>
   <!-- Marketing onboarding primary button text. 'Firefox' is intentionally hardcoded. -->
-  <string name="nova_onboarding_marketing_primary_button_text" tools:ignore="BrandUsage">Hjälp Firefox</string>
+  <string name="nova_onboarding_marketing_primary_button_text" tools:ignore="BrandUsage,UnusedResources">Hjälp Firefox</string>
+  <!-- Marketing onboarding primary button text. -->
+  <string name="nova_onboarding_marketing_primary_button_text_3">Ja</string>
   <!-- Marketing onboarding secondary button text. -->
-  <string name="nova_onboarding_marketing_secondary_button_text">Nej tack</string>
+  <string name="nova_onboarding_marketing_secondary_button_text" tools:ignore="UnusedResources">Nej tack</string>
+  <!-- Marketing onboarding secondary button text. -->
+  <string name="nova_onboarding_marketing_secondary_button_text_2">Nej</string>
   <!-- Notifications onboarding title. 'Firefox' is intentionally hardcoded. -->
   <string name="nova_onboarding_notifications_title" tools:ignore="BrandUsage,UnusedResources">Aviseringar hjälper dig att vara säkrare med Firefox</string>
   <!-- Notifications onboarding subtitle. 'Firefox' is intentionally hardcoded. -->
@@ -768,41 +691,6 @@
   <string name="nova_onboarding_app_icon_prompt_body" tools:ignore="UnusedResources">Ge din startskärm en personlig touch.</string>
   <!-- ==== End of Project "Nova" onboarding strings ==== -->
 
-  <!-- Onboarding header for the toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_title" tools:ignore="UnusedResources">Välj en placering för verktygsfältet</string>
-  <!-- Onboarding sub header for toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_description" tools:ignore="UnusedResources">Ha sökningar nära till hands.</string>
-  <!-- Onboarding label for 'Save and continue' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_continue_button">Spara och fortsätt</string>
-  <!-- Onboarding toolbar selection card label for 'top' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_top_option">Överst</string>
-  <!-- Onboarding toolbar selection card label for 'bottom' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_bottom_option">Nederst</string>
-  <!-- Onboarding toolbar selection card content description for the main image. -->
-  <string name="onboarding_customize_toolbar_main_image_content_description">Stor sidbild av verktygsfältets urval som visar ett illustrerat verktygsfält.</string>
-  <!-- Onboarding toolbar selection card content description for the toolbar placement image. -->
-  <string name="onboarding_customize_toolbar_placement_bottom_content_description">Bild av det nedre verktygsfältet</string>
-  <string name="onboarding_customize_toolbar_placement_top_content_description">Bild på det översta verktygsfältet</string>
-  <!-- Action label for toolbar options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_toolbar_a11y_action_label_select">välj</string>
-  <!-- Onboarding header for the theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_title" tools:ignore="UnusedResources">Välj ett tema</string>
-  <!-- Onboarding sub header for theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_description" tools:ignore="UnusedResources">Se webben i bästa ljus.</string>
-  <!-- Onboarding label for 'Save and start browsing' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_start_button">Spara och börja surfa</string>
-  <!-- Onboarding theme selection card label for 'dark' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_dark_option">Mörkt</string>
-  <!-- Onboarding theme selection card label for 'light' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_light_option">Ljust</string>
-  <!-- Onboarding theme selection card label for 'System auto' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_system_option">Automatisk (system)</string>
-  <!-- Onboarding theme selection card content description for the main image. -->
-  <string name="onboarding_customize_theme_main_image_content_description">Stor huvudbild av vyn för val av tema som visar illustrerade konstnärs- och byggverktyg.</string>
-  <!-- Onboarding theme selection card content description for the theme selection image. %1$s is placeholder for either 'system', 'light' or 'dark'. -->
-  <string name="onboarding_customize_theme_content_description">Bild på temat %1$s</string>
-  <!-- Action label for options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_theme_a11y_action_label_select">välj</string>
   <!--
     Widget Picker
 
@@ -890,40 +778,8 @@
   <string name="preferences_pbm_lock_screen_title">Använd skärmlås för att dölja flikar i privat surfning</string>
   <!-- Informs the user how to access the tabs when "Use screen lock to hide tabs in private browsing" is enabled -->
   <string name="preferences_pbm_lock_screen_summary_3">Visa flikar med ditt fingeravtryck, PIN-kod eller ansiktslås. Genom att aktivera detta förhindras också skärmfångst och delning.</string>
-  <!-- Label for cookie banner section in quick settings panel. -->
-  <string name="cookie_banner_blocker">Blockering av kakbanners</string>
   <!-- Preference for removing cookie/consent banners from sites automatically in private mode. See reduce_cookie_banner_summary for additional context. -->
   <string name="preferences_cookie_banner_reduction_private_mode">Blockering av kakbanner vid privat surfning</string>
-  <!-- Text for indicating cookie banner handling is off this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_off_for_site">Av för denna webbplats</string>
-  <!-- Text for cancel button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_cancel_button">Avbryt</string>
-  <!-- Text for request support button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_request_support_button_2">Skicka begäran</string>
-  <!-- Text for title indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_title_2">Begär support för den här webbplatsen?</string>
-  <!-- Label for the snackBar, after the user reports with success a website where cookie banner reducer did not work -->
-  <string name="cookie_banner_handling_report_site_snack_bar_text_2">Begäran skickad</string>
-  <!-- Text for indicating cookie banner handling is on this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_on_for_site">PÅ för denna webbplats</string>
-  <!-- Text for indicating that a request for unsupported site was sent to Nimbus (it's a Mozilla library for experiments), this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site_request_submitted_2">Supportbegäran har skickats</string>
-  <!-- Text for indicating cookie banner handling is currently not supported for this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site">Webbplatsen stöds inte för närvarande</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is on this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_on_for_site_1">Vill du aktivera blockering av kakbanner för %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is off this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_off_for_site_1">Vill du stänga av blockering av kakbanner för %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner reducer didn't work for the current site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_title_unsupported_site_request_2">%1$s kan inte automatiskt avvisa kakförfrågningar på den här webbplatsen. Du kan skicka en begäran om att stödja den här webbplatsen i framtiden.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is off for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_off_for_site_1">Stäng av och %1$s rensar kakor och laddar om den här webbplatsen. Detta kan logga ut dig eller tömma kundvagnar.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is on for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_on_for_site_3">Slå på och %1$s försöker automatiskt neka alla kakbanners på den här webbplatsen.</string>
-  <!-- Title for the cookie banner re-engagement CFR, the placeholder is replaced with app name. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="cookie_banner_cfr_title">%1$s har precis avvisat kakor åt dig</string>
-  <!-- Message for the cookie banner re-engagement CFR -->
-  <string name="cookie_banner_cfr_message">Mindre distraktioner, färre kakor som spårar dig på den här webbplatsen.</string>
   <!-- Description of the preference to enable "HTTPS-Only" mode. -->
   <string name="preferences_https_only_summary">Försöker automatiskt ansluta till webbplatser med HTTPS-krypteringsprotokollet för ökad säkerhet.</string>
   <!-- Summary of https only preference if https only is set to off -->
@@ -947,7 +803,7 @@
   <!-- Preference for accessibility -->
   <string name="preferences_accessibility">Hjälpmedel</string>
   <!-- Preference to override the Mozilla account server -->
-  <string name="preferences_override_account_server">Anpassad Mozilla-kontoserver</string>
+  <string name="preferences_override_account_server" tools:ignore="BrandUsage">Anpassad Mozilla-kontoserver</string>
   <!-- Preference to override the Sync token server -->
   <string name="preferences_override_sync_tokenserver">Anpassad synkroniseringsserver</string>
   <!-- Preference category for account information -->
@@ -968,6 +824,8 @@
   <string name="preferences_toolbar_shortcut">Genväg i verktygsfältet</string>
   <!-- Preference for gestures based actions -->
   <string name="preferences_toolbar_select_shortcut">Välj en genväg</string>
+  <!-- Title of a menu option allowing to change the shortcut button shown in the toolbar -->
+  <string name="toolbar_shortcut_menu_edit_option">Redigera genväg</string>
   <!-- Preference for gestures based actions -->
   <string name="preferences_gestures">Gester</string>
   <!-- Preference for settings related to visual options -->
@@ -975,7 +833,7 @@
   <!-- Preference description shown in the banner prompting the user to sign in for sync features -->
   <string name="preferences_sign_in_description">Synka flikar, bokmärken, lösenord och mer.</string>
   <!-- Preference shown instead of account display name while account profile information isn't available yet. -->
-  <string name="preferences_account_default_name_2">Mozilla-konto</string>
+  <string name="preferences_account_default_name_2" tools:ignore="BrandUsage">Mozilla-konto</string>
   <!-- Preference text for account title when there was an error syncing FxA -->
   <string name="preferences_account_sync_error">Anslut igen för att återuppta synkroniseringen</string>
   <!-- Preference for language -->
@@ -1023,7 +881,7 @@
   <!-- Summary for preference to show Firefox Suggest search suggestions for web content -->
   <string name="preferences_show_nonsponsored_suggestions_summary">Få förslag från webben relaterade till din sökning</string>
   <!-- Preference title for switch preference to show search optimization cards -->
-  <string name="preferences_show_search_optimization_cards">Få förslag från Mozilla medan du skriver</string>
+  <string name="preferences_show_search_optimization_cards" tools:ignore="BrandUsage">Få förslag från Mozilla medan du skriver</string>
   <!-- Preference for link sharing -->
   <string name="preferences_link_sharing">Länkdelning</string>
   <!-- Title for the link sharing toggle. %1$s is replaced by the brand name (e.g. Firefox). -->
@@ -1076,6 +934,12 @@
   <string name="notifications_allowed_summary">Tillåten</string>
   <!-- Summary for notification preference indicating notifications are not allowed -->
   <string name="notifications_not_allowed_summary">Inte tillåtet</string>
+  <!-- Preference for local network access / nearby devices in Android 17 -->
+  <string name="preferences_local_network_access">Lokal nätverksåtkomst / Enheter i närheten</string>
+  <!-- Summary for local network access preference indicating access is allowed -->
+  <string name="local_network_access_allowed_summary">Tillåten</string>
+  <!-- Summary for local network access preference indicating access is not allowed -->
+  <string name="local_network_access_not_allowed_summary">Inte tillåten</string>
   <!--
     Add-on Permissions
 
@@ -1135,10 +999,14 @@
   <string name="customize_toggle_pocket_sponsored">Sponsrade berättelser</string>
   <!-- Title for the opening wallpaper settings screen -->
   <string name="customize_wallpapers">Bakgrundsbilder</string>
+  <!-- Label for the menu item that opens the customize homepage settings screen. -->
+  <string name="browser_menu_customize_homepage">Anpassa startsidan</string>
+  <!-- Label for the menu item that opens the wallpaper settings screen. -->
+  <string name="browser_menu_change_wallpaper">Ändra bakgrundsbild</string>
   <!-- Title for the customize home screen section with sponsored shortcuts. -->
   <string name="customize_toggle_contile">Sponsrade genvägar</string>
   <!-- Title for the customize home screen section that toggles the Homepage sports widget. -->
-  <string name="customize_toggle_world_cup" tools:ignore="UnusedResources">VM</string>
+  <string name="customize_toggle_world_cup">VM</string>
   <!--
     Wallpapers
 
@@ -1263,6 +1131,8 @@
   <string name="extension_process_crash_dialog_retry_button_text" tools:ignore="UnusedResources">Testa att starta om tillägg</string>
   <!-- Button text on the extension crash dialog to prompt the user to continue with all extensions disabled. -->
   <string name="extension_process_crash_dialog_disable_extensions_button_text">Fortsätt med tillägg inaktiverade</string>
+  <!-- Text shown in the snackbar action button that lets the user retry an add-on operation that just failed. -->
+  <string name="addon_failure_retry_action">Försök igen</string>
   <!--
     Account Preferences
 
@@ -1351,7 +1221,7 @@
   <string name="preferences_usage_data_description_1" tools:ignore="BrandUsage">Data om din enhet, hårdvarukonfiguration och användning hjälper oss att förbättra Firefox funktioner, prestanda och stabilitet.</string>
   <!-- Preference switch for daily usage ping data collection -->
   <string name="preferences_daily_usage_ping_title">Ping för daglig användning</string>
-  <string name="preferences_daily_usage_ping_description">Detta hjälper Mozilla att uppskatta antalet aktiva användare.</string>
+  <string name="preferences_daily_usage_ping_description" tools:ignore="BrandUsage">Detta hjälper Mozilla att uppskatta antalet aktiva användare.</string>
   <string name="preferences_daily_usage_ping_learn_more">Läs mer om ping för daglig användning</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
   <string name="crash_reporting_snack_bar_message">Rapport skickad</string>
@@ -1377,7 +1247,7 @@
   <!-- Title for studies preferences -->
   <string name="preference_experiments_2">Undersökningar</string>
   <!-- Summary for studies preferences -->
-  <string name="preference_experiments_summary_2">Tillåter Mozilla att installera och köra undersökningar</string>
+  <string name="preference_experiments_summary_2" tools:ignore="BrandUsage">Tillåter Mozilla att installera och köra undersökningar</string>
   <!--
     Turn On Sync Preferences
 
@@ -1436,6 +1306,11 @@
   <string name="preference_light_theme">Ljust</string>
   <!-- Preference for using dark theme -->
   <string name="preference_dark_theme">Mörkt</string>
+  <!--
+    Preference for using the OLED theme. For localization, this can be translated as "True Black", "Maximum Darkness",
+    or "Full dark" if needed.
+  -->
+  <string name="preference_oled_theme">Mörkast</string>
   <!-- Preference for using using dark or light theme automatically set by battery -->
   <string name="preference_auto_battery_theme">Bestämd av energisparläge</string>
   <!-- Preference for using following device theme -->
@@ -1478,8 +1353,6 @@
   <string name="library_desktop_bookmarks_unfiled">Andra bokmärken</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">Historik</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">Ny flik</string>
   <!-- Settings Page Title -->
   <string name="settings_title">Inställningar</string>
   <!-- Content description (not visible, for screen readers etc.): "Close button for library settings" -->
@@ -1584,6 +1457,16 @@
   <string name="preferences_inactive_tabs">Flytta gamla flikar till inaktiva</string>
   <!-- Title of inactive tabs preference -->
   <string name="preferences_inactive_tabs_title">Flikar som du inte har besökt på två veckor flyttas till inaktiva.</string>
+  <!-- Title for the preference to enable or disable the tab groups feature -->
+  <string name="preferences_tab_groups_feature">Aktivera flikgrupper</string>
+  <!--
+    Privacy report
+
+    Category header of a preference that allows a user to enable or disable the privacy report feature
+  -->
+  <string name="preferences_privacy_report">Integritetsrapport</string>
+  <!-- Title of the privacy report preference that allows a user to enable or disable the feature -->
+  <string name="preferences_privacy_report_title">Aktivera integritetsrapport</string>
   <!--
     Studies
 
@@ -1639,10 +1522,14 @@
   <string name="add_tab">Lägg till flik</string>
   <!-- Content description (not visible, for screen readers etc.): Add tab button. Adds a news tab when pressed -->
   <string name="add_private_tab">Lägg till privat flik</string>
+  <!-- Content description (not visible, for screen readers etc.): Create tab group button. Opens the create tab group sheet when pressed -->
+  <string name="create_tab_group_content_description">Skapa flikgrupp</string>
   <!-- Text for the tab search bar placeholder -->
   <string name="tab_manager_search_bar_placeholder">Sök i dina flikar</string>
   <!-- Text shown in the menu to view recently closed tabs -->
   <string name="tab_tray_menu_recently_closed">Nyligen stängda flikar</string>
+  <!-- Text shown in the menu to select all tabs. -->
+  <string name="tab_tray_menu_select_all_tabs">Markera alla</string>
   <!-- Text shown in the menu to view account settings -->
   <string name="tab_tray_menu_account_settings">Kontoinställningar</string>
   <!-- Text shown in the menu to view tab settings -->
@@ -1705,6 +1592,14 @@
   <string name="pwa_site_controls_title_private">%1$s (Privat läge)</string>
   <!-- Content description (not visible, for screen readers etc.) for the button to open the Tab Search feature to search through tabs. -->
   <string name="tab_manager_open_tab_search">Öppna fliksökning</string>
+  <!-- Title for introducing tab groups via an onboarding card shown in the tab manager. -->
+  <string name="tab_group_onboarding_item_title">Skapa en flikgrupp</string>
+  <!-- Description for tab groups onboarding shown in the tab manager when in grid view. -->
+  <string name="tab_group_onboarding_grid_item_description">Dra en flik till en annan för att gruppera dem.</string>
+  <!-- Description for tab groups onboarding shown in the tab manager when in list view. -->
+  <string name="tab_group_onboarding_list_item_description">Välj flera flikar för att skapa en grupp.</string>
+  <!-- Content description (accessibility label) for button to dismiss the tab group onboarding item. -->
+  <string name="tab_group_onboarding_item_dismiss_content_description">Stäng introduktion av flikgrupp</string>
   <!-- The header text displayed on the tab groups page when no tab groups are open -->
   <string name="tab_manager_empty_tab_groups_page_header">Testa flikgrupper för mindre skrollning, mer görande</string>
   <!-- The description displayed on the tab groups page when no tab groups are open -->
@@ -1786,6 +1681,36 @@
   <string name="close_tab_and_delete_group_confirmation_dialog_confirm">Ta bort grupp</string>
   <!-- Text shown on the cancel button in the Close last tab and delete tab group confirmation dialog. -->
   <string name="close_tab_and_delete_group_confirmation_dialog_cancel">Avbryt</string>
+  <!-- Content description for the three dot button next to a tab group" -->
+  <string name="tab_group_three_dot_button_content_description">Fler alternativ</string>
+  <!-- Text shown on the edit button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_edit">Redigera</string>
+  <!-- Text shown on the ungroup button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_ungroup">Dela upp</string>
+  <!-- Text shown on the delete button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_delete">Ta bort</string>
+  <!-- Text shown on the share button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_share">Dela</string>
+  <!-- Text shown on the close button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_close">Stäng</string>
+  <!-- Title for the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_title">Dela upp flikgrupp?</string>
+  <!-- Text shown in the body of the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_body">Flikarna förblir öppna på den här enheten, men gruppen kommer att tas bort.</string>
+  <!-- Text shown on the Don't Ask Again checkbox button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_dont_ask_again">Fråga inte igen</string>
+  <!-- Text shown on the confirm button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_confirm">Dela upp</string>
+  <!-- Text shown on the cancel button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_cancel">Avbryt</string>
+  <!-- Custom accessibility action to reorder a tab up rather than dragging. -->
+  <string name="custom_accessibility_action_reorder_tab_up">Flytta flik uppåt</string>
+  <!-- Custom accessibility action to reorder a tab left rather than dragging. -->
+  <string name="custom_accessibility_action_reorder_tab_left">Flytta flik åt vänster</string>
+  <!-- Custom accessibility action to reorder a tab right rather than dragging. -->
+  <string name="custom_accessibility_action_reorder_tab_right">Flytta flik åt höger</string>
+  <!-- Custom accessibility action to reorder a tab down rather than dragging. -->
+  <string name="custom_accessibility_action_reorder_tab_down">Flytta flik nedåt</string>
   <!--
     Color labels for tab groups, used for accessibility and selection UI.
 
@@ -1800,8 +1725,6 @@
   <string name="tab_group_color_pink">Rosa</string>
   <!-- Tab group color: Purple -->
   <string name="tab_group_color_purple">Lila</string>
-  <!-- Tab group color: Violet -->
-  <string name="tab_group_color_violet">Violett</string>
   <!-- Tab group color: Blue -->
   <string name="tab_group_color_blue">Blå</string>
   <!-- Tab group color: Cyan -->
@@ -1818,8 +1741,6 @@
   <string name="history_search_1">Ange söktermer</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">Rensa historik</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">Historik borttagen</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">Tog bort %1$s</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -2056,33 +1977,37 @@
   <!-- The error message of the URL text field when an invalid URL has been entered. -->
   <string name="webcompat_reporter_url_error_invalid">Ange en giltig URL</string>
   <!-- The label/title of a field in the Web Compat Reporter feature for explaining a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_label_whats_broken_2">Vad är trasigt?</string>
-  <!-- The placeholder text for the dropdown where a user selects a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_2">Välj en orsak</string>
-  <!-- The error message of the dropdown, prompting the user to select a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_error">Välj en anledning</string>
-  <!-- The label/title of an optional field in the Web Compat Reporter feature for adding additional information. -->
-  <string name="webcompat_reporter_label_description">Beskriv problemet (valfritt)</string>
-  <!-- The button text for navigating away from the feature to provide more information on the broken site's bug report. -->
-  <string name="webcompat_reporter_add_more_info">Lägg till mer info</string>
+  <string name="webcompat_reporter_label_whats_broken_3">Vad fungerar inte?</string>
+  <!-- Content description for the icon button that clears the selected broken site reason in the WebCompat Reporter. -->
+  <string name="webcompat_reporter_clear_reason_content_description">Rensa valt skäl</string>
+  <!-- The error message of the description when the user selects "Something else" as the reason, but left the description empty or too short. -->
+  <string name="webcompat_reporter_description_error">Ange minst 10 tecken</string>
+  <!-- The label/title of a mandatory field in the Web Compat Reporter feature for adding additional information. -->
+  <string name="webcompat_reporter_label_mandatory_description">Beskriv problemet i detalj för att hjälpa oss undersöka problemet</string>
+  <!-- The label/title of a optional field in the Web Compat Reporter feature for adding additional information. -->
+  <string name="webcompat_reporter_label_optional_description">Beskriv problemet i detalj för att hjälpa oss att undersöka problemet (valfritt)</string>
   <!-- The button text for the cancel button to leave the Web Compat Reporter feature. -->
   <string name="webcompat_reporter_cancel">Avbryt</string>
   <!-- The button text for the send button to submit the provided form data. -->
-  <string name="webcompat_reporter_send">Skicka</string>
+  <string name="webcompat_reporter_send_report">Skicka rapport</string>
   <!-- Text for a snackbar to confirm the successful submission of a WebCompat report. -->
   <string name="webcompat_reporter_success_snackbar_text_2">Rapport skickad</string>
   <!-- Placeholder text for the description field to prompt the user on what they should type. -->
-  <string name="webcompat_reporter_problem_description_placeholder_text">Vad hände? Vad skulle ha hänt?</string>
+  <string name="webcompat_reporter_problem_description_placeholder_text_2">Vad hände? Vad förväntade du dig skulle hända? Ange steg för att reproducera problemet.</string>
   <!-- Label of the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. -->
-  <string name="webcompat_reporter_etp_checkbox_text">Skicka webbadresser blockerade av spårningsskydd</string>
-  <!-- Description text for the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. It informs the user when checked, the report will include the list of URLs that were blocked by Enhanced Tracking Protection on the current page. -->
-  <string name="webcompat_reporter_etp_checkbox_description">Förbättrat spårningsskydd kan blockera spårare och skript som vissa webbplatser behöver för att fungera korrekt.</string>
+  <string name="webcompat_reporter_etp_checkbox_text_2">Skicka lista över objekt som blockerats av spårningsskydd</string>
   <!-- The button text for the preview report button to view a preview of the report. -->
   <string name="webcompat_reporter_preview_report">Förhandsgranska rapport</string>
   <!-- The title shown at the top of the WebCompat Report preview panel. This appears after the user taps the “Preview” button before sending a report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_header">Förhandsgranskning av rapport</string>
   <!-- Label for the “Send” button shown in the WebCompat Report preview panel, which the user taps to submit the report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_send">Skicka</string>
+  <!-- Title for the Edit URL confirmation dialog in the WebCompatReporter -->
+  <string name="webcompat_reporter_edit_url_dialog_title">Redigera webbplatsens URL</string>
+  <!-- Text shown on the save button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_save">Spara</string>
+  <!-- Text shown on the dismiss button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_dismiss">Ignorera</string>
   <!--
     These reason strings are dropdown options on a WebCompat reporter form, indicating what is broken on the site.
 
@@ -2102,7 +2027,9 @@
   <!-- Broken site reason text for site asked to turn off ad blocker -->
   <string name="webcompat_reporter_reason_turn_off_adblocker">Webbplatsen ombeds att stänga av annonsblockeraren</string>
   <!-- Broken site reason text for browser isn’t supported or blocked -->
-  <string name="webcompat_reporter_reason_notsupported">Webbläsaren stöds inte eller är blockerad</string>
+  <string name="webcompat_reporter_reason_notsupported_2">Webbläsaren stöds inte eller är blockerad</string>
+  <!-- Broken site reason text for the site being deceptive -->
+  <string name="webcompat_reporter_reason_site_is_deceptive">Den här webbplatsen är vilseledande</string>
   <!-- Broken site reason text for something else -->
   <string name="webcompat_reporter_reason_other">Något annat</string>
   <!--
@@ -2112,7 +2039,7 @@
   -->
   <string name="tab_crash_title_2">Tyvärr. %1$s kan inte ladda den sidan.</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">Skicka kraschrapport till Mozilla</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">Skicka kraschrapport till Mozilla</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">Stäng flik</string>
   <!-- Restore tab button text on the tab crash page -->
@@ -2211,12 +2138,8 @@
   <string name="edit_bookmark_folder_fragment_title">Redigera mapp</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">URL</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">MAPP</string>
   <!-- Text indicating which folder a bookmark or folder will be saved in -->
   <string name="bookmark_save_in_label">Spara i</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">NAMN</string>
   <!-- Label for a text input field for a bookmark or folder name -->
   <string name="bookmark_name_label_normal_case">Namn</string>
   <!-- Bookmark select folder screen title -->
@@ -2260,30 +2183,24 @@
   <string name="bookmark_empty_list_root_title">Håll alla dina favoritbokmärken samlade</string>
   <!-- Bookmark screen folder description. %s is the count of bookmark folder children -->
   <string name="bookmarks_folder_description">Bokmärken i mappen: %s</string>
-  <!-- Description for the bookmark list empty state when you're not signed into sync. -->
-  <string name="bookmark_empty_list_guest_description">Spara webbplatser när du surfar. Logga in för att hämta bokmärken från andra synkroniserade enheter.</string>
   <!-- Text for the button to navigate to sync authentication -->
   <string name="bookmark_empty_list_guest_cta">Logga in för att synkronisera</string>
-  <!-- Description for the bookmark list empty state when you're signed into sync. -->
-  <string name="bookmark_empty_list_authenticated_description">Spara webbplatser när du surfar. Vi kommer också att hämta bokmärken från andra synkroniserade enheter.</string>
   <!-- Description for the bookmark list empty state when you're in an empty folder. -->
   <string name="bookmark_empty_list_folder_description">Lägg till bokmärken när du surfar så att du kan hitta dina favoritplatser senare.</string>
   <!-- Description for the add new folder button when selecting a folder. -->
   <string name="bookmark_select_folder_new_folder_button_title">Ny mapp</string>
   <!-- Bookmark snackbar message for moving a single item. %1$s is the title of the item being moved and %2$s is the new parent folder of the bookmark -->
   <string name="bookmark_moved_single_item">Flyttade %1$s till %2$s</string>
+  <!-- Text for bookmark search page when there are no results. -->
+  <string name="bookmark_no_search_results">Inga matchningar hittades.</string>
+  <!-- Additional text for bookmark search page when there are no results. -->
+  <string name="bookmark_no_search_results_additional_text">Testa en annan sökning!</string>
   <!--
     Site Permissions
 
     Button label that take the user to the Android App setting
   -->
   <string name="phone_feature_go_to_settings">Gå till inställningar</string>
-  <!--
-    Content description (not visible, for screen readers etc.): Quick settings sheet
-    to give users access to site specific information / settings. For example:
-    Secure settings status and a button to modify site permissions
-  -->
-  <string name="quick_settings_sheet">Genväg snabbinställningar</string>
   <!-- Label that indicates that this option it the recommended one -->
   <string name="phone_feature_recommended">Rekommenderad</string>
   <!-- Button label for clearing all the information of site permissions -->
@@ -2380,8 +2297,6 @@
   <string name="collections_header">Samlingar</string>
   <!-- Content description (not visible, for screen readers etc.): Opens the collection menu when pressed -->
   <string name="collection_menu_button_content_description">Samlingsmeny</string>
-  <!-- Label to describe what collections are to a new user without any collections -->
-  <string name="no_collections_description2">Samla de saker som är viktiga för dig.\nGruppera liknande sökningar, webbplatser och flikar för snabb åtkomst senare.</string>
   <!-- Title for the "select tabs" step of the collection creator -->
   <string name="create_collection_select_tabs">Välj flikar</string>
   <!-- Title for the "select collection" step of the collection creator -->
@@ -2475,6 +2390,10 @@
   <string name="sync_sign_in">Logga in till Sync</string>
   <!-- An option from the share dialog to send link to all other sync devices -->
   <string name="sync_send_to_all">Skicka till alla enheter</string>
+  <!-- Text displayed when no other sync devices are available for link sharing -->
+  <string name="sync_no_devices_available">Inga enheter tillgängliga</string>
+  <!-- Text displayed when no other sync devices are available for link sharing. -->
+  <string name="sync_no_devices_available_description">Alla enheter som är inloggade och synkroniserar med det här kontot visas här.</string>
   <!-- An option from the share dialog to reconnect to sync -->
   <string name="sync_reconnect">Återanslut till Sync</string>
   <!-- Text displayed when sync is offline and cannot be accessed -->
@@ -2531,6 +2450,8 @@
   <string name="preferences_take_survey">Gör undersökning</string>
   <!-- Preference for not taking the short survey. -->
   <string name="preferences_not_take_survey">Nej tack</string>
+  <!-- Error message shown in a Toast when the system fails to trigger the device uninstallation prompt. -->
+  <string name="uninstall_survey_error_failed">Det gick inte att öppna prompten för systemavinstallation. Använd åtgärden för systemavinstallation direkt.</string>
   <!--
     Snackbar
 
@@ -2676,10 +2597,8 @@
   <!--
     Enhanced Tracking Protection
 
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
+    Preference title for enhanced tracking protection settings
   -->
-  <string name="etp_settings">Skyddsinställningar</string>
-  <!-- Preference title for enhanced tracking protection settings -->
   <string name="preference_enhanced_tracking_protection">Förbättrat spårningsskydd</string>
   <!-- Preference summary for enhanced tracking protection settings on/off switch -->
   <string name="preference_enhanced_tracking_protection_summary">Nu med Totalt skydd mot kakor, vår mest kraftfulla barriär hittills mot spårare på flera webbplatser.</string>
@@ -2687,7 +2606,7 @@
   <string name="preference_enhanced_tracking_protection_explanation_2">%s skyddar dig från många av de vanligaste spårarna som följer vad du gör online.</string>
   <!-- Text displayed that links to website about enhanced tracking protection -->
   <string name="preference_enhanced_tracking_protection_explanation_learn_more">Läs mer</string>
-  <plurals name="trackers_blocked_count">
+  <plurals name="trackers_blocked_count_2">
     <!--
       Trackers blocked card on homepage
 
@@ -2768,12 +2687,8 @@
   <string name="preference_enhanced_tracking_protection_custom_cryptominers">Kryptogrävare</string>
   <!-- Preference for enhanced tracking protection for the custom protection settings -->
   <string name="preference_enhanced_tracking_protection_custom_known_fingerprinters">Kända fingeravtrycksspårare</string>
-  <!-- Button label for navigating to the Enhanced Tracking Protection details -->
-  <string name="enhanced_tracking_protection_details">Detaljer</string>
   <!-- Header for categories that are being being blocked by current Enhanced Tracking Protection settings -->
   <string name="enhanced_tracking_protection_blocked">Blockerad</string>
-  <!-- Header for categories that are being not being blocked by current Enhanced Tracking Protection settings -->
-  <string name="enhanced_tracking_protection_allowed">Tillåten</string>
   <!-- Category of trackers (social media trackers) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_social_media_trackers_title">Sociala media-spårare</string>
   <!-- Description of social media trackers that can be blocked by Enhanced Tracking Protection -->
@@ -2796,10 +2711,6 @@
   <string name="etp_tracking_content_title">Spårningsinnehåll</string>
   <!-- Description of tracking content that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_tracking_content_description">Stoppar externa annonser, videor och annat innehåll från laddning eftersom de kan innehålla spårningskod. Kan påverka vissa webbplatsfunktioner.</string>
-  <!-- Enhanced Tracking Protection message that protection is currently on for this site -->
-  <string name="etp_panel_on">Skydd är PÅ för den här webbplatsen</string>
-  <!-- Enhanced Tracking Protection message that protection is currently off for this site -->
-  <string name="etp_panel_off">Skydd är AV för den här webbplatsen</string>
   <!-- Header for exceptions list for which sites enhanced tracking protection is always off -->
   <string name="enhanced_tracking_protection_exceptions">Förbättrat spårningsskydd är avstängt för dessa webbplatser</string>
   <!--
@@ -2824,13 +2735,6 @@
   <string name="etp_suspected_fingerprinters_description">Aktiverar skydd mot fingeravtryck för att stoppa misstänkta fingeravtrycksspårare.</string>
   <!-- Category of trackers (fingerprinters) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_known_fingerprinters_title">Kända fingeravtrycksspårare</string>
-  <!--
-    Description of the SmartBlock Enhanced Tracking Protection feature. The * symbol is intentionally hardcoded here,
-    as we use it on the UI to indicate which trackers have been partially unblocked.
-  -->
-  <string name="preference_etp_smartblock_description">Vissa spårare markerade nedan har delvis blockerats på den här sidan eftersom du interagerade med dem *.</string>
-  <!-- Text displayed that links to website about enhanced tracking protection SmartBlock -->
-  <string name="preference_etp_smartblock_learn_more">Läs mer</string>
   <!--
     Content description (not visible, for screen readers etc.):
     Enhanced tracking protection exception preference icon for ETP settings.
@@ -3078,6 +2982,8 @@
   <string name="saved_logins_sort_strategy_last_used">Senast använd</string>
   <!-- Content description (not visible, for screen readers etc.) -->
   <string name="saved_logins_menu_dropdown_chevron_icon_content_description_2">Menyn sortera lösenord</string>
+  <!-- Label for button to import passwords from file. -->
+  <string name="passwords_import_menu_button">Importera från fil</string>
   <!--
     Email Masks
 
@@ -3108,10 +3014,12 @@
   <string name="ip_protection_title">VPN</string>
   <!-- Label for the browser VPN toggle on the settings screen -->
   <string name="ip_protection_toggle_label">VPN</string>
+  <!-- Content description for the browser VPN settings screen top bar back button -->
+  <string name="ip_protection_navigate_back_button_content_description">Navigera bakåt</string>
   <!-- Headline for the browser VPN promo card. %s is the name of the app (for example "Firefox"). -->
   <string name="ip_protection_promo_headline">%s:s inbyggda VPN</string>
-  <!-- Body text for the browser VPN promo card -->
-  <string name="ip_protection_promo_body">Surfa med extra skydd genom att dölja din plats, även på offentligt Wi-Fi.</string>
+  <!-- Body text for the browser VPN promo card . %s is a learn more link using ip_protection_learn_more as text. -->
+  <string name="ip_protection_promo_body_2">Surfa med extra skydd genom att dölja din plats, även på offentligt Wi-Fi. %s</string>
   <!-- Link text that opens additional information about the browser VPN -->
   <string name="ip_protection_learn_more">Läs mer</string>
   <!-- Label for the monthly data allowance section on the browser VPN settings screen -->
@@ -3161,8 +3069,14 @@
   <string name="ip_protection_toolbar_pill_label">VPN på</string>
   <!-- Accessibility description for the browser VPN pill in the address bar when the VPN has been activated -->
   <string name="ip_protection_toolbar_pill_description">VPN är aktivt.</string>
+  <!-- Label shown next to the browser protection icon in the address bar when the browser VPN turns off -->
+  <string name="ip_protection_toolbar_pill_label_off">VPN av</string>
+  <!-- Accessibility description for the browser VPN pill in the address bar when the VPN has turned off -->
+  <string name="ip_protection_toolbar_pill_description_off">VPN är avstängt.</string>
   <!-- Label for the button that starts the browser VPN authentication or authorization flow on the settings screen -->
   <string name="ip_protection_get_started">Kom igång</string>
+  <!-- Label for the "connecting" state of the button that starts the browser VPN authentication or authorization flow on the settings screen -->
+  <string name="ip_protection_connecting">Ansluter…</string>
   <!-- Headline for the browser VPN onboarding card. %s is the name of the app (for example "Firefox"). -->
   <string name="ip_protection_onboarding_card_headline">Testa %s:s inbyggda VPN</string>
   <!--
@@ -3173,6 +3087,14 @@
   <string name="ip_protection_onboarding_body">%1$s genom att dölja din plats, även på offentligt Wi-Fi. Få %2$d GB gratis varje månad.</string>
   <!-- Used as text for a link in ip_protection_onboarding_body. Make sure to adapt capitalization if the link is in the middle of the sentence. -->
   <string name="ip_protection_onboarding_body_link">Surfa med extra skydd</string>
+  <!--
+    The body of the VPN onboarding card for a promotion that provides unlimited data bandwidth for a certain time.
+    %1$s is a localized date (for example "Jun 9") indicating the end of the promotional period.
+    %2$s is a link using ip_protection_onboarding_body_link_promo (“Learn more”) as text. It links to a support article about VPN on Firefox.
+  -->
+  <string name="ip_protection_onboarding_body_promo">Aktivera den för att göra din surfning mer privat och svårare att spåra. Testa nu för att få obegränsad bandbredd genom %1$s. %2$s</string>
+  <!-- Used as text for a link in ip_protection_onboarding_body. Make sure to adapt capitalization if the link is in the middle of the sentence. -->
+  <string name="ip_protection_onboarding_body_link_promo">Läs mer</string>
   <!-- Label for the dismiss button on the onboarding bottom sheet. -->
   <string name="ip_protection_onboarding_not_now_button">Inte nu</string>
   <!-- Snackbar (in-app pop-up notification) text to signal the browser VPN connection error -->
@@ -3182,6 +3104,42 @@
     %1$d is the total monthly allowance in GB (for example "50").
   -->
   <string name="ip_protection_data_limit_reached_snackbar">%1$d GB VPN-data använd. Åtkomst återställs nästa månad.</string>
+  <!-- Snackbar (in-app pop-up notification) action button text that takes the user to the VPN settings screen. -->
+  <string name="ip_protection_data_limit_reached_snackbar_action">Inställningar</string>
+  <!-- Description shown on the browser VPN settings screen prompting the user to turn the VPN on. -->
+  <string name="ip_protection_settings_description" tools:ignore="UnusedResources">Aktivera VPN för att göra din surfning mer privat och svårare att spåra.</string>
+  <!-- Title shown on the browser VPN settings screen for location selection section. -->
+  <string name="ip_protection_location_title" tools:ignore="UnusedResources">Plats</string>
+  <!-- Label for the Recommended server location option which is automatically selected by the browser. -->
+  <string name="ip_protection_recommended_location" tools:ignore="UnusedResources">Rekommenderad</string>
+  <!-- Headline for the card that promotes the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_headline" tools:ignore="UnusedResources,BrandUsage">Skydda mer med Mozilla VPN</string>
+  <!-- Body for the card that promotes the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_body" tools:ignore="UnusedResources">Välj bland över 300 platser och skydda alla dina appar på upp till 5 enheter.</string>
+  <!-- Label for the button that takes the user to get the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_button" tools:ignore="UnusedResources,BrandUsage">Hämta Mozilla VPN</string>
+  <!-- Title for the browser VPN location picker screen. -->
+  <string name="ip_protection_location_picker_title" tools:ignore="UnusedResources">Välj VPN-plats</string>
+  <!-- Description for what it means to use the Recommended setting and let the app automatically pick the best server location. -->
+  <string name="ip_protection_location_fastest_description" tools:ignore="BrandUsage">Firefox hittar den snabbaste platsen</string>
+  <!-- Description for an unavailable VPN location in the location list. -->
+  <string name="ip_protection_location_unavailable_description">Upptagen</string>
+  <!-- Error message shown when the selected browser VPN location is unavailable. -->
+  <string name="ip_protection_location_unavailable" tools:ignore="UnusedResources">Plats otillgänglig. Välj en annan plats.</string>
+  <!-- Snackbar (in-app pop-up notification) text shown when the previously selected browser VPN location is unavailable and the recommended location was used instead. -->
+  <string name="ip_protection_location_unavailable_recommended_snackbar" tools:ignore="UnusedResources">Vald VPN-plats otillgänglig. Ansluten till den rekommenderade platsen.</string>
+  <!-- Title for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_locations_unavailable_title">Platser är inte tillgängliga</string>
+  <!-- Description for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_locations_unavailable_description">Bytte till den rekommenderade platsen.</string>
+  <!-- Title for the browser VPN location selection screen (displayed in the app bar) -->
+  <string name="ip_protection_locations_title">Välj VPN-plats</string>
+  <!-- Content description for the browser VPN location selection screen top bar back button -->
+  <string name="ip_protection_locations_navigate_back_button_content_description">Navigera bakåt</string>
+  <!-- Title for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_location_unavailable_title" tools:ignore="UnusedResources">Tidigare plats är inte tillgänglig</string>
+  <!-- Description for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_location_unavailable_recommended_description" tools:ignore="UnusedResources">Ansluten till den rekommenderade platsen.</string>
   <!--
     Autofill
 
@@ -3334,8 +3292,6 @@
   <string name="addresses_save_button">Spara</string>
   <!-- The text for the "Cancel" button for cancelling adding, updating or deleting an address -->
   <string name="addresses_cancel_button">Avbryt</string>
-  <!-- The text for the "Delete address" button for deleting an address -->
-  <string name="addressess_delete_address_button">Ta bort adress</string>
   <!-- The title for the "Delete address" confirmation dialog -->
   <string name="addressess_confirm_dialog_message_2">Ta bort den här adressen?</string>
   <!-- The text for the positive button on "Delete address" dialog -->
@@ -3390,16 +3346,8 @@
   <string name="phone_feature_blocked_step_permissions"><![CDATA[2. Tryck <b>Behörigheter</b>]]></string>
   <!-- Third step for the allowing a permission (%1$s is the permission name, for example "Camera"). -->
   <string name="phone_feature_blocked_step_feature"><![CDATA[3. Växla <b>%1$s</b> till PÅ]]></string>
-  <!-- Label that indicates a site is using a secure connection -->
-  <string name="quick_settings_sheet_secure_connection_2">Anslutningen är säker</string>
-  <!-- Label that indicates a site is using a insecure connection -->
-  <string name="quick_settings_sheet_insecure_connection_2">Anslutningen är inte säker</string>
-  <!-- Label that indicates a site is displaying a local document -->
-  <string name="quick_settings_sheet_local_page">Den här sidan är lagrad på din enhet.</string>
   <!-- Label to clear site data -->
   <string name="clear_site_data">Rensa kakor och webbplatsdata</string>
-  <!-- Confirmation message for a dialog confirming if the user wants to delete all data for current site. %s is the domain of the site. -->
-  <string name="confirm_clear_site_data"><![CDATA[Är du säker på att du vill rensa alla kakor och data för webbplatsen <b>%s</b>?]]></string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for all sites -->
   <string name="confirm_clear_permissions_on_all_sites">Är du säker på att du vill rensa alla behörigheterna för alla webbplatser?</string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for a site -->
@@ -3412,11 +3360,6 @@
   <string name="browser_menu_add_to_shortcuts">Lägg till i genvägar</string>
   <!-- Browser menu button that removes a shortcut from the home fragment -->
   <string name="browser_menu_remove_from_shortcuts">Ta bort från genvägar</string>
-  <!--
-    text shown before the issuer name to indicate who its verified by, %1$s is the name of
-    the certificate authority that verified the ticket
-  -->
-  <string name="certificate_info_verified_by">Verifierad av: %1$s</string>
   <!-- Message in delete confirmation dialog for password -->
   <string name="login_deletion_confirmation_2">Är du säker på att du vill ta bort det här lösenordet?</string>
   <!-- Positive action of a dialog asking to delete -->
@@ -3480,10 +3423,26 @@
     which navigates the user to a screen displaying all the shortcuts.
   -->
   <string name="homepage_shortcuts_show_all_content_description">Visa alla genvägar</string>
+  <!--
+    Label for the button in the shortcuts home screen section that expands the section to show
+    every shortcut.
+  -->
+  <string name="homepage_shortcuts_show_all">Visa alla</string>
+  <!--
+    Label for the button in the shortcuts home screen section that collapses the section back
+    to showing only the first shortcuts.
+  -->
+  <string name="homepage_shortcuts_show_less">Visa färre</string>
   <!-- Label for the "Add shortcut" button displayed as a tile. -->
   <string name="homepage_shortcuts_add_shortcut">Lägg till genväg</string>
+  <!-- Title for the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_add_to_homepage">Lägg till på startsidan</string>
+  <!-- Label for the "Add website" button in the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_add_website">Lägg till webbplats</string>
   <!-- Title text for the "Enter a Website URL" dialog for adding a shortcut. -->
   <string name="homepage_shortcuts_add_website_title">Ange en webbplatsadress</string>
+  <!-- Title for the "Popular sites" section in the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_popular_sites">Populära webbplatser</string>
   <!-- Title text displayed in the dialog when shortcuts limit is reached. -->
   <string name="shortcut_max_limit_title">Övre gräns för genvägar nådd</string>
   <!-- Content description text displayed in the dialog when shortcut limit is reached. -->
@@ -3570,8 +3529,6 @@
   <string name="default_browser_experiment_card_title">Ändra din standardwebbläsare</string>
   <!-- Default browser card text -->
   <string name="default_browser_experiment_card_text" tools:ignore="BrandUsage">Ställ in länkar från webbplatser, e-post och meddelanden så att de öppnas automatiskt i Firefox.</string>
-  <!-- Content description for close button in collection placeholder. -->
-  <string name="remove_home_collection_placeholder_content_description">Ta bort</string>
   <!-- Content description radio buttons with a link to more information -->
   <string name="radio_preference_info_content_description">Klicka för mer information</string>
   <!-- Content description for the action bar "up" button -->
@@ -3603,20 +3560,10 @@
     Action label for elements that can be collapsed if interacting with them. Talkback will append this to say "Double tap to collapse".
   -->
   <string name="a11y_action_label_collapse">komprimera</string>
-  <!-- Current state for elements that can be collapsed if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_collapsed">komprimerad</string>
   <!-- Action label for elements that can be expanded if interacting with them. Talkback will append this to say "Double tap to expand". -->
   <string name="a11y_action_label_expand">expandera</string>
-  <!-- Current state for elements that can be expanded if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_expanded">expanderad</string>
   <!-- Action label for links to a website containing documentation about a wallpaper collection. Talkback will append this to say "Double tap to open link to learn more about this collection". -->
   <string name="a11y_action_label_wallpaper_collection_learn_more">öppna länken för att lära dig mer om denna samling</string>
-  <!-- Content description for headings announced by accessibility service. %s is the text of the heading. Talkback will announce the text and then speak the word "Heading" indicating to the user that this text is a heading for a section. -->
-  <string name="a11y_heading">%s, Rubrik</string>
-  <!-- Title for dialog displayed when trying to access links present in a text. -->
-  <string name="a11y_links_title">Länkar</string>
-  <!-- Additional content description for text bodies that contain urls. -->
-  <string name="a11y_links_available">Länkar tillgängliga</string>
   <!-- Translations feature -->
 
   <!--
@@ -3883,8 +3830,19 @@
     %s is the name of the app (for example "Firefox").
   -->
   <string name="protection_panel_banner_protected_title">%s är på vakt</string>
-  <!-- Description text for the protection panel banner when tracking protection is enabled. -->
-  <string name="protection_panel_banner_protected_description">Du är skyddad. Om vi upptäcker något meddelar vi dig.</string>
+  <plurals name="protection_panel_banner_protected_blocked_trackers_description">
+    <!--
+      Description text for the protection panel banner when privacy dashboard is enabled.
+      %1$d is the number of trackers blocked.
+    -->
+    <item quantity="one">%1$d spårare blockerad på den här webbplatsen.</item>
+    <item quantity="other">%1$d spårare blockerade på den här webbplatsen.</item>
+  </plurals>
+  <!--
+    Description text for the protection panel banner when privacy dashboard is enabled.
+    and there are no trackers blocked.
+  -->
+  <string name="protection_panel_banner_protected_no_blocked_trackers_description">Du är skyddad.</string>
   <!-- Label text for the Enhanced Tracking Protection toggle. -->
   <string name="protection_panel_etp_toggle_label">Förbättrat spårningsskydd</string>
   <!-- Toggle if Enhanced Tracking Protection is turned on -->
@@ -3900,25 +3858,68 @@
     %d is a placeholder for the number of trackers blocked.
   -->
   <string name="protection_panel_num_trackers_blocked">Blockerade spårare: %d</string>
-  <!-- Text for when no trackers have been blocked. -->
-  <string name="protection_panel_no_trackers_blocked">Inga spårare hittades</string>
   <!-- Text for when tracking protection is disabled and no trackers are blocked. -->
   <string name="protection_panel_etp_disabled_no_trackers_blocked">Spårare blockeras inte</string>
   <!-- Link text to navigate to privacy and security settings from the protection panel. -->
   <string name="protection_panel_privacy_and_security_settings_2">Sekretessinställningar</string>
   <!-- Title text for the protection panel permissions section. -->
   <string name="protection_panel_permissions_title">Behörigheter</string>
-  <!--
-    Text for displaying the total number of trackers blocked in the trackers blocked panel.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_total_num_trackers_blocked">Blockerade spårare: %d</string>
-  <!--
-    Text for displaying the number of trackers blocked for a specific tracker category in the trackers blocked panel.
-    %s is a placeholder for the name of the tracker category.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_categorical_num_trackers_blocked">%s: %d</string>
+  <plurals name="trackers_blocked_panel_total_num_trackers_blocked_2">
+    <!--
+      Text for displaying the total number of trackers blocked in the trackers blocked panel.
+      %1$d is a placeholder for the number of trackers blocked.
+    -->
+    <item quantity="one">%1$d spårare blockerad på den här webbplatsen</item>
+    <item quantity="other">%1$d spårare blockerade på den här webbplatsen</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_social_media_trackers">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked social media trackers.
+      %1$d is a placeholder for the number of social media trackers blocked.
+    -->
+    <item quantity="one">%1$d spårare för sociala medier</item>
+    <item quantity="other">%1$d spårare för sociala medier</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_cross_site_cookies">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked cross-site tracking cookies.
+      %1$d is a placeholder for the number of cross-site tracking cookies blocked.
+    -->
+    <item quantity="one">%1$d global spårningskaka</item>
+    <item quantity="other">%1$d globala spårningskakor</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_cryptominers">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked cryptomining scripts.
+      %1$d is a placeholder for the number of cryptominers blocked.
+    -->
+    <item quantity="one">%1$d kryptogrävare</item>
+    <item quantity="other">%1$d kryptogrävare</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_fingerprinters">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked fingerprinter scripts.
+      %1$d is a placeholder for the number of fingerprinters blocked.
+    -->
+    <item quantity="one">%1$d fingeravtrycksspårare</item>
+    <item quantity="other">%1$d fingeravtrycksspårare</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_trackers_2">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked generic tracking scripts.
+      %1$d is a placeholder for the number of trackers blocked.
+    -->
+    <item quantity="one">%1$d spårningsinnehåll</item>
+    <item quantity="other">%1$d spårningsinnehåll</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_trackers_blocked_this_week_2">
+    <!--
+      Text for displaying the number of trackers blocked this week in the trackers blocked panel.
+      %1$d is a placeholder for the number of trackers blocked this week.
+    -->
+    <item quantity="one">%1$d spårare blockerad den här veckan</item>
+    <item quantity="other">%1$d spårare blockerade den här veckan</item>
+  </plurals>
   <!--
     Description text for a dialog confirming whether the user wants to delete all data for current site.
     %s is a placeholder for the base domain of website.
@@ -3939,6 +3940,8 @@
     %s is a placeholder for the name of the certificate authority that issued the certificate.
   -->
   <string name="connection_security_panel_verified_by">Verifierad av %s</string>
+  <!-- Content description (not visible, for screen readers etc.) for the handle used to drag the protections dashboard to the bottom of the screen and close it. -->
+  <string name="tracker_protections_dashboard_close_handlebar_content_description">Stäng översikten</string>
   <!--
     Text for the connection security panel when the site uses a QWAC.
     %s is a placeholder for the organization for which the certificate was issued.
@@ -4062,6 +4065,26 @@
   <string name="microsurvey_sync_title" tools:ignore="BrandUsage,UnusedResources">Hur nöjd är du med synkroniseringen i Firefox?</string>
   <!-- Text shown in the survey title for 'describe your experience so far' microsurvey. Note: The word "Firefox" should NOT be translated. -->
   <string name="microsurvey_describe_your_experience_title" tools:ignore="BrandUsage,UnusedResources">Hjälp oss att förbättra Firefox. Vilken beskriver bäst din upplevelse hittills?</string>
+  <!--
+    Uninstall Survey
+
+    Title text for the uninstall survey dialog, asking the user for the reason they are removing the app
+  -->
+  <string name="microsurvey_uninstall_survey_title">Din feedback är viktig. Varför avinstallerar du?</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_1_v2">Den är långsam eller opålitlig</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_2_v2">Webbplatser fungerade inte korrekt</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_3_v2">Saknar funktioner som jag behöver</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_4_v2">Videor, nedladdningar eller media fungerade inte</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_5_v2">Den är svår att använda eller dåligt utformad</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_6_v2">Sekretess eller säkerhetsproblem</string>
+  <!-- Button label shown at the bottom of the uninstall survey -->
+  <string name="uninstall_survey_button_label">Skicka feedback och avinstallera</string>
   <!--
     Accessibility
 
@@ -4433,17 +4456,17 @@
   <!-- Section header for the South America confederation group in the sports widget country selector. -->
   <string name="sports_widget_confederation_south_america">Sydamerika</string>
   <!-- Country name for England in the sports widget. England cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
-  <string name="sports_widget_country_england" tools:ignore="UnusedResources">Storbritannien</string>
+  <string name="sports_widget_country_england">Storbritannien</string>
   <!-- Country name for Scotland in the sports widget. Scotland cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
-  <string name="sports_widget_country_scotland" tools:ignore="UnusedResources">Skottland</string>
+  <string name="sports_widget_country_scotland">Skottland</string>
   <!-- Label shown on the sports widget scoreboard when a match is currently being played live. -->
   <string name="sports_widget_match_live">LIVE</string>
   <!-- Title shown on the sports widget champion scoreboard row celebrating the soccer tournament winner. -->
-  <string name="sports_widget_champions_title" tools:ignore="UnusedResources">Världsmästare 2026</string>
+  <string name="sports_widget_champions_title">Världsmästare 2026</string>
   <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament runners-up. Runners-up means second place. -->
   <string name="sports_widget_runner_up_title" tools:ignore="UnusedResources">Tvåa</string>
   <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament third place winners. -->
-  <string name="sports_widget_third_place_title" tools:ignore="UnusedResources">Tredje plats</string>
+  <string name="sports_widget_third_place_title">Tredje plats</string>
   <!-- Round name shown on the sports widget for the Round of 32 stage in the soccer tournament. -->
   <string name="sports_widget_round_of_32">Sextondelsfinal</string>
   <!-- Round name shown on the sports widget for the Round of 16 stage in the soccer tournament. -->
@@ -4457,9 +4480,9 @@
   <!-- Round name shown on the sports widget for the bronze final stage in the soccer tournament. -->
   <string name="sports_widget_bronze_final">Bronsfinal</string>
   <!-- Sports widget error card message shown when match data fails to load. -->
-  <string name="sports_widget_error_load_failed">Matchinfo är inte tillgänglig just nu. Testa att uppdatera om några minuter.</string>
+  <string name="sports_widget_error_load_failed" tools:ignore="UnusedResources">Matchinfo är inte tillgänglig just nu. Testa att uppdatera om några minuter.</string>
   <!-- Sports widget error card message shown when the network connection is interrupted and live updates pause. -->
-  <string name="sports_widget_error_connection_interrupted">Anslutningen avbröts — liveuppdateringar pausades.</string>
+  <string name="sports_widget_error_connection_interrupted" tools:ignore="UnusedResources">Anslutningen avbröts — liveuppdateringar pausades.</string>
   <!-- Sports widget action label to refresh match data after an error. -->
   <string name="sports_widget_error_refresh">Uppdatera</string>
   <!-- Sports widget group stage label for group A in the soccer tournament. -->
@@ -4497,7 +4520,7 @@
   <!-- Sports widget match status suffix appended to match scores (e.g., "3 - 2 (Full time)") to indicate the match has been completed. -->
   <string name="sports_widget_match_full_time_suffix">(Heltid)</string>
   <!-- Sports widget match status to indicate the match has been completed. -->
-  <string name="sports_widget_match_full_time_2" tools:ignore="UnusedResources">Heltid</string>
+  <string name="sports_widget_match_full_time_2">Heltid</string>
   <!--
     Sports widget card title encouraging the user to follow the soccer tournament. “Keep tabs on” is an informal expression
     meaning to stay updated on or regularly follow something (in this case, World Cup matches and updates).
@@ -4529,7 +4552,7 @@
   <!-- Sports widget match status label shown during halftime of a match. -->
   <string name="sports_widget_halftime" tools:ignore="UnusedResources">Halvtid</string>
   <!-- Sports widget match status label shown during extra time of a match. -->
-  <string name="sports_widget_extra_time" tools:ignore="UnusedResources">Förlängning</string>
+  <string name="sports_widget_extra_time">Förlängning</string>
   <!-- Sports widget match status label shown during penalties of a match. -->
   <string name="sports_widget_penalties">Straffar</string>
   <!--
@@ -4551,11 +4574,11 @@
   -->
   <string name="sports_widget_countdown_minutes">M</string>
   <!-- Content description (for accessibility, not displayed) for the close button on the sports widget team / country selector. -->
-  <string name="sports_widget_close_team_selection_sheet_content_description" tools:ignore="UnusedResources">Stäng lagets urvalslista</string>
+  <string name="sports_widget_close_team_selection_sheet_content_description">Stäng lagets urvalslista</string>
   <!-- Content description (for accessibility, not displayed) for the close button on the sports widget card. -->
   <string name="sports_widget_close_content_description">Stäng</string>
   <!-- Content description (for accessibility, not displayed) for the overflow (more options) menu button on the sports widget card. -->
-  <string name="sports_widget_more_options_content_description" tools:ignore="UnusedResources">Fler alternativ</string>
+  <string name="sports_widget_more_options_content_description">Fler alternativ</string>
   <!--
     Content description (for accessibility, not displayed) announcing the time remaining until the soccer tournament kickoff.
     %1$d is the number of days, %2$d is the number of hours, and %3$d is the number of minutes.
@@ -4567,30 +4590,44 @@
     Content description (for accessibility, not displayed)  announcing an upcoming soccer match.
     %1$s is the home team name, %2$s is the away team name, %3$s is the match date, %4$s is the kickoff time.
   -->
-  <string name="sports_widget_upcoming_match_content_description" tools:ignore="UnusedResources">Kommande: %1$s mot %2$s, %3$s kl. %4$s</string>
+  <string name="sports_widget_upcoming_match_content_description">Kommande: %1$s mot %2$s, %3$s kl. %4$s</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing a soccer match.
+    %1$s is the home team name, %2$s is the away team name, %3$s is trailing context
+    (e.g. formatted score "1 - 2 (Full time)", upcoming match info "Jun 19 5:00 PM",
+    or a match status like "Full time").
+  -->
+  <string name="sports_widget_match_content_description">%1$s mot %2$s, %3$s</string>
   <!--
     Content description (for accessibility, not displayed)  used for the sports widget card header announcing a live match for a group or stage.
     %s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32,
     or Final represented by sports_widget_final).
   -->
-  <string name="sports_widget_live_game_content_description" tools:ignore="UnusedResources">%s, livematch</string>
+  <string name="sports_widget_live_game_content_description">%s, livematch</string>
   <!--
     Content description (for accessibility, not displayed) announcing a live score.
     %1$s is the home team name, %2$d is the home team score, %3$s is the away team name, %4$d is the away team score,
     and %5$s is the match elapsed time (e.g. 72 minutes).
   -->
-  <string name="sports_widget_live_score_content_description" tools:ignore="UnusedResources">%1$s %2$d, %3$s %4$d, %5$s, live</string>
+  <string name="sports_widget_live_score_content_description">%1$s %2$d, %3$s %4$d, %5$s, live</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing the elapsed minutes of a live match.
+    %1$s is the clock value, which may be a plain number (e.g. "72") or include extra time (e.g. "90+3").
+  -->
+  <string name="sports_widget_match_elapsed_minutes">Förfluten tid i minuter: %1$s</string>
   <!--
     Content description (for accessibility, not displayed) for a paginated item.
     %1$s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32),
     %2$d is the current page number, and %3$d is the total number of pages.
   -->
-  <string name="sports_widget_page_position_content_description" tools:ignore="UnusedResources">%1$s, sida %2$d av %3$d</string>
+  <string name="sports_widget_page_position_content_description">%1$s, sida %2$d av %3$d</string>
   <!--
     Content description (for accessibility, not displayed) for a page within the World Cup final results carousel.
     %1$d is the current page number, and %2$d is the total number of pages.
   -->
   <string name="sports_widget_final_results_page_content_description" tools:ignore="UnusedResources">VM-slutresultat, sida %1$d av %2$d</string>
+  <!-- Content description (for accessibility, not displayed) for the World Cup final results page. -->
+  <string name="sports_widget_final_results_content_description">VM-slutresultat</string>
   <!-- Content description (for accessibility, not displayed) for the remove button that removes the sports widget from the homepage. -->
   <string name="sports_widget_remove_content_description" tools:ignore="UnusedResources">Ta bort VM från hem</string>
   <!-- Title shown on the sports widget immediately after the user has followed a team. %s is the selected team (e.g., "USA"). -->
@@ -4602,11 +4639,17 @@
   <!-- Sports widget match status label shown during second half of a match. -->
   <string name="sports_widget_second_half" tools:ignore="UnusedResources">Andra halvlek</string>
   <!-- Sports widget error card title shown when the user is offline. -->
-  <string name="sports_widget_error_connection_offline_title" tools:ignore="UnusedResources">Du verkar vara offline.</string>
+  <string name="sports_widget_error_connection_offline_title">Du verkar vara offline.</string>
   <!-- Sports widget error card description shown when the user is offline. -->
-  <string name="sports_widget_error_connection_offline_description" tools:ignore="UnusedResources">Kontrollera din internetanslutning och försök igen.</string>
+  <string name="sports_widget_error_connection_offline_description">Kontrollera din internetanslutning och försök igen.</string>
   <!-- Sports widget general group stage label in the soccer tournament. -->
   <string name="sports_widget_group_stage">Gruppspel</string>
+  <!-- Sports widget error card title shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_title">Matchinfo är inte tillgänglig just nu.</string>
+  <!-- Sports widget error card description shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_description">Testa att uppdatera om några minuter.</string>
+  <!-- Content description (for accessibility, not displayed) for teams which have not yet been determined in the match schedule. -->
+  <string name="sports_widget_team_to_be_determined">Lag kommer att bestämmas</string>
   <!-- ==== End of Terms of use popup prompt. ==== -->
 
   <!--
@@ -4621,4 +4664,114 @@
   <string name="privacy_notice_updated_homepage_message_privacy_notice" tools:ignore="UnusedResources">sekretessmeddelande</string>
   <!-- The second active link used in privacy_notice_updated_homepage_message -->
   <string name="privacy_notice_updated_homepage_message_learn_more" tools:ignore="UnusedResources">Läs mer</string>
+  <!--
+    Collections migration homepage card
+
+    Title shown on the collections to tab groups migration card on the homepage.
+  -->
+  <string name="collections_migration_homepage_banner_title">Samlingar är nu grupper</string>
+  <!-- Message shown on the collections to tab groups migration card on the homepage. -->
+  <string name="collections_migration_homepage_card_message">Det finns ett enklare sätt att hålla ordning på dina flikar</string>
+  <!-- Link text shown on the collections to tab groups migration card that opens the tab groups page in the tab manager. -->
+  <string name="collections_migration_homepage_card_link">Se mina flikgrupper</string>
+  <!-- Google Lens prototype related strings -->
+  <string name="preferences_debug_settings_google_lens_integration">Aktivera Google Lens-integration</string>
+  <!-- Lens image search button content description -->
+  <string name="lens_search_content_description">Sök med bild</string>
+  <!-- Content description for the gallery picker button in the Lens camera screen -->
+  <string name="content_description_gallery">Välj från galleriet att skicka till Google Lens</string>
+  <!-- Content description for the shutter button in the Lens camera screen -->
+  <string name="content_description_take_photo">Ta foto och skicka till Google Lens</string>
+  <!-- Image context menu entry that sends the long-pressed image to Google Lens -->
+  <string name="context_menu_open_image_with_google_lens">Sök med Google Lens</string>
+  <!-- Toast shown when the user denies the camera permission requested by the Lens camera screen -->
+  <string name="lens_camera_permission_denied">Tillstånd nekad</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the photo they capture will be sent to Google Lens for a visual search.
+  -->
+  <string name="lens_camera_title_lens">Google Lens</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the camera is being used to scan a QR code.
+  -->
+  <string name="lens_camera_title_qr">QR-kod</string>
+  <!-- Title for the Google Lens Search Settings page feature toggle -->
+  <string name="search_settings_google_lens_title">Aktivera sökning med Google Lens</string>
+  <!-- Description for the Google Lens Search Settings page feature toggle -->
+  <string name="search_settings_google_lens_description">Skickar bilder och foton till Google för visuell sökning.</string>
+  <!-- Caption shown under the Google Lens toggle clarifying when the feature is available -->
+  <string name="preferences_google_lens_availability_caption">Endast tillgängligt när Google är aktiverat ovan och är din aktiva sökmotor medan du surfar.</string>
+  <!-- Content description for the Google Lens half of the camera mode toggle -->
+  <string name="lens_camera_mode_lens">Google Lens</string>
+  <!-- Content description for the QR scanner half of the camera mode toggle -->
+  <string name="lens_camera_mode_qr">QR-skanner</string>
+  <!-- Toast shown when the user picks an image from the gallery in QR mode but no QR code is found in it -->
+  <string name="lens_camera_qr_no_code_found">Ingen QR-kod hittades i bilden</string>
+  <!-- Title of the bottom sheet shown the first time the user opens the Google Lens camera screen -->
+  <string name="lens_opt_out_title">Hitta det med Google Lens</string>
+  <!-- Description of the bottom sheet shown the first time the user opens the Google Lens camera screen -->
+  <string name="lens_opt_out_description">Välj en bild eller använd kameran för att få resultat med Google Lens.</string>
+  <!-- Text of the link in the first-run Google Lens bottom sheet that opens the Search settings page -->
+  <string name="lens_opt_out_settings_link">Inställningar för Google Lens</string>
+  <!-- Button in the first-run Google Lens bottom sheet that dismisses it and starts the camera -->
+  <string name="lens_opt_out_try_it_now_button">Testa på en gång</string>
+  <!-- Button in the first-run Google Lens bottom sheet that leaves Google Lens without using it -->
+  <string name="lens_opt_out_not_now_button">Inte nu</string>
+  <!--
+    Firefox Labs
+
+    Firefox Labs is the name of a screen in Settings to allow users to learn about
+    experimental and in-development features, and turn those features on and off.
+    The "Labs" portion can be localized, "Firefox" must be treated as a brand and kept
+    in English.
+  -->
+  <string name="firefox_labs_title" tools:ignore="BrandUsage">Firefox Labs</string>
+  <!-- Banner title text on the Firefox Labs screen. -->
+  <string name="firefox_labs_banner_title_2">Testa våra experimentella funktioner!</string>
+  <!--
+    Banner description text on the Firefox Labs screen. Provides information on what Firefox Labs does. %s is the name of the app (for example "Firefox Nightly").
+    Text will appear under the Firefox Labs banner title.
+  -->
+  <string name="firefox_labs_experimental_description">De är under utveckling och utvecklas, vilket kan påverka hur %s fungerar.</string>
+  <!-- The link text shown when a feedback URL for a Firefox Labs feature is available. The feedback URL page will allow users to provide opinions and suggestions. -->
+  <string name="firefox_labs_share_feedback">Dela feedback</string>
+  <!-- Content description for the share feedback link on a Firefox Labs feature. This text will be used by screen readers to provide more context on the feedback link. %s is the name of the Firefox Labs feature. -->
+  <string name="firefox_labs_share_feedback_content_description">Dela feedback för %s.</string>
+  <!-- Button text on the Firefox Labs screen for restoring all toggles back to the default settings. The button will turn off any experimental features. -->
+  <string name="firefox_labs_restore_default_button_text">Återställ standard</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when toggling "on" or "off" an experimental feature that requires a restart. -->
+  <string name="firefox_labs_feature_dialog_title">Omstart krävs</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the positive button when toggling "on" and "off" experimental features. This prompts the user to confirm that they want to restart the app. -->
+  <string name="firefox_labs_dialog_restart_button">Starta om</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the negative button when toggling "on" and "off" experimental features. This is used to cancel the action and return to the previous screen. -->
+  <string name="firefox_labs_dialog_cancel_button">Avbryt</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. -->
+  <string name="firefox_labs_restore_defaults_dialog_title">Omstart krävs</string>
+  <!-- The description used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_restore_defaults_dialog_message">För att återställa standardinställningarna, starta om %s.</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "on" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_enable_dialog_message">För att aktivera den här funktionen, starta om %s.</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "off" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_disable_dialog_message">För att stänga av den här funktionen, starta om %s.</string>
+  <!-- Helper text shown beneath a Firefox Labs item when it is blocked from being turned on. -->
+  <string name="firefox_labs_feature_conflict">Funktionen är inte tillgänglig att prova.</string>
+  <!-- Text displayed on the Firefox Labs screen when there are no Labs experimental features present. -->
+  <string name="firefox_labs_no_labs_available_description">Inga experimentella funktioner att prova just nu</string>
+  <!-- Title of the Firefox Labs Sandboxing experiment. -->
+  <string name="firefox_labs_website_isolation_title" tools:ignore="UnusedResources">Isolering av webbplatser</string>
+  <!-- Description of the Firefox Labs Sandboxing experiment. -->
+  <string name="firefox_labs_website_isolation_description" tools:ignore="UnusedResources">En extra barriär mellan webbplatser som hjälper till att skydda din data mellan flikar. Kan påverka prestanda, stabilitet, webbplatskompatibilitet och hur webbhistorik sparas.</string>
+  <!--
+    PDF viewer toolbar and buttons
+
+    Content description for accessibility (used by screen readers): Description for the button that triggers the start of a signature workflow on the PDF displayed on the screen.
+  -->
+  <string name="pdf_tools_sign_content_description">Signera PDF</string>
+  <!-- Content description for accessibility (used by screen readers): Description of the button that downloads the PDF displayed on the screen to the user's device. -->
+  <string name="pdf_tools_download_content_description">Ladda ner PDF</string>
+  <!-- Content description for accessibility (used by screen readers): Description for the button that opens the printing dialogue window for the PDF displayed on the screen. -->
+  <string name="pdf_tools_print_content_description">Skriv ut PDF</string>
+  <!-- Content description for accessibility (used by screen readers): Description for the button that opens the sharing options for the PDF being displayed on the screen. -->
+  <string name="pdf_tools_share_content_description">Dela PDF</string>
 </resources>

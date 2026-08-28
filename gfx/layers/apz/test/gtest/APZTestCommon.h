@@ -10,24 +10,23 @@
  * writing APZ gtests.
  */
 
-#include "gtest/gtest.h"
-#include "gmock/gmock.h"
-
-#include "mozilla/layers/GeckoContentController.h"
-#include "mozilla/layers/CompositorBridgeParent.h"
-#include "mozilla/layers/DoubleTapToZoom.h"
-#include "mozilla/layers/APZThreadUtils.h"
-#include "mozilla/layers/MatrixMessage.h"
-#include "mozilla/StaticPrefs_layout.h"
-#include "mozilla/TypedEnumBits.h"
-#include "mozilla/UniquePtr.h"
+#include "TestWRScrollData.h"
+#include "UnitTransforms.h"
 #include "apz/src/APZCTreeManager.h"
 #include "apz/src/AsyncPanZoomController.h"
 #include "apz/src/HitTestingTreeNode.h"
 #include "base/task.h"
 #include "gfxPlatform.h"
-#include "TestWRScrollData.h"
-#include "UnitTransforms.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include "mozilla/StaticPrefs_layout.h"
+#include "mozilla/TypedEnumBits.h"
+#include "mozilla/UniquePtr.h"
+#include "mozilla/layers/APZThreadUtils.h"
+#include "mozilla/layers/CompositorBridgeParent.h"
+#include "mozilla/layers/DoubleTapToZoom.h"
+#include "mozilla/layers/GeckoContentController.h"
+#include "mozilla/layers/MatrixMessage.h"
 
 using namespace mozilla;
 using namespace mozilla::gfx;
@@ -725,6 +724,15 @@ void APZCTesterBase::Pan(const RefPtr<InputReceiver>& aTarget,
       overcomeTouchToleranceX = panThreshold;
     } else if (aTouchStart.y != aTouchEnd.y) {
       overcomeTouchToleranceY = panThreshold;
+    }
+    // For a negative-direction gesture we add the offset and subtract it for a
+    // positive-direction one, so the touch-down is "behind" the start
+    // coordinate along the gesture direction.
+    if (aTouchEnd.x > aTouchStart.x) {
+      overcomeTouchToleranceX = -overcomeTouchToleranceX;
+    }
+    if (aTouchEnd.y > aTouchStart.y) {
+      overcomeTouchToleranceY = -overcomeTouchToleranceY;
     }
   }
 

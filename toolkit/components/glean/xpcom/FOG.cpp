@@ -74,6 +74,7 @@ already_AddRefed<FOG> FOG::GetSingleton() {
   MOZ_LOG(sLog, LogLevel::Debug, ("FOG::GetSingleton()"));
 
   gFOG = new FOG();
+  gFOG->mIsShutdown = false;
   gFOG->InitMemoryReporter();
 
   if (XRE_IsParentProcess()) {
@@ -124,6 +125,10 @@ already_AddRefed<FOG> FOG::GetSingleton() {
 void FOG::Shutdown() {
   MOZ_ASSERT(XRE_IsParentProcess());
 
+  if (mIsShutdown) {
+    return;
+  }
+
   UnregisterWeakMemoryReporter(this);
   glean::impl::fog_shutdown();
 }
@@ -139,9 +144,6 @@ extern "C" bool FOG_TooLateToSend(void) {
 extern "C" uint32_t FOG_MaxPingLimit(void) {
   return Preferences::GetInt("telemetry.glean.internal.maxPingsPerMinute", 15);
 }
-
-// Called when knowing if we're in automation is necessary.
-extern "C" bool FOG_IPCIsInAutomation(void) { return xpc::IsInAutomation(); }
 
 NS_IMETHODIMP
 FOG::InitializeFOG(const nsACString& aDataPathOverride,
@@ -322,12 +324,12 @@ FOG::TestGetExperimentData(const nsACString& aExperimentId, JSContext* aCx,
                            JS::MutableHandleValue aResult) {
 #ifdef MOZ_GLEAN_ANDROID
   NS_WARNING("Don't test experiments from Gecko in Android. Throwing.");
-  aResult.set(JS::UndefinedValue());
+  aResult.setUndefined();
   return NS_ERROR_FAILURE;
 #else
   MOZ_ASSERT(XRE_IsParentProcess());
   if (!glean::impl::fog_test_is_experiment_active(&aExperimentId)) {
-    aResult.set(JS::UndefinedValue());
+    aResult.setUndefined();
     return NS_OK;
   }
 
@@ -453,7 +455,23 @@ FOG::TestResetFOG(const nsACString& aDataPathOverride,
     ApplyInterestingServerKnobs();
   }
 #endif
+  mIsShutdown = false;
   return rv;
+}
+
+NS_IMETHODIMP
+FOG::TestShutdownFOG() {
+  MOZ_ASSERT(XRE_IsParentProcess());
+
+  if (mIsShutdown) {
+    return NS_OK;
+  }
+
+  mIsShutdown = true;
+
+  PROFILER_MARKER_UNTYPED("fog.testShutdownFOG", TEST);
+  glean::impl::fog_test_shutdown();
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -483,11 +501,12 @@ NS_IMETHODIMP
 FOG::TestRegisterRuntimeMetric(
     const nsACString& aType, const nsACString& aCategory,
     const nsACString& aName, const nsTArray<nsCString>& aPings,
-    const nsACString& aLifetime, const bool aDisabled,
+    const nsACString& aLifetime, const bool aDisabled, const bool aInSession,
     const nsACString& aExtraArgs, uint32_t* aMetricIdOut) {
   *aMetricIdOut = 0;
   *aMetricIdOut = glean::jog::jog_test_register_metric(
-      &aType, &aCategory, &aName, &aPings, &aLifetime, aDisabled, &aExtraArgs);
+      &aType, &aCategory, &aName, &aPings, &aLifetime, aDisabled, aInSession,
+      &aExtraArgs);
   return NS_OK;
 }
 
@@ -496,10 +515,12 @@ FOG::RegisterRuntimeMetric(const nsACString& aType, const nsACString& aCategory,
                            const nsACString& aName,
                            const nsTArray<nsCString>& aPings,
                            const nsACString& aLifetime, const bool aDisabled,
+                           const bool aInSession,
                            const nsACString& aExtraArgs) {
   MOZ_ASSERT(XRE_IsParentProcess());
   return glean::jog::jog_register_metric(&aType, &aCategory, &aName, &aPings,
-                                         &aLifetime, aDisabled, &aExtraArgs);
+                                         &aLifetime, aDisabled, aInSession,
+                                         &aExtraArgs);
 }
 
 NS_IMETHODIMP
@@ -535,6 +556,13 @@ FOG::RegisterRuntimePing(const nsACString& aName, const bool aIncludeClientId,
 }
 
 NS_IMETHODIMP
+FOG::ClearAttribution() {
+  MOZ_ASSERT(XRE_IsParentProcess());
+  glean::impl::fog_clear_attribution();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 FOG::UpdateAttribution(const nsACString& aSource, const nsACString& aMedium,
                        const nsACString& aCampaign, const nsACString& aTerm,
                        const nsACString& aContent) {
@@ -552,7 +580,7 @@ NS_IMETHODIMP
 FOG::TestGetAttribution(JSContext* aCx, JS::MutableHandleValue aResult) {
 #ifdef MOZ_GLEAN_ANDROID
   NS_WARNING("Don't test attribution from Gecko in Android. Throwing.");
-  aResult.set(JS::UndefinedValue());
+  aResult.setUndefined();
   return NS_ERROR_FAILURE;
 #else
   MOZ_ASSERT(XRE_IsParentProcess());
@@ -628,6 +656,13 @@ FOG::TestGetAttribution(JSContext* aCx, JS::MutableHandleValue aResult) {
 }
 
 NS_IMETHODIMP
+FOG::ClearDistribution() {
+  MOZ_ASSERT(XRE_IsParentProcess());
+  glean::impl::fog_clear_distribution();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 FOG::UpdateDistribution(const nsACString& aName) {
   MOZ_ASSERT(XRE_IsParentProcess());
   glean::impl::FogDistributionMetrics dist{.name = nsCString(aName)};
@@ -639,7 +674,7 @@ NS_IMETHODIMP
 FOG::TestGetDistribution(JSContext* aCx, JS::MutableHandleValue aResult) {
 #ifdef MOZ_GLEAN_ANDROID
   NS_WARNING("Don't test distribution from Gecko in Android. Throwing.");
-  aResult.set(JS::UndefinedValue());
+  aResult.setUndefined();
   return NS_ERROR_FAILURE;
 #else
   MOZ_ASSERT(XRE_IsParentProcess());

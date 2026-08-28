@@ -5,9 +5,15 @@
 const lazy = {};
 
 ChromeUtils.defineESModuleGetters(lazy, {
+  E10SUtils: "resource://gre/modules/E10SUtils.sys.mjs",
+
   error: "chrome://remote/content/shared/messagehandler/Errors.sys.mjs",
   PollPromise: "chrome://remote/content/shared/Sync.sys.mjs",
 });
+
+// Schemes that WebDriver can always load without restrictions when
+// system access is not enabled.
+const webdriverSafeSchemes = ["blob", "file", "http", "https"];
 
 /**
  * @typedef {object} BrowsingContextDetails
@@ -78,6 +84,79 @@ export function isParentProcess(browsingContext) {
 
   // If `browsingContext` is not a `CanonicalBrowsingContext`, then we are
   // necessarily in a content process page.
+  return false;
+}
+
+/**
+ * Check if the browsing context has elevated privileges, i.e., it is running
+ * in the parent process, an extension process, or a privileged about: process.
+ * Regular web (http, https) and file content processes are not considered
+ * privileged for WebDriver.
+ *
+ * A context in a privileged process with a null principal (e.g. about:blank
+ * loaded as a placeholder before session restore completes) is not considered
+ * privileged because the null principal has no elevated API access.
+ *
+ * @param {BrowsingContext} browsingContext
+ *     Browsing context to check.
+ *
+ * @returns {boolean}
+ *     True if the browsing context has elevated privileges.
+ */
+export function isPrivilegedContext(browsingContext) {
+  if (CanonicalBrowsingContext.isInstance(browsingContext)) {
+    const remoteType = browsingContext.currentWindowGlobal?.remoteType;
+
+    if (
+      remoteType &&
+      (lazy.E10SUtils.isWebRemoteType(remoteType) ||
+        remoteType === lazy.E10SUtils.FILE_REMOTE_TYPE)
+    ) {
+      return false;
+    }
+
+    const principal = browsingContext.currentWindowGlobal?.documentPrincipal;
+    return principal != null && !principal.isNullPrincipal;
+  }
+
+  // If `browsingContext` is not a `CanonicalBrowsingContext`, then we are
+  // necessarily in a content process page.
+  return false;
+}
+
+/**
+ * Check if the given URL is allowed to be loaded in the specified
+ * browsing context when system access is not allowed.
+ *
+ * @param {nsIURI} uri
+ *     URI to check.
+ * @param {BrowsingContext} browsingContext
+ *     Target browsing context for the navigation.
+ *
+ * @returns {boolean}
+ *     True if the URL is web safe, false otherwise.
+ */
+export function isWebdriverSafeNavigationURL(uri, browsingContext) {
+  if (
+    webdriverSafeSchemes.includes(uri.scheme) ||
+    (uri.scheme === "about" && uri.filePath === "blank")
+  ) {
+    return true;
+  }
+
+  // For other protocols, check for the URI_INHERITS_SECURITY_CONTEXT flag.
+  // Protocols like "data:" and "javascript:" inherit the loading document’s
+  // security context and are only safe when the browsing context is not in a
+  // privileged process and the current document does not have the system
+  // principal.
+  const flags = Services.io.getDynamicProtocolFlags(uri);
+  if (flags & Ci.nsIProtocolHandler.URI_INHERITS_SECURITY_CONTEXT) {
+    const principal = browsingContext.currentWindowGlobal?.documentPrincipal;
+    return (
+      !isPrivilegedContext(browsingContext) && !principal?.isSystemPrincipal
+    );
+  }
+
   return false;
 }
 
@@ -216,4 +295,41 @@ export async function waitForCurrentWindowGlobal(browsingContext) {
       `BrowsingContext does no longer exist`
     );
   }
+}
+
+/**
+ * Wait until `currentWindowGlobal` is available on a top-level browsing context.
+ * When a browsing context has just been created, the `currentWindowGlobal` might not
+ * be attached yet.
+ *
+ * @param {CanonicalBrowsingContext} browsingContext
+ *     The top-level browsing context to wait for.
+ *
+ * @returns {CanonicalBrowsingContext|null}
+ *     Return the browsing context or `null` if the browsing context has been discarded.
+ *
+ * @throws {Error}
+ *     If the passed browsing context is not top-level.
+ */
+export async function waitForTopBrowsingContextToBeReady(browsingContext) {
+  // We might want to do the same for iframes once
+  // https://github.com/w3c/webdriver-bidi/issues/832 is resolved.
+  if (browsingContext.parent) {
+    throw new Error(`The provided browsing context is not top-level`);
+  }
+
+  if (!browsingContext.currentWindowGlobal) {
+    try {
+      await waitForCurrentWindowGlobal(browsingContext);
+    } catch (e) {
+      // Don't throw if the browsing context was discarded or
+      // the window global never attached.
+      if (e.name === "DiscardedBrowsingContextError") {
+        return null;
+      }
+      throw e;
+    }
+  }
+
+  return browsingContext;
 }

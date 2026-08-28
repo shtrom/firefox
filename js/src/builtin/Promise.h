@@ -77,14 +77,12 @@ enum class PromiseHandler : uint32_t {
   // Step 13.a. closeIterator Abstract Closure.
   AsyncFromSyncIteratorClose,
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
   // Explicit Resource Management Proposal
   // 27.1.3.1 %AsyncIteratorPrototype% [ @@asyncDispose ] ( )
   // https://arai-a.github.io/ecma262-compare/?pr=3000&id=sec-%25asynciteratorprototype%25-%40%40asyncdispose
   //
   // Step 6.e. unwrap Abstract Closure
   AsyncIteratorDisposeAwaitFulfilled,
-#endif
 
   // One past the maximum allowed PromiseHandler value.
   Limit
@@ -271,6 +269,15 @@ struct PromiseReactionRecordBuilder {
     JS::Handle<JS::Value> reason,
     JS::Handle<SavedFrame*> unwrappedRejectionStack = nullptr);
 
+#ifdef NIGHTLY_BUILD
+// Implements the SafePromiseResolve abstract operation from the
+// https://tc39.es/proposal-thenable-curtailment/
+// See the function definition in Promise.cpp for the observable contract.
+[[nodiscard]] bool SafeResolvePromise(JSContext* cx,
+                                      JS::Handle<PromiseObject*> promise,
+                                      JS::Handle<JS::Value> resolution);
+#endif  // NIGHTLY_BUILD
+
 [[nodiscard]] bool InternalAsyncGeneratorAwait(
     JSContext* cx, JS::Handle<AsyncGeneratorObject*> generator,
     JS::Handle<JS::Value> value, PromiseHandler onFulfilled,
@@ -286,11 +293,9 @@ bool AbruptRejectPromise(JSContext* cx, JS::CallArgs& args,
                          JS::Handle<JSObject*> promiseObj,
                          JS::Handle<JSObject*> reject);
 
-#ifdef ENABLE_EXPLICIT_RESOURCE_MANAGEMENT
 [[nodiscard]] bool InternalAsyncIteratorDisposeAwait(
     JSContext* cx, JS::Handle<JS::Value> value,
     JS::Handle<JSObject*> resultPromise);
-#endif
 }  // namespace js
 
 #endif  // builtin_Promise_h

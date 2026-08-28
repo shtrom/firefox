@@ -12,13 +12,35 @@ const { sinon } = ChromeUtils.importESModule(
   "resource://testing-common/Sinon.sys.mjs"
 );
 
-const { sanitizeUntrustedContent } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/aiwindow/models/ChatUtils.sys.mjs"
-);
-
 const { getPlacesSemanticHistoryManager } = ChromeUtils.importESModule(
   "resource://gre/modules/PlacesSemanticHistoryManager.sys.mjs"
 );
+
+const { TestUtils } = ChromeUtils.importESModule(
+  "resource://testing-common/TestUtils.sys.mjs"
+);
+
+/**
+ * Mock engine that returns a fixed vector per entry title, mirroring the one
+ * used in the PlacesSemanticHistoryManager unit tests. Titles not in `entries`
+ * embed to a zero vector.
+ */
+class MockMLEngine {
+  #embeddingSize;
+  #entries;
+  constructor(embeddingSize, entries = []) {
+    this.#embeddingSize = embeddingSize;
+    this.#entries = entries;
+  }
+
+  async run(request) {
+    const texts = request.args;
+    return texts.map(text => {
+      let entry = this.#entries.find(e => e.title === text);
+      return entry ? entry.vector : Array(this.#embeddingSize).fill(0);
+    });
+  }
+}
 
 let sb;
 
@@ -105,11 +127,7 @@ add_task(async function test_basic_history_fetch_and_shape() {
   const byUrl = new Map(allRowsObj.results.map(r => [r.url, r]));
   for (const { url, title } of seeded) {
     Assert.ok(byUrl.has(url), `Has entry for ${url}`);
-    Assert.equal(
-      byUrl.get(url).title,
-      sanitizeUntrustedContent(title),
-      `Title matches for ${url}`
-    );
+    Assert.equal(byUrl.get(url).title, title, `Title matches for ${url}`);
   }
 
   // check visitDate iso string
@@ -539,6 +557,7 @@ add_task(async function test_hybrid_search_path() {
 
   // Fake semantic SQL rows.
   sb.stub(semanticManager, "getConnection").resolves({
+    execute: async () => [],
     executeCached: async () => [
       {
         getResultByName(name) {
@@ -591,7 +610,7 @@ add_task(async function test_hybrid_search_path() {
 
   Assert.equal(
     byUrl.get("https://example.com/mozilla").title,
-    sanitizeUntrustedContent("Mozilla From Places"),
+    "Mozilla From Places",
     "Places metadata should win in hybrid merge"
   );
 });
@@ -627,6 +646,7 @@ add_task(async function test_hybrid_search_rrf_ranking_prefers_shared_result() {
   });
 
   sb.stub(semanticManager, "getConnection").resolves({
+    execute: async () => [],
     executeCached: async () => [
       {
         getResultByName(name) {
@@ -675,7 +695,210 @@ add_task(async function test_hybrid_search_rrf_ranking_prefers_shared_result() {
   // Shared URL should still prefer Places metadata.
   Assert.equal(
     output.results[0].title,
-    sanitizeUntrustedContent(siteB.title),
+    siteB.title,
     "Hybrid merge should prefer Places metadata for the shared URL"
+  );
+});
+
+add_task(async function test_hybrid_semantic_respects_distance_threshold() {
+  await PlacesUtils.history.clear();
+  sb.restore();
+
+  // Float prefs are stored as char prefs.
+  Services.prefs.setCharPref(
+    "places.semanticHistory.smartwindow.distanceThreshold",
+    "0.5"
+  );
+  registerCleanupFunction(() => {
+    Services.prefs.clearUserPref(
+      "places.semanticHistory.smartwindow.distanceThreshold"
+    );
+  });
+
+  const makeVector = (size, components) => {
+    let v = Array(size).fill(0);
+    for (let [i, val] of Object.entries(components)) {
+      v[i] = val;
+    }
+    return v;
+  };
+
+  // Shut down any pre-existing singleton first so its open connection to
+  // places_semantic.sqlite is released. Otherwise removeDatabaseFiles() below
+  // fails on Windows, where an open connection locks the file.
+  await getPlacesSemanticHistoryManager().shutdown();
+
+  const semanticManager = getPlacesSemanticHistoryManager(
+    { changeThresholdCount: 1, deferredTaskInterval: 100 },
+    true
+  );
+  const embeddingSize = semanticManager.embedder.embeddingSize;
+
+  const queryVector = makeVector(embeddingSize, { 0: 1 });
+  // The query term embeds to queryVector but does not match either page title,
+  // so the keyword leg of the hybrid search contributes nothing and the
+  // semantic distance filter is exercised in isolation.
+  const searchTerm = "qqzz semantic probe";
+  const entries = [
+    {
+      url: "https://near.moz.com/",
+      title: "near entry page",
+      vector: makeVector(embeddingSize, { 0: 1, 1: 0.05 }),
+    },
+    {
+      url: "https://far.moz.com/",
+      title: "far entry page",
+      vector: makeVector(embeddingSize, { 1: 1 }),
+    },
+  ];
+
+  await PlacesTestUtils.addVisits(entries);
+
+  await semanticManager.semanticDB.removeDatabaseFiles();
+
+  await semanticManager.getConnection();
+  semanticManager.embedder.setEngine(
+    new MockMLEngine(embeddingSize, [
+      ...entries,
+      { title: searchTerm, vector: queryVector },
+    ])
+  );
+  await TestUtils.topicObserved(
+    "places-semantichistorymanager-update-complete"
+  );
+
+  // Make the hybrid path eligible.
+  sb.stub(semanticManager, "hasSufficientEntriesForSearching").resolves(true);
+  sb.stub(semanticManager, "isEnabledForSmartWindow").value(true);
+
+  const output = await searchBrowsingHistory({
+    searchTerm,
+    startTs: null,
+    endTs: null,
+    historyLimit: 15,
+  });
+
+  Assert.ok(!output.error, "Semantic query should run without SQL errors");
+
+  const urls = new Set(output.results.map(r => r.url));
+  Assert.ok(
+    urls.has("https://near.moz.com/"),
+    "Entry within the distance threshold should be returned"
+  );
+  Assert.ok(
+    !urls.has("https://far.moz.com/"),
+    "Entry beyond the distance threshold should be filtered out"
+  );
+
+  await semanticManager.shutdown();
+});
+
+add_task(async function test_basic_text_search_returns_thumbnail() {
+  await PlacesUtils.history.clear();
+  sb.restore();
+
+  const now = Date.now();
+  const url = "https://example.com/mozilla-with-preview";
+  const previewImageURL = "https://example.com/mozilla-preview.png";
+
+  await PlacesUtils.history.insertMany([
+    {
+      url,
+      title: "Mozilla With Preview",
+      visits: [{ date: new Date(now - 5 * 60 * 1000) }], // 5 min ago
+    },
+  ]);
+  await PlacesUtils.history.update({ url, previewImageURL });
+
+  // Disable semantic search to take the Places history search path.
+  Services.prefs.setBoolPref("browser.ml.enable", false);
+  Services.prefs.setBoolPref("places.semanticHistory.featureGate", false);
+
+  try {
+    const output = await searchBrowsingHistory({
+      searchTerm: "mozilla",
+      startTs: null,
+      endTs: null,
+      historyLimit: 15,
+    });
+
+    Assert.equal(
+      output.results.length,
+      1,
+      "Places history search returns the entry"
+    );
+    Assert.equal(
+      output.results[0].thumbnail,
+      previewImageURL,
+      "Places history search result should have a preview image URL"
+    );
+  } finally {
+    Services.prefs.setBoolPref("browser.ml.enable", true);
+    Services.prefs.setBoolPref("places.semanticHistory.featureGate", true);
+  }
+});
+
+add_task(async function test_hybrid_keyword_only_row_has_thumbnail() {
+  await PlacesUtils.history.clear();
+  sb.restore();
+
+  const now = Date.now();
+  const url = "https://example.com/keyword-only";
+  const previewImageURL = "https://example.com/keyword-only-preview.png";
+
+  await PlacesUtils.history.insertMany([
+    {
+      url,
+      title: "Keyword Only From Places",
+      visits: [{ date: new Date(now - 5 * 60 * 1000) }], // 5 min ago
+    },
+  ]);
+  await PlacesUtils.history.update({ url, previewImageURL });
+
+  const semanticManager = getPlacesSemanticHistoryManager();
+
+  sb.stub(semanticManager, "hasSufficientEntriesForSearching").resolves(true);
+  sb.stub(semanticManager, "isEnabledForSmartWindow").value(true);
+
+  sb.stub(semanticManager.embedder, "ensureEngine").resolves();
+  sb.stub(semanticManager.embedder, "embed").resolves({
+    output: [[0.1, 0.2, 0.3]],
+  });
+
+  // Non-matching URL, so only the keyword leg finds the seeded page.
+  sb.stub(semanticManager, "getConnection").resolves({
+    execute: async () => [],
+    executeCached: async () => [
+      {
+        getResultByName(name) {
+          const row = {
+            id: 2,
+            title: "Semantic Only",
+            url: "https://example.com/semantic-only",
+            distance: 0.1,
+            visit_count: 1,
+            frecency: 10,
+            last_visit_date: (now - 60 * 60 * 1000) * 1000, // 60 min ago
+            preview_image_url: null,
+          };
+          return row[name];
+        },
+      },
+    ],
+  });
+
+  const output = await searchBrowsingHistory({
+    searchTerm: "keyword",
+    startTs: null,
+    endTs: null,
+    historyLimit: 15,
+  });
+
+  const keywordRow = output.results.find(result => result.url === url);
+  Assert.ok(keywordRow, "Keyword-only URL should be returned by hybrid search");
+  Assert.equal(
+    keywordRow.thumbnail,
+    previewImageURL,
+    "Keyword-only hybrid result should have a preview image URL"
   );
 });

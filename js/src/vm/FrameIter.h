@@ -277,6 +277,9 @@ class FrameIter {
   bool isEvalFrame() const;
   bool isModuleFrame() const;
   bool isFunctionFrame() const;
+
+  bool isResumingGenerator() const;
+
   bool hasArgs() const { return isFunctionFrame(); }
 
   ScriptSource* scriptSource() const;
@@ -536,7 +539,7 @@ inline wasm::Instance* FrameIter::wasmInstance() const {
 inline unsigned FrameIter::wasmBytecodeOffset() const {
   MOZ_ASSERT(!done());
   MOZ_ASSERT(isWasm());
-  return wasmFrame().lineOrBytecode();
+  return wasmFrame().bytecodeOffset();
 }
 
 inline uint32_t FrameIter::wasmFuncIndex() const {

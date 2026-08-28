@@ -14,8 +14,10 @@ namespace mozilla::dom {
 
 class TextFormat final : public nsISupports, public nsWrapperCache {
  public:
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL
   NS_DECL_CYCLE_COLLECTION_WRAPPERCACHE_CLASS(TextFormat)
+
+  TextFormat(nsIGlobalObject* aGlobal, const TextFormatInit& aOptions);
 
   nsIGlobalObject* GetParentObject() const { return mGlobal; }
 
@@ -36,7 +38,6 @@ class TextFormat final : public nsISupports, public nsWrapperCache {
   }
 
  private:
-  TextFormat(nsIGlobalObject* aGlobal, const TextFormatInit& aOptions);
   ~TextFormat() = default;
 
   nsCOMPtr<nsIGlobalObject> mGlobal;
@@ -46,6 +47,18 @@ class TextFormat final : public nsISupports, public nsWrapperCache {
   enum UnderlineThickness mUnderlineThickness;
 };
 
+std::ostream& operator<<(std::ostream& aStream, UnderlineStyle aStyle);
+std::ostream& operator<<(std::ostream& aStream, UnderlineThickness aThickness);
+std::ostream& operator<<(std::ostream& aStream, const TextFormat& aFormat);
+
 }  // namespace mozilla::dom
+
+template <>
+struct fmt::formatter<mozilla::dom::TextFormat> : fmt::ostream_formatter {};
+template <>
+struct fmt::formatter<mozilla::dom::UnderlineStyle> : fmt::ostream_formatter {};
+template <>
+struct fmt::formatter<mozilla::dom::UnderlineThickness>
+    : fmt::ostream_formatter {};
 
 #endif  // DOM_TEXTFORMAT_H_

@@ -27,7 +27,6 @@ import org.mozilla.fenix.GleanMetrics.Translations
 import org.mozilla.fenix.R
 import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
 import org.mozilla.fenix.ext.requireComponents
-import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.ext.showToolbar
 import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.settings.SupportUtils
@@ -38,9 +37,7 @@ import org.mozilla.fenix.translations.TranslationsAIControllableFeature
 import org.mozilla.fenix.translations.TranslationsDialogAccessPoint
 import org.mozilla.fenix.translations.TranslationsEnabledSettings
 
-/**
- * A fragment displaying the Firefox Translation settings screen.
- */
+/** A fragment displaying the Firefox Translation settings screen. */
 class TranslationSettingsFragment : Fragment(), UserInteractionHandler, SystemInsetsPaddedFragment {
     private val browserStore: BrowserStore by lazy { requireComponents.core.store }
 
@@ -65,40 +62,47 @@ class TranslationSettingsFragment : Fragment(), UserInteractionHandler, SystemIn
             val scope = rememberCoroutineScope()
             val translationsState by browserStore.observeAsComposableState { it.translationEngine }
             val switchItems: List<TranslationSwitchItem> = getTranslationSwitchItemList()
-            val settingsState = remember(translationsState.isTranslationsEnabled, switchItems) {
-                TranslationsSettingsState(
-                    showAutomaticTranslations = FxNimbus.features.translations.value().globalLangSettingsEnabled,
-                    showNeverTranslate = FxNimbus.features.translations.value().globalSiteSettingsEnabled,
-                    showDownloads = FxNimbus.features.translations.value().downloadsEnabled,
-                    translationsEnabled = translationsState.isTranslationsEnabled,
-                    switchItems = switchItems,
-                )
-            }
+            val settingsState =
+                remember(translationsState.isTranslationsEnabled, switchItems) {
+                    TranslationsSettingsState(
+                        showAutomaticTranslations = FxNimbus.features.translations.value().globalLangSettingsEnabled,
+                        showNeverTranslate = FxNimbus.features.translations.value().globalSiteSettingsEnabled,
+                        showDownloads = FxNimbus.features.translations.value().downloadsEnabled,
+                        translationsEnabled = translationsState.isTranslationsEnabled,
+                        switchItems = switchItems,
+                    )
+                }
             TranslationSettings(
                 state = settingsState,
-                pageSettingsError = browserStore.observeAsComposableState { state ->
-                    state.selectedTab?.translationsState?.settingsError
-                }.value,
+                pageSettingsError =
+                    browserStore
+                        .observeAsComposableState { state ->
+                            state.selectedTab?.translationsState?.settingsError
+                        }
+                        .value,
                 onAutomaticTranslationClicked = {
                     Translations.action.record(Translations.ActionExtra("global_lang_settings"))
-                    findNavController().navigate(
-                        TranslationSettingsFragmentDirections
-                            .actionTranslationSettingsFragmentToAutomaticTranslationPreferenceFragment(),
-                    )
+                    findNavController()
+                        .navigate(
+                            TranslationSettingsFragmentDirections
+                                .actionTranslationSettingsFragmentToAutomaticTranslationPreferenceFragment()
+                        )
                 },
                 onNeverTranslationClicked = {
                     Translations.action.record(Translations.ActionExtra("global_site_settings"))
-                    findNavController().navigate(
-                        TranslationSettingsFragmentDirections
-                            .actionTranslationSettingsToNeverTranslateSitePreference(),
-                    )
+                    findNavController()
+                        .navigate(
+                            TranslationSettingsFragmentDirections
+                                .actionTranslationSettingsToNeverTranslateSitePreference()
+                        )
                 },
                 onDownloadLanguageClicked = {
                     Translations.action.record(Translations.ActionExtra("downloads"))
-                    findNavController().navigate(
-                        TranslationSettingsFragmentDirections
-                            .actionTranslationSettingsFragmentToDownloadLanguagesPreferenceFragment(),
-                    )
+                    findNavController()
+                        .navigate(
+                            TranslationSettingsFragmentDirections
+                                .actionTranslationSettingsFragmentToDownloadLanguagesPreferenceFragment()
+                        )
                 },
                 onFeatureControlToggled = { enabled ->
                     scope.launch {
@@ -116,56 +120,52 @@ class TranslationSettingsFragment : Fragment(), UserInteractionHandler, SystemIn
     }
 
     /**
-     * Set the switch item values.
-     * The first one is based on [mozilla.components.browser.state.state.TranslationsBrowserState.offerTranslation].
-     * The second one is [DownloadLanguageFileDialog] visibility.
-     * This pop-up will appear if the switch item is unchecked, the phone is in saving mode, and
-     * doesn't have a WiFi connection.
+     * Set the switch item values. The first one is based on
+     * [mozilla.components.browser.state.state.TranslationsBrowserState.offerTranslation]. The second one is
+     * [DownloadLanguageFileDialog] visibility. This pop-up will appear if the switch item is unchecked, the phone is in
+     * saving mode, and doesn't have a WiFi connection.
      */
     @Composable
     private fun getTranslationSwitchItemList(): MutableList<TranslationSwitchItem> {
-        val offerToTranslate = browserStore.observeAsComposableState { state ->
-            state.translationEngine.offerTranslation
-        }.value
+        val offerToTranslate =
+            browserStore
+                .observeAsComposableState { state ->
+                    state.translationEngine.offerTranslation
+                }
+                .value
         val translationSwitchItems = mutableListOf<TranslationSwitchItem>()
 
         translationSwitchItems.add(
             TranslationSwitchItem(
-                type = TranslationSettingsScreenOption.OfferToTranslate(
-                    hasDivider = false,
-                ),
+                type = TranslationSettingsScreenOption.OfferToTranslate(hasDivider = false),
                 textLabel = stringResource(R.string.translation_settings_offer_to_translate),
                 isChecked = offerToTranslate ?: false,
                 isEnabled = offerToTranslate != null, // disable if we don't know if we should offer translate
                 onStateChange = { _, checked ->
                     browserStore.dispatch(
-                        TranslationsAction.UpdateGlobalOfferTranslateSettingAction(
-                            offerTranslation = checked,
-                        ),
+                        TranslationsAction.UpdateGlobalOfferTranslateSettingAction(offerTranslation = checked)
                     )
                     // Ensures persistence of value
-                    requireContext().settings().offerTranslation = checked
+                    requireComponents.settings.offerTranslation = checked
                 },
-            ),
+            )
         )
 
         var isDownloadInSavingModeChecked by remember {
-            mutableStateOf(requireContext().settings().ignoreTranslationsDataSaverWarning)
+            mutableStateOf(requireComponents.settings.ignoreTranslationsDataSaverWarning)
         }
 
         translationSwitchItems.add(
             TranslationSwitchItem(
-                type = TranslationSettingsScreenOption.AlwaysDownloadInSavingMode(
-                    hasDivider = true,
-                ),
+                type = TranslationSettingsScreenOption.AlwaysDownloadInSavingMode(hasDivider = true),
                 textLabel = stringResource(R.string.translation_settings_always_download),
                 isChecked = isDownloadInSavingModeChecked,
                 isEnabled = true,
                 onStateChange = { _, checked ->
                     isDownloadInSavingModeChecked = checked
-                    requireContext().settings().ignoreTranslationsDataSaverWarning = checked
+                    requireComponents.settings.ignoreTranslationsDataSaverWarning = checked
                 },
-            ),
+            )
         )
         return translationSwitchItems
     }
@@ -173,11 +173,13 @@ class TranslationSettingsFragment : Fragment(), UserInteractionHandler, SystemIn
     override fun onBackPressed(): Boolean {
         return if (findNavController().previousBackStackEntry?.destination?.id == R.id.browserFragment) {
             if (browserStore.state.translationEngine.isTranslationsEnabled) {
-                findNavController().navigate(
-                    TranslationSettingsFragmentDirections.actionTranslationSettingsFragmentToTranslationsDialogFragment(
-                        translationsDialogAccessPoint = TranslationsDialogAccessPoint.TranslationsOptions,
-                    ),
-                )
+                findNavController()
+                    .navigate(
+                        TranslationSettingsFragmentDirections
+                            .actionTranslationSettingsFragmentToTranslationsDialogFragment(
+                                translationsDialogAccessPoint = TranslationsDialogAccessPoint.TranslationsOptions
+                            )
+                    )
             } else {
                 findNavController().popBackStack(R.id.browserFragment, false)
             }

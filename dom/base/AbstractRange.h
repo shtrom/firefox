@@ -200,7 +200,7 @@ class AbstractRange : public nsISupports,
    */
   bool IsInAnySelection() const { return !mSelections.IsEmpty(); }
 
-  void RegisterSelection(mozilla::dom::Selection& aSelection);
+  [[nodiscard]] nsresult RegisterSelection(mozilla::dom::Selection& aSelection);
 
   void UnregisterSelection(const mozilla::dom::Selection& aSelection,
                            IsUnlinking aIsUnlinking = IsUnlinking::No);
@@ -273,10 +273,7 @@ class AbstractRange : public nsISupports,
 
   static void UpdateDescendantsInFlattenedTree(nsINode& aNode,
                                                bool aMarkDescendants);
-  friend void mozilla::SlotAssignedNodeAdded(dom::HTMLSlotElement* aSlot,
-                                             nsIContent& aAssignedNode);
-  friend void mozilla::SlotAssignedNodeRemoved(dom::HTMLSlotElement* aSlot,
-                                               nsIContent& aUnassignedNode);
+  friend class HTMLSlotElement;
 
   already_AddRefed<DOMRectList> GetClientRectsInner(
       AllowRangeCrossShadowBoundary = AllowRangeCrossShadowBoundary::No,

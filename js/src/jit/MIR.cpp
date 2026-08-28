@@ -714,6 +714,16 @@ void MInstruction::stealResumePoint(MInstruction* other) {
   setResumePoint(resumePoint);
 }
 
+bool MInstruction::copyResumePointFrom(TempAllocator& alloc,
+                                       MInstruction* previous) {
+  MResumePoint* rp = previous->resumePoint_->clone(alloc);
+  if (!rp) {
+    return false;
+  }
+  setResumePoint(rp);
+  return true;
+}
+
 void MInstruction::moveResumePointAsEntry() {
   MOZ_ASSERT(isNop());
   block()->clearEntryResumePoint();
@@ -2747,25 +2757,6 @@ bool MPhi::markIteratorPhis(const PhiVector& iterators) {
   return true;
 }
 
-bool MPhi::typeIncludes(MDefinition* def) {
-  MOZ_ASSERT(!IsMagicType(def->type()));
-
-  if (def->type() == this->type()) {
-    return true;
-  }
-
-  // This phi must be able to be any value.
-  if (this->type() == MIRType::Value) {
-    return true;
-  }
-
-  if (def->type() == MIRType::Int32 && this->type() == MIRType::Double) {
-    return true;
-  }
-
-  return false;
-}
-
 void MCallBase::addArg(size_t argnum, MDefinition* arg) {
   // The operand vector is initialized in reverse order by WarpBuilder.
   // It cannot be checked for consistency until all arguments are added.
@@ -2818,9 +2809,8 @@ MDefinition* MBinaryBitwiseInstruction::foldsTo(TempAllocator& alloc) {
 }
 
 MDefinition* MBinaryBitwiseInstruction::foldUnnecessaryBitop() {
-  // It's probably OK to perform this optimization only for int32, as it will
-  // have the greatest effect for asm.js code that is compiled with the JS
-  // pipeline, and that code will not see int64 values.
+  // It's probably OK to perform this optimization only for int32, as JS
+  // bytecode does not see int64 values.
 
   if (type() != MIRType::Int32) {
     return this;
@@ -3075,9 +3065,8 @@ MDefinition* MRsh::foldsTo(TempAllocator& alloc) {
   MDefinition* lhs = getOperand(0);
   MDefinition* rhs = getOperand(1);
 
-  // It's probably OK to perform this optimization only for int32, as it will
-  // have the greatest effect for asm.js code that is compiled with the JS
-  // pipeline, and that code will not see int64 values.
+  // It's probably OK to perform this optimization only for int32, as JS
+  // bytecode does not see int64 values.
 
   if (!lhs->isLsh() || !rhs->isConstant() || rhs->type() != MIRType::Int32) {
     return this;
@@ -4431,6 +4420,19 @@ MResumePoint* MResumePoint::New(TempAllocator& alloc, MBasicBlock* block,
   return resume;
 }
 
+MResumePoint* MResumePoint::clone(TempAllocator& alloc) {
+  MResumePoint* resume = new (alloc) MResumePoint(block(), pc_, mode_);
+  size_t n = this->numOperands();
+  if (!resume->operands_.init(alloc, n)) {
+    return nullptr;
+  }
+  for (size_t i = 0; i < n; i++) {
+    resume->initOperand(i, getOperand(i));
+  }
+  resume->stores_.copy(this->stores_);
+  return resume;
+}
+
 MResumePoint::MResumePoint(MBasicBlock* block, jsbytecode* pc, ResumeMode mode)
     : MNode(block, Kind::ResumePoint),
       pc_(pc),
@@ -4888,13 +4890,19 @@ MDefinition* MToFloat16::foldsTo(TempAllocator& alloc) {
       return def;
     }
 
+    // Unwrap CanonicalizeNaN added after load instructions.
+    MDefinition* load = def;
+    if (load->isCanonicalizeNaN()) {
+      load = load->toCanonicalizeNaN()->input();
+    }
+
     // ToFloat16(LoadFloat16(x)) => LoadFloat16(x)
-    if (def->isLoadUnboxedScalar() &&
-        def->toLoadUnboxedScalar()->storageType() == Scalar::Float16) {
+    if (load->isLoadUnboxedScalar() &&
+        load->toLoadUnboxedScalar()->storageType() == Scalar::Float16) {
       return def;
     }
-    if (def->isLoadDataViewElement() &&
-        def->toLoadDataViewElement()->storageType() == Scalar::Float16) {
+    if (load->isLoadDataViewElement() &&
+        load->toLoadDataViewElement()->storageType() == Scalar::Float16) {
       return def;
     }
     return nullptr;
@@ -6221,6 +6229,29 @@ MDefinition* MStrictConstantCompareBoolean::foldsTo(TempAllocator& alloc) {
   return MConstant::NewBoolean(alloc, jsop() == JSOp::StrictNe);
 }
 
+MDefinition* MStrictConstantCompareString::foldsTo(TempAllocator& alloc) {
+  if (!value()->isBox()) {
+    return this;
+  }
+  MDefinition* unboxed = value()->toBox()->input();
+
+  if (unboxed->type() == MIRType::String) {
+    if (unboxed->isConstant()) {
+      int32_t comp =
+          CompareStrings(unboxed->toConstant()->toString(), constant());
+      bool result = FoldComparison(jsop(), comp, 0);
+      return MConstant::NewBoolean(alloc, result);
+    }
+
+    auto* cst = MConstant::NewString(alloc, constant()->unwrap());
+    block()->insertBefore(this, cst);
+
+    return MCompare::New(alloc, unboxed, cst, jsop(), MCompare::Compare_String);
+  }
+
+  return MConstant::NewBoolean(alloc, jsop() == JSOp::StrictNe);
+}
+
 MDefinition* MSameValue::foldsTo(TempAllocator& alloc) {
   MDefinition* lhs = left();
   if (lhs->isBox()) {
@@ -6685,6 +6716,10 @@ MDefinition* MFunctionEnvironment::foldsTo(TempAllocator& alloc) {
 }
 
 static bool AddIsANonZeroAdditionOf(MAdd* add, MDefinition* ins) {
+  if (add->type() != MIRType::Int32 && add->type() != MIRType::Double) {
+    return false;
+  }
+
   if (add->lhs() != ins && add->rhs() != ins) {
     return false;
   }
@@ -6695,7 +6730,11 @@ static bool AddIsANonZeroAdditionOf(MAdd* add, MDefinition* ins) {
   if (!other->isConstant()) {
     return false;
   }
-  if (other->toConstant()->numberToDouble() == 0) {
+  // The constant must be representable as a non-zero int32. Other doubles may
+  // leave the index unchanged after conversion.
+  int32_t n;
+  if (!mozilla::NumberIsInt32(other->toConstant()->numberToDouble(), &n) ||
+      n == 0) {
     return false;
   }
   return true;
@@ -7890,31 +7929,31 @@ MDefinition* MTimeClip::foldsTo(TempAllocator& alloc) {
   return MConstant::NewDouble(alloc, JS::CanonicalizeNaN(clipped.toDouble()));
 }
 
-// Returns `false` if it can be proven that (1) both `mtyA` and `mtyB` are
-// struct types and (2) they are not related by inheritance.  Returns `true` in
-// all other cases.  `true` is the safe-but-possibly-suboptimal return value.
-static bool StructTypesMightBeRelatedByInheritance(wasm::MaybeRefType mtyA,
-                                                   wasm::MaybeRefType mtyB) {
-  if (!mtyA.isSome() || !mtyB.isSome()) {
-    // The "Track Wasm ref types" pass couldn't establish that both `mtyA` and
-    // `mtyB` are ref types.  Give up.
-    return true;
-  }
+JSOp MBinaryCache::jsop() const { return JSOp(*resumePoint()->pc()); }
 
-  wasm::RefType tyA = mtyA.value();
-  wasm::RefType tyB = mtyB.value();
-  if (!tyA.isTypeRef() || !tyA.typeDef()->isStructType() || !tyB.isTypeRef() ||
-      !tyB.typeDef()->isStructType()) {
-    // They aren't both struct types.  Give up.
-    return true;
+template <typename T>
+static wasm::MaybeRefType GetBaseRefTypeForWasmLoadOrStore(T ins) {
+  const MDefinition* structObject;
+  if (ins->base()->type() == MIRType::WasmStructData) {
+    MOZ_RELEASE_ASSERT(ins->base()->isWasmLoadField());
+    structObject = ins->base()->toWasmLoadField()->base();
+  } else {
+    structObject = ins->base();
   }
-
-  // They are both struct types.  So they are related by inheritance if one is
-  // a subtype of the other.  (Which is also the case if they are the same
-  // type.)
-  return wasm::RefType::valuesMightAlias(tyA, tyB);
+  return structObject->wasmRefType().asNonNullable();
 }
 
+// Wasm loads and stores can be proven not to alias if their offsets are
+// different or their ref types are known and disjoint. (Disjoint alias sets
+// also mean no aliasing, but this is obvious because that's just what alias
+// sets already do.)
+//
+// Different offsets -> NoAlias is true because each field (whether GC data or
+// internal data) has one and only one offset that is used to access it.
+// Disjoint types -> NoAlias is true because, well, types. When considering
+// types here, we exclude null because null loads and stores will trap anyway.
+//
+// For more rationale, see bug 2061530.
 MDefinition::AliasType MWasmLoadField::mightAlias(
     const MDefinition* ins) const {
   if (!(getAliasSet().flags() & ins->getAliasSet().flags())) {
@@ -7922,25 +7961,27 @@ MDefinition::AliasType MWasmLoadField::mightAlias(
   }
   MOZ_ASSERT(!isEffectful() && ins->isEffectful());
 
-  // Pick off cases where we can easily prove non-aliasing.  The idea is that
-  // two struct field accesses can't alias if either they are at different
-  // offsets, or the struct types are unrelated (which implies that the struct
-  // base pointer for one of the accesses could not validly be handed to the
-  // other access).
+  wasm::MaybeRefType insType;
+  uint32_t insOffset;
   if (ins->isWasmStoreField()) {
     const MWasmStoreField* store = ins->toWasmStoreField();
-    if (offset() != store->offset() ||
-        !StructTypesMightBeRelatedByInheritance(base()->wasmRefType(),
-                                                store->base()->wasmRefType())) {
-      return AliasType::NoAlias;
-    }
+    insType = GetBaseRefTypeForWasmLoadOrStore(store);
+    insOffset = store->offset();
   } else if (ins->isWasmStoreFieldRef()) {
     const MWasmStoreFieldRef* store = ins->toWasmStoreFieldRef();
-    if (offset() != store->offset() ||
-        !StructTypesMightBeRelatedByInheritance(base()->wasmRefType(),
-                                                store->base()->wasmRefType())) {
-      return AliasType::NoAlias;
-    }
+    insType = GetBaseRefTypeForWasmLoadOrStore(store);
+    insOffset = store->offset();
+  } else {
+    // Safe default, but any other type of store that can operate on the same
+    // values as a (performance-sensitive) MWasmLoadField should probably be
+    // added above.
+    return AliasType::MayAlias;
+  }
+
+  wasm::MaybeRefType thisType = GetBaseRefTypeForWasmLoadOrStore(this);
+  if (offset() != insOffset ||
+      !wasm::MaybeRefType::mayHaveValuesInCommon(thisType, insType)) {
+    return AliasType::NoAlias;
   }
 
   return AliasType::MayAlias;

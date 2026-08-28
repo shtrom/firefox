@@ -38,11 +38,12 @@ extern void DumpWeakMapLog(JSRuntime* rt);
 namespace gc {
 
 // Ensure a Symbol read out of a weak map is marked black in |zone|'s atom
-// marking bitmap before it can escape to script.
+// reference bitmap before it can escape to script.
 void MarkSymbolForWeakMapReadBarrier(JS::Zone* zone, JS::Symbol* sym);
 
 #if defined(JS_GC_ZEAL) || defined(DEBUG)
-// Check whether a weak map entry is marked correctly.
+// Check whether a weak map / entry is marked correctly.
+bool CheckWeakMapMapMarking(const WeakMapBase* map);
 bool CheckWeakMapEntryMarking(const WeakMapBase* map, Cell* key, Cell* value);
 #endif
 
@@ -121,6 +122,9 @@ struct MightBeInNursery<JS::Value> {
 
 using WeakMapColors = HashMap<WeakMapBase*, js::gc::CellColor,
                               DefaultHasher<WeakMapBase*>, SystemAllocPolicy>;
+
+class WeakMapBase;
+using WeakMapList = SlimLinkedList<WeakMapBase>;
 
 // Common base class for all WeakMap specializations, used for calling
 // subclasses' GC-related methods.
@@ -226,6 +230,7 @@ class WeakMapBase : public SlimLinkedListElement<WeakMapBase> {
 #ifdef JS_GC_ZEAL
   virtual bool checkMarking() const = 0;
   virtual bool allowKeysInOtherZones() const { return false; }
+  friend bool gc::CheckWeakMapMapMarking(const WeakMapBase*);
   friend bool gc::CheckWeakMapEntryMarking(const WeakMapBase*, gc::Cell*,
                                            gc::Cell*);
 #endif
@@ -536,6 +541,9 @@ class WeakMap : public WeakMapBase {
   static void valueReadBarrier(JSObject* obj) {
     JS::ExposeObjectToActiveJS(obj);
   }
+  static void valueReadBarrier(jit::JitCode* code) {
+    gc::ExposeGCThingToActiveJS(JS::GCCellPtr(code));
+  }
 
   void writeBarrier(const Key& key, const Value& value) {
     keyKindBarrier(key);
@@ -551,6 +559,14 @@ class WeakMap : public WeakMapBase {
     }
   }
   void keyKindBarrier(JSObject* key) {
+    // Fast path for non-proxy objects.
+    if (!IsProxy(key)) {
+      MOZ_ASSERT(!ObjectMayBeSwapped(key));
+      return;
+    }
+    keyKindBarrierSlow(key);
+  }
+  void keyKindBarrierSlow(JSObject* key) {
     if (!mayHaveKeyDelegates) {
       JSObject* delegate = UncheckedUnwrapWithoutExpose(key);
       if (delegate != key || ObjectMayBeSwapped(key)) {

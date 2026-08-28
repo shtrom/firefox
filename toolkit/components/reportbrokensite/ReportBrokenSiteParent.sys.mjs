@@ -6,7 +6,69 @@ import { Troubleshoot } from "resource://gre/modules/Troubleshoot.sys.mjs";
 
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 
+import { ReportBrokenSiteHelpers as Helpers } from "./ReportBrokenSiteHelpers.mjs";
+
 export class ReportBrokenSiteParent extends JSWindowActorParent {
+  sendBrokenSiteReport({
+    details,
+    description,
+    doNotSubmit = false, // only needed for Android tests
+    reason,
+    sendTabSpecificInfo,
+    sendBlockedUrls,
+    url,
+  }) {
+    const gBase = Glean.brokenSiteReport;
+
+    if (reason) {
+      gBase.breakageCategory.set(reason);
+    }
+
+    gBase.description.set(description);
+    gBase.url.set(url);
+
+    if (!details) {
+      if (!doNotSubmit) {
+        GleanPings.brokenSiteReport.submit();
+      }
+      return;
+    }
+
+    Helpers.filterReportData(details, { sendTabSpecificInfo, sendBlockedUrls });
+
+    for (const categoryItems of Object.values(details)) {
+      for (let [name, { glean, json, value }] of Object.entries(
+        categoryItems
+      )) {
+        if (!glean) {
+          continue;
+        }
+        // Transform glean=xx.yy.zz to brokenSiteReportXxYyZz.
+        glean =
+          "brokenSiteReport" +
+          glean
+            .split(".")
+            .map(v => `${v[0].toUpperCase()}${v.substr(1)}`)
+            .join("");
+        if (json) {
+          name = `${name}Json`;
+          value = JSON.stringify(value);
+        }
+        Glean[glean][name].set(value);
+      }
+    }
+
+    if (!doNotSubmit) {
+      GleanPings.brokenSiteReport.submit();
+    }
+  }
+
+  // only needed for Android tests
+  filterReportData(details, opts) {
+    Helpers.filterReportData(details, opts);
+    return details;
+  }
+
   async getBrokenSiteReport(options = {}) {
     const { antitracking, browser, devicePixelRatio, screenshot, childData } =
       await this.getWebCompatInfo(options);
@@ -40,6 +102,7 @@ export class ReportBrokenSiteParent extends JSWindowActorParent {
           glean: "tabInfo.antitracking",
         },
         hasMixedDisplayContentBlocked: {
+          isTabSpecific: true,
           value: antitracking.hasMixedDisplayContentBlocked,
           glean: "tabInfo.antitracking",
         },
@@ -120,7 +183,7 @@ export class ReportBrokenSiteParent extends JSWindowActorParent {
           glean: "browserInfo.app",
         },
         platform: {
-          do_not_preview: true,
+          doNotPreview: true,
           value: browser.platform.name,
           // Gleans sends this for us in the base ping
         },
@@ -186,12 +249,12 @@ export class ReportBrokenSiteParent extends JSWindowActorParent {
         isTabSpecific: true,
         consoleLog: {
           value: consoleLog,
-          do_not_preview: true,
+          doNotPreview: true,
           // Only sent to webcompat.com with send more info, not with Glean.
         },
         favicon: {
           value: favicon,
-          do_not_preview: true,
+          doNotPreview: true,
           // Only to be displayed to the user on the UI, not to be sent to Glean.
         },
         languages: {
@@ -201,12 +264,12 @@ export class ReportBrokenSiteParent extends JSWindowActorParent {
         screenshot: {
           isTabSpecific: true,
           value: screenshot,
-          do_not_preview: true,
+          doNotPreview: true,
           // Binary data not sent by Glean
         },
         url: {
           value: url,
-          do_not_preview: true,
+          doNotPreview: true,
           // Duplicate value used only for sanity-checking.
         },
         useragentString: {
@@ -535,6 +598,10 @@ export class ReportBrokenSiteParent extends JSWindowActorParent {
       osVersion: this.#getSysinfoProperty("version", null),
       name: AppConstants.platform,
     };
+    if (info.osVersion !== null) {
+      // Android can return a number, but we want a string.
+      info.osVersion = String(info.osVersion);
+    }
     if (info.os === "android") {
       info.device = this.#getSysinfoProperty("device", null);
       info.isTablet = this.#getSysinfoProperty("tablet", false);
@@ -638,8 +705,7 @@ export class ReportBrokenSiteParent extends JSWindowActorParent {
     const image = await wgp.drawSnapshot(
       undefined, // rect
       scale * zoom,
-      "white",
-      undefined // resetScrollPosition
+      "white"
     );
 
     const canvas = new OffscreenCanvas(image.width, image.height);

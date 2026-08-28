@@ -29,15 +29,16 @@ pub use crate::properties::counter_style::{DescriptorId, DescriptorParser, Descr
 
 /// https://drafts.csswg.org/css-counter-styles/#typedef-symbols-type
 #[allow(missing_docs)]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[derive(
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     Parse,
     PartialEq,
+    Serialize,
     ToComputedValue,
     ToCss,
     ToResolvedValue,
@@ -105,6 +106,14 @@ impl CounterStyle {
                     || name == &atom!("disclosure-closed")
                     || name == &atom!("disclosure-open")
             },
+            _ => false,
+        }
+    }
+
+    /// Returns whether this is a particular name.
+    pub fn is_name(&self, name: &Atom) -> bool {
+        match *self {
+            CounterStyle::Name(CustomIdent(ref n)) => n == name,
             _ => false,
         }
     }

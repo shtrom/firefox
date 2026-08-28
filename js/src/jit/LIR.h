@@ -176,13 +176,9 @@ class LAllocation {
                                               ~(KIND_MASK << KIND_SHIFT));
   }
 
-  bool operator==(const LAllocation& other) const {
-    return bits_ == other.bits_;
-  }
+  bool operator==(const LAllocation& other) const = default;
 
-  bool operator!=(const LAllocation& other) const {
-    return bits_ != other.bits_;
-  }
+  bool operator!=(const LAllocation& other) const = default;
 
   HashNumber hash() const { return bits_; }
 
@@ -432,6 +428,9 @@ class LStackSlot : public LAllocation {
     uint32_t slot() const { return data_ & SLOT_MASK; }
     Width width() const { return Width(data_ & WIDTH_MASK); }
   };
+
+  static constexpr uint32_t MAX_SLOT =
+      (uint64_t(1) << LAllocation::DATA_BITS) - 1;
 
   explicit LStackSlot(SlotAndWidth slotAndWidth)
       : LAllocation(STACK_SLOT, slotAndWidth.data()) {}
@@ -2310,11 +2309,11 @@ namespace jit {
 
 #define LIROP(name)                           \
   L##name* LNode::to##name() {                \
-    MOZ_ASSERT(is##name());                   \
+    MOZ_RELEASE_ASSERT(is##name());           \
     return static_cast<L##name*>(this);       \
   }                                           \
   const L##name* LNode::to##name() const {    \
-    MOZ_ASSERT(is##name());                   \
+    MOZ_RELEASE_ASSERT(is##name());           \
     return static_cast<const L##name*>(this); \
   }
 LIR_OPCODE_LIST(LIROP)
@@ -2322,12 +2321,12 @@ LIR_OPCODE_LIST(LIROP)
 
 #define LALLOC_CAST(type)               \
   L##type* LAllocation::to##type() {    \
-    MOZ_ASSERT(is##type());             \
+    MOZ_RELEASE_ASSERT(is##type());     \
     return static_cast<L##type*>(this); \
   }
 #define LALLOC_CONST_CAST(type)                  \
   const L##type* LAllocation::to##type() const { \
-    MOZ_ASSERT(is##type());                      \
+    MOZ_RELEASE_ASSERT(is##type());              \
     return static_cast<const L##type*>(this);    \
   }
 

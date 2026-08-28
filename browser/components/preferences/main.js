@@ -24,6 +24,11 @@ const { Multilingual } = ChromeUtils.importESModule(
   { global: "current" }
 );
 
+const { DefaultBrowserHelper } = ChromeUtils.importESModule(
+  "chrome://browser/content/preferences/DefaultBrowserHelper.mjs",
+  { global: "current" }
+);
+
 ChromeUtils.defineESModuleGetters(this, {
   BackgroundUpdate: "resource://gre/modules/BackgroundUpdate.sys.mjs",
   UpdateListener: "resource://gre/modules/UpdateListener.sys.mjs",
@@ -32,7 +37,7 @@ ChromeUtils.defineESModuleGetters(this, {
   TranslationsParent: "resource://gre/actors/TranslationsParent.sys.mjs",
   TranslationsUtils:
     "chrome://global/content/translations/TranslationsUtils.mjs",
-  WindowsLaunchOnLogin: "resource://gre/modules/WindowsLaunchOnLogin.sys.mjs",
+  LaunchOnLogin: "resource://gre/modules/LaunchOnLogin.sys.mjs",
   NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   FormAutofillPreferences:
     "resource://autofill/FormAutofillPreferences.sys.mjs",
@@ -94,6 +99,7 @@ function canShowAiFeature(featureSetting, defaultSetting) {
 Preferences.addAll([
   // Startup
   { id: "browser.startup.page", type: "int" },
+  { id: "browser.sessionstore.newTabOnRestore", type: "bool" },
   { id: "browser.startup.windowsLaunchOnLogin.enabled", type: "bool" },
   { id: "browser.privatebrowsing.autostart", type: "bool" },
 
@@ -120,7 +126,6 @@ Preferences.addAll([
 if (AppConstants.HAVE_SHELL_SERVICE) {
   Preferences.addAll([
     { id: "browser.shell.checkDefaultBrowser", type: "bool" },
-    { id: "pref.general.disable_button.default_browser", type: "bool" },
   ]);
 }
 
@@ -143,17 +148,11 @@ Preferences.addSetting(
     // but it is not possible to change it back to enabled as the disabled value is just a random
     // hexadecimal number
     setup() {
-      if (AppConstants.platform !== "win") {
-        /**
-         * WindowsLaunchOnLogin isnt available if not on windows
-         * but this setup function still fires, so must prevent
-         * WindowsLaunchOnLogin.getLaunchOnLoginApproved
-         * below from executing unnecessarily.
-         */
+      if (!LaunchOnLogin.isSupported()) {
         return;
       }
       // @ts-ignore bug 1996860
-      WindowsLaunchOnLogin.getLaunchOnLoginApproved().then(val => {
+      LaunchOnLogin.isAllowed().then(val => {
         this._getLaunchOnLoginApprovedCachedValue = val;
       });
     },
@@ -179,13 +178,7 @@ Preferences.addSetting(
       return this._getLaunchOnLoginEnabledValue;
     },
     setup(emitChange) {
-      if (AppConstants.platform !== "win") {
-        /**
-         * WindowsLaunchOnLogin isnt available if not on windows
-         * but this setup function still fires, so must prevent
-         * WindowsLaunchOnLogin.getLaunchOnLoginEnabled
-         * below from executing unnecessarily.
-         */
+      if (!LaunchOnLogin.isSupported()) {
         return;
       }
 
@@ -204,7 +197,7 @@ Preferences.addSetting(
         maybeEmitChange();
       } else {
         // @ts-ignore bug 1996860
-        WindowsLaunchOnLogin.getLaunchOnLoginEnabled().then(val => {
+        LaunchOnLogin.isEnabled().then(val => {
           getLaunchOnLoginEnabledValue = val;
           maybeEmitChange();
         });
@@ -212,7 +205,7 @@ Preferences.addSetting(
     },
     visible: ({ windowsLaunchOnLoginEnabled }) => {
       let isVisible =
-        AppConstants.platform === "win" && windowsLaunchOnLoginEnabled.value;
+        LaunchOnLogin.isSupported() && windowsLaunchOnLoginEnabled.value;
       if (isVisible) {
         // @ts-ignore bug 1996860
         NimbusFeatures.windowsLaunchOnLogin.recordExposureEvent({
@@ -233,15 +226,11 @@ Preferences.addSetting(
         // registry fails. As such we pass an arbitrary AUMID for the purpose
         // of testing.
         // @ts-ignore bug 1996860
-        WindowsLaunchOnLogin.createLaunchOnLogin();
-        Services.prefs.setBoolPref(
-          "browser.startup.windowsLaunchOnLogin.disableLaunchOnLoginPrompt",
-          true
-        );
+        LaunchOnLogin.enable();
       } else {
         // windowsLaunchOnLogin has been unchecked: delete registry key and shortcut
         // @ts-ignore bug 1996860
-        WindowsLaunchOnLogin.removeLaunchOnLogin();
+        LaunchOnLogin.disable();
       }
     },
   })
@@ -251,7 +240,7 @@ Preferences.addSetting({
   id: "windowsLaunchOnLoginDisabledProfileBox",
   deps: ["windowsLaunchOnLoginEnabled"],
   visible: ({ windowsLaunchOnLoginEnabled }) => {
-    if (AppConstants.platform !== "win") {
+    if (!LaunchOnLogin.isSupported()) {
       return false;
     }
     let startWithLastProfile = Cc[
@@ -266,7 +255,7 @@ Preferences.addSetting({
   id: "windowsLaunchOnLoginDisabledBox",
   deps: ["launchOnLoginApproved", "windowsLaunchOnLoginEnabled"],
   visible: ({ launchOnLoginApproved, windowsLaunchOnLoginEnabled }) => {
-    if (AppConstants.platform !== "win") {
+    if (!LaunchOnLogin.isSupported()) {
       return false;
     }
     let startWithLastProfile = Cc[
@@ -328,6 +317,18 @@ Preferences.addSetting({
 });
 
 Preferences.addSetting({
+  id: "sessionRestoreNewTab",
+  pref: "browser.sessionstore.newTabOnRestore",
+  deps: ["browserRestoreSession"],
+  visible: () =>
+    Services.prefs.getBoolPref(
+      "browser.sessionstore.newTabOnRestore.showSetting",
+      false
+    ),
+  disabled: deps => !deps.browserRestoreSession.value,
+});
+
+Preferences.addSetting({
   id: "containersPane",
   onUserClick(e) {
     e.preventDefault();
@@ -353,157 +354,14 @@ Preferences.addSetting({
   },
 });
 
-/**
- * A helper object containing all logic related to
- * setting the browser as the user's default.
- */
-const DefaultBrowserHelper = {
-  /**
-   * @type {number}
-   */
-  _backoffIndex: 0,
-
-  /**
-   * @type {number | undefined}
-   */
-  _pollingTimer: undefined,
-
-  /**
-   * Keeps track of the last known browser
-   * default value set to compare while polling.
-   *
-   * @type {boolean | undefined}
-   */
-  _lastPolledIsDefault: undefined,
-
-  /**
-   * @type {typeof import('../shell/ShellService.sys.mjs').ShellService | undefined}
-   */
-  get shellSvc() {
-    return (
-      AppConstants.HAVE_SHELL_SERVICE &&
-      // @ts-ignore from utilityOverlay.js
-      getShellService()
-    );
-  },
-
-  /**
-   * Sets up polling of whether the browser is set to default,
-   * and calls provided hasChanged function when the state changes.
-   *
-   * @param {Function} hasChanged
-   */
-  pollForDefaultChanges(hasChanged) {
-    if (this._pollingTimer) {
-      return;
-    }
-    this._lastPolledIsDefault = this.isBrowserDefault;
-
-    // Exponential backoff mechanism will delay the polling times if user doesn't
-    // trigger SetDefaultBrowser for a long time.
-    const backoffTimes = [
-      1000, 1000, 1000, 1000, 2000, 2000, 2000, 5000, 5000, 10000,
-    ];
-
-    const pollForDefaultBrowser = () => {
-      if (
-        (location.hash == "" ||
-          location.hash == "#general" ||
-          location.hash == "#sync") &&
-        document.visibilityState == "visible"
-      ) {
-        const { isBrowserDefault } = this;
-        if (isBrowserDefault !== this._lastPolledIsDefault) {
-          this._lastPolledIsDefault = isBrowserDefault;
-          hasChanged();
-        }
-      }
-
-      if (!this._pollingTimer) {
-        return;
-      }
-
-      // approximately a "requestIdleInterval"
-      this._pollingTimer = window.setTimeout(
-        () => {
-          window.requestIdleCallback(pollForDefaultBrowser);
-        },
-        backoffTimes[
-          this._backoffIndex + 1 < backoffTimes.length
-            ? this._backoffIndex++
-            : backoffTimes.length - 1
-        ]
-      );
-    };
-
-    this._pollingTimer = window.setTimeout(() => {
-      window.requestIdleCallback(pollForDefaultBrowser);
-    }, backoffTimes[this._backoffIndex]);
-  },
-
-  /**
-   * Stops timer for polling changes.
-   */
-  clearPollingForDefaultChanges() {
-    if (this._pollingTimer) {
-      clearTimeout(this._pollingTimer);
-      this._pollingTimer = undefined;
-    }
-  },
-
-  /**
-   *  Checks if the browser is default through the shell service.
-   */
-  get isBrowserDefault() {
-    if (!this.canCheck) {
-      return false;
-    }
-    return this.shellSvc?.isDefaultBrowser(false, true);
-  },
-
-  /**
-   * Attempts to set the browser as the user's
-   * default through the shell service.
-   *
-   * @returns {Promise<void>}
-   */
-  async setDefaultBrowser() {
-    // Reset exponential backoff delay time in order to do visual update in pollForDefaultBrowser.
-    this._backoffIndex = 0;
-
-    try {
-      await this.shellSvc?.setDefaultBrowser(false);
-    } catch (e) {
-      console.error(e);
-    }
-  },
-
-  /**
-   * Checks whether the browser is capable of being made default.
-   *
-   * @type {boolean}
-   */
-  get canCheck() {
-    return (
-      this.shellSvc &&
-      /**
-       * Flatpak does not support setting nor detection of default browser
-       */
-      !gGIOService?.isRunningUnderFlatpak
-    );
-  },
-};
-
 Preferences.addSetting({
   id: "alwaysCheckDefault",
   pref: "browser.shell.checkDefaultBrowser",
   setup: emitChange => {
     if (!DefaultBrowserHelper.canCheck) {
-      return;
+      return undefined;
     }
-    DefaultBrowserHelper.pollForDefaultChanges(emitChange);
-    // eslint-disable-next-line consistent-return
-    return () => DefaultBrowserHelper.clearPollingForDefaultChanges();
+    return DefaultBrowserHelper.pollForDefaultChanges(emitChange);
   },
   /**
    * Show button for setting browser as default browser or information that
@@ -520,14 +378,20 @@ Preferences.addSetting({
   id: "isDefaultPane",
   deps: ["alwaysCheckDefault"],
   visible: () =>
-    DefaultBrowserHelper.canCheck && DefaultBrowserHelper.isBrowserDefault,
+    DefaultBrowserHelper.canCheck &&
+    DefaultBrowserHelper.isBrowserDefault &&
+    Services.policies.isAllowed("setDefaultBrowser") &&
+    !Services.prefs.prefIsLocked("pref.general.disable_button.default_browser"),
 });
 
 Preferences.addSetting({
   id: "isNotDefaultPane",
   deps: ["alwaysCheckDefault"],
   visible: () =>
-    DefaultBrowserHelper.canCheck && !DefaultBrowserHelper.isBrowserDefault,
+    DefaultBrowserHelper.canCheck &&
+    !DefaultBrowserHelper.isBrowserDefault &&
+    Services.policies.isAllowed("setDefaultBrowser") &&
+    !Services.prefs.prefIsLocked("pref.general.disable_button.default_browser"),
   onUserClick: (e, { alwaysCheckDefault }) => {
     if (!DefaultBrowserHelper.canCheck) {
       return;
@@ -642,6 +506,12 @@ function createStartupConfig(hidden = false) {
       {
         id: "browserRestoreSession",
         l10nId: "startup-restore-windows-and-tabs",
+        items: [
+          {
+            id: "sessionRestoreNewTab",
+            l10nId: "windows-launch-on-login-open-new-tab",
+          },
+        ],
       },
       {
         id: "windowsLaunchOnLogin",
@@ -650,6 +520,9 @@ function createStartupConfig(hidden = false) {
       {
         id: "windowsLaunchOnLoginDisabledBox",
         control: "moz-message-bar",
+        controlAttrs: {
+          role: "status",
+        },
         options: [
           {
             control: "span",
@@ -672,6 +545,9 @@ function createStartupConfig(hidden = false) {
         id: "windowsLaunchOnLoginDisabledProfileBox",
         control: "moz-message-bar",
         l10nId: "startup-windows-launch-on-login-profile-disabled",
+        controlAttrs: {
+          role: "status",
+        },
       },
       {
         id: "alwaysCheckDefault",
@@ -684,7 +560,7 @@ function createStartupConfig(hidden = false) {
 SettingGroupManager.registerGroups({
   defaultBrowser: createDefaultBrowserConfig(),
   startup: createStartupConfig(
-    Services.prefs.getBoolPref("browser-settings-redesign.enabled", false)
+    Services.prefs.getBoolPref("browser.settings-redesign.enabled", false)
   ),
 });
 
@@ -694,7 +570,14 @@ SettingGroupManager.registerGroups({
 function initSettingGroup(id) {
   /** @type {SettingGroup[]} */
   let groups = document.querySelectorAll(`setting-group[groupid=${id}]`);
-  const config = SettingGroupManager.get(id);
+  let config;
+  try {
+    config = SettingGroupManager.get(id);
+  } catch (e) {
+    // Downstream browsers (e.g. Tor) may exclude extensions that
+    // register some setting groups. Treat missing as no-op, not error.
+    config = null;
+  }
   for (let group of groups) {
     if (group && config) {
       let sectionEnabled = srdSectionEnabled(id);
@@ -881,8 +764,10 @@ var gMainPane = {
     if (!(await FxAccounts.canConnectAccount())) {
       return;
     }
-    let url =
-      await FxAccounts.config.promiseConnectAccountURI("dev-edition-setup");
+    let url = await FxAccounts.config.promiseConnectAccountURI(
+      "sync",
+      "dev-edition-setup"
+    );
     let accountsTab = win.gBrowser.addWebTab(url);
     win.gBrowser.selectedTab = accountsTab;
   },
@@ -1536,7 +1421,7 @@ var gMainPane = {
     win.toOpenWindowByType(
       "about:profilemanager",
       "about:profilemanager",
-      "chrome,extrachrome,menubar,resizable,scrollbars,status,toolbar,centerscreen"
+      "chrome,resizable,toolbar,centerscreen"
     );
   },
 
@@ -1890,7 +1775,7 @@ class HandlerListItem {
         actionIconClass ? null : this.handlerInfoWrapper.actionIconSrcset,
       ],
     ]);
-    const selectedItem = this.node.querySelector("[selected=true]");
+    const selectedItem = this.node.querySelector("[selected]");
     if (!selectedItem) {
       console.error("No selected item for " + this.handlerInfoWrapper.type);
       return;

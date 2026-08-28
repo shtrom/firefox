@@ -1663,18 +1663,14 @@ void ArrayMemoryView::visitSetInitializedLength(MSetInitializedLength* ins) {
     return;
   }
 
-  // Replace by the new initialized length.  Note that the argument of
-  // MSetInitializedLength is the last index and not the initialized length.
-  // To obtain the length, we need to add 1 to it, and thus we need to create
-  // a new constant that we register in the ArrayState.
+  // Replace by the new initialized length.
   state_ = BlockState::Copy(alloc_, state_);
   if (!state_) {
     oom_ = true;
     return;
   }
 
-  int32_t initLengthValue = ins->index()->maybeConstantValue()->toInt32() + 1;
-  MConstant* initLength = MConstant::NewInt32(alloc_, initLengthValue);
+  MConstant* initLength = MConstant::NewInt32(alloc_, ins->length());
   ins->block()->insertBefore(ins, initLength);
   ins->block()->insertBefore(ins, state_);
   state_->setInitializedLength(initLength);
@@ -1853,6 +1849,7 @@ class ArgumentsReplacer : public MDefinitionVisitorDefaultNoop {
   void visitGuardToClass(MGuardToClass* ins);
   void visitGuardProto(MGuardProto* ins);
   void visitGuardArgumentsObjectFlags(MGuardArgumentsObjectFlags* ins);
+  void visitGuardObjectHasSameRealm(MGuardObjectHasSameRealm* ins);
   void visitUnbox(MUnbox* ins);
   void visitGetArgumentsObjectArg(MGetArgumentsObjectArg* ins);
   void visitLoadArgumentsObjectArg(MLoadArgumentsObjectArg* ins);
@@ -1940,6 +1937,14 @@ bool ArgumentsReplacer::escapes(MInstruction* ins, bool guardedForMapped) {
         break;
       }
 
+      case MDefinition::Opcode::GuardObjectHasSameRealm: {
+        if (escapes(def->toInstruction(), guardedForMapped)) {
+          JitSpewDef(JitSpew_Escape, "is indirectly escaped by\n", def);
+          return true;
+        }
+        break;
+      }
+
       case MDefinition::Opcode::Unbox: {
         if (def->type() != MIRType::Object) {
           JitSpewDef(JitSpew_Escape, "has an invalid unbox\n", def);
@@ -1956,7 +1961,7 @@ bool ArgumentsReplacer::escapes(MInstruction* ins, bool guardedForMapped) {
         MLoadFixedSlot* load = def->toLoadFixedSlot();
 
         // We can replace arguments.callee.
-        if (load->slot() == ArgumentsObject::CALLEE_SLOT) {
+        if (load->slot() == ArgumentsObject::CALLEE_SLOT.index()) {
           MOZ_ASSERT(guardedForMapped);
           continue;
         }
@@ -2112,6 +2117,23 @@ void ArgumentsReplacer::visitGuardArgumentsObjectFlags(
   MOZ_ASSERT_IF(ins->flags() & ArgumentsObject::FORWARDED_ARGUMENTS_BIT,
                 !args_->block()->info().anyFormalIsForwarded());
 #endif
+
+  // Replace the guard with the args object.
+  ins->replaceAllUsesWith(args_);
+
+  // Remove the guard.
+  ins->block()->discard(ins);
+}
+
+void ArgumentsReplacer::visitGuardObjectHasSameRealm(
+    MGuardObjectHasSameRealm* ins) {
+  // Skip guards on other objects.
+  if (ins->object() != args_) {
+    return;
+  }
+
+  // We can eliminate this guard because the arguments object is created in the
+  // script's realm and we don't inline cross-realm calls.
 
   // Replace the guard with the args object.
   ins->replaceAllUsesWith(args_);
@@ -2398,9 +2420,8 @@ MNewArrayObject* ArgumentsReplacer::inlineArgsArray(MInstruction* ins,
     auto* elements = MElements::New(alloc(), newArray);
     ins->block()->insertBefore(ins, elements);
 
-    MConstant* index = nullptr;
     for (uint32_t i = 0; i < count; i++) {
-      index = MConstant::NewInt32(alloc(), i);
+      auto* index = MConstant::NewInt32(alloc(), i);
       ins->block()->insertBefore(ins, index);
 
       MDefinition* arg = actualArgs->getArg(begin + i);
@@ -2412,7 +2433,9 @@ MNewArrayObject* ArgumentsReplacer::inlineArgsArray(MInstruction* ins,
       ins->block()->insertBefore(ins, barrier);
     }
 
-    auto* initLength = MSetInitializedLength::New(alloc(), elements, index);
+    auto* initLength =
+        MSetInitializedLength::New(alloc(), elements, count,
+                                   /* needsPreBarrier = */ false);
     ins->block()->insertBefore(ins, initLength);
   }
 
@@ -2589,7 +2612,7 @@ void ArgumentsReplacer::visitLoadFixedSlot(MLoadFixedSlot* ins) {
     return;
   }
 
-  MOZ_ASSERT(ins->slot() == ArgumentsObject::CALLEE_SLOT);
+  MOZ_ASSERT(ins->slot() == ArgumentsObject::CALLEE_SLOT.index());
 
   MDefinition* replacement;
   if (isInlinedArguments()) {
@@ -2996,6 +3019,7 @@ class SubarrayReplacer : public MDefinitionVisitorDefaultNoop {
   }
 
   bool escapes(MArrayBufferViewElements* ins) const;
+  bool escapes(MGuardHasAttachedArrayBuffer* ins) const;
 
   void visitArrayBufferViewByteOffset(MArrayBufferViewByteOffset* ins);
   void visitArrayBufferViewElements(MArrayBufferViewElements* ins);
@@ -3015,11 +3039,7 @@ class SubarrayReplacer : public MDefinitionVisitorDefaultNoop {
     return ins->id() >= initialNumInstrIds_;
   }
 
-  bool isSubarrayOrGuard(MDefinition* ins) const {
-    if (ins == subarray_) {
-      return true;
-    }
-
+  bool isNewGuardHasAttachedArrayBuffer(MDefinition* ins) const {
     // GuardHasAttachedArrayBuffer is replaced with a guard on the subarray's
     // object.
     if (ins->isGuardHasAttachedArrayBuffer() && isNewInstruction(ins)) {
@@ -3027,8 +3047,18 @@ class SubarrayReplacer : public MDefinitionVisitorDefaultNoop {
                  subarray()->object());
       return true;
     }
-
     return false;
+  }
+
+  bool isSubarray(MDefinition* ins) const {
+    // New MGuardHasAttachedArrayBuffer instructions aren't expected to flow
+    // into |isSubarray()| callers.
+    MOZ_ASSERT(!isNewGuardHasAttachedArrayBuffer(ins));
+    return ins == subarray_;
+  }
+
+  bool isSubarrayOrGuard(MDefinition* ins) const {
+    return ins == subarray_ || isNewGuardHasAttachedArrayBuffer(ins);
   }
 
   MDefinition* toSubarrayObject(MDefinition* ins) const {
@@ -3087,7 +3117,7 @@ class SubarrayReplacer : public MDefinitionVisitorDefaultNoop {
 
 void SubarrayReplacer::visitUnbox(MUnbox* ins) {
   // Skip unbox on other objects.
-  if (ins->input() != subarray_) {
+  if (!isSubarray(ins->input())) {
     return;
   }
   MOZ_ASSERT(ins->type() == MIRType::Object);
@@ -3101,7 +3131,7 @@ void SubarrayReplacer::visitUnbox(MUnbox* ins) {
 
 void SubarrayReplacer::visitGuardShape(MGuardShape* ins) {
   // Skip guards on other objects.
-  if (ins->object() != subarray_) {
+  if (!isSubarray(ins->object())) {
     return;
   }
 
@@ -3115,7 +3145,7 @@ void SubarrayReplacer::visitGuardShape(MGuardShape* ins) {
 void SubarrayReplacer::visitGuardHasAttachedArrayBuffer(
     MGuardHasAttachedArrayBuffer* ins) {
   // Skip guards on other objects.
-  if (ins->object() != subarray_) {
+  if (!isSubarray(ins->object())) {
     return;
   }
 
@@ -3457,6 +3487,58 @@ bool SubarrayReplacer::escapes(MArrayBufferViewElements* ins) const {
   return false;
 }
 
+// Returns false if the subarray guard-has-attached-buffer does not escape.
+bool SubarrayReplacer::escapes(MGuardHasAttachedArrayBuffer* ins) const {
+  MOZ_ASSERT(ins->type() == MIRType::Object);
+
+  JitSpewDef(JitSpew_Escape, "Check subarray typed array guard\n", ins);
+  JitSpewIndent spewIndent(JitSpew_Escape);
+
+  // Check all uses to see whether they can be supported without allocating an
+  // TypedArrayObject for the `%TypedArray%.prototype.subarray` call.
+  for (MUseIterator i(ins->usesBegin()); i != ins->usesEnd(); i++) {
+    MNode* consumer = (*i)->consumer();
+
+    // If a resume point can observe this instruction, we can only optimize if
+    // it is recoverable.
+    if (consumer->isResumePoint()) {
+      if (!consumer->toResumePoint()->isRecoverableOperand(*i)) {
+        JitSpew(JitSpew_Escape, "Observable guard cannot be recovered");
+        return true;
+      }
+      continue;
+    }
+
+    MDefinition* def = consumer->toDefinition();
+    switch (def->op()) {
+      case MDefinition::Opcode::ArrayBufferViewElements: {
+        auto* elements = def->toArrayBufferViewElements();
+        if (escapes(elements)) {
+          JitSpewDef(JitSpew_Escape, "is indirectly escaped by\n", def);
+          return true;
+        }
+        break;
+      }
+
+      // Replacable instructions.
+      case MDefinition::Opcode::ArrayBufferViewByteOffset:
+      case MDefinition::Opcode::ArrayBufferViewLength:
+      case MDefinition::Opcode::TypedArrayElementSize:
+      case MDefinition::Opcode::TypedArrayFill:
+      case MDefinition::Opcode::TypedArraySet:
+      case MDefinition::Opcode::TypedArraySubarray:
+        break;
+
+      default:
+        JitSpewDef(JitSpew_Escape, "is escaped by\n", def);
+        return true;
+    }
+  }
+
+  JitSpew(JitSpew_Escape, "Subarray guard-has-attached-buffer is not escaped");
+  return false;
+}
+
 // Returns false if the subarray typed array object does not escape.
 bool SubarrayReplacer::escapes(MInstruction* ins) const {
   MOZ_ASSERT(ins->type() == MIRType::Object);
@@ -3663,24 +3745,24 @@ void DateObjectReplacer::visitLoadFixedSlot(MLoadFixedSlot* ins) {
 
   MDefinition* replacement;
   switch (ins->slot()) {
-    case DateObject::UTC_TIME_SLOT: {
+    case DateObject::UTC_TIME_SLOT.index(): {
       // Replace load with the UTC time argument.
       replacement = utcTime;
       break;
     }
-    case DateObject::LOCAL_YEAR_SLOT: {
+    case DateObject::LOCAL_YEAR_SLOT.index(): {
       auto* yearFromTime = MYearFromTime::New(alloc(), utcTime);
       ins->block()->insertBefore(ins, yearFromTime);
       replacement = yearFromTime;
       break;
     }
-    case DateObject::LOCAL_MONTH_SLOT: {
+    case DateObject::LOCAL_MONTH_SLOT.index(): {
       auto* monthFromTime = MMonthFromTime::New(alloc(), utcTime);
       ins->block()->insertBefore(ins, monthFromTime);
       replacement = monthFromTime;
       break;
     }
-    case DateObject::LOCAL_DATE_SLOT: {
+    case DateObject::LOCAL_DATE_SLOT.index(): {
       auto* dateFromTime = MDateFromTime::New(alloc(), utcTime);
       ins->block()->insertBefore(ins, dateFromTime);
       replacement = dateFromTime;
@@ -3761,12 +3843,12 @@ bool DateObjectReplacer::escapes(MInstruction* ins) {
         auto* load = def->toLoadFixedSlot();
 
         switch (load->slot()) {
-          case DateObject::UTC_TIME_SLOT:
+          case DateObject::UTC_TIME_SLOT.index():
             // We can replace loading the UTC time slot.
             break;
-          case DateObject::LOCAL_YEAR_SLOT:
-          case DateObject::LOCAL_MONTH_SLOT:
-          case DateObject::LOCAL_DATE_SLOT:
+          case DateObject::LOCAL_YEAR_SLOT.index():
+          case DateObject::LOCAL_MONTH_SLOT.index():
+          case DateObject::LOCAL_DATE_SLOT.index():
             // We can replace loading these date component slots. Only allow a
             // single load, because it's probably more efficient to use the
             // cached components in the Date object if multiple loads happen.
@@ -4430,6 +4512,7 @@ bool ObjectKeysReplacer::run(MInstructionIterator& outerIterator) {
 
   objToIter_ = MObjectToIterator::New(alloc_, objectKeys()->object(), nullptr);
   objToIter_->setSkipRegistration(true);
+  objToIter_->stealResumePoint(arr_);
   arr_->block()->insertBefore(arr_, objToIter_);
 
   // Iterate over each basic block.
@@ -4464,7 +4547,28 @@ bool ObjectKeysReplacer::run(MInstructionIterator& outerIterator) {
 
   auto* forRecovery = MObjectKeysFromIterator::New(alloc_, objToIter_);
   arr_->block()->insertBefore(arr_, forRecovery);
-  forRecovery->stealResumePoint(arr_);
+
+  auto* nop = MNop::New(alloc_);
+  arr_->block()->insertBefore(arr_, nop);
+  if (!nop->copyResumePointFrom(alloc_, objToIter_)) {
+    return false;
+  }
+
+  {
+    // Use the PropertyIteratorObject in the resume point for the
+    // MObjectToIterator instruction. If this instruction calls a VM function
+    // that triggers an invalidation, we use ResumeMode::ResumeAfterObjectKeys
+    // to create the array from the iterator object when we bail out.
+    MResumePoint* rp = objToIter_->resumePoint();
+    size_t n = rp->numOperands() - 1;
+    for (size_t i = 0; i < n; i++) {
+      MOZ_RELEASE_ASSERT(rp->getOperand(i) != arr_);
+    }
+    MOZ_RELEASE_ASSERT(rp->getOperand(n) == arr_);
+    rp->replaceOperand(n, objToIter_);
+    MOZ_RELEASE_ASSERT(rp->mode() == ResumeMode::ResumeAfter);
+    rp->setMode(ResumeMode::ResumeAfterObjectKeys);
+  }
   arr_->replaceAllUsesWith(forRecovery);
 
   // We need to explicitly discard the instruction since it's marked as

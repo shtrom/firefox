@@ -12,11 +12,10 @@
   <script type="application/javascript"
           src="../name.js"></script>
   <script type="application/javascript"
-          src="../promisified-events.js"></script>
+          src="../events.js"></script>
 
   <script type="application/javascript">
     // enableLogging("tree");
-    // gA11yEventDumpToConsole = true;
 
     async function doTest() {
       let containerNode = getNode("outerDiv");
@@ -31,7 +30,7 @@
 
       const docContainer = getNode("docContainer");
       const iframe = document.createElement("iframe");
-      // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+      // eslint-disable-next-line sdl/no-insecure-url
       iframe.setAttribute("src", "http://example.com");
       iframe.setAttribute("id", "newChildDoc");
 

@@ -89,9 +89,6 @@ PR_STATIC_ASSERT(PR_ARRAY_SIZE(ssl_hello_retry_random) == SSL3_RANDOM_LENGTH);
  * precedence (desirability).  It only includes cipher suites we implement.
  * This table is modified by SSL3_SetPolicy(). The ordering of cipher suites
  * in this table must match the ordering in SSL_ImplementedCiphers (sslenum.c)
- *
- * Important: See bug 946147 before enabling, reordering, or adding any cipher
- * suites to this list.
  */
 /* clang-format off */
 static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
@@ -107,14 +104,11 @@ static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
  { TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,   SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,   SSL_ALLOWED, PR_TRUE, PR_FALSE},
-   /* TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA is out of order to work around
-    * bug 946147.
-    */
- { TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,    SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,    SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,      SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,   SSL_ALLOWED, PR_TRUE, PR_FALSE},
+ { TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,    SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,      SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, SSL_ALLOWED, PR_FALSE, PR_FALSE},
  { TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,   SSL_ALLOWED, PR_FALSE, PR_FALSE},
@@ -378,6 +372,8 @@ static const CK_MECHANISM_TYPE kea_alg_defs[] = {
     CKM_INVALID_MECHANISM, /* ssl_kea_tls13_any */
     CKM_INVALID_MECHANISM, /* ssl_kea_ecdh_hybrid */
     CKM_INVALID_MECHANISM, /* ssl_kea_ecdh_hybrid_psk */
+    CKM_INVALID_MECHANISM, /* ssl_kea_kem */
+    CKM_INVALID_MECHANISM, /* ssl_kea_kem_psk */
 };
 PR_STATIC_ASSERT(PR_ARRAY_SIZE(kea_alg_defs) == ssl_kea_size);
 
@@ -894,13 +890,6 @@ ssl_KEAEnabled(const sslSocket *ss, SSLKEAType keaType)
         case ssl_kea_ecdh:
         case ssl_kea_ecdh_psk:
             return ssl_NamedGroupTypeEnabled(ss, ssl_kea_ecdh);
-
-        case ssl_kea_ecdh_hybrid:
-        case ssl_kea_ecdh_hybrid_psk:
-            if (ss->version < SSL_LIBRARY_VERSION_TLS_1_3) {
-                return PR_FALSE;
-            }
-            return ssl_NamedGroupTypeEnabled(ss, ssl_kea_ecdh_hybrid);
 
         case ssl_kea_tls13_any:
             return PR_TRUE;
@@ -3672,7 +3661,8 @@ ssl3_ComputeMasterSecretInt(sslSocket *ss, PK11SymKey *pms,
      */
     PRBool isDH = (PRBool)((ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_dh) ||
                            (ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_ecdh) ||
-                           (ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_ecdh_hybrid));
+                           (ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_ecdh_hybrid) ||
+                           (ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_kem));
     CK_MECHANISM_TYPE master_derive;
     CK_MECHANISM_TYPE key_derive;
     SECItem params;
@@ -3773,7 +3763,8 @@ tls_ComputeExtendedMasterSecretInt(sslSocket *ss, PK11SymKey *pms,
      * mode. Bug 1198298 */
     PRBool isDH = (PRBool)((ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_dh) ||
                            (ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_ecdh) ||
-                           (ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_ecdh_hybrid));
+                           (ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_ecdh_hybrid) ||
+                           (ss->ssl3.hs.kea_def->exchKeyType == ssl_kea_kem));
     CK_MECHANISM_TYPE master_derive;
     CK_MECHANISM_TYPE key_derive;
     SECItem params;

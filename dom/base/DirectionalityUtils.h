@@ -48,11 +48,6 @@ Directionality RecomputeDirectionality(mozilla::dom::Element* aElement,
                                        bool aNotify = true);
 
 /**
- * https://html.spec.whatwg.org/#parent-directionality
- */
-Directionality GetParentDirectionality(const mozilla::dom::Element* aElement);
-
-/**
  * Set the directionality of any descendants of a node that do not themselves
  * have a dir attribute.
  * For performance reasons we walk down the descendant tree in the rare case
@@ -65,25 +60,14 @@ void SetDirectionalityOnDescendants(mozilla::dom::Element* aElement,
 /**
  * Update flags on assigned node and auto directionality of the slot.
  */
-void SlotAssignedNodeAdded(dom::HTMLSlotElement* aSlot,
-                           nsIContent& aAssignedNode);
+void SlotAssignedNodeAddedForDir(dom::HTMLSlotElement* aSlot,
+                                 nsIContent& aAssignedNode);
 
 /**
  * Update flags on assigned node and auto directionality of the slot.
  */
-void SlotAssignedNodeRemoved(dom::HTMLSlotElement* aSlot,
-                             nsIContent& aUnassignedNode);
-
-/**
- * After setting dir=auto on an element, walk its descendants in tree order.
- * If the node doesn't have the NODE_ANCESTOR_HAS_DIR_AUTO flag, set the
- * NODE_ANCESTOR_HAS_DIR_AUTO flag on all of its descendants.
- * Resolve the directionality of the element by the "downward propagation
- * algorithm" (defined in section 3 in the comments at the beginning of
- * DirectionalityUtils.cpp)
- */
-void WalkDescendantsSetDirAuto(mozilla::dom::Element* aElement,
-                               bool aNotify = true);
+void SlotAssignedNodeRemovedForDir(dom::HTMLSlotElement* aSlot,
+                                   nsIContent& aUnassignedNode);
 
 /**
  * After unsetting dir=auto on an element, walk its descendants in tree order,
@@ -112,7 +96,7 @@ void TextNodeChangedDirection(dom::Text* aTextNode, Directionality aOldDir,
  * When a text node is appended to an element, find any ancestors with dir=auto
  * whose directionality will be determined by the text node
  */
-void SetDirectionFromNewTextNode(dom::Text* aTextNode);
+void SetDirectionFromNewTextNode(dom::Text* aTextNode, nsINode* aParent);
 
 /**
  * When a text node is removed from a document, find any ancestors whose

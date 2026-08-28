@@ -35,7 +35,6 @@
     <link rel="localization" href="branding/brand.ftl" />
     <link rel="localization" href="toolkit/about/aboutAddons.ftl" />
     <link rel="localization" href="toolkit/global/extensionPermissions.ftl" />
-    <!-- TODO: move these strings into aboutAddons.ftl once promoted out of locales-preview -->
     <link
       rel="localization"
       href="locales-preview/smartWindow-aboutAddons.ftl"
@@ -58,6 +57,12 @@
       type="module"
       src="chrome://global/content/elements/moz-toggle.mjs"
     ></script>
+    <!-- NOTE: Import named-deck explicitly to avoid logspam when it is
+               reimported again as a side-effect of document.import calls
+               originated from AboutAddonsElementBase fragment getter
+               when the template includes a named-deck custom element.
+    -->
+    <script async src="chrome://global/content/elements/named-deck.js"></script>
     <!-- NOTE: Import panel-list explicitly so it's ready before DOMContentLoaded.-->
     <script
       type="module"
@@ -65,6 +70,14 @@
     ></script>
 
     <!-- about:addons Domain-specific Components -->
+    <script
+      type="module"
+      src="chrome://mozapps/content/extensions/components/aboutaddons-themes-mode.mjs"
+    ></script>
+    <script
+      type="module"
+      src="chrome://mozapps/content/extensions/components/aboutaddons-themes-picker.mjs"
+    ></script>
     <script
       type="module"
       src="chrome://mozapps/content/extensions/components/addon-card.mjs"
@@ -111,19 +124,15 @@
     ></script>
     <script
       type="module"
+      src="chrome://mozapps/content/extensions/components/addons-promo.mjs"
+    ></script>
+    <script
+      type="module"
       src="chrome://mozapps/content/extensions/components/categories-box.mjs"
     ></script>
     <script
       type="module"
-      src="chrome://mozapps/content/extensions/components/category-button.mjs"
-    ></script>
-    <script
-      type="module"
       src="chrome://mozapps/content/extensions/components/colorway-removal-notice.mjs"
-    ></script>
-    <script
-      type="module"
-      src="chrome://mozapps/content/extensions/components/discover-button.mjs"
     ></script>
     <script
       type="module"
@@ -159,6 +168,10 @@
     ></script>
     <script
       type="module"
+      src="chrome://mozapps/content/extensions/components/native-theme-colors-checkbox.mjs"
+    ></script>
+    <script
+      type="module"
       src="chrome://mozapps/content/extensions/components/plugin-options.mjs"
     ></script>
     <script
@@ -179,6 +192,10 @@
     ></script>
     <script
       type="module"
+      src="chrome://mozapps/content/extensions/components/recommended-extensions-footer.mjs"
+    ></script>
+    <script
+      type="module"
       src="chrome://mozapps/content/extensions/components/recommended-footer.mjs"
     ></script>
     <script
@@ -195,15 +212,15 @@
     ></script>
     <script
       type="module"
-      src="chrome://mozapps/content/extensions/components/sidebar-footer.mjs"
-    ></script>
-    <script
-      type="module"
       src="chrome://mozapps/content/extensions/components/smartwindow-themes-notice.mjs"
     ></script>
     <script
       type="module"
       src="chrome://mozapps/content/extensions/components/taar-notice.mjs"
+    ></script>
+    <script
+      type="module"
+      src="chrome://mozapps/content/extensions/components/theme-preview.mjs"
     ></script>
     <script
       type="module"
@@ -220,92 +237,7 @@
     <drag-drop-addon-installer></drag-drop-addon-installer>
     <div id="full">
       <div id="sidebar">
-        <categories-box id="categories" orientation="vertical">
-          <button
-            is="discover-button"
-            viewid="addons://discover/"
-            class="category"
-            role="tab"
-            name="discover"
-          ></button>
-          <button
-            is="category-button"
-            viewid="addons://list/extension"
-            class="category"
-            role="tab"
-            name="extension"
-          ></button>
-          <button
-            is="category-button"
-            viewid="addons://list/theme"
-            class="category"
-            role="tab"
-            name="theme"
-          ></button>
-          <button
-            is="category-button"
-            viewid="addons://list/plugin"
-            class="category"
-            role="tab"
-            name="plugin"
-          ></button>
-          <button
-            is="category-button"
-            viewid="addons://list/dictionary"
-            class="category"
-            role="tab"
-            name="dictionary"
-            hidden
-            default-hidden
-          ></button>
-          <button
-            is="category-button"
-            viewid="addons://list/locale"
-            class="category"
-            role="tab"
-            name="locale"
-            hidden
-            default-hidden
-          ></button>
-          <button
-            is="category-button"
-            viewid="addons://list/sitepermission"
-            class="category"
-            role="tab"
-            name="sitepermission"
-            hidden
-            default-hidden
-          ></button>
-          <button
-            is="category-button"
-            viewid="addons://list/mlmodel"
-            class="category"
-            role="tab"
-            name="mlmodel"
-            hidden
-            default-hidden
-          ></button>
-          <button
-            is="category-button"
-            viewid="addons://updates/available"
-            class="category"
-            role="tab"
-            name="available-updates"
-            hidden
-            default-hidden
-          ></button>
-          <button
-            is="category-button"
-            viewid="addons://updates/recent"
-            class="category"
-            role="tab"
-            name="recent-updates"
-            hidden
-            default-hidden
-          ></button>
-        </categories-box>
-        <div class="spacer"></div>
-        <sidebar-footer></sidebar-footer>
+        <categories-box></categories-box>
       </div>
       <div id="content">
         <addon-page-header

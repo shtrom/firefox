@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include <initializer_list>
+
 #include "APZCTreeManagerTester.h"
 #include "APZTestCommon.h"
 #include "InputUtils.h"
@@ -21,8 +22,7 @@ class APZCFlingAccelerationTester : public APZCTreeManagerTester {
     // Scroll somewhere into the middle of the scroll range, so that we have
     // lots of space to scroll in both directions.
     ModifyFrameMetrics(root, [](ScrollMetadata& aSm, FrameMetrics& aMetrics) {
-      aMetrics.SetVisualScrollUpdateType(
-          FrameMetrics::ScrollOffsetUpdateType::eMainThread);
+      aMetrics.SetVisualScrollUpdateType(ScrollOffsetUpdateType::MainThread);
       aMetrics.SetVisualDestination(CSSPoint(0, 25000));
     });
 

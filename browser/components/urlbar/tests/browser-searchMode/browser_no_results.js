@@ -7,8 +7,6 @@
 
 "use strict";
 
-const TEST_ENGINE_BASENAME = "searchSuggestionEngine.xml";
-
 add_setup(async function () {
   // In order to open the view without any results, we need to be in search mode
   // with an empty search string so that no heuristic result is shown, and the
@@ -51,13 +49,13 @@ add_task(async function basic() {
       "Top sites should be present initially"
     );
     Assert.ok(
-      !win.gURLBar.panel.hasAttribute("noresults"),
+      !win.gURLBar.hasAttribute("noresults"),
       "Panel has results, therefore should not have noresults attribute"
     );
 
     // Enter search mode by clicking the bookmarks one-off.
     await UrlbarTestUtils.enterSearchMode(win, {
-      source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+      source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
     });
 
     Assert.equal(
@@ -65,9 +63,8 @@ add_task(async function basic() {
       0,
       "Zero results since no bookmarks exist"
     );
-    Assert.equal(
-      win.gURLBar.panel.getAttribute("noresults"),
-      "true",
+    Assert.ok(
+      win.gURLBar.hasAttribute("noresults"),
       "Panel has no results, therefore should have noresults attribute"
     );
 
@@ -79,7 +76,7 @@ add_task(async function basic() {
       "Top sites should be present again"
     );
     Assert.ok(
-      !win.gURLBar.panel.hasAttribute("noresults"),
+      !win.gURLBar.hasAttribute("noresults"),
       "noresults attribute should be absent again"
     );
 
@@ -104,29 +101,28 @@ add_task(async function autoOpen() {
       "Top sites should be present initially"
     );
     Assert.ok(
-      !win.gURLBar.panel.hasAttribute("noresults"),
+      !win.gURLBar.hasAttribute("noresults"),
       "Panel has results, therefore should not have noresults attribute"
     );
 
     // Enter search mode by clicking the bookmarks one-off.
     await UrlbarTestUtils.enterSearchMode(win, {
-      source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+      source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
     });
     Assert.equal(
       UrlbarTestUtils.getResultCount(win),
       0,
       "Zero results since no bookmarks exist"
     );
-    Assert.equal(
-      win.gURLBar.panel.getAttribute("noresults"),
-      "true",
+    Assert.ok(
+      win.gURLBar.hasAttribute("noresults"),
       "Panel has no results, therefore should have noresults attribute"
     );
 
     // Blur the urlbar.
     win.gURLBar.blur();
     await UrlbarTestUtils.assertSearchMode(win, {
-      source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+      source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
       entry: "oneoff",
     });
 
@@ -139,9 +135,8 @@ add_task(async function autoOpen() {
       0,
       "Still zero results since no bookmarks exist"
     );
-    Assert.equal(
-      win.gURLBar.panel.getAttribute("noresults"),
-      "true",
+    Assert.ok(
+      win.gURLBar.hasAttribute("noresults"),
       "Panel still has no results, therefore should have noresults attribute"
     );
 
@@ -153,7 +148,7 @@ add_task(async function autoOpen() {
       "Top sites should be present again"
     );
     Assert.ok(
-      !win.gURLBar.panel.hasAttribute("noresults"),
+      !win.gURLBar.hasAttribute("noresults"),
       "noresults attribute should be absent again"
     );
 
@@ -177,13 +172,13 @@ add_task(async function backspaceRemainOpen() {
       "At least the heuristic result should be shown"
     );
     Assert.ok(
-      !win.gURLBar.panel.hasAttribute("noresults"),
+      !win.gURLBar.hasAttribute("noresults"),
       "Panel has results, therefore should not have noresults attribute"
     );
 
     // Enter search mode by clicking the bookmarks one-off.
     await UrlbarTestUtils.enterSearchMode(win, {
-      source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+      source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
     });
 
     // The heursitic should not be shown since we don't show it in local search
@@ -194,7 +189,7 @@ add_task(async function backspaceRemainOpen() {
       "No results should be present"
     );
     Assert.ok(
-      win.gURLBar.panel.hasAttribute("noresults"),
+      win.gURLBar.hasAttribute("noresults"),
       "Panel has no results, therefore should have noresults attribute"
     );
 
@@ -204,7 +199,7 @@ add_task(async function backspaceRemainOpen() {
     await searchPromise;
     Assert.ok(UrlbarTestUtils.isPopupOpen(win), "View remains open");
     await UrlbarTestUtils.assertSearchMode(win, {
-      source: UrlbarUtils.RESULT_SOURCE.BOOKMARKS,
+      source: UrlbarShared.RESULT_SOURCE.BOOKMARKS,
       entry: "oneoff",
     });
     Assert.equal(
@@ -212,9 +207,8 @@ add_task(async function backspaceRemainOpen() {
       0,
       "Zero results since no bookmarks exist"
     );
-    Assert.equal(
-      win.gURLBar.panel.getAttribute("noresults"),
-      "true",
+    Assert.ok(
+      win.gURLBar.hasAttribute("noresults"),
       "Panel has no results, therefore should have noresults attribute"
     );
 
@@ -226,51 +220,10 @@ add_task(async function backspaceRemainOpen() {
       "Top sites should be present again"
     );
     Assert.ok(
-      !win.gURLBar.panel.hasAttribute("noresults"),
+      !win.gURLBar.hasAttribute("noresults"),
       "noresults attribute should be absent again"
     );
 
-    await UrlbarTestUtils.promisePopupClose(win);
-  });
-});
-
-// Types a search alias and then a space to enter search mode, with no results.
-// The one-offs should be shown.
-add_task(async function spaceToEnterSearchMode() {
-  let engine = await SearchTestUtils.installOpenSearchEngine({
-    url: getRootDirectory(gTestPath) + TEST_ENGINE_BASENAME,
-  });
-  engine.alias = "@test";
-
-  await withNewWindow(async win => {
-    await UrlbarTestUtils.promiseAutocompleteResultPopup({
-      window: win,
-      value: engine.alias,
-    });
-
-    // We need to wait for two searches: The first enters search mode, the
-    // second does the search in search mode.
-    let searchPromise = UrlbarTestUtils.promiseSearchComplete(win);
-    EventUtils.synthesizeKey(" ", {}, win);
-    await searchPromise;
-
-    Assert.equal(UrlbarTestUtils.getResultCount(win), 0, "Zero results");
-    Assert.equal(
-      win.gURLBar.panel.getAttribute("noresults"),
-      "true",
-      "Panel has no results, therefore should have noresults attribute"
-    );
-    await UrlbarTestUtils.assertSearchMode(win, {
-      engineName: engine.name,
-      entry: "typed",
-    });
-    this.Assert.equal(
-      UrlbarTestUtils.getOneOffSearchButtonsVisible(window),
-      true,
-      "One-offs are visible"
-    );
-
-    await UrlbarTestUtils.exitSearchMode(win, { backspace: true });
     await UrlbarTestUtils.promisePopupClose(win);
   });
 });

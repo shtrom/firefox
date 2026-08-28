@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::http_cache::{ByteSize, CachePolicy, HttpCache};
-use crate::mars::ad_request::AdPlacementRequest;
+use crate::mars::ad_request::{AdPlacementRequest, AdRequestFlags};
 use crate::mars::ad_response::{AdImage, AdResponse, AdResponseValue, AdSpoc, AdTile};
 use crate::mars::error::{RecordClickError, RecordImpressionError, ReportAdError};
 use crate::mars::{MARSClient, ReportReason};
@@ -98,6 +98,18 @@ where
         self.client.clear_cache()
     }
 
+    // Shutdown the db connection and drop references to telemetry callbacks.
+    // Should be used only when dropping the ads client, this may be extended to drop more things.
+    pub fn shutdown_client(&mut self) -> Result<(), rusqlite::Error> {
+        // Drop telemetry (within the telemetry wrapper)
+        self.telemetry.shutdown();
+
+        // Shutdown DB
+        self.client.shutdown_db()?;
+
+        Ok(())
+    }
+
     pub fn get_context_id(&self) -> context_id::ApiResult<String> {
         self.context_id_provider.context_id()
     }
@@ -130,6 +142,29 @@ where
         // if let Some(request_hash) = pop_request_hash_from_url(&mut impression_url) {
         //     let _ = self.client.invalidate_cache_by_hash(&request_hash);
         // }
+
+        // TODO: Add count call with _cap_key for impression capping logic
+        let impression_url = if let Some((_, _cap_key)) = impression_url
+            .query_pairs()
+            .find(|(key, _)| key == "cap_key")
+        {
+            let mut new_url = impression_url.clone();
+            new_url
+                .query_pairs_mut()
+                .clear()
+                .extend_pairs(
+                    impression_url
+                        .query_pairs()
+                        .collect::<Vec<_>>()
+                        .iter()
+                        .filter(|(key, _)| key != "cap_key"),
+                )
+                .finish();
+            new_url
+        } else {
+            impression_url
+        };
+
         self.client
             .record_impression(impression_url, ohttp)
             .inspect_err(|e| {
@@ -160,11 +195,12 @@ where
     pub fn request_image_ads(
         &self,
         ad_placement_requests: Vec<AdPlacementRequest>,
+        flags: AdRequestFlags,
         options: Option<CachePolicy>,
         ohttp: bool,
     ) -> Result<HashMap<String, AdImage>, RequestAdsError> {
         let response = self
-            .request_ads::<AdImage>(ad_placement_requests, options, ohttp)
+            .request_ads::<AdImage>(ad_placement_requests, flags, options, ohttp)
             .inspect_err(|e| {
                 self.telemetry.record(e);
             })?;
@@ -175,10 +211,11 @@ where
     pub fn request_spoc_ads(
         &self,
         ad_placement_requests: Vec<AdPlacementRequest>,
+        flags: AdRequestFlags,
         options: Option<CachePolicy>,
         ohttp: bool,
     ) -> Result<HashMap<String, Vec<AdSpoc>>, RequestAdsError> {
-        let result = self.request_ads::<AdSpoc>(ad_placement_requests, options, ohttp);
+        let result = self.request_ads::<AdSpoc>(ad_placement_requests, flags, options, ohttp);
         result
             .inspect_err(|e| {
                 self.telemetry.record(e);
@@ -192,10 +229,11 @@ where
     pub fn request_tile_ads(
         &self,
         ad_placement_requests: Vec<AdPlacementRequest>,
+        flags: AdRequestFlags,
         options: Option<CachePolicy>,
         ohttp: bool,
     ) -> Result<HashMap<String, AdTile>, RequestAdsError> {
-        let result = self.request_ads::<AdTile>(ad_placement_requests, options, ohttp);
+        let result = self.request_ads::<AdTile>(ad_placement_requests, flags, options, ohttp);
         result
             .inspect_err(|e| {
                 self.telemetry.record(e);
@@ -209,6 +247,7 @@ where
     fn request_ads<A>(
         &self,
         placements: Vec<AdPlacementRequest>,
+        flags: AdRequestFlags,
         options: Option<CachePolicy>,
         ohttp: bool,
     ) -> Result<AdResponse<A>, RequestAdsError>
@@ -219,7 +258,7 @@ where
         let cache_policy = options.unwrap_or_default();
         let (mut response, request_hash) =
             self.client
-                .fetch_ads::<A>(context_id, placements, cache_policy, ohttp)?;
+                .fetch_ads::<A>(context_id, flags, placements, cache_policy, ohttp)?;
         response.enrich_callbacks(&request_hash);
         Ok(response)
     }
@@ -236,6 +275,8 @@ pub enum ClientOperationEvent {
 
 #[cfg(test)]
 mod tests {
+    use std::{assert_eq, assert_ne, sync::Arc};
+
     use crate::{
         ffi::telemetry::MozAdsTelemetryWrapper,
         mars::Environment,
@@ -250,6 +291,7 @@ mod tests {
     fn new_with_mars_client(
         client: MARSClient<MozAdsTelemetryWrapper>,
     ) -> AdsClient<MozAdsTelemetryWrapper> {
+        let telemetry = client.get_telemetry();
         AdsClient {
             client,
             context_id_provider: Box::new(ContextIDComponent::new(
@@ -258,7 +300,7 @@ mod tests {
                 false,
                 Box::new(DefaultContextIdCallback),
             )),
-            telemetry: MozAdsTelemetryWrapper::noop(),
+            telemetry,
         }
     }
 
@@ -289,7 +331,12 @@ mod tests {
         let mars_client = MARSClient::new(Environment::Test, None, MozAdsTelemetryWrapper::noop());
         let ads_client = new_with_mars_client(mars_client);
 
-        let result = ads_client.request_image_ads(make_happy_placement_requests(), None, false);
+        let result = ads_client.request_image_ads(
+            make_happy_placement_requests(),
+            AdRequestFlags::default(),
+            None,
+            false,
+        );
         assert!(result.is_ok());
         m.assert();
     }
@@ -308,7 +355,12 @@ mod tests {
         let mars_client = MARSClient::new(Environment::Test, None, MozAdsTelemetryWrapper::noop());
         let ads_client = new_with_mars_client(mars_client);
 
-        let result = ads_client.request_spoc_ads(make_happy_placement_requests(), None, false);
+        let result = ads_client.request_spoc_ads(
+            make_happy_placement_requests(),
+            AdRequestFlags::default(),
+            None,
+            false,
+        );
         assert!(result.is_ok());
         m.assert();
     }
@@ -327,7 +379,12 @@ mod tests {
         let mars_client = MARSClient::new(Environment::Test, None, MozAdsTelemetryWrapper::noop());
         let ads_client = new_with_mars_client(mars_client);
 
-        let result = ads_client.request_tile_ads(make_happy_placement_requests(), None, false);
+        let result = ads_client.request_tile_ads(
+            make_happy_placement_requests(),
+            AdRequestFlags::default(),
+            None,
+            false,
+        );
         assert!(result.is_ok());
         m.assert();
     }
@@ -363,9 +420,41 @@ mod tests {
 
         assert_eq!(client.get_context_id().unwrap(), "custom-context-id-12345");
 
-        let result = client.request_image_ads(make_happy_placement_requests(), None, false);
+        let result = client.request_image_ads(
+            make_happy_placement_requests(),
+            AdRequestFlags::default(),
+            None,
+            false,
+        );
         assert!(result.is_ok());
         m.assert();
+    }
+
+    #[test]
+    fn test_record_impression_removes_cap_key() {
+        viaduct_dev::init_backend_dev();
+        let mars_client = MARSClient::new(Environment::Test, None, MozAdsTelemetryWrapper::noop());
+        let ads_client = new_with_mars_client(mars_client);
+
+        let base_url = mockito::server_url();
+        let path_and_query = "/impression?kept=example";
+        let callback_url = Url::parse(&format!("{}{}", base_url, path_and_query)).unwrap();
+
+        let mock = mockito::mock("GET", path_and_query)
+            .with_status(200)
+            .create();
+
+        ads_client.record_impression(callback_url, false).unwrap();
+
+        mock.assert();
+
+        let callback_url_with_cap_key =
+            Url::parse(&format!("{}{}&cap_key=test", base_url, path_and_query)).unwrap();
+        ads_client
+            .record_impression(callback_url_with_cap_key, false)
+            .unwrap();
+
+        mock.expect(2).assert();
     }
 
     #[test]
@@ -392,7 +481,12 @@ mod tests {
             .create();
 
         let response = ads_client
-            .request_image_ads(make_happy_placement_requests(), None, false)
+            .request_image_ads(
+                make_happy_placement_requests(),
+                AdRequestFlags::default(),
+                None,
+                false,
+            )
             .unwrap();
         let callback_url = response.values().next().unwrap().callbacks.click.clone();
 
@@ -401,7 +495,12 @@ mod tests {
             .create();
 
         ads_client
-            .request_image_ads(make_happy_placement_requests(), None, false)
+            .request_image_ads(
+                make_happy_placement_requests(),
+                AdRequestFlags::default(),
+                None,
+                false,
+            )
             .unwrap();
 
         ads_client.record_click(callback_url, false).unwrap();
@@ -409,6 +508,7 @@ mod tests {
         ads_client
             .request_ads::<AdImage>(
                 make_happy_placement_requests(),
+                AdRequestFlags::default(),
                 Some(CachePolicy::default()),
                 false,
             )
@@ -416,5 +516,48 @@ mod tests {
 
         m1.assert();
         m2.assert();
+    }
+
+    #[test]
+    fn test_shutdown_telemetry() {
+        viaduct_dev::init_backend_dev();
+
+        // test with client created from config
+        let noop_telemetry = MozAdsTelemetryWrapper::noop();
+        let weak_reference = Arc::downgrade(
+            &noop_telemetry
+                .clone_inner_arc()
+                .expect("Inner telemetry should be Some before dropping"),
+        );
+        let config = AdsClientConfig {
+            cache_config: None,
+            context_id_provider: None,
+            environment: Environment::Test,
+            telemetry: noop_telemetry,
+        };
+        let mut client = AdsClient::new(config);
+
+        // weak ref will show 0 strong references when the Arc<dyn MozAdsTelemetry> is gone.
+        assert_ne!(weak_reference.strong_count(), 0);
+        client.shutdown_client().unwrap();
+        assert_eq!(weak_reference.strong_count(), 0);
+
+        // test also with internal function from_mars
+        let noop_telemetry = MozAdsTelemetryWrapper::noop();
+        let weak_reference = Arc::downgrade(
+            &noop_telemetry
+                .clone_inner_arc()
+                .expect("Inner telemetry should be Some before dropping"),
+        );
+        let cache = HttpCache::builder("test_shutdown_telemetry")
+            .build()
+            .unwrap();
+        let mars_client = MARSClient::new(Environment::Test, Some(cache), noop_telemetry);
+        let mut client = new_with_mars_client(mars_client);
+
+        // weak ref will show 0 strong references when the Arc<dyn MozAdsTelemetry> is gone.
+        assert_ne!(weak_reference.strong_count(), 0);
+        client.shutdown_client().unwrap();
+        assert_eq!(weak_reference.strong_count(), 0);
     }
 }

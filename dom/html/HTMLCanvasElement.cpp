@@ -234,23 +234,40 @@ class RequestedFrameRefreshObserver : public nsARefreshObserver {
       return;
     }
 
-    RefPtr<SourceSurface> snapshot;
+    if (mPendingCapturePromise.Exists()) {
+      PROFILER_MARKER_TEXT("Canvas CaptureStream", MEDIA_RT, {},
+                           "Abort: pending capture"_ns);
+      return;
+    }
+
     {
       AUTO_PROFILER_MARKER_TEXT("Canvas CaptureStream", MEDIA_RT, {},
                                 "GetSnapshot"_ns);
-      snapshot = mOwningElement->GetSurfaceSnapshot(nullptr);
-      if (!snapshot) {
-        PROFILER_MARKER_TEXT("Canvas CaptureStream", MEDIA_RT, {},
-                             "Abort: snapshot failed"_ns);
-        return;
-      }
-    }
 
+      mOwningElement->GetSurfaceSnapshotAsync()
+          ->Then(
+              GetCurrentSerialEventTarget(), __func__,
+              [self = RefPtr{this},
+               time = aTime](RefPtr<gfx::SourceSurface> aSurface) {
+                MOZ_ASSERT(aSurface);
+                self->mPendingCapturePromise.Complete();
+                self->GetSurfaceSnapshotAsyncSuccess(aSurface, time);
+              },
+              [self = RefPtr{this}](nsresult aRv) {
+                NS_WARNING("Failed to get Snapshot");
+                self->mPendingCapturePromise.Complete();
+              })
+          ->Track(mPendingCapturePromise);
+    }
+  }
+
+  void GetSurfaceSnapshotAsyncSuccess(RefPtr<gfx::SourceSurface> aSurface,
+                                      TimeStamp aTime) {
     RefPtr<DataSourceSurface> copy;
     {
       AUTO_PROFILER_MARKER_TEXT("Canvas CaptureStream", MEDIA_RT, {},
                                 "CopySurface"_ns);
-      copy = CopySurface(snapshot, mReturnPlaceholderData);
+      copy = CopySurface(aSurface, mReturnPlaceholderData);
       if (!copy) {
         PROFILER_MARKER_TEXT("Canvas CaptureStream", MEDIA_RT, {},
                              "Abort: copy failed"_ns);
@@ -282,6 +299,7 @@ class RequestedFrameRefreshObserver : public nsARefreshObserver {
     Unregister();
     mRefreshDriver = nullptr;
     mWatchManager.Shutdown();
+    mPendingCapturePromise.DisconnectIfExists();
   }
 
   bool IsRegisteredAndWatching() { return mRegistered && mWatching; }
@@ -354,6 +372,8 @@ class RequestedFrameRefreshObserver : public nsARefreshObserver {
   WatchManager<RequestedFrameRefreshObserver> mWatchManager;
   TimeStamp mLastCaptureTime;
   bool mPendingThrottledCapture;
+  MozPromiseRequestHolder<HTMLCanvasElement::SurfaceSnapshotPromise>
+      mPendingCapturePromise;
 };
 
 // ---------------------------------------------------------------------------
@@ -371,6 +391,13 @@ HTMLCanvasPrintState::HTMLCanvasPrintState(
       mCallback(aCallback) {}
 
 HTMLCanvasPrintState::~HTMLCanvasPrintState() = default;
+
+HTMLCanvasElement* HTMLCanvasPrintState::GetParentObject() {
+  if (auto* original = mCanvas->GetOriginalCanvas()) {
+    return original;
+  }
+  return mCanvas;
+}
 
 /* virtual */
 JSObject* HTMLCanvasPrintState::WrapObject(JSContext* aCx,
@@ -473,7 +500,7 @@ NS_IMPL_ISUPPORTS(HTMLCanvasElementObserver, nsIObserver)
 // ---------------------------------------------------------------------------
 
 HTMLCanvasElement::HTMLCanvasElement(
-    already_AddRefed<mozilla::dom::NodeInfo>&& aNodeInfo)
+    already_AddRefed<mozilla::dom::NodeInfo> aNodeInfo)
     : nsGenericHTMLElement(std::move(aNodeInfo)),
       mResetLayer(true),
       mMaybeModified(false),
@@ -908,7 +935,8 @@ already_AddRefed<CanvasCaptureMediaStream> HTMLCanvasElement::CaptureStream(
   // If no permission, arrange for the frame capture listener to return
   // all-white, opaque image data.
   CanvasUtils::ImageExtraction extractionBehaviour =
-      CanvasUtils::ImageExtractionResult(this, nullptr, &aSubjectPrincipal);
+      CanvasUtils::ImageExtractionResult(
+          this, nsContentUtils::GetCurrentJSContext(), &aSubjectPrincipal);
 
   rv = RegisterFrameCaptureListener(
       stream->FrameCaptureListener(),
@@ -1460,7 +1488,8 @@ nsresult HTMLCanvasElement::RegisterFrameCaptureListener(
 }
 
 bool HTMLCanvasElement::IsFrameCaptureRequested(const TimeStamp& aTime) const {
-  for (WeakPtr<FrameCaptureListener> listener : mRequestedFrameListeners) {
+  for (const WeakPtr<FrameCaptureListener>& listener :
+       mRequestedFrameListeners) {
     if (!listener) {
       continue;
     }
@@ -1488,7 +1517,8 @@ void HTMLCanvasElement::SetFrameCapture(
   RefPtr<SourceSurfaceImage> image =
       new SourceSurfaceImage(surface->GetSize(), surface);
 
-  for (WeakPtr<FrameCaptureListener> listener : mRequestedFrameListeners) {
+  for (const WeakPtr<FrameCaptureListener>& listener :
+       mRequestedFrameListeners) {
     if (!listener) {
       continue;
     }
@@ -1506,6 +1536,20 @@ already_AddRefed<SourceSurface> HTMLCanvasElement::GetSurfaceSnapshot(
     return mOffscreenDisplay->GetSurfaceSnapshot();
   }
   return nullptr;
+}
+
+RefPtr<HTMLCanvasElement::SurfaceSnapshotPromise>
+HTMLCanvasElement::GetSurfaceSnapshotAsync() {
+  if (mCurrentContext && mCurrentContext->SupportAsyncSnapshot()) {
+    return mCurrentContext->GetSurfaceSnapshotAsync();
+  }
+
+  RefPtr<gfx::SourceSurface> surface = GetSurfaceSnapshot();
+  if (!surface) {
+    return SurfaceSnapshotPromise::CreateAndReject(NS_ERROR_FAILURE, __func__);
+  }
+
+  return SurfaceSnapshotPromise::CreateAndResolve(std::move(surface), __func__);
 }
 
 layers::LayersBackend HTMLCanvasElement::GetCompositorBackendType() const {

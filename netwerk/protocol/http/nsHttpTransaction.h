@@ -187,6 +187,7 @@ class nsHttpTransaction final : public nsAHttpTransaction,
   void MarkEarlyDataSent() {
     if (mEarlyDataDisposition == EARLY_NONE) {
       mEarlyDataDisposition = EARLY_SENT;
+      mEarlyDataSentTime = TimeStamp::Now();
     }
   }
 
@@ -215,13 +216,17 @@ class nsHttpTransaction final : public nsAHttpTransaction,
   // not on this transaction.
   void FinishAdopted0RTT(bool aRestart);
 
+  // Remove all SSL session tokens keyed by aSecInfo->GetPeerId() so a 0-RTT
+  // restart starts a fresh handshake instead of looping on the rejected ticket.
+  void RemoveSSLTokens(nsITransportSecurityInfo* aSecInfo);
+
   uint64_t BrowserId() override { return mBrowserId; }
 
   void SetHttpTrailers(nsCString& aTrailers);
 
   bool IsWebsocketUpgrade();
 
-  void OnProxyConnectComplete(int32_t aResponseCode) override;
+  void OnProxyConnectComplete(ProxyConnectResponseHead* aResponseHead) override;
   void SetFlat407Headers(const nsACString& aHeaders);
 
   void UpdateConnectionInfo(nsHttpConnectionInfo* aConnInfo);
@@ -257,11 +262,16 @@ class nsHttpTransaction final : public nsAHttpTransaction,
     mSecurityInfo = aSecurityInfo;
   }
 
+  void RefreshSecurityInfoAfter0RTTAdopt() { MaybeRefreshSecurityInfo(); }
+
  private:
   friend class DeleteHttpTransaction;
   virtual ~nsHttpTransaction();
 
   [[nodiscard]] nsresult Restart();
+  // For an accepted 0-RTT request, report connectEnd and requestStart at the
+  // early-data send point. Caller must hold mLock.
+  void Apply0RTTTimingOverride();
   char* LocateHttpStart(char* buf, uint32_t len, bool aAllowPartialMatch);
   [[nodiscard]] nsresult ParseLine(nsACString& line);
   [[nodiscard]] nsresult ParseLineSegment(char* seg, uint32_t len);
@@ -640,9 +650,20 @@ class nsHttpTransaction final : public nsAHttpTransaction,
     EARLY_ACCEPTED,
     EARLY_425
   } mEarlyDataDisposition{EARLY_NONE};
+  // The moment the request bytes were first sent as TLS 1.3 early data
+  // (0-RTT). For an accepted 0-RTT request this is the point the connection
+  // could send the request, i.e. the W3C Resource Timing connectEnd (which,
+  // per spec, must exclude the round trip spent receiving the server's
+  // ServerHello). See Apply0RTTTimingOverride.
+  TimeStamp mEarlyDataSentTime;
 
   HttpTrafficCategory mTrafficCategory{HttpTrafficCategory::eInvalid};
-  Atomic<int32_t> mProxyConnectResponseCode{0};
+  // Shared pointer to the full CONNECT response head, owned by the connection.
+  // Held here only so it survives the transaction being detached from the
+  // connection; copying the RefPtr is just an addref rather than a deep copy
+  // of the header array on every request. See bug 2045419.
+  RefPtr<ProxyConnectResponseHead> mProxyConnectResponseHead
+      MOZ_GUARDED_BY(mLock);
 
   nsCOMPtr<nsICancelable> mDNSRequest;
   Atomic<uint32_t, Relaxed> mHTTPSSVCReceivedStage{HTTPSSVC_NOT_USED};

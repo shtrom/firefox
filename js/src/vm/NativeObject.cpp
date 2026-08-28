@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "vm/NativeObject-inl.h"
-
 #include "mozilla/CheckedInt.h"
 #include "mozilla/Maybe.h"
 
@@ -22,8 +20,10 @@
 #include "vm/PlainObject.h"         // js::PlainObject
 #include "vm/TypedArrayObject.h"
 #include "vm/Watchtower.h"
+
 #include "gc/Nursery-inl.h"
 #include "vm/JSObject-inl.h"
+#include "vm/NativeObject-inl.h"
 #include "vm/Shape-inl.h"
 
 using namespace js;
@@ -135,7 +135,9 @@ bool ObjectElements::FreezeOrSeal(JSContext* cx, Handle<NativeObject*> obj,
   }
 
   if (level == IntegrityLevel::Frozen) {
-    if (!JSObject::setFlag(cx, obj, ObjectFlag::FrozenElements)) {
+    ObjectFlags flags = {ObjectFlag::FrozenElements,
+                         ObjectFlag::NeedsProxyGetSetResultValidation};
+    if (!JSObject::setFlags(cx, obj, flags)) {
       return false;
     }
   }
@@ -215,8 +217,8 @@ void ObjectElements::dumpStringContent(js::GenericPrinter& out) const {
       });
   out.put("]");
 
-  out.printf(", init=%u, capacity=%u, length=%u>", initializedLength, capacity,
-             length);
+  out.printf(", init=%u, capacity=%u, length=%u>", initializedLength.get(),
+             capacity, length);
 }
 #endif
 
@@ -1209,11 +1211,12 @@ static MOZ_ALWAYS_INLINE bool PreserveAnyUnpreservedWrapper(
     return true;
   }
 
+  MaybePreserveDOMWrapper(cx, obj);
+
   // The flag is used to guard against having a wrapper that needs to be
   // preserved but isn't so it's OK if we preserve the wrapper but fail to set
   // the flag.
-  return MaybePreserveDOMWrapper(cx, obj) &&
-         JSObject::setFlag(cx, obj, ObjectFlag::HasPreservedWrapper);
+  return JSObject::setFlag(cx, obj, ObjectFlag::HasPreservedWrapper);
 }
 
 static MOZ_ALWAYS_INLINE bool CallAddPropertyHook(JSContext* cx,
@@ -2043,6 +2046,7 @@ bool js::AddOrUpdateSparseElementHelper(JSContext* cx,
   // At this point we're updating a property: See SetExistingProperty.
   PropertyInfo prop = map->getPropertyInfo(index);
   if (prop.isDataProperty() && prop.writable()) {
+    Watchtower::watchPropertyValueChange<AllowGC::CanGC>(cx, obj, id, v, prop);
     obj->setSlot(prop.slot(), v);
     return true;
   }

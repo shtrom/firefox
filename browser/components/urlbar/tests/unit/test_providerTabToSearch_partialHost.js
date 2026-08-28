@@ -80,7 +80,7 @@ add_task(async function test() {
         }),
         makeSearchResult(context, {
           engineName: "TestEngine",
-          engineIconUri: UrlbarUtils.ICON.SEARCH_GLASS,
+          engineIconUri: UrlbarShared.ICON.SEARCH_GLASS,
           searchUrlDomainWithoutSuffix: "en.example.",
           providesSearchMode: true,
           query: "",
@@ -123,7 +123,7 @@ add_task(async function test() {
         }),
         makeSearchResult(context, {
           engineName: engine2.name,
-          engineIconUri: UrlbarUtils.ICON.SEARCH_GLASS,
+          engineIconUri: UrlbarShared.ICON.SEARCH_GLASS,
           searchUrlDomainWithoutSuffix: "www.it.mochi.",
           providesSearchMode: true,
           query: "",
@@ -171,7 +171,7 @@ add_task(async function test() {
         }),
         makeSearchResult(context, {
           engineName: "TestEngine3",
-          engineIconUri: UrlbarUtils.ICON.SEARCH_GLASS,
+          engineIconUri: UrlbarShared.ICON.SEARCH_GLASS,
           searchUrlDomainWithoutSuffix: "search.foo.",
           providesSearchMode: true,
           query: "",
@@ -222,7 +222,7 @@ add_task(async function test() {
   let searchStr = "w";
   let context = createContext(searchStr, {
     isPrivate: false,
-    sources: [UrlbarUtils.RESULT_SOURCE.BOOKMARKS],
+    sources: [UrlbarShared.RESULT_SOURCE.BOOKMARKS],
   });
   let host = await UrlbarProviderAutofill.getTopHostOverThreshold(context, [
     wikiEngine.searchUrlDomain,
@@ -258,7 +258,7 @@ add_task(async function test() {
   info("Restricting to history should not autofill our bookmark");
   context = createContext("ex", {
     isPrivate: false,
-    sources: [UrlbarUtils.RESULT_SOURCE.HISTORY],
+    sources: [UrlbarShared.RESULT_SOURCE.HISTORY],
   });
   let controller = UrlbarTestUtils.newMockController();
   await providersManager.startQuery(context, controller);

@@ -242,12 +242,19 @@ impl PacketSender {
 
 #[cfg(test)]
 mod tests {
-    use std::net::{IpAddr, Ipv4Addr};
+    use std::{
+        net::{IpAddr, Ipv4Addr},
+        time::Duration,
+    };
 
+    use neqo_common::to_u64;
     use test_fixture::now;
 
     use super::PacketSender;
-    use crate::{ConnectionParameters, SlowStart, cc::CongestionControl, pmtud::Pmtud};
+    use crate::{
+        ConnectionParameters, SlowStart, cc::CongestionControl, pmtud::Pmtud, recovery::sent,
+        rtt::RttEstimate, stats::Stats,
+    };
 
     #[test]
     fn packet_sender_creation_and_display() {
@@ -295,5 +302,57 @@ mod tests {
                 "expected prefix {expected_prefix:?}, got {description:?}",
             );
         }
+    }
+
+    const RTT: Duration = Duration::from_millis(100);
+
+    fn make_sender(pacing: bool) -> PacketSender {
+        let params = ConnectionParameters::default().pacing(pacing);
+        PacketSender::new(
+            &params,
+            Pmtud::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), Some(1500)),
+            now(),
+        )
+    }
+
+    /// Send `n` packets at once, ACK them one RTT later, return (`cwnd_before`, `cwnd_after`).
+    fn send_and_ack(pacing: bool, n: usize) -> (usize, usize) {
+        let mut sender = make_sender(pacing);
+        let now = now();
+        let mtu = sender.pmtud().plpmtu();
+        let cwnd_before = sender.cwnd();
+
+        let pkts: Vec<_> = (0..n)
+            .map(|pn| {
+                let p = sent::make_packet(to_u64(pn), now, mtu);
+                sender.on_packet_sent(&p, RTT, now);
+                p
+            })
+            .collect();
+        sender.on_packets_acked(
+            &pkts,
+            &RttEstimate::new(RTT),
+            now + RTT,
+            &mut Stats::default(),
+        );
+
+        (cwnd_before, sender.cwnd())
+    }
+
+    #[test]
+    fn app_limited_suppresses_cwnd_growth_without_pacing() {
+        // Sending PACING_BURST_SIZE + 1 packets is not filling the initial congestion window, thus
+        // should leave us genuinely app-limited, thus the congestion window shouldn't grow.
+        let (before, after) = send_and_ack(false, super::PACING_BURST_SIZE + 1);
+        assert_eq!(after, before, "cwnd should not grow when app-limited");
+    }
+
+    #[test]
+    fn app_limited_suppresses_cwnd_growth_with_pacing() {
+        // Sending PACING_BURST_SIZE + 1 packets is not filling the initial congestion window, thus
+        // should leave us genuinely app-limited, thus the congestion window shouldn't grow, even
+        // though we are pacing delayed.
+        let (before, after) = send_and_ack(true, super::PACING_BURST_SIZE + 1);
+        assert_eq!(after, before, "cwnd should not grow when app limited");
     }
 }

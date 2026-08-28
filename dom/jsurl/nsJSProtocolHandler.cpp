@@ -16,6 +16,7 @@
 #include "mozilla/SourceLocation.h"
 #include "mozilla/TextUtils.h"
 #include "mozilla/dom/AutoEntryScript.h"
+#include "mozilla/dom/ContentChild.h"
 #include "mozilla/dom/DOMSecurityMonitor.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/JSExecutionUtils.h"  // mozilla::dom::Compile, mozilla::dom::EvaluationExceptionToNSResult
@@ -537,6 +538,9 @@ nsresult nsJSChannel::Init(nsIURI* aURI, nsILoadInfo* aLoadInfo) {
   nsresult rv = aURI->QueryInterface(kJSURICID, getter_AddRefs(jsURI));
   NS_ENSURE_SUCCESS(rv, rv);
 
+  // Defensively mark the current process as untrusted.
+  mozilla::dom::ContentChild::MaybeBecomeUntrusted();
+
   // Create the nsIStreamIO layer used by the nsIStreamIOChannel.
   mJSURIStream = new JSURLInputStream();
 
@@ -920,8 +924,9 @@ void nsJSChannel::EvaluateScript() {
 }
 
 void nsJSChannel::NotifyListener() {
-  mListener->OnStartRequest(this);
-  mListener->OnStopRequest(this, mStatus);
+  nsCOMPtr<nsIStreamListener> listener = mListener;
+  listener->OnStartRequest(this);
+  listener->OnStopRequest(this, mStatus);
 
   CleanupStrongRefs();
 }
@@ -1051,6 +1056,18 @@ nsJSChannel::SetLoadInfo(nsILoadInfo* aLoadInfo) {
 }
 
 NS_IMETHODIMP
+nsJSChannel::GetParentProcessChannelHandle(
+    mozilla::dom::ParentProcessChannelHandle** aValue) {
+  return mStreamChannel->GetParentProcessChannelHandle(aValue);
+}
+
+NS_IMETHODIMP
+nsJSChannel::SetParentProcessChannelHandle(
+    mozilla::dom::ParentProcessChannelHandle* aValue) {
+  return mStreamChannel->SetParentProcessChannelHandle(aValue);
+}
+
+NS_IMETHODIMP
 nsJSChannel::GetNotificationCallbacks(nsIInterfaceRequestor** aCallbacks) {
   return mStreamChannel->GetNotificationCallbacks(aCallbacks);
 }
@@ -1129,7 +1146,8 @@ NS_IMETHODIMP
 nsJSChannel::OnStartRequest(nsIRequest* aRequest) {
   NS_ENSURE_TRUE(aRequest == mStreamChannel, NS_ERROR_UNEXPECTED);
 
-  return mListener->OnStartRequest(this);
+  nsCOMPtr<nsIStreamListener> listener = mListener;
+  return listener->OnStartRequest(this);
 }
 
 NS_IMETHODIMP
@@ -1137,7 +1155,8 @@ nsJSChannel::OnDataAvailable(nsIRequest* aRequest, nsIInputStream* aInputStream,
                              uint64_t aOffset, uint32_t aCount) {
   NS_ENSURE_TRUE(aRequest == mStreamChannel, NS_ERROR_UNEXPECTED);
 
-  return mListener->OnDataAvailable(this, aInputStream, aOffset, aCount);
+  nsCOMPtr<nsIStreamListener> listener = mListener;
+  return listener->OnDataAvailable(this, aInputStream, aOffset, aCount);
 }
 
 NS_IMETHODIMP
@@ -1413,7 +1432,9 @@ bool nsJSURI::Deserialize(const mozilla::ipc::URIParams& aParams) {
   }
 
   const JSURIParams& jsParams = aParams.get_JSURIParams();
-  mozilla::net::nsSimpleURI::Deserialize(jsParams.simpleParams());
+  if (!mozilla::net::nsSimpleURI::Deserialize(jsParams.simpleParams())) {
+    return false;
+  }
 
   if (jsParams.baseURI().isSome()) {
     mBaseURI = DeserializeURI(jsParams.baseURI().ref());

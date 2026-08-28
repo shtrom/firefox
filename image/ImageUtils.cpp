@@ -3,13 +3,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "mozilla/image/ImageUtils.h"
+
 #include "DecodePool.h"
 #include "Decoder.h"
 #include "DecoderFactory.h"
 #include "IDecodingTask.h"
 #include "mozilla/AppShutdown.h"
-#include "mozilla/gfx/2D.h"
 #include "mozilla/Logging.h"
+#include "mozilla/gfx/2D.h"
 #include "nsNetUtil.h"
 #include "nsStreamUtils.h"
 
@@ -346,12 +347,7 @@ class AnonymousDecoderImpl final : public AnonymousDecoder {
       }
     }
 
-    if (!mMetadataResult.mAnimated) {
-      mMetadataResult.mFrameCount = 1;
-      mMetadataResult.mFrameCountComplete = true;
-      mMetadataTask = nullptr;
-      mFrameCountTask = nullptr;
-    } else if (mFrameCountTask && !mFrameCountTaskRunning) {
+    if (mFrameCountTask && !mFrameCountTaskRunning) {
       MOZ_LOG(
           sLog, LogLevel::Debug,
           ("[%p] AnonymousDecoderImpl::OnMetadata -- start frame count task",
@@ -389,6 +385,17 @@ class AnonymousDecoderImpl final : public AnonymousDecoder {
     if (mFrameCount < aFrameCount) {
       mFrameCount = aFrameCount;
       resolve = true;
+    }
+
+    // If the frame count task discovered more than one frame, the image is
+    // actually animated even if the metadata decoder missed it (e.g. a GIF
+    // whose first frame has delay_time=0).
+    if (mFrameCount > 1 && !mMetadataResult.mAnimated) {
+      MOZ_LOG(sLog, LogLevel::Debug,
+              ("[%p] AnonymousDecoderImpl::OnFrameCount -- discovered "
+               "animation, frameCount %u",
+               this, mFrameCount));
+      mMetadataResult.mAnimated = true;
     }
 
     // If metadata completing is waiting on an updated frame count, resolve it.

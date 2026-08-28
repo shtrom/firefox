@@ -6,18 +6,16 @@
 #define LocalAccessible_H_
 
 #include "mozilla/ComputedStyle.h"
-#include "mozilla/a11y/Accessible.h"
+#include "mozilla/UniquePtr.h"
 #include "mozilla/a11y/AccTypes.h"
+#include "mozilla/a11y/Accessible.h"
 #include "mozilla/a11y/CacheConstants.h"
 #include "mozilla/a11y/RelationType.h"
 #include "mozilla/a11y/States.h"
-
-#include "mozilla/UniquePtr.h"
-
 #include "nsIContent.h"
-#include "nsTArray.h"
-#include "nsRefPtrHashtable.h"
 #include "nsRect.h"
+#include "nsRefPtrHashtable.h"
+#include "nsTArray.h"
 
 struct nsRoleMapEntry;
 
@@ -767,6 +765,8 @@ class LocalAccessible : public nsISupports, public Accessible {
   virtual void DOMNodeID(nsString& aID) const override;
 
   virtual void DOMNodeClass(nsString& aClass) const override;
+
+  virtual int32_t HeadingLevel() const override;
 
   virtual void LiveRegionAttributes(nsAString* aLive, nsAString* aRelevant,
                                     Maybe<bool>* aAtomic,

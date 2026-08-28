@@ -53,6 +53,7 @@ using mozilla::LayoutDeviceIntMargin from "Units.h";
 using mozilla::ScreenIntCoord from "Units.h";
 using mozilla::ScreenRect from "Units.h";
 using struct mozilla::layers::ScrollableLayerGuid from "mozilla/layers/ScrollableLayerGuid.h";
+using struct mozilla::layers::KeyboardScrollAction from "mozilla/layers/KeyboardScrollAction.h";
 using struct mozilla::layers::ZoomConstraints from "mozilla/layers/ZoomConstraints.h";
 using struct mozilla::layers::DoubleTapToZoomMetrics from "mozilla/layers/DoubleTapToZoom.h";
 using mozilla::layers::LayersId from "mozilla/layers/LayersTypes.h";
@@ -83,9 +84,12 @@ using mozilla::layers::CompositorOptions from "mozilla/layers/CompositorOptions.
 using mozilla::CSSToScreenScale from "Units.h";
 using mozilla::CommandInt from "mozilla/EventForwards.h";
 using mozilla::HapticFeedbackType from "nsIWidget.h";
+using nsIWidget::NativeMouseMessage from "nsIWidget.h";
+using nsIWidget::NativeModifiers from "nsIWidget.h";
 using nsIWidget::NativePointerLockMode from "nsIWidget.h";
 using nsIWidget::TouchPointerState from "nsIWidget.h";
 using nsIWidget::TouchpadGesturePhase from "nsIWidget.h";
+using mozilla::MouseButton from "mozilla/EventForwards.h";
 using nsCursor from "nsIWidget.h";
 using struct LookAndFeelInt from "mozilla/widget/WidgetMessageUtils.h";
 using struct mozilla::DimensionRequest from "mozilla/widget/WidgetMessageUtils.h";
@@ -214,10 +218,12 @@ parent:
      * Tell the parent process a new accessible document has been created.
      * aParentDoc is the accessible document it was created in if any, and
      * aParentAcc is the id of the accessible in that document the new document
-     * is a child of.
+     * is a child of. aIsPrintDoc indicates whether this document is a static
+     * clone created for printing.
      */
     async PDocAccessible(nullable PDocAccessible aParentDoc, uint64_t aParentAcc,
-                         MaybeDiscardedBrowsingContext aBrowsingContext);
+                         MaybeDiscardedBrowsingContext aBrowsingContext,
+                         bool aIsPrintDoc);
 #endif
 
     async PPaymentRequest();
@@ -466,14 +472,14 @@ parent:
 
     async SynthesizeNativeKeyEvent(int32_t aNativeKeyboardLayout,
                                    int32_t aNativeKeyCode,
-                                   uint32_t aModifierFlags,
+                                   NativeModifiers aModifierFlags,
                                    nsString aCharacters,
                                    nsString aUnmodifiedCharacters,
                                    uint64_t? aCallbackId);
     async SynthesizeNativeMouseEvent(LayoutDeviceIntPoint aPoint,
-                                     uint32_t aNativeMessage,
-                                     int16_t aButton,
-                                     uint32_t aModifierFlags,
+                                     NativeMouseMessage aNativeMessage,
+                                     MouseButton aButton,
+                                     NativeModifiers aModifierFlags,
                                      uint64_t? aCallbackId);
     async SynthesizeNativeMouseMove(LayoutDeviceIntPoint aPoint,
                                     uint64_t? aCallbackId);
@@ -482,7 +488,7 @@ parent:
                                            double aDeltaX,
                                            double aDeltaY,
                                            double aDeltaZ,
-                                           uint32_t aModifierFlags,
+                                           NativeModifiers aModifierFlags,
                                            uint32_t aAdditionalFlags,
                                            uint64_t? aCallbackId);
     async SynthesizeNativeTouchPoint(uint32_t aPointerId,
@@ -567,7 +573,7 @@ parent:
     /**
      * Child informs the parent that a pointer lock has requested.
      */
-    async RequestPointerLock() returns (nsCString error);
+    async RequestPointerLock(bool aUnadjustedMovement) returns (nsCString error);
 
 both:
     /**
@@ -657,6 +663,14 @@ parent:
     async ScrollRectIntoView(nsRect aRect, AxisScrollParams aVertical,
                              AxisScrollParams aHorizontal, ScrollFlags aScrollFlags,
                              int32_t aAppUnitsPerDevPixel);
+
+    /**
+     * Continue a main-thread keyboard scroll in the embedder document when the
+     * embedded subframe could not scroll any further in the requested
+     * direction. The embedder resumes the search for a scroll container from
+     * its frame for this browser, handing off further up if needed.
+     */
+    async ScrollForKeyboard(KeyboardScrollAction aAction);
 
     async ShowDynamicToolbar();
 

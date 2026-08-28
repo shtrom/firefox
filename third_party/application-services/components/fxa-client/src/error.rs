@@ -3,14 +3,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use error_support::{ErrorHandling, GetErrorHandling};
-use rc_crypto::hawk;
 use std::string;
 
+#[derive(uniffi::Error, Debug, thiserror::Error)]
+#[uniffi(flat_error)]
 /// Public error type thrown by many [`FirefoxAccount`] operations.
 ///
 /// Precise details of the error are hidden from consumers. The type of the error indicates how the
 /// calling code should respond.
-#[derive(Debug, thiserror::Error)]
 pub enum FxaError {
     /// Thrown when there was a problem with the authentication status of the account,
     /// such as an expired token. The application should [check its authorization status](
@@ -189,9 +189,6 @@ pub enum Error {
 
     #[error("Sync15 error: {0}")]
     SyncError(#[from] sync15::Error),
-
-    #[error("HAWK error: {0}")]
-    HawkError(#[from] hawk::Error),
 
     #[error("Integer conversion error: {0}")]
     IntegerConversionError(#[from] std::num::TryFromIntError),

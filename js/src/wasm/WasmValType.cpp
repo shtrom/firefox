@@ -21,7 +21,6 @@
 #include "js/friend/ErrorMessages.h"  // JSMSG_*
 #include "js/Printf.h"
 #include "js/Value.h"
-
 #include "vm/JSAtomUtils.h"  // Atomize
 #include "vm/JSObject.h"
 #include "vm/StringType.h"
@@ -168,8 +167,7 @@ RefType RefType::greatestLowerBound(RefType a, RefType b) {
   // b, regardless of their actual types.
   bool nullable = a.isNullable() && b.isNullable();
 
-  // If one type is a subtype of the other, the lower type is the GLB. The
-  // nullability should already match what we expect.
+  // If one type is a subtype of the other, the lower type is the GLB.
   if (RefType::isSubTypeOf(a.asNonNullable(), b.asNonNullable())) {
     return a.withIsNullable(nullable);
   }
@@ -254,13 +252,15 @@ static bool ToRefType(JSContext* cx, const JSLinearString* typeLinearStr,
   }
 
 #ifdef ENABLE_WASM_JSPI
-  if (StringEqualsLiteral(typeLinearStr, "contref")) {
-    *out = RefType::cont();
-    return true;
-  }
-  if (StringEqualsLiteral(typeLinearStr, "nullcontref")) {
-    *out = RefType::nocont();
-    return true;
+  if (StackSwitchingAvailable(cx)) {
+    if (StringEqualsLiteral(typeLinearStr, "contref")) {
+      *out = RefType::cont();
+      return true;
+    }
+    if (StringEqualsLiteral(typeLinearStr, "nullcontref")) {
+      *out = RefType::nocont();
+      return true;
+    }
   }
 #endif
 

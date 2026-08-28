@@ -25,13 +25,13 @@ task-defaults:
     run-on-repo-type: [hg]
     attributes:
         retrigger: true
-    use-python: default
+    use-python: system
     use-uv: true
     worker-type:
         by-test-platform:
-            windows.*-asan/.*: win11-64-25h2-large
-            windows.*aarch64.*/.*: win11-a64-25h2
-            windows.*/.*: win11-64-25h2
+            windows11.*-asan/.*: win11-64-25h2-large
+            windows11.*aarch64.*/.*: win11-a64-25h2
+            windows11.*/.*: win11-64-25h2
             default: default
     require-signed-extensions:
         by-release-type:
@@ -209,6 +209,11 @@ tasks:
                     by-test-platform:
                         android-em.*/debug-isolated-process: ['trunk']
                         android.*: built-projects
+                        # Compositor shutdown assertion in DisconnectApzcTreeManager
+                        # on headless macOS aarch64 VM workers (Bug 2039987 family);
+                        # same pattern excludes jsreftest, marionette, mochitest-remote,
+                        # and crashtest debug on this platform.
+                        macosx1500-aarch64-vms/debug: []
                         default: built-projects
         chunks: dynamic
         default-chunks:
@@ -323,6 +328,10 @@ tasks:
             - inc-origin-init
             - trainhop-beta
             - trainhop-release
+            - no-nova
+            - no-nova+vertical-tabs
+            - urlbar-ipc
+            - webrender-sw+urlbar-ipc
         run-on-projects:
             by-variant:
                 trainhop-beta:
@@ -330,7 +339,7 @@ tasks:
                         .*-wayland.*: []
                         .*-32.*: []
                         linux2404-64(-shippable)?/opt: ['trunk']
-                        macosx.*-64(-shippable)?(-qr)?/opt: ['trunk']
+                        macosx1500-aarch64(-shippable)?/opt: ['trunk']
                         windows11-64-25h2(-shippable)?/opt: ['trunk']
                         default: []
                 trainhop-release:
@@ -338,7 +347,7 @@ tasks:
                         .*-wayland.*: []
                         .*-32.*: []
                         linux2404-64(-shippable)?/opt: ['trunk']
-                        macosx.*-64(-shippable)?(-qr)?/opt: ['trunk']
+                        macosx1500-aarch64(-shippable)?/opt: ['trunk']
                         windows11-64-25h2(-shippable)?/opt: ['trunk']
                         default: []
                 webrender-sw:
@@ -379,6 +388,40 @@ tasks:
                         windows1.*-64.*(-shippable)?/.*: ['autoland', 'mozilla-central']
                         default: []
                 inc-origin-init: []
+                no-nova:
+                    by-test-platform:
+                        .*-artifact.*: []
+                        .*-asan.*: []
+                        .*-ccov.*: []
+                        linux.*64(-shippable)?/opt: ['trunk']
+                        # limited testing pool
+                        macosx1[45].*64(-shippable)?(-qr)?/opt: ['mozilla-central']
+                        windows11.*-64.*(-shippable)?/opt: ['trunk']
+                        default: []
+                no-nova+vertical-tabs:
+                    by-test-platform:
+                        .*-artifact.*: []
+                        .*-asan.*: []
+                        .*-ccov.*: []
+                        linux.*64(-shippable)?/opt: ['trunk']
+                        macosx1[45].*64(-shippable)?(-qr)?/opt: ['trunk']
+                        windows11.*-64.*(-shippable)?/opt: ['trunk']
+                        default: []
+                urlbar-ipc:
+                    by-test-platform:
+                        .*-artifact.*: []
+                        .*-asan.*: []
+                        .*-ccov.*: []
+                        macosx1[45].*64(-shippable)?(-qr)?/opt: ['mozilla-central']
+                        windows11.*-64.*(-shippable)?/opt: ['autoland', 'mozilla-central']
+                        default: []
+                webrender-sw+urlbar-ipc:
+                    by-test-platform:
+                        .*-artifact.*: []
+                        .*-asan.*: []
+                        .*-ccov.*: []
+                        linux.*64(-shippable)?/opt: ['autoland', 'mozilla-central']
+                        default: []
                 default:
                     by-test-platform:
                         android.*: []
@@ -500,6 +543,9 @@ tasks:
             by-test-platform:
                 .*-tsan.*: 2700
                 linux.*/debug: 2700
+                windows.*-ccov.*: 2700
+                windows.*-asan.*: 2700
+                windows.*/debug: 2700
                 default: 1800
         mozharness:
             mochitest-flavor: browser
@@ -551,15 +597,22 @@ tasks:
         suite:
             name: mochitest-browser-screenshots
         treeherder-symbol: M(ss)
+        index:
+            product: test
+            job-name: mochitest-browser-screenshots
         loopback-video: true
-        variants: ["no-fission"]
+        variants: ["no-nova"]
         run-on-projects:
             by-test-platform:
                 linux2404-64.*/opt: ['trunk']
+                windows11-64-25h2.*/opt: ['trunk']
+                macosx1500-aarch64/opt: ['trunk']
                 default: []
         max-run-time: 3600
         mozharness:
             mochitest-flavor: browser
+            extra-options:
+                - "--setpref=layout.css.devPixelsPerPx=1.0"
         allow-software-gl-layers: false
 
     mochitest-browser-translations:
@@ -593,6 +646,25 @@ tasks:
                 - tr8ns.T.esen.model
                 - tr8ns.T.esen.vocab
 
+    mochitest-browser-chrome-ml-models:
+        description: "Mochitest browser-chrome tests that download real ML models from model-hub.mozilla.org"
+        suite:
+            name: mochitest-browser-chrome-ml-models
+        treeherder-symbol: M(bc-ml)
+        schedules-component: mochitest-browser-chrome-ml-models
+        loopback-video: true
+        run-on-projects:
+            by-test-platform:
+                # Shippable Linux opt only. The `.*` glob previously also
+                # matched sanitizer variants (asan/tsan), which abort on
+                # upstream ggml UB in the native llama.cpp backend.
+                linux2404-64-shippable/opt: ['mozilla-central']
+                default: []
+        max-run-time: 1800
+        mozharness:
+            mochitest-flavor: browser
+        allow-software-gl-layers: false
+
     mochitest-chrome:
         description: "Mochitest chrome run"
         treeherder-symbol: M(c)
@@ -604,6 +676,7 @@ tasks:
             - webrender-sw+1proc
             - standalone
             - inc-origin-init
+            - no-nova
         run-on-projects:
             by-variant:
                 webrender-sw+1proc:
@@ -614,6 +687,10 @@ tasks:
                 1proc:
                     by-test-platform:
                         .*-wayland.*: []
+                        # Compositor shutdown assertion in DisconnectApzcTreeManager
+                        # on headless macOS aarch64 VM workers (Bug 2039987 family);
+                        # same pattern excludes the other suites' debug on this platform.
+                        macosx1500-aarch64-vms/debug: []
                         default: built-projects
                 standalone:
                     by-test-platform:
@@ -625,6 +702,15 @@ tasks:
                         windows.*-64-[^-/]+/opt: ['autoland']
                         default: []
                 inc-origin-init: []
+                no-nova:
+                    by-test-platform:
+                        .*-artifact.*: []
+                        .*-asan.*: []
+                        .*-ccov.*: []
+                        linux.*64(-shippable)?/opt: ['trunk']
+                        macosx1[45].*64(-shippable)?(-qr)?/opt: ['trunk']
+                        windows11.*-64.*(-shippable)?/opt: ['trunk']
+                        default: []
         chunks: dynamic
         default-chunks:
             by-variant:
@@ -791,7 +877,7 @@ tasks:
         loopback-video: true
         worker-type:
             by-test-platform:
-                windows.*/.*: win11-64-25h2-gpu
+                windows11.*/.*: win11-64-25h2-gpu
                 default: default
         variants:
             - no-fission
@@ -857,7 +943,7 @@ tasks:
         virtualization: virtual-with-gpu
         worker-type:
             by-test-platform:
-                windows.*/.*: win11-64-25h2-gpu
+                windows11.*/.*: win11-64-25h2-gpu
                 default: default
         run-without-variant: false
         variants:
@@ -1054,9 +1140,9 @@ tasks:
                         default: default
                 default:
                     by-test-platform:
-                        windows.*-asan/.*: win11-64-25h2-large
-                        windows.*aarch64.*/.*: win11-a64-25h2
-                        windows.*/.*: win11-64-25h2
+                        windows11.*-asan/.*: win11-64-25h2-large
+                        windows11.*aarch64.*/.*: win11-a64-25h2
+                        windows11.*/.*: win11-64-25h2
                         default: default
 
     mochitest-valgrind:
@@ -1084,8 +1170,10 @@ tasks:
         virtualization: virtual-with-gpu
         worker-type:
             by-test-platform:
-                windows.*/.*: win11-64-25h2-gpu
+                windows11.*/.*: win11-64-25h2-gpu
                 default: default
+        chunks: dynamic
+        default-chunks: 1
 
         loopback-video: true
         max-run-time: 1800
@@ -1121,6 +1209,7 @@ tasks:
         allow-software-gl-layers: false
         mozharness:
             mochitest-flavor: plain
+            chunked: true
 
     mochitest-webgl1-ext:
         description: "Mochitest webgl1-ext run"
@@ -1129,8 +1218,10 @@ tasks:
         virtualization: virtual-with-gpu
         worker-type:
             by-test-platform:
-                windows.*/.*: win11-64-25h2-gpu
+                windows11.*/.*: win11-64-25h2-gpu
                 default: default
+        chunks: dynamic
+        default-chunks: 1
 
         loopback-video: true
         max-run-time: 2700
@@ -1166,6 +1257,7 @@ tasks:
         allow-software-gl-layers: false
         mozharness:
             mochitest-flavor: plain
+            chunked: true
 
     mochitest-webgl2-core:
         description: "Mochitest webgl2-core run"
@@ -1174,9 +1266,10 @@ tasks:
         virtualization: virtual-with-gpu
         worker-type:
             by-test-platform:
-                windows.*/.*: win11-64-25h2-gpu
+                windows11.*/.*: win11-64-25h2-gpu
                 default: default
-        chunks:
+        chunks: dynamic
+        default-chunks:
             by-test-platform:
                 android.*: 2
                 default: 1
@@ -1225,7 +1318,7 @@ tasks:
         virtualization: virtual-with-gpu
         worker-type:
             by-test-platform:
-                windows.*/.*: win11-64-25h2-gpu
+                windows11.*/.*: win11-64-25h2-gpu
                 default: default
         variants:
             - no-fission
@@ -1252,7 +1345,8 @@ tasks:
                         android.*: []
                         .*-tsan.*: []
                         default: built-projects
-        chunks: 4
+        chunks: dynamic
+        default-chunks: 4
 
         loopback-video: true
         max-run-time: 2700
@@ -1269,7 +1363,7 @@ tasks:
         virtualization: virtual-with-gpu
         worker-type:
             by-test-platform:
-                windows.*/.*: win11-64-25h2-gpu
+                windows11.*/.*: win11-64-25h2-gpu
                 default: default
         variants:
             - webrender-sw
@@ -1291,7 +1385,7 @@ tasks:
         virtualization: virtual-with-gpu
         worker-type:
             by-test-platform:
-                windows.*/.*: win11-64-25h2-gpu
+                windows11.*/.*: win11-64-25h2-gpu
                 default: default
         loopback-video: true
         variants:
@@ -1338,6 +1432,10 @@ tasks:
                 default:
                     by-test-platform:
                         android.*: []
+                        # GPU process leak-detection failure on headless macOS
+                        # aarch64 VM workers (Bug 2039987 family); opt is green,
+                        # debug consistently misses the "total leaks" output line.
+                        macosx1500-aarch64-vms/debug: []
                         default: built-projects
         tier: default
         max-run-time: 5400

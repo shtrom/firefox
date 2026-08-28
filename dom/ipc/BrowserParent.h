@@ -61,6 +61,10 @@ namespace gfx {
 class SourceSurface;
 }  // namespace gfx
 
+namespace layers {
+struct KeyboardScrollAction;
+}  // namespace layers
+
 namespace dom {
 
 class CanonicalBrowsingContext;
@@ -98,7 +102,7 @@ class BrowserParent final : public PBrowserParent,
   struct AutoUseNewTab;
 
   NS_INLINE_DECL_STATIC_IID(DOM_BROWSERPARENT_IID)
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL
   NS_DECL_NSIAUTHPROMPTPROVIDER
   // nsIDOMEventListener interfaces
   NS_DECL_NSIDOMEVENTLISTENER
@@ -419,6 +423,9 @@ class BrowserParent final : public PBrowserParent,
       const AxisScrollParams& aHorizontal, const ScrollFlags& aScrollFlags,
       const int32_t& aAppUnitsPerDevPixel);
 
+  mozilla::ipc::IPCResult RecvScrollForKeyboard(
+      const mozilla::layers::KeyboardScrollAction& aAction);
+
   already_AddRefed<PColorPickerParent> AllocPColorPickerParent(
       const MaybeDiscarded<BrowsingContext>& aBrowsingContext,
       const nsString& aTitle, const nsString& aInitialColor,
@@ -431,12 +438,13 @@ class BrowserParent final : public PBrowserParent,
 #ifdef ACCESSIBILITY
   PDocAccessibleParent* AllocPDocAccessibleParent(
       PDocAccessibleParent*, const uint64_t&,
-      const MaybeDiscardedBrowsingContext&);
+      const MaybeDiscardedBrowsingContext&, const bool&);
   bool DeallocPDocAccessibleParent(PDocAccessibleParent*);
   virtual mozilla::ipc::IPCResult RecvPDocAccessibleConstructor(
       PDocAccessibleParent* aDoc, PDocAccessibleParent* aParentDoc,
       const uint64_t& aParentID,
-      const MaybeDiscardedBrowsingContext& aBrowsingContext) override;
+      const MaybeDiscardedBrowsingContext& aBrowsingContext,
+      const bool& aIsPrintDoc) override;
 #endif
 
   already_AddRefed<PSessionStoreParent> AllocPSessionStoreParent();
@@ -502,13 +510,15 @@ class BrowserParent final : public PBrowserParent,
 
   mozilla::ipc::IPCResult RecvSynthesizeNativeKeyEvent(
       const int32_t& aNativeKeyboardLayout, const int32_t& aNativeKeyCode,
-      const uint32_t& aModifierFlags, const nsString& aCharacters,
-      const nsString& aUnmodifiedCharacters,
+      const nsIWidget::NativeModifiers& aModifierFlags,
+      const nsString& aCharacters, const nsString& aUnmodifiedCharacters,
       const Maybe<uint64_t>& aCallbackId);
 
   mozilla::ipc::IPCResult RecvSynthesizeNativeMouseEvent(
-      const LayoutDeviceIntPoint& aPoint, const uint32_t& aNativeMessage,
-      const int16_t& aButton, const uint32_t& aModifierFlags,
+      const LayoutDeviceIntPoint& aPoint,
+      const nsIWidget::NativeMouseMessage& aNativeMessage,
+      const mozilla::MouseButton& aButton,
+      const nsIWidget::NativeModifiers& aModifierFlags,
       const Maybe<uint64_t>& aCallbackId);
 
   mozilla::ipc::IPCResult RecvSynthesizeNativeMouseMove(
@@ -517,8 +527,8 @@ class BrowserParent final : public PBrowserParent,
   mozilla::ipc::IPCResult RecvSynthesizeNativeMouseScrollEvent(
       const LayoutDeviceIntPoint& aPoint, const uint32_t& aNativeMessage,
       const double& aDeltaX, const double& aDeltaY, const double& aDeltaZ,
-      const uint32_t& aModifierFlags, const uint32_t& aAdditionalFlags,
-      const Maybe<uint64_t>& aCallbackId);
+      const nsIWidget::NativeModifiers& aModifierFlags,
+      const uint32_t& aAdditionalFlags, const Maybe<uint64_t>& aCallbackId);
 
   mozilla::ipc::IPCResult RecvSynthesizeNativeTouchPoint(
       const uint32_t& aPointerId, const TouchPointerState& aPointerState,
@@ -723,6 +733,8 @@ class BrowserParent final : public PBrowserParent,
 
   void MaybeInvokeDragSession(EventMessage aMessage);
 
+  BrowserParent* TopLevelBrowserParent();
+
  protected:
   friend BrowserBridgeParent;
   friend BrowserHost;
@@ -759,7 +771,7 @@ class BrowserParent final : public PBrowserParent,
       EmbedderElementEventType aFireEventAtEmbeddingElement);
 
   mozilla::ipc::IPCResult RecvRequestPointerLock(
-      RequestPointerLockResolver&& aResolve);
+      const bool& aUnadjustedMovement, RequestPointerLockResolver&& aResolve);
   mozilla::ipc::IPCResult RecvReleasePointerLock();
 
   mozilla::ipc::IPCResult RecvRequestPointerCapture(
@@ -1010,6 +1022,10 @@ class BrowserParent final : public PBrowserParent,
   // True after RecvLockNativePointer has been called and until
   // UnlockNativePointer has been called.
   bool mLockedNativePointer : 1;
+
+  // True after mLockedNativePointer is changed to `false` and reset to false
+  // once we receive a native mouse move request.
+  bool mWaitingForNativeMouseMoveAfterUnlock : 1;
 
   // True between ShowTooltip and HideTooltip messages.
   bool mShowingTooltip : 1;

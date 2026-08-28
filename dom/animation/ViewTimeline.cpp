@@ -6,9 +6,17 @@
 
 #include "mozilla/Keyframe.h"
 #include "mozilla/ScrollContainerFrame.h"
+#include "mozilla/ServoCSSParser.h"
+#include "mozilla/ServoStyleSet.h"
 #include "mozilla/dom/Animation.h"
+#include "mozilla/dom/CSSKeywordValue.h"
+#include "mozilla/dom/CSSUnitValue.h"
+#include "mozilla/dom/Document.h"
+#include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/dom/ElementInlines.h"
+#include "mozilla/dom/TimelineName.h"
 #include "mozilla/dom/ViewTimelineBinding.h"
+#include "nsComputedDOMStyle.h"
 #include "nsLayoutUtils.h"
 #include "nsPresContext.h"
 
@@ -20,8 +28,8 @@ NS_IMPL_ISUPPORTS_CYCLE_COLLECTION_INHERITED_0(ViewTimeline, ScrollTimeline)
 /* static */
 already_AddRefed<ViewTimeline> ViewTimeline::MakeNamed(
     Document* aDocument, Element* aSubject,
-    const PseudoStyleRequest& aPseudoRequest,
-    const StyleViewTimeline& aStyleTimeline) {
+    const PseudoStyleRequest& aPseudoRequest, StyleScrollAxis aAxis,
+    const StyleViewTimelineInset& aInset) {
   MOZ_ASSERT(NS_IsMainThread());
 
   // 1. Create an anonymous scroller, as if `scroll(nearest)`.
@@ -30,9 +38,8 @@ already_AddRefed<ViewTimeline> ViewTimeline::MakeNamed(
       NonOwningAnimationTarget{aSubject, aPseudoRequest});
 
   // 2. Create timeline.
-  return MakeAndAddRef<ViewTimeline>(
-      aDocument, scroller, aStyleTimeline.GetAxis(), aSubject,
-      aPseudoRequest.mType, aStyleTimeline.GetInset());
+  return MakeAndAddRef<ViewTimeline>(aDocument, scroller, aAxis, aSubject,
+                                     aPseudoRequest.mType, aInset, false);
 }
 
 /* static */
@@ -41,51 +48,197 @@ already_AddRefed<ViewTimeline> ViewTimeline::MakeAnonymous(
     StyleScrollAxis aAxis, const StyleViewTimelineInset& aInset) {
   // view() finds the nearest scroll container from the animation target.
   auto scroller = ScrollerInfo::Anonymous(StyleScroller::Nearest, aTarget);
-  return MakeAndAddRef<ViewTimeline>(aDocument, scroller, aAxis,
-                                     aTarget.mElement,
-                                     aTarget.mPseudoRequest.mType, aInset);
+  return MakeAndAddRef<ViewTimeline>(
+      aDocument, scroller, aAxis, aTarget.mElement,
+      aTarget.mPseudoRequest.mType, aInset, true);
 }
 
 JSObject* ViewTimeline::WrapObject(JSContext* aCx,
                                    JS::Handle<JSObject*> aGivenProto) {
-  if (!StaticPrefs::
-          layout_css_scroll_driven_animations_viewtimeline_enabled()) {
-    return ScrollTimeline::WrapObject(aCx, aGivenProto);
-  }
   return ViewTimeline_Binding::Wrap(aCx, this, aGivenProto);
 }
 
-Nullable<double> ViewTimeline::GetStartOffset() const {
-  auto data = ComputeTimelineData();
-  if (!data) {
-    return nullptr;
+static Maybe<StyleLengthPercentageOrAuto> ComputeStartOrEndInset(
+    const OwningUTF8StringOrCSSKeywordValueOrCSSNumericValue& aValue,
+    ErrorResult& aRv) {
+  // Note: This is a CSSKeywordish, so we don't expect to accept a length or
+  // percentage for this string.
+  // Note: We compare the string case-insensitively to make the behavior
+  // consistent with ServoCSSParser::ParseViewTimelineInset().
+  // https://github.com/w3c/csswg-drafts/issues/9584
+  if (aValue.IsUTF8String()) {
+    const nsCString& s = aValue.GetAsUTF8String();
+    if (!s.LowerCaseEqualsLiteral("auto")) {
+      aRv.ThrowTypeError("Invalid inset keyword");
+      return Nothing();
+    }
+    return Some(StyleLengthPercentageOrAuto::Auto());
+  } else if (aValue.IsCSSKeywordValue()) {
+    nsAutoCString s;
+    aValue.GetAsCSSKeywordValue()->GetValue(s);
+    if (!s.LowerCaseEqualsLiteral("auto")) {
+      aRv.ThrowTypeError("Invalid inset keyword");
+      return Nothing();
+    }
+    return Some(StyleLengthPercentageOrAuto::Auto());
   }
-  return nsPresContext::AppUnitsToFloatCSSPixels(data->mStart);
+
+  nsAutoCString s;
+  const CSSNumericValue& numeric = aValue.GetAsCSSNumericValue();
+  numeric.Stringify(s);
+  StyleLengthPercentage result;
+  if (!ServoCSSParser::ParseLengthPercentageForAbsoluteLengths(s, result)) {
+    aRv.ThrowTypeError("Invalid inset value");
+    return Nothing();
+  }
+  return Some(StyleLengthPercentageOrAuto::LengthPercentage(result));
 }
 
-Nullable<double> ViewTimeline::GetEndOffset() const {
+/* static */
+already_AddRefed<ViewTimeline> ViewTimeline::Constructor(
+    const GlobalObject& aGlobal, const ViewTimelineOptions& aOptions,
+    ErrorResult& aRv) {
+  RefPtr<Document> doc =
+      AnimationUtils::GetCurrentRealmDocument(aGlobal.Context());
+  if (!doc) {
+    aRv.Throw(NS_ERROR_FAILURE);
+    return nullptr;
+  }
+
+  // The spec doesn't provide the default value for element, so we use null
+  // subject to align the behavior with other browsers.
+  RefPtr<Element> subject = aOptions.mSubject;
+
+  StyleScrollAxis axis;
+  switch (aOptions.mAxis) {
+    case dom::ScrollAxis::Block:
+      axis = StyleScrollAxis::Block;
+      break;
+    case dom::ScrollAxis::Inline:
+      axis = StyleScrollAxis::Inline;
+      break;
+    case dom::ScrollAxis::X:
+      axis = StyleScrollAxis::X;
+      break;
+    case dom::ScrollAxis::Y:
+      axis = StyleScrollAxis::Y;
+      break;
+  }
+
+  StyleViewTimelineInset inset;
+  if (aOptions.mInset.IsUTF8String()) {
+    // If a DOMString value is provided as an inset, parse it as a
+    // <'view-timeline-inset'> value;
+    if (!ServoCSSParser::ParseViewTimelineInset(
+            aOptions.mInset.GetAsUTF8String(), inset)) {
+      // We throw TypeError for the invalid inset, including DOMString, just
+      // like the invalid sequence case per spec.
+      aRv.ThrowTypeError("Invalid inset string");
+      return nullptr;
+    }
+  } else {
+    if (!StaticPrefs::layout_css_typed_om_enabled()) {
+      // CSSKeywordValue and CSSNumericValue are disabled.
+      aRv.Throw(NS_ERROR_DOM_NOT_SUPPORTED_ERR);
+      return nullptr;
+    }
+    // if a sequence is provided, the first value represents the start inset and
+    // the second value represents the end inset. If the sequence has only one
+    // value, it is duplicated. If it has zero values or more than two values,
+    // or if it contains a CSSKeywordValue whose value is not "auto", throw a
+    // TypeError.
+    const auto& sequence =
+        aOptions.mInset
+            .GetAsUTF8StringOrCSSKeywordValueOrCSSNumericValueSequence();
+    if (sequence.Length() == 0 || sequence.Length() > 2) {
+      aRv.ThrowTypeError("Invalid inset sequence");
+      return nullptr;
+    }
+    auto start = ComputeStartOrEndInset(sequence[0], aRv);
+    if (!start) {
+      return nullptr;
+    }
+    auto end = sequence.Length() == 2 ? ComputeStartOrEndInset(sequence[1], aRv)
+                                      : start;
+    if (!end) {
+      return nullptr;
+    }
+    inset.start = std::move(*start);
+    inset.end = std::move(*end);
+  }
+
+  // Set the source of timeline to the subject’s nearest ancestor scroll
+  // container element.
+  // Note: if subject is null, we use null source as well.
+  ScrollerInfo scroller = ScrollerInfo::Anonymous(
+      subject ? ScrollerInfo::Type::Nearest : ScrollerInfo::Type::Provided,
+      subject, PseudoStyleRequest::NotPseudo());
+
+  RefPtr<ViewTimeline> result = MakeAndAddRef<ViewTimeline>(
+      doc, scroller, axis, subject, PseudoStyleType::NotPseudo, inset, false);
+  if (subject) {
+    // The values of subject, source, and currentTime are all computed when any
+    // of them is requested or updated, per spec.
+    if (Document* doc = subject->GetComposedDoc()) {
+      doc->FlushPendingNotifications(FlushType::Layout);
+    }
+    // Maybe our nearested scroller already exists, try to compute the current
+    // time.
+    result->UpdateCachedCurrentTime();
+  }
+
+  return result.forget();
+}
+
+already_AddRefed<CSSNumericValue> ViewTimeline::GetStartOffset(
+    ErrorResult& aRv) const {
   auto data = ComputeTimelineData();
   if (!data) {
     return nullptr;
   }
-  return nsPresContext::AppUnitsToFloatCSSPixels(data->mEnd);
+
+  if (!StaticPrefs::layout_css_typed_om_enabled()) {
+    aRv.Throw(NS_ERROR_DOM_NOT_SUPPORTED_ERR);
+    return nullptr;
+  }
+  return MakeCSSUnitValue(
+      GetParentObject(), StyleNumericType::Length(),
+      nsPresContext::AppUnitsToDoubleCSSPixels(data->mStart), "px"_ns);
+}
+
+already_AddRefed<CSSNumericValue> ViewTimeline::GetEndOffset(
+    ErrorResult& aRv) const {
+  auto data = ComputeTimelineData();
+  if (!data) {
+    return nullptr;
+  }
+
+  if (!StaticPrefs::layout_css_typed_om_enabled()) {
+    aRv.Throw(NS_ERROR_DOM_NOT_SUPPORTED_ERR);
+    return nullptr;
+  }
+  return MakeCSSUnitValue(GetParentObject(), StyleNumericType::Length(),
+                          nsPresContext::AppUnitsToDoubleCSSPixels(data->mEnd),
+                          "px"_ns);
 }
 
 void ViewTimeline::ReplacePropertiesWith(
     Element* aSubjectElement, const PseudoStyleRequest& aPseudoRequest,
-    const StyleViewTimeline& aNew) {
+    const dom::ScopedTimelineName& aName, StyleScrollAxis aAxis,
+    const StyleViewTimelineInset& aInset) {
   mSubject = aSubjectElement;
   mSubjectPseudoType = aPseudoRequest.mType;
-  mAxis = aNew.GetAxis();
+  mAxis = aAxis;
   // FIXME: Bug 1817073. We assume it is a non-animatable value for now.
-  mInset = aNew.GetInset();
+  mInset = aInset;
 
   for (auto* anim = mAnimationOrder.getFirst(); anim;
        anim = static_cast<LinkedListElement<Animation>*>(anim)->getNext()) {
     MOZ_ASSERT(anim->GetTimeline() == this);
-    MOZ_ASSERT(anim->GetTimelineName() == aNew.GetName());
+    MOZ_ASSERT(anim->GetTimelineName() == aName);
     // Set this so we just PostUpdate() for this animation.
-    anim->SetTimeline(this, aNew.GetName());
+    // FIXME(dshin, bug 1737927): Mutation observer may need to be notified.
+    anim->SetTimeline(this, aName, Animation::FromJS::No);
   }
 }
 
@@ -123,30 +276,25 @@ static std::pair<nscoord, nscoord> ComputeInsets(
   return {startInset, endInset};
 }
 
-void ViewTimeline::UpdateCachedCurrentTime() {
+bool ViewTimeline::UpdateCachedCurrentTime() {
   const auto prevCachedCurrentTime = std::move(mCachedCurrentTime);
 
   mCachedCurrentTime.reset();
 
-  const auto state = GetState();
-  // If no layout box, this timeline is inactive.
-  if (const auto* e = state.mSource.mElement; !e || !e->GetPrimaryFrame()) {
-    return;
+  mCachedStateSnapshot = Some(ComputeSnapshot());
+  // The timeline is inactive if it has no principal box or its source is not a
+  // scroll container.
+  if (!mCachedStateSnapshot->IsActive()) {
+    return prevCachedCurrentTime.isSome();
   }
 
-  // if this is not a scroller container, this timeline is inactive.
   const ScrollContainerFrame* scrollContainerFrame =
-      state.GetScrollContainerFrame();
-  if (!scrollContainerFrame) {
-    return;
-  }
+      mCachedStateSnapshot->GetScrollContainerFrame();
+  MOZ_ASSERT(scrollContainerFrame);
 
-  // If there is no scrollable overflow, then the ScrollTimeline is inactive.
-  // https://drafts.csswg.org/scroll-animations-1/#scrolltimeline-interface
-  const auto orientation = state.Axis();
-  if (!scrollContainerFrame->GetAvailableScrollingDirections().contains(
-          orientation)) {
-    return;
+  // Don't try to update against a frame that hasn't been laid out yet.
+  if (scrollContainerFrame->HasAnyStateBits(NS_FRAME_FIRST_REFLOW)) {
+    return prevCachedCurrentTime.isSome();
   }
 
   // Note: We may fail to get the pseudo element (or its primary frame) if it is
@@ -163,7 +311,7 @@ void ViewTimeline::UpdateCachedCurrentTime() {
     // No principal box of the subject, so we cannot compute the offset. This
     // may happen when we clear all animation collections during unbinding from
     // the tree.
-    return;
+    return prevCachedCurrentTime.isSome();
   }
 
   // The current scroll position and scroll range.
@@ -189,17 +337,26 @@ void ViewTimeline::UpdateCachedCurrentTime() {
   // (i.e. the box of the scrollport), where as |startOffset| refers to the
   // start of the timeline, and similarly for end side/offset. [1]
   // https://drafts.csswg.org/css-writing-modes-4/#css-start
+  const auto orientation = mCachedStateSnapshot->Axis();
   const auto sideInsets =
       ComputeInsets(scrollContainerFrame, orientation, mAxis, mInset);
 
   // Adjuct the positions and sizes based on the physical axis.
+  const WritingMode wm = scrolledFrame->GetWritingMode();
   switch (orientation) {
-    case layers::ScrollDirection::eVertical:
+    case layers::ScrollDirection::eVertical: {
+      // Mirror of the R-L case below for bottom-to-top scrolling (vertical
+      // writing-mode + direction:rtl), where the inline axis is vertical and
+      // reversed, so scrollPosition.y is zero or negative.
+      const bool isBottomToTop = wm.IsVertical() && wm.IsInlineReversed();
       mCachedCurrentTime.emplace(CurrentTimeData{
           ScrollTimeline::CurrentTimeData{scrollPosition.y, scrollRange.height},
-          scrollPort.height, subjectRect.y, subjectRect.height,
-          sideInsets.first, sideInsets.second});
+          scrollPort.height,
+          isBottomToTop ? scrolledFrame->GetSize().height - subjectRect.YMost()
+                        : subjectRect.y,
+          subjectRect.height, sideInsets.first, sideInsets.second});
       break;
+    }
     case layers::ScrollDirection::eHorizontal:
       mCachedCurrentTime.emplace(CurrentTimeData{
           ScrollTimeline::CurrentTimeData{scrollPosition.x, scrollRange.width},
@@ -209,7 +366,7 @@ void ViewTimeline::UpdateCachedCurrentTime() {
           // start border edge of the subject, and compute its position by using
           // the x-most side of the scrolled frame as the origin on the
           // horizontal axis.
-          scrolledFrame->GetWritingMode().IsPhysicalRTL()
+          wm.IsPhysicalRTL()
               ? scrolledFrame->GetSize().width - subjectRect.XMost()
               : subjectRect.x,
           subjectRect.width, sideInsets.first, sideInsets.second});
@@ -220,6 +377,7 @@ void ViewTimeline::UpdateCachedCurrentTime() {
       prevCachedCurrentTime->IsChanged(*mCachedCurrentTime)) {
     TimelineDataDidChange();
   }
+  return mCachedCurrentTime != prevCachedCurrentTime;
 }
 
 // FIXME: Bug 2018678. Need to be adjusted for sticky positioning element.
@@ -389,6 +547,14 @@ std::pair<double, double> ViewTimeline::IntervalForAttachmentRange(
       };
   return {computeNamedRangeEdgeAsPercentage(aStyleRange.mStart),
           computeNamedRangeEdgeAsPercentage(aStyleRange.mEnd)};
+}
+
+bool ViewTimeline::IsReusableAnonymousTimeline(
+    const StyleGenericViewFunction<StyleLengthPercentage>& aView) const {
+  if (!mIsAnonymous) {
+    return false;
+  }
+  return mAxis == aView.axis && mInset == aView.inset;
 }
 
 Maybe<ScrollTimeline::ComputedTimelineData> ViewTimeline::ComputeTimelineData()

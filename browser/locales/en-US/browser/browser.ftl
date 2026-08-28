@@ -21,10 +21,20 @@ browser-main-private-suffix-for-content = Private Browsing
 # "PRIVATE_BROWSING_SHORTCUT_TITLE" in custom.properties
 private-browsing-shortcut-text-2 = { -brand-shortcut-name } Private Browsing
 
+# This MUST match the translation of "BRIEF_APP_DESC" in custom.properties
+browser-shortcut-description = Fast and private web browsing
+
 ##
 
-urlbar-identity-button =
-    .aria-label = View site information
+# Variables
+#   $count (number) - The number of blocked trackers on this page. Please leave the mention of blocked trackers out when there are none.
+urlbar-identity-button2 =
+    .aria-label =
+        { $count ->
+            [0] View site information
+            [1] View site information (1 tracker blocked)
+           *[other] View site information ({ $count } trackers blocked)
+        }
 
 ## Tooltips for images appearing in the address bar
 
@@ -81,32 +91,35 @@ urlbar-result-menu-button =
     .title = Open menu
 urlbar-result-menu-button-feedback = Feedback
     .title = Open menu
-urlbar-result-menu-learn-more =
-    .label = Learn more
+urlbar-result-menu-learn-more2 = Learn more
     .accesskey = L
-urlbar-result-menu-remove-from-history =
-    .label = Remove from history
+urlbar-result-menu-remove-from-history2 = Remove from history
     .accesskey = R
-urlbar-result-menu-tip-get-help =
-    .label = Get help
+urlbar-result-menu-tip-get-help2 = Get help
     .accesskey = h
-urlbar-result-menu-dismiss-suggestion =
-    .label = Dismiss this suggestion
+urlbar-result-menu-dismiss-suggestion2 = Dismiss this suggestion
     .accesskey = D
-urlbar-result-menu-manage-firefox-suggest =
-    .label = Manage { -firefox-suggest-brand-name }
+urlbar-result-menu-manage-firefox-suggest2 = Manage { -firefox-suggest-brand-name }
     .accesskey = M
 # Some urlbar suggestions show the user's approximate location as automatically
 # detected by Firefox (e.g., weather suggestions), and this menu item lets the
 # user tell Firefox that the location is not accurate. Typically the location
 # will be a city name, or a city name combined with the name of its parent
 # administrative division (e.g., a province, prefecture, or state).
-urlbar-result-menu-report-inaccurate-location =
-    .label = Report inaccurate location
-urlbar-result-menu-show-less-frequently =
-    .label = Show less frequently
-urlbar-result-menu-dont-show-weather-suggestions =
-    .label = Don’t show weather suggestions
+urlbar-result-menu-report-inaccurate-location2 = Report inaccurate location
+urlbar-result-menu-show-less-frequently2 = Show less frequently
+urlbar-result-menu-dont-show-weather-suggestions2 = Don’t show weather suggestions
+
+# Shown in the urlbar input field context menu to dismiss an adaptive autofill
+# suggestion.
+urlbar-input-dismiss-autofill =
+    .label = Dismiss this suggestion
+    .accesskey = i
+# Shown in the urlbar input field context menu to remove an adaptive autofill
+# URL from history.
+urlbar-input-remove-from-history =
+    .label = Remove from history
+    .accesskey = e
 
 # Used for Split Button.
 urlbar-splitbutton-dropmarker =
@@ -276,13 +289,17 @@ quickactions-addons = View add-ons
 # same word).
 quickactions-cmd-addons3 = extensions, themes, addons, add-ons
 
+# Opens preferences page at AI controls
+quickactions-manageai = Manage AI controls
+quickactions-cmd-manageai = disable ai, off ai, manage ai
+
 # Opens the bookmarks library window
 quickactions-bookmarks2 = Manage bookmarks
 quickactions-cmd-bookmarks = bookmarks
 
 # Opens a SUMO article explaining how to clear history
 quickactions-clearrecenthistory = Clear recent history
-quickactions-cmd-clearrecenthistory = clear recent history, history
+quickactions-cmd-clearrecenthistory2 = cookies, clear cookies, cache, clear cache, browsing data, clear browsing data, history, clear recent history
 
 # Opens about:downloads page
 quickactions-downloads2 = View downloads
@@ -307,6 +324,10 @@ quickactions-cmd-help = help, support
 quickactions-inspector2 = Open Developer Tools
 quickactions-cmd-inspector2 = inspector, devtools, dev tools
 
+# Opens the devtools eyedropper to pick a color from the page
+quickactions-colorpicker = Pick a color
+quickactions-cmd-colorpicker = color picker, eyedropper, pick color
+
 # Opens Firefox Library
 quickactions-cmd-library = library
 quickactions-library = Open Library
@@ -329,6 +350,10 @@ quickactions-cmd-print = print
 # Opens the print dialog at the save to PDF option
 quickactions-savepdf = Save page as PDF
 quickactions-cmd-savepdf2 = pdf, save page
+
+# Opens about:pdf, the PDF editor landing page
+quickactions-editpdf = Open PDF editor
+quickactions-cmd-editpdf = pdf
 
 # Opens a new private browsing window
 quickactions-private2 = Open private window
@@ -369,6 +394,10 @@ quickactions-cmd-update = update
 # Opens the view-source UI with current pages source
 quickactions-viewsource2 = View page source
 quickactions-cmd-viewsource2 = view source, source, page source
+
+# Opens about:preferences:experimental (Firefox Labs)
+quickactions-labs = Open { -firefoxlabs-brand-name }
+quickactions-cmd-labs = labs, experiment
 
 # Tooltip text for the help button shown in the result.
 quickactions-learn-more =
@@ -450,8 +479,8 @@ identity-clear-site-data =
     .label = Clear cookies and site data…
 identity-connection-not-secure-security-view = You are not securely connected to this site.
 identity-connection-verified = You are securely connected to this site.
-identity-ev-owner-label = Certificate issued to:
-identity-verifier-label = Verified by:
+identity-ev-owner-label2 = Certificate issued to
+identity-verifier-label2 = Verified by
 # "qualified" here refers to the qualified website authentication certificate presented by the site.
 identity-etsi = Qualified as specified in Regulation (EU) 2024/1183.
 identity-description-custom-root2 = Mozilla does not recognize this certificate issuer. It may have been added from your operating system or by an administrator.
@@ -468,6 +497,8 @@ identity-description-passive-loaded-insecure2 = This website contains content th
 identity-description-passive-loaded-mixed2 = Although { -brand-short-name } has blocked some content, there is still content on the page that is not secure (such as images).
 identity-description-active-loaded = This website contains content that is not secure (such as scripts) and your connection to it is not private.
 identity-description-active-loaded-insecure = Information you share with this site could be viewed by others (like passwords, messages, credit cards, etc.).
+identity-description-tls-key-logging-heading = Your connection may not be private
+identity-description-tls-key-logging-message = An app or service may see your encrypted traffic from this site.
 identity-more-info-link-text =
     .label = More information
 
@@ -662,6 +693,36 @@ urlbar-result-action-copy-to-clipboard = Copy
 # The string returned for an undefined calculator result such as when dividing by 0
 urlbar-result-action-undefined-calculator-result = undefined
 
+## "Last visited" and "bookmarked" explanation strings. For bookmarks and urlbar
+## results with last-visited dates like history and top sites, these strings
+## explain why the result is shown.
+
+# This explanation is used when the last-visited date is formatted as one of the
+# following relative dates: "yesterday", "today"
+# Variables:
+#   $date (string) - A localized relative date string
+urlbar-result-explanation-last-visited-relative-2 = Last visited { $date }
+
+# This explanation is used when the last-visited date is a small number of days,
+# weeks, or months in the past.
+# Variables:
+#   $date (string) - A localized relative date string like one of the following:
+#                    "6 days ago", "1 week ago", "4 weeks ago", "1 month ago",
+#                    "11 months ago"
+urlbar-result-explanation-last-visited-days-weeks-months-ago = Last visited { $date }
+
+# This explanation is used when the last-visited date is further in the past.
+# The date will be formatted as an absolute date like: "11 May", "11 May 2026"
+# Variables:
+#   $date (string) - A localized absolute date string
+urlbar-result-explanation-last-visited-absolute-2 = Last visited { $date }
+
+# This explanation is used when the result is bookmarked. The date will be
+# formatted as an absolute date like: "11 May", "11 May 2026"
+# Variables:
+#   $date (string) - A localized absolute date string
+urlbar-result-explanation-bookmarked = Bookmarked { $date }
+
 # The sub title of an add-on suggestion in the urlbar.
 urlbar-result-addons-subtitle = { -brand-product-name } extension
 
@@ -733,12 +794,10 @@ urlbar-result-realtime-opt-in-allow = Show suggestions
 # This string is shown in split button to dismiss activation the Realtime suggestion.
 urlbar-result-realtime-opt-in-not-now = Not now
 urlbar-result-realtime-opt-in-dismiss = Dismiss
-urlbar-result-realtime-opt-in-dismiss-all =
-    .label = Don’t show these suggestions
+urlbar-result-realtime-opt-in-dismiss-all2 = Don’t show these suggestions
 
 # This string is shown in the result menu.
-urlbar-result-menu-dont-show-market =
-  .label = Don’t show market suggestions
+urlbar-result-menu-dont-show-market2 = Don’t show market suggestions
 
 # A message that replaces a result when the user dismisses Market suggestions.
 urlbar-result-dismissal-acknowledgment-market = Thanks for your feedback. You won’t see market suggestions anymore.
@@ -814,10 +873,14 @@ urlbar-searchmode-no-keyword2 =
 
 urlbar-searchmode-dropmarker2 =
     .title = Pick a Search Engine
-urlbar-searchmode-bookmarks2 = Bookmarks
-urlbar-searchmode-tabs2 = Tabs
-urlbar-searchmode-history2 = History
-urlbar-searchmode-actions2 = Actions
+urlbar-searchmode-bookmarks3 = Bookmarks
+    .accesskey = B
+urlbar-searchmode-tabs3 = Tabs
+    .accesskey = T
+urlbar-searchmode-history3 = History
+    .accesskey = H
+urlbar-searchmode-actions3 = Actions
+    .accesskey = A
 urlbar-searchmode-exit-button2 =
     .title = Close
 urlbar-searchmode-default2 =
@@ -835,8 +898,10 @@ urlbar-searchmode-popup-one-off-header = This time search with:
 # Label shown on the top of Searchmode Switcher popup when the search engine won't automatically
 # reset after submitting.
 urlbar-searchmode-popup-header = Search with:
-urlbar-searchmode-popup-search-settings-panelitem = Search Settings
-urlbar-searchmode-popup-settings-panelitem = Settings
+urlbar-searchmode-popup-search-settings = Search Settings
+    .accesskey = S
+urlbar-searchmode-popup-settings = Settings
+    .accesskey = S
 
 # Label prompting user to search with a particular search engine.
 #  $engine (String): the name of a search engine that searches a specific site
@@ -915,9 +980,8 @@ urlbar-group-trending =
   .label = Trending on { $engine }
 
 # The result menu labels shown next to trending results.
-urlbar-result-menu-trending-dont-show =
-    .label = Don’t show trending searches
-    .accesskey = D
+urlbar-result-menu-trending-dont-show2 = Don’t show trending searches
+  .accesskey = D
 
 # A message that replaces a result when the user dismisses all suggestions of a
 # particular type.
@@ -1080,13 +1144,17 @@ qrcode-copy-error =
 
 qrcode-save-button =
     .label = Save
-qrcode-save-success =
-    .message = QR code saved.
-qrcode-save-error =
-    .message = Failed to save QR code.
-qrcode-save-title = Save QR Code
-qrcode-save-filter-png = PNG Image
-qrcode-save-filename = qrcode.png
+
+## Default filenames used when saving a QR code. The file extension (.png)
+## is added automatically.
+
+qrcode-save-filename-base = qrcode
+# Variables:
+#  $domain (String): The current page's domain used in the suggested filename.
+qrcode-save-filename-with-domain-base = qrcode-{ $domain }
+
+##
+
 qrcode-window-title = QR Code
 qrcode-dialog-title = QR Code
 qrcode-image =
@@ -1138,8 +1206,10 @@ eme-notifications-drm-content-playing-dismiss-accesskey = D
 
 ## Password save/update panel
 
-panel-save-update-username = Username
-panel-save-update-password = Password
+panel-save-update-username-2 =
+    .label = Username
+panel-save-update-password-2 =
+    .label = Password
 
 ##
 
@@ -1266,6 +1336,17 @@ private-browsing-indicator-label = Private browsing
 private-browsing-indicator-tooltip =
     .tooltiptext = Private browsing
 
+# Tooltip for the private browsing indicator button that opens the info panel.
+private-browsing-indicator-button =
+    .tooltiptext = Private browsing info
+
+# Title shown in the private browsing info panel.
+private-browsing-info-panel-title = You’re in a Private Window
+
+# Body copy shown in the private browsing info panel. The learn-more link text
+# is embedded in the sentence.
+private-browsing-info-panel-description = This helps keep your browsing hidden from others on this device, but doesn’t make you invisible online. <a data-l10n-name="learn-more">Who might be able to see my activity?</a>
+
 # Tooltip for the indicator shown in the window titlebar when content analysis is active.
 # Variables:
 #   $agentName (String): The name of the DLP agent that is connected
@@ -1312,8 +1393,8 @@ unified-extensions-button-blocklisted =
 ## Private browsing reset button
 
 reset-pbm-toolbar-button2 =
-    .label = Clear Private Session
-    .tooltiptext = Clear Private Session
+    .label = Clear private session
+    .tooltiptext = Clear private session
 reset-pbm-panel-heading2 = Clear data and start a fresh private session?
 reset-pbm-panel-description2 = This deletes history, cookies, and all other site data without closing your Private Window.
 reset-pbm-panel-always-ask-checkbox =
@@ -1458,6 +1539,14 @@ onboarding-checklist-button-label = Finish setup
 # Keep this string as short as possible, this is displayed in the URL bar
 # use a synonym for "safe" or "private" if "secure" is too long.
 urlbar-trust-icon-notsecure-label = Not Secure
+
+# Keep this string as short as possible, this is displayed in the URL bar
+# Variables
+#  $count (number): the number of trackers blocked.
+urlbar-trust-icon-trackers-blocked-longform-label = { $count ->
+  [one] { $count } tracker blocked
+  *[other] { $count } trackers blocked
+}
 
 trustpanel-etp-label-enabled = Enhanced Tracking Protection is on
 trustpanel-etp-label-disabled = Enhanced Tracking Protection is off

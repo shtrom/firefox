@@ -18,6 +18,9 @@ add_setup(async () => {
 registerCleanupFunction(async () => {
   await SidebarController.toggleExpandOnHover(false);
   await SidebarController.waitUntilStable();
+  // Reset visibility so SidebarManager doesn't persist "expand-on-hover" when
+  // popPrefEnv disables vertical tabs, leaking that state into the next test.
+  Services.prefs.clearUserPref(SIDEBAR_VISIBILITY_PREF);
   await SpecialPowers.popPrefEnv();
 });
 
@@ -44,7 +47,7 @@ add_task(async function test_escape_collapses_hover_expanded_sidebar() {
           "absolute"
       );
     },
-    "The sidebar launcher is expanded on mouse over"
+    { msg: "The sidebar launcher is expanded on mouse over" }
   );
 
   info("The sidebar launcher is expanded, now pressing Escape");
@@ -64,7 +67,7 @@ add_task(async function test_escape_collapses_hover_expanded_sidebar() {
         !SidebarController._state.launcherExpanded
       );
     },
-    "The sidebar launcher is collapsed after Escape"
+    { msg: "The sidebar launcher is collapsed after Escape" }
   );
 
   ok(

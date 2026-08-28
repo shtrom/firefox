@@ -51,9 +51,8 @@ class SocketProcessParent final
   mozilla::ipc::IPCResult RecvRecordDiscardedData(
       const DiscardedData& aDiscardedData);
 
-  PWebrtcTCPSocketParent* AllocPWebrtcTCPSocketParent(
+  already_AddRefed<PWebrtcTCPSocketParent> AllocPWebrtcTCPSocketParent(
       const Maybe<TabId>& aTabId);
-  bool DeallocPWebrtcTCPSocketParent(PWebrtcTCPSocketParent* aActor);
   already_AddRefed<PDNSRequestParent> AllocPDNSRequestParent(
       const nsACString& aHost, const nsACString& aTrrServer,
       const int32_t& port, const uint16_t& aType,
@@ -95,7 +94,8 @@ class SocketProcessParent final
 
   mozilla::ipc::IPCResult RecvGeckoTraceExport(ByteBuf&& aBuf);
 
-  mozilla::ipc::IPCResult RecvSSLTokensCacheData(ByteBuf&& aBuf);
+  mozilla::ipc::IPCResult RecvSSLTokensCacheData(
+      nsTArray<SSLTokensCacheRecordInfo>&& aRecords);
 
 #if defined(XP_MACOSX) || defined(XP_IOS)
   mozilla::ipc::IPCResult RecvAppleFastDatapathProbeResult(

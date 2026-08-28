@@ -82,6 +82,28 @@ var BrowserCommands = {
     return true;
   },
 
+  addTabSplitView() {
+    if (
+      !gBrowser.selectedTab ||
+      gBrowser.selectedTab.hidden ||
+      gBrowser.selectedTab.pinned ||
+      gBrowser.selectedTab.splitview
+    ) {
+      return;
+    }
+
+    let newTab = gBrowser.addTrustedTab("about:opentabs");
+    gBrowser.addTabSplitView([gBrowser.selectedTab, newTab], {
+      insertBefore: gBrowser.selectedTab,
+      trigger: "keyboard_shortcut",
+    });
+    gBrowser.selectedTab = newTab;
+  },
+
+  separateTabSplitView() {
+    gBrowser.selectedTab?.splitview?.unsplitTabs("keyboard_shortcut");
+  },
+
   duplicateTab() {
     duplicateTabIn(gBrowser.selectedTab, "tab");
   },
@@ -250,7 +272,7 @@ var BrowserCommands = {
           if (!werePassedURL && searchClipboard) {
             let clipboard = readFromClipboard();
             clipboard =
-              UrlbarUtils.stripUnsafeProtocolOnPaste(clipboard).trim();
+              UrlbarShared.stripUnsafeProtocolOnPaste(clipboard).trim();
             if (clipboard) {
               url = clipboard;
               options.allowThirdPartyFixup = true;
@@ -339,10 +361,16 @@ var BrowserCommands = {
     }
 
     // In a multi-select context, close all selected tabs
+    // pinned tabs excluded if closed using keyboard
     if (gBrowser.multiSelectedTabsCount) {
-      gBrowser.removeMultiSelectedTabs(
-        gBrowser.TabMetrics.userTriggeredContext()
-      );
+      let excludePinnedTabs =
+        event && (event.ctrlKey || event.metaKey || event.altKey);
+      gBrowser.removeMultiSelectedTabs({
+        metricsContext: gBrowser.TabMetrics.userTriggeredContext(
+          gBrowser.TabMetrics.METRIC_SOURCE.KEYBOARD
+        ),
+        excludePinnedTabs,
+      });
       return;
     }
 
@@ -362,7 +390,9 @@ var BrowserCommands = {
     // If the current tab is the last one, this will close the window.
     gBrowser.removeCurrentTab({
       animate: true,
-      ...gBrowser.TabMetrics.userTriggeredContext(),
+      metricsContext: gBrowser.TabMetrics.userTriggeredContext(
+        gBrowser.TabMetrics.METRIC_SOURCE.KEYBOARD
+      ),
     });
   },
 
@@ -439,15 +469,9 @@ var BrowserCommands = {
       // source in tab expects the new view source browser's remoteness to match
       // that of the original URL, so disable remoteness if necessary for this
       // URL.
-      const oa = E10SUtils.predictOriginAttributes({ window });
-      preferredRemoteType = E10SUtils.getRemoteTypeForURI(
-        args.URL,
-        gMultiProcessBrowser,
-        gFissionBrowser,
-        E10SUtils.DEFAULT_REMOTE_TYPE,
-        null,
-        oa
-      );
+      preferredRemoteType = ChromeUtils.predictRemoteTypeForURI(args.URL, {
+        window,
+      });
     }
 
     // In the case of popups, we need to find a non-popup browser window.

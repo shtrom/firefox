@@ -7,6 +7,12 @@ subsuite = "mozlint"
 
 ["test_android_format.py"]
 
+["test_android_ktfmt_ac.py"]
+
+["test_android_ktfmt_fenix.py"]
+
+["test_android_ktfmt_focus.py"]
+
 ["test_cargo-audit.py"]
 # testing it on linux is enough
 skip-if = [
@@ -36,6 +42,8 @@ skip-if = ["os == 'win'"]
 
 ["test_fluent_lint.py"]
 
+["test_forbid_moduleloaderbase_include.py"]
+
 ["test_gecko_trace.py"]
 
 ["test_glean_parser.py"]
@@ -50,13 +58,13 @@ skip-if = ["os == 'win'"]
 
 ["test_manifest_toml.py"]
 
+["test_md.py"]
+
 ["test_node_licenses.py"]
 
 ["test_node_package_names.py"]
 
 ["test_python_sites.py"]
-
-["test_rst.py"]
 
 ["test_ruff.py"]
 
@@ -74,5 +82,7 @@ sequential = true
 ["test_trojan_source.py"]
 
 ["test_updatebot.py"]
+
+["test_wpt-subsuite-tagging.py"]
 
 ["test_yaml.py"]

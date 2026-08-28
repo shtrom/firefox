@@ -23,7 +23,7 @@ class RsdparsaSdp final : public Sdp {
  public:
   explicit RsdparsaSdp(RsdparsaSessionHandle session, const SdpOrigin& origin);
 
-  Sdp* Clone() const override;
+  UniquePtr<Sdp> Clone() const override;
 
   const SdpOrigin& GetOrigin() const override;
 
@@ -54,11 +54,11 @@ class RsdparsaSdp final : public Sdp {
   void Serialize(std::ostream&) const override;
 
  private:
-  RsdparsaSdp() : mOrigin("", 0, 0, sdp::kIPv4, "") {}
+  RsdparsaSdp() = default;
   RsdparsaSdp(const RsdparsaSdp& aOrig);
 
   RsdparsaSessionHandle mSession;
-  SdpOrigin mOrigin;
+  SdpOrigin mOrigin{"", 0, 0, sdp::kIPv4, ""};
   UniquePtr<RsdparsaSdpAttributeList> mAttributeList;
   std::vector<UniquePtr<RsdparsaSdpMediaSection>> mMediaSections;
 };

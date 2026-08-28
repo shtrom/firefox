@@ -33,21 +33,17 @@ MOCHITEST_MANIFESTS += [
     "test/crash/mochitest.toml",
     "test/crossorigin/mochitest.toml",
     "test/mochitest.toml",
-    "test/webgl-conf/generated-mochitest.toml",
     "test/webgl-mochitest/mochitest.toml",
+]
+
+DIRS += [
+    "test/webgl-conf/generated",
 ]
 
 MOCHITEST_CHROME_MANIFESTS += ["test/chrome/chrome.toml"]
 
 EXPORTS += [
     "nsICanvasRenderingContextInternal.h",
-]
-
-EXPORTS.mozilla += [
-    "ParamTraits_STL.h",
-    "ParamTraits_TiedFields.h",
-    "TiedFields.h",
-    "TupleUtils.h",
 ]
 
 EXPORTS.mozilla.dom += [
@@ -191,7 +187,7 @@ LOCAL_INCLUDES += [
 include("/ipc/chromium/chromium-config.mozbuild")
 
 
-USE_LIBS += ["translator"]  # Grab the Angle shader translator.
+USE_LIBS += ["translator_gn"]  # Grab the Angle shader translator.
 
 FINAL_LIBRARY = "xul"
 LOCAL_INCLUDES += [
@@ -200,7 +196,6 @@ LOCAL_INCLUDES += [
     "/dom/svg",
     "/dom/workers",
     "/dom/xul",
-    "/gfx/angle/checkout/include",
     "/gfx/cairo/cairo/src",
     "/gfx/gl",
     "/image",
@@ -209,6 +204,7 @@ LOCAL_INCLUDES += [
     "/layout/style",
     "/layout/xul",
     "/media/libyuv/libyuv/include",
+    "/third_party/angle/include",
 ]
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":

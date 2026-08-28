@@ -7,7 +7,7 @@ This is archived here because it captures valuable documentation that even if po
 ---
 
 
-This page lists a few tips to help you investigate issues related to SpiderMonkey. All tips listed here are dealing with the JavaScript shell obtained at the end of the [build documentation of SpiderMonkey](build.rst). It is separated in 2 parts, one section related to debugging and another section related to drafting optimizations. Many of these tips only apply to debug builds of the JS shell; they will not function in a release build.
+This page lists a few tips to help you investigate issues related to SpiderMonkey. All tips listed here are dealing with the JavaScript shell obtained at the end of the [build documentation of SpiderMonkey](build.md). It is separated in 2 parts, one section related to debugging and another section related to drafting optimizations. Many of these tips only apply to debug builds of the JS shell; they will not function in a release build.
 
 ## Tools
 
@@ -225,9 +225,9 @@ Or you can wrap the x command in your own command:
         set arm force-mode auto
     end
 
-### Printing asm.js/wasm generated assembly code (from gdb)
+### Printing wasm generated assembly code (from gdb)
 
-- Set a breakpoint on `js::wasm::Instance::callExport` (defined in `WasmInstance.cpp` as of November 18th 2016). This will trigger for _any_ asm.js/wasm call, so you should find a way to set this breakpoint for the only generated codes you want to look at.
+- Set a breakpoint on `js::wasm::Instance::callExport` (defined in `WasmInstance.cpp` as of November 18th 2016). This will trigger for _any_ wasm call, so you should find a way to set this breakpoint for the only generated codes you want to look at.
 - Run the program.
 - Do `next` in gdb until you reach the definition of the `funcPtr`:
 ```
@@ -304,7 +304,7 @@ With gdb instrumentation, we can call [iongraph](https://github.com/sstangl/iong
 (gdb) frame 3
 #3  0x000000000083317f in js::jit::OptimizeMIR(js::jit::MIRGenerator*) (mir=0x33dbdf0) at …/js/src/jit/Ion.cpp:1570
 (gdb) iongraph mir
- function 0 (asm.js compilation): success; 1 passes.
+ function 0 (wasm compilation): success; 1 passes.
 /* open your png viewer with the result of iongraph */
 ```
 
@@ -359,7 +359,7 @@ Note: the line 3196, listed above, corresponds to the location of the [Jit spew 
 
 ### Using the Gecko Profiler (browser / xpcshell)
 
-See the section dedicated to [profiling with the Gecko Profiler](/tools/profiler/index.rst). This method of profiling has the advantage of mixing the JavaScript stack with the C++ stack, which is useful for analyzing library function issues.
+See the section dedicated to [profiling with the Gecko Profiler](/tools/profiler/index.md). This method of profiling has the advantage of mixing the JavaScript stack with the C++ stack, which is useful for analyzing library function issues.
 
 One tip is to start looking at a script with an inverted JS stack to locate the most expensive JS function, then to focus on the frame of this JS function, and to remove the inverted stack and look at C++ part of this function to determine from where the cost is coming from.
 

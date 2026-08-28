@@ -61,6 +61,8 @@
 #include "mozilla/layout/RemoteLayerTreeOwner.h"
 #include "mozilla/net/CookieJarSettings.h"
 #include "mozilla/net/NeckoChild.h"
+#include "mozilla/widget/Screen.h"
+#include "mozilla/widget/WidgetLogging.h"
 #include "nsCOMPtr.h"
 #include "nsContentPermissionHelper.h"
 #include "nsContentUtils.h"
@@ -122,6 +124,7 @@
 #include "nsIAuthPromptCallback.h"
 #include "nsICancelable.h"
 #include "nsILoginManagerAuthPrompter.h"
+#include "nsIScriptSecurityManager.h"
 #include "nsISecureBrowserUI.h"
 #include "nsIXULRuntime.h"
 #include "nsNetCID.h"
@@ -193,7 +196,7 @@ class RequestingAccessKeyEventData {
   RequestingAccessKeyEventData() = delete;
 
   static void OnBrowserParentCreated() {
-    MOZ_ASSERT(sBrowserParentCount <= INT32_MAX);
+    MOZ_ASSERT(sBrowserParentCount < INT32_MAX);
     sBrowserParentCount++;
   }
   static void OnBrowserParentDestroyed() {
@@ -323,6 +326,7 @@ BrowserParent::BrowserParent(ContentParent* aManager, const TabId& aTabId,
       mIsReadyToHandleInputEvents(false),
       mIsMouseEnterIntoWidgetEventSuppressed(false),
       mLockedNativePointer(false),
+      mWaitingForNativeMouseMoveAfterUnlock(false),
       mShowingTooltip(false) {
   MOZ_ASSERT(aManager);
 
@@ -407,7 +411,7 @@ TabId BrowserParent::GetTabIdFrom(nsIDocShell* docShell) {
 }
 
 ContentParent* BrowserParent::Manager() const {
-  return static_cast<ContentParent*>(PBrowserParent::Manager());
+  return mozilla::ipc::ActorCast<ContentParent>(PBrowserParent::Manager());
 }
 
 void BrowserParent::AddBrowserParentToTable(layers::LayersId aLayersId,
@@ -930,17 +934,18 @@ mozilla::ipc::IPCResult BrowserParent::RecvDropLinks(
     // not been modified then it's safe to load those links using the
     // SystemPrincipal. If they have been modified by web content, then
     // we use a NullPrincipal which still allows to load web links.
-    bool loadUsingSystemPrincipal = true;
-    if (aLinks.Length() != mVerifyDropLinks.Length()) {
-      loadUsingSystemPrincipal = false;
-    }
-    for (uint32_t i = 0; i < aLinks.Length(); i++) {
-      if (loadUsingSystemPrincipal) {
+    const bool loadUsingSystemPrincipal = [&]() {
+      if (aLinks.Length() != mVerifyDropLinks.Length()) {
+        return false;
+      }
+      for (uint32_t i = 0; i < aLinks.Length(); i++) {
         if (!aLinks[i].Equals(mVerifyDropLinks[i])) {
-          loadUsingSystemPrincipal = false;
+          return false;
         }
       }
-    }
+      return true;
+    }();
+
     mVerifyDropLinks.Clear();
     nsCOMPtr<nsIPrincipal> triggeringPrincipal;
     if (loadUsingSystemPrincipal) {
@@ -1093,6 +1098,27 @@ mozilla::ipc::IPCResult BrowserParent::RecvSetDimensions(
     aRequest.mHeight.apply(rescaleFunc);
   }
 
+  // Nothing further down keeps the size near the size of the screen that the
+  // window is on, so do it here. We allow twice the screen size because the
+  // size we get for a screen is not always accurate, on Wayland in particular,
+  // and all we need is to keep the size in a range the window can be given. For
+  // a request that carries inner dimensions this is a looser bound than it
+  // looks, since the outer size is larger.
+  nsCOMPtr<nsIWidget> mainWidget;
+  treeOwnerAsWin->GetMainWidget(getter_AddRefs(mainWidget));
+  if (mainWidget) {
+    if (RefPtr<widget::Screen> screen = mainWidget->GetWidgetScreen()) {
+      const LayoutDeviceIntSize availSize = screen->GetAvailRect().Size();
+      auto clampTo = [](Maybe<LayoutDeviceIntCoord>& aValue, int32_t aMax) {
+        if (aValue) {
+          *aValue = std::min<int32_t>(*aValue, aMax);
+        }
+      };
+      clampTo(aRequest.mWidth, 2 * availSize.width);
+      clampTo(aRequest.mHeight, 2 * availSize.height);
+    }
+  }
+
   // treeOwner is the chrome tree owner, but we wan't the content tree owner.
   nsCOMPtr<nsIWebBrowserChrome> webBrowserChrome = do_GetInterface(treeOwner);
   NS_ENSURE_TRUE(webBrowserChrome, IPC_OK());
@@ -1188,6 +1214,7 @@ void BrowserParent::HandleAccessKey(const WidgetKeyboardEvent& aEvent,
     // Note that we don't need to mark aEvent is posted to a remote process
     // because the event may be dispatched to it as normal keyboard event.
     // Therefore, we should use local copy to send it.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     WidgetKeyboardEvent localEvent(aEvent);
     RequestingAccessKeyEventData::Set(localEvent);
     (void)SendHandleAccessKey(localEvent, aCharCodes);
@@ -1215,7 +1242,7 @@ void BrowserParent::Deactivate(bool aWindowLowering, uint64_t aActionId) {
 #ifdef ACCESSIBILITY
 a11y::PDocAccessibleParent* BrowserParent::AllocPDocAccessibleParent(
     PDocAccessibleParent* aParent, const uint64_t&,
-    const MaybeDiscardedBrowsingContext&) {
+    const MaybeDiscardedBrowsingContext&, const bool&) {
   // Reference freed in DeallocPDocAccessibleParent.
   return a11y::DocAccessibleParent::New().take();
 }
@@ -1229,11 +1256,23 @@ bool BrowserParent::DeallocPDocAccessibleParent(PDocAccessibleParent* aParent) {
 mozilla::ipc::IPCResult BrowserParent::RecvPDocAccessibleConstructor(
     PDocAccessibleParent* aDoc, PDocAccessibleParent* aParentDoc,
     const uint64_t& aParentID,
-    const MaybeDiscardedBrowsingContext& aBrowsingContext) {
+    const MaybeDiscardedBrowsingContext& aBrowsingContext,
+    const bool& aIsPrintDoc) {
 #  if defined(ANDROID)
   MonitorAutoLock mal(nsAccessibilityService::GetAndroidMonitor());
 #  endif
   auto doc = static_cast<a11y::DocAccessibleParent*>(aDoc);
+  doc->SetIsPrintDoc(aIsPrintDoc);
+  auto allow = doc->ShouldAllowConstruction();
+  if (allow == a11y::DocAccessibleParent::AllowConstruction::Disallow) {
+    return IPC_FAIL(
+        this,
+        "Attempt to construct PDocAccessible when accessibility not in use");
+  } else if (allow ==
+             a11y::DocAccessibleParent::AllowConstruction::AllowButIgnore) {
+    doc->MarkAsShutdown();
+    return IPC_OK();
+  }
 
   // If this tab is already shutting down just mark the new actor as shutdown
   // and ignore it.  When the tab actor is destroyed it will be too.
@@ -1297,7 +1336,9 @@ mozilla::ipc::IPCResult BrowserParent::RecvPDocAccessibleConstructor(
     // In this case, we don't get aParentDoc and aParentID.
     MOZ_ASSERT(!aParentDoc && !aParentID);
     doc->SetTopLevelInContentProcess();
-    a11y::ProxyCreated(doc);
+    if (!doc->IsPrintDoc()) {
+      a11y::ProxyCreated(doc);
+    }
     // It's possible the embedder accessible hasn't been set yet; e.g.
     // a hidden iframe. In that case, embedderDoc will be null and this will
     // be handled when the embedder is set.
@@ -1321,7 +1362,9 @@ mozilla::ipc::IPCResult BrowserParent::RecvPDocAccessibleConstructor(
     doc->SetTopLevel();
     a11y::DocManager::RemoteDocAdded(doc);
 #  ifdef XP_WIN
-    doc->MaybeInitWindowEmulation();
+    if (!aIsPrintDoc) {
+      doc->MaybeInitWindowEmulation();
+    }
 #  endif
   }
   return IPC_OK();
@@ -1364,26 +1407,42 @@ IPCResult BrowserParent::RecvNewWindowGlobal(
   if (!browsingContext) {
     return IPC_FAIL(this, "Cannot create for missing BrowsingContext");
   }
+  if (!browsingContext->Group()->IsKnownForChildID(OtherChildID())) {
+    return IPC_FAIL(this, "Invalid BrowsingContextGroup for process");
+  }
+  WindowGlobalParent* parentWgp = browsingContext->GetParentWindowContext();
+  if (browsingContext != mBrowsingContext &&
+      (!parentWgp || parentWgp->Manager() != this)) {
+    return IPC_FAIL(this, "BrowsingContext is not in BrowserParent subtree");
+  }
   if (!aInit.principal()) {
     return IPC_FAIL(this, "Cannot create without valid principal");
   }
+  if (!aInit.documentURI()) {
+    return IPC_FAIL(this, "Cannot create without valid documentURI");
+  }
 
   nsCOMPtr<nsIURI> docURI = aInit.documentURI();
-  WindowGlobalParent* parentWgp = browsingContext->GetParentWindowContext();
 
   // Ensure we never load a document with a content principal in
   // the wrong type of webIsolated process
-  // NOTE: Keep this in sync with the similar check in
+  // NOTE: Keep the AllowSystem condition in sync with the similar check in
   // DocumentLoadListener::TriggerRedirectToRealChannel.
   EnumSet<ValidatePrincipalOptions> validationOptions = {};
-  // FIXME(bug 1699385): Remove allowSystem for blobs
-  // FIXME(bug 1698087): chrome://devtools/**/webextension-fallback.html
-  // Automation-Only: chrome://reftest/** + blank subframes
-  if (docURI->SchemeIs("blob") || docURI->SchemeIs("chrome") ||
-      (xpc::IsInAutomation() && NS_IsAboutBlank(docURI) && parentWgp &&
-       parentWgp->Manager() == this &&
-       parentWgp->DocumentPrincipal()->IsSystemPrincipal())) {
-    validationOptions += ValidatePrincipalOptions::AllowSystem;
+  if (xpc::IsInAutomation()) {
+    // Automation-Only: chrome://reftest/** + blank subframes
+    bool isChromeReftest = false;
+    if (docURI->SchemeIs("chrome")) {
+      nsAutoCString host;
+      docURI->GetHost(host);
+      isChromeReftest = host.EqualsLiteral("reftest");
+    }
+
+    if (isChromeReftest ||
+        (NS_IsAboutBlank(docURI) && parentWgp && parentWgp->Manager() == this &&
+         parentWgp->DocumentPrincipal()->IsSystemPrincipal())) {
+      validationOptions += ValidatePrincipalOptions::AllowSystemIfLoaded;
+    }
   }
   if (!Manager()->ValidatePrincipal(aInit.principal(), validationOptions)) {
     return ContentParent::PrincipalValidationIpcFail(aInit.principal(), this,
@@ -1392,7 +1451,7 @@ IPCResult BrowserParent::RecvNewWindowGlobal(
 
   // Construct our new WindowGlobalParent, bind, and initialize it.
   RefPtr<WindowGlobalParent> wgp =
-      WindowGlobalParent::CreateDisconnected(aInit);
+      WindowGlobalParent::CreateDisconnected(aInit, Manager());
   BindPWindowGlobalEndpoint(std::move(aEndpoint), wgp);
   wgp->Init();
   return IPC_OK();
@@ -1650,6 +1709,27 @@ bool BrowserParent::QueryDropLinksForVerification() {
     return false;
   }
 
+  nsCOMPtr<nsIPrincipal> triggeringPrincipal;
+  dragSession->GetTriggeringPrincipal(getter_AddRefs(triggeringPrincipal));
+
+  nsIScriptSecurityManager* secMan = nullptr;
+  if (triggeringPrincipal) {
+    if (!(secMan = nsContentUtils::GetSecurityManager())) {
+      NS_WARNING("No ScriptSecurityManager for links verification");
+      return false;
+    }
+  } else {
+    RefPtr<WindowContext> sourceWC = dragSession->GetSourceWindowContext();
+    RefPtr<WindowContext> sourceTopWC =
+        dragSession->GetSourceTopWindowContext();
+    if (sourceWC || sourceTopWC) {
+      NS_WARNING(
+          "How can we have a source window context while no triggering "
+          "principal?");
+      return false;
+    }
+  }
+
   // No more than one drop event can happen simultaneously; reset the link
   // verification array and store all links that are being dragged.
   mVerifyDropLinks.Clear();
@@ -1668,6 +1748,22 @@ bool BrowserParent::QueryDropLinksForVerification() {
       NS_WARNING("Failed to query url for verification");
       break;
     }
+
+    if (triggeringPrincipal) {
+      MOZ_ASSERT(secMan);
+      if (NS_FAILED(secMan->CheckLoadURIStrWithPrincipal(
+              triggeringPrincipal, NS_ConvertUTF16toUTF8(tmp),
+              nsIScriptSecurityManager::STANDARD |
+                  nsIScriptSecurityManager::DISALLOW_INHERIT_PRINCIPAL))) {
+        MOZ_LOG_FMT(sWidgetDragServiceLog, mozilla::LogLevel::Debug,
+                    "[{}] {} | dragSession: {} | Bad URI {} from {}",
+                    fmt::ptr(this), __FUNCTION__, fmt::ptr(dragSession.get()),
+                    NS_ConvertUTF16toUTF8(tmp).get(), triggeringPrincipal);
+        mVerifyDropLinks.Clear();
+        return true;
+      }
+    }
+
     mVerifyDropLinks.AppendElement(tmp);
 
     rv = item->GetName(tmp);
@@ -1907,8 +2003,9 @@ NS_IMPL_ISUPPORTS(SynthesizedEventCallback, nsISynthesizedEventCallback)
 
 mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeKeyEvent(
     const int32_t& aNativeKeyboardLayout, const int32_t& aNativeKeyCode,
-    const uint32_t& aModifierFlags, const nsString& aCharacters,
-    const nsString& aUnmodifiedCharacters, const Maybe<uint64_t>& aCallbackId) {
+    const nsIWidget::NativeModifiers& aModifierFlags,
+    const nsString& aCharacters, const nsString& aUnmodifiedCharacters,
+    const Maybe<uint64_t>& aCallbackId) {
   NS_ENSURE_TRUE(xpc::IsInAutomation(), IPC_FAIL(this, "Unexpected event"));
 
   nsCOMPtr<nsISynthesizedEventCallback> callback =
@@ -1922,30 +2019,32 @@ mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeKeyEvent(
 }
 
 mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeMouseEvent(
-    const LayoutDeviceIntPoint& aPoint, const uint32_t& aNativeMessage,
-    const int16_t& aButton, const uint32_t& aModifierFlags,
+    const LayoutDeviceIntPoint& aPoint,
+    const nsIWidget::NativeMouseMessage& aNativeMessage,
+    const mozilla::MouseButton& aButton,
+    const nsIWidget::NativeModifiers& aModifierFlags,
     const Maybe<uint64_t>& aCallbackId) {
   NS_ENSURE_TRUE(xpc::IsInAutomation(), IPC_FAIL(this, "Unexpected event"));
-
-  const uint32_t last =
-      static_cast<uint32_t>(nsIWidget::NativeMouseMessage::LeaveWindow);
-  NS_ENSURE_TRUE(aNativeMessage <= last, IPC_FAIL(this, "Bogus message"));
 
   nsCOMPtr<nsISynthesizedEventCallback> callback =
       SynthesizedEventCallback::MaybeCreate(this, aCallbackId);
   if (nsCOMPtr<nsIWidget> widget = GetWidget()) {
-    widget->SynthesizeNativeMouseEvent(
-        aPoint, static_cast<nsIWidget::NativeMouseMessage>(aNativeMessage),
-        static_cast<mozilla::MouseButton>(aButton),
-        static_cast<nsIWidget::Modifiers>(aModifierFlags), callback);
+    widget->SynthesizeNativeMouseEvent(aPoint, aNativeMessage, aButton,
+                                       aModifierFlags, callback);
   }
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeMouseMove(
     const LayoutDeviceIntPoint& aPoint, const Maybe<uint64_t>& aCallbackId) {
-  // This is used by pointer lock API.  So, even if it's not in the automation
-  // mode, we need to accept the request.
+  NS_ENSURE_TRUE(
+      xpc::IsInAutomation()
+          // This is used by pointer lock API.  So, even if it's not
+          // in the automation mode, we need to accept the request.
+          || (mLockedNativePointer || mWaitingForNativeMouseMoveAfterUnlock),
+      IPC_FAIL(this, "Unexpected event"));
+
+  mWaitingForNativeMouseMoveAfterUnlock = false;
   nsCOMPtr<nsISynthesizedEventCallback> callback =
       SynthesizedEventCallback::MaybeCreate(this, aCallbackId);
   if (nsCOMPtr<nsIWidget> widget = GetWidget()) {
@@ -1957,8 +2056,8 @@ mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeMouseMove(
 mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeMouseScrollEvent(
     const LayoutDeviceIntPoint& aPoint, const uint32_t& aNativeMessage,
     const double& aDeltaX, const double& aDeltaY, const double& aDeltaZ,
-    const uint32_t& aModifierFlags, const uint32_t& aAdditionalFlags,
-    const Maybe<uint64_t>& aCallbackId) {
+    const nsIWidget::NativeModifiers& aModifierFlags,
+    const uint32_t& aAdditionalFlags, const Maybe<uint64_t>& aCallbackId) {
   NS_ENSURE_TRUE(xpc::IsInAutomation(), IPC_FAIL(this, "Unexpected event"));
 
   nsCOMPtr<nsISynthesizedEventCallback> callback =
@@ -2058,6 +2157,12 @@ mozilla::ipc::IPCResult BrowserParent::RecvSynthesizeNativeTouchpadPan(
 
 mozilla::ipc::IPCResult BrowserParent::RecvLockNativePointer(
     const nsIWidget::NativePointerLockMode& aNativePointerLockMode) {
+  // XXX(edgar): LockNativePointer IPC message can be removed if pointer lock
+  // is handled mainly from parent process.
+  NS_ENSURE_TRUE(
+      !StaticPrefs::dom_pointer_lock_reset_to_center_from_parent_enabled(),
+      IPC_FAIL(this, "Unexpected request"));
+
   if (nsCOMPtr<nsIWidget> widget = GetWidget()) {
     mLockedNativePointer = true;
     widget->LockNativePointer(aNativePointerLockMode);
@@ -2072,10 +2177,16 @@ void BrowserParent::UnlockNativePointer() {
   if (nsCOMPtr<nsIWidget> widget = GetWidget()) {
     widget->UnlockNativePointer();
     mLockedNativePointer = false;
+    mWaitingForNativeMouseMoveAfterUnlock = true;
   }
 }
 
 mozilla::ipc::IPCResult BrowserParent::RecvUnlockNativePointer() {
+  // XXX(edgar): LockNativePointer IPC message can be removed if pointer lock
+  // is handled mainly from parent process.
+  NS_ENSURE_TRUE(
+      !StaticPrefs::dom_pointer_lock_reset_to_center_from_parent_enabled(),
+      IPC_FAIL(this, "Unexpected request"));
   UnlockNativePointer();
   return IPC_OK();
 }
@@ -2097,7 +2208,7 @@ void BrowserParent::SendRealKeyEvent(WidgetKeyboardEvent& aEvent) {
   // NOTE: If you call `InitAllEditCommands()` for the other messages too,
   //       you also need to update
   //       TextEventDispatcher::DispatchKeyboardEventInternal().
-  if (aEvent.mMessage == eKeyPress) {
+  if (aEvent.mMessage == eKeyPress || aEvent.mMessage == eKeyDown) {
     // If current input context is editable, the edit commands are initialized
     // by TextEventDispatcher::DispatchKeyboardEventInternal().  Otherwise,
     // we need to do it here (they are not necessary for the parent process,
@@ -3927,6 +4038,11 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
     return IPC_OK();
   }
 
+  if (!Manager()->ValidatePrincipal(aPrincipal, {})) {
+    return ContentParent::PrincipalValidationIpcFail(aPrincipal, this,
+                                                     __func__);
+  }
+
   nsCOMPtr<nsICookieJarSettings> cookieJarSettings;
   net::CookieJarSettings::Deserialize(aCookieJarSettingsArgs,
                                       getter_AddRefs(cookieJarSettings));
@@ -4221,6 +4337,18 @@ mozilla::ipc::IPCResult BrowserParent::RecvScrollRectIntoView(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult BrowserParent::RecvScrollForKeyboard(
+    const KeyboardScrollAction& aAction) {
+  // We do deliberately not support handing off keyboard scrolling to the
+  // browser chrome.
+  BrowserBridgeParent* bridge = GetBrowserBridgeParent();
+  if (!bridge || !bridge->CanSend()) {
+    return IPC_OK();
+  }
+  (void)bridge->SendScrollForKeyboard(aAction);
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult BrowserParent::RecvIsWindowSupportingProtectedMedia(
     const uint64_t& aOuterWindowID,
     IsWindowSupportingProtectedMediaResolver&& aResolve) {
@@ -4252,9 +4380,8 @@ mozilla::ipc::IPCResult BrowserParent::RecvIsWindowSupportingWebVR(
   return IPC_OK();
 }
 
-static BrowserParent* GetTopLevelBrowserParent(BrowserParent* aBrowserParent) {
-  MOZ_ASSERT(aBrowserParent);
-  BrowserParent* parent = aBrowserParent;
+BrowserParent* BrowserParent::TopLevelBrowserParent() {
+  BrowserParent* parent = this;
   while (BrowserBridgeParent* bridge = parent->GetBrowserBridgeParent()) {
     parent = bridge->Manager();
   }
@@ -4262,14 +4389,14 @@ static BrowserParent* GetTopLevelBrowserParent(BrowserParent* aBrowserParent) {
 }
 
 mozilla::ipc::IPCResult BrowserParent::RecvRequestPointerLock(
-    RequestPointerLockResolver&& aResolve) {
-  if (sTopLevelWebFocus != GetTopLevelBrowserParent(this)) {
+    const bool& aUnadjustedMovement, RequestPointerLockResolver&& aResolve) {
+  if (sTopLevelWebFocus != TopLevelBrowserParent()) {
     aResolve("PointerLockDeniedNotFocused"_ns);
     return IPC_OK();
   }
 
   nsCString error;
-  PointerLockManager::SetLockedRemoteTarget(this, error);
+  PointerLockManager::SetLockedRemoteTarget(this, aUnadjustedMovement, error);
   aResolve(std::move(error));
   return IPC_OK();
 }

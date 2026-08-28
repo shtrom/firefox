@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use crash_helper_common::{
     messages::{self, Header, Message, ProcessRendezVous},
     AncillaryData, GeckoChildId, IPCConnector, IPCConnectorKey, IPCEvent, IPCListener, IPCQueue,
@@ -78,21 +78,27 @@ impl IPCServer {
         client_pid: Pid,
         client_handle: Option<ProcessHandle>,
         listener: IPCListener,
-        connector: IPCConnector,
+        mut connector: IPCConnector,
         breakpad_data: BreakpadData,
         minidump_path: OsString,
+        build_id: String,
     ) -> Result<IPCServer> {
         // If the client process handle was not provided at launch then it will
         // be sent by the client using a regular `ProcessRendezVous` message.
         let client_handle = match client_handle {
             Some(handle) => handle,
-            None => {
-                let message = connector.recv_reply::<ProcessRendezVous>()?;
-                message.get_process_handle()
-            }
+            None => connector
+                .recv_reply::<ProcessRendezVous>()
+                .context("Client failed to rendez-vous")?
+                .get_process_handle(),
         };
+        connector.set_process(client_handle.clone());
 
-        let crash_generator = Box::new(Mutex::new(CrashGenerator::new(minidump_path.clone())));
+        let crash_generator = Box::new(Mutex::new(CrashGenerator::new(
+            client_handle.clone(),
+            minidump_path.clone(),
+            build_id,
+        )));
 
         // SAFETY: We widen the lifetime of this crash generator reference
         // as we guarantee that the underlying object will outlive the Breakpad

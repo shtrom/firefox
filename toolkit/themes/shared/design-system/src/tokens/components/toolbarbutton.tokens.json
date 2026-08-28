@@ -1,4 +1,39 @@
 {
+  "badge": {
+    "background": {
+      "color": {
+        "value": {
+          "light": "{color.red.60}",
+          "dark": "{color.red.40}"
+        }
+      }
+    },
+    "font": {
+      "size": {
+        "value": "10px"
+      }
+    },
+    "min": {
+      "width": {
+        "value": "14px"
+      }
+    },
+    "max": {
+      "width": {
+        "value": "20px"
+      }
+    },
+    "padding": {
+      "inline": {
+        "value": "2px"
+      },
+      "block": {
+        "end": {
+          "value": "1px"
+        }
+      }
+    }
+  },
   "padding": {
     "outer": {
       "@base": {
@@ -33,7 +68,7 @@
       "@base": {
         "value": {
           "light": "{color.gray.70}",
-          "dark": "{color.gray.05}",
+          "dark": "{color.gray.0}",
           "nativeTheme": "currentColor"
         }
       },
@@ -71,10 +106,18 @@
   "background": {
     "color": {
       "hover": {
-        "value": "color-mix(in srgb, currentColor 17%, transparent)"
+        "value": {
+          "default": "color-mix(in srgb, currentColor 17%, transparent)",
+          "forcedColors": "{button.background.color.hover}",
+          "nativeTheme": "{button.background.color.ghost.hover}"
+        }
       },
       "active": {
-        "value": "color-mix(in srgb, currentColor 30%, transparent)"
+        "value": {
+          "default": "color-mix(in srgb, currentColor 30%, transparent)",
+          "forcedColors": "{button.background.color.active}",
+          "nativeTheme": "{button.background.color.ghost.active}"
+        }
       }
     }
   },

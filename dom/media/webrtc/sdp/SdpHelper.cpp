@@ -5,6 +5,7 @@
 #include "sdp/SdpHelper.h"
 
 #include <charconv>
+#include <cstddef>
 #include <cstdint>
 #include <set>
 
@@ -43,8 +44,8 @@ nsresult SdpHelper::CopyTransportParams(const size_t numComponents,
   // Now we copy over attributes that won't be added by the usual logic
   if (oldLocalAttrs.HasAttribute(SdpAttribute::kCandidateAttribute) &&
       numComponents) {
-    UniquePtr<SdpMultiStringAttribute> candidateAttrs(
-        new SdpMultiStringAttribute(SdpAttribute::kCandidateAttribute));
+    auto candidateAttrs =
+        MakeUnique<SdpMultiStringAttribute>(SdpAttribute::kCandidateAttribute);
     for (const std::string& candidate : oldLocalAttrs.GetCandidate()) {
       size_t component;
       nsresult rv = GetComponent(candidate, &component);
@@ -54,19 +55,20 @@ nsresult SdpHelper::CopyTransportParams(const size_t numComponents,
       }
     }
     if (!candidateAttrs->mValues.empty()) {
-      newLocalAttrs.SetAttribute(candidateAttrs.release());
+      newLocalAttrs.SetAttribute(std::move(candidateAttrs));
     }
   }
 
   if (oldLocalAttrs.HasAttribute(SdpAttribute::kEndOfCandidatesAttribute)) {
     newLocalAttrs.SetAttribute(
-        new SdpFlagAttribute(SdpAttribute::kEndOfCandidatesAttribute));
+        MakeUnique<SdpFlagAttribute>(SdpAttribute::kEndOfCandidatesAttribute));
   }
 
   if (numComponents == 2 &&
       oldLocalAttrs.HasAttribute(SdpAttribute::kRtcpAttribute)) {
     // copy rtcp attribute if we had one that we are using
-    newLocalAttrs.SetAttribute(new SdpRtcpAttribute(oldLocalAttrs.GetRtcp()));
+    newLocalAttrs.SetAttribute(
+        MakeUnique<SdpRtcpAttribute>(oldLocalAttrs.GetRtcp()));
   }
 
   return NS_OK;
@@ -137,24 +139,24 @@ void SdpHelper::DisableMsection(Sdp* sdp, SdpMediaSection* msection) {
   if (msection->GetAttributeList().HasAttribute(SdpAttribute::kMidAttribute)) {
     mid = msection->GetAttributeList().GetMid();
     if (sdp->GetAttributeList().HasAttribute(SdpAttribute::kGroupAttribute)) {
-      UniquePtr<SdpGroupAttributeList> newGroupAttr(
-          new SdpGroupAttributeList(sdp->GetAttributeList().GetGroup()));
+      auto newGroupAttr =
+          MakeUnique<SdpGroupAttributeList>(sdp->GetAttributeList().GetGroup());
       newGroupAttr->RemoveMid(mid);
-      sdp->GetAttributeList().SetAttribute(newGroupAttr.release());
+      sdp->GetAttributeList().SetAttribute(std::move(newGroupAttr));
     }
   }
 
   // Clear out attributes.
   msection->GetAttributeList().Clear();
 
-  auto* direction = new SdpDirectionAttribute(SdpDirectionAttribute::kInactive);
-  msection->GetAttributeList().SetAttribute(direction);
+  msection->GetAttributeList().SetAttribute(
+      MakeUnique<SdpDirectionAttribute>(SdpDirectionAttribute::kInactive));
   msection->SetPort(0);
 
   // maintain the mid for easier identification on other side
   if (!mid.empty()) {
     msection->GetAttributeList().SetAttribute(
-        new SdpStringAttribute(SdpAttribute::kMidAttribute, mid));
+        MakeUnique<SdpStringAttribute>(SdpAttribute::kMidAttribute, mid));
   }
 
   msection->ClearCodecs();
@@ -327,16 +329,16 @@ nsresult SdpHelper::AddCandidateToSdp(Sdp* sdp,
   UniquePtr<SdpMultiStringAttribute> candidates;
   if (!attrList.HasAttribute(SdpAttribute::kCandidateAttribute)) {
     // Create new
-    candidates.reset(
-        new SdpMultiStringAttribute(SdpAttribute::kCandidateAttribute));
+    candidates =
+        MakeUnique<SdpMultiStringAttribute>(SdpAttribute::kCandidateAttribute);
   } else {
     // Copy existing
-    candidates.reset(new SdpMultiStringAttribute(
+    candidates = MakeUnique<SdpMultiStringAttribute>(
         *static_cast<const SdpMultiStringAttribute*>(
-            attrList.GetAttribute(SdpAttribute::kCandidateAttribute))));
+            attrList.GetAttribute(SdpAttribute::kCandidateAttribute)));
   }
   candidates->PushEntry(candidate);
-  attrList.SetAttribute(candidates.release());
+  attrList.SetAttribute(std::move(candidates));
 
   return NS_OK;
 }
@@ -369,7 +371,7 @@ nsresult SdpHelper::SetIceGatheringComplete(Sdp* sdp, const uint16_t level,
   }
 
   attrList.SetAttribute(
-      new SdpFlagAttribute(SdpAttribute::kEndOfCandidatesAttribute));
+      MakeUnique<SdpFlagAttribute>(SdpAttribute::kEndOfCandidatesAttribute));
   // Remove trickle-ice option
   attrList.RemoveAttribute(SdpAttribute::kIceOptionsAttribute);
   return NS_OK;
@@ -389,9 +391,9 @@ void SdpHelper::SetDefaultAddresses(const std::string& defaultCandidateAddr,
     if (defaultRtcpCandidateAddr.find(':') != std::string::npos) {
       ipVersion = sdp::kIPv6;
     }
-    attrList.SetAttribute(new SdpRtcpAttribute(defaultRtcpCandidatePort,
-                                               sdp::kInternet, ipVersion,
-                                               defaultRtcpCandidateAddr));
+    attrList.SetAttribute(
+        MakeUnique<SdpRtcpAttribute>(defaultRtcpCandidatePort, sdp::kInternet,
+                                     ipVersion, defaultRtcpCandidateAddr));
   }
 }
 
@@ -485,10 +487,9 @@ nsresult SdpHelper::ParseMsid(const std::string& msidAttribute,
 void SdpHelper::SetupMsidSemantic(const std::vector<std::string>& msids,
                                   Sdp* sdp) const {
   if (!msids.empty()) {
-    UniquePtr<SdpMsidSemanticAttributeList> msidSemantics(
-        new SdpMsidSemanticAttributeList);
+    auto msidSemantics = MakeUnique<SdpMsidSemanticAttributeList>();
     msidSemantics->PushEntry("WMS", msids);
-    sdp->GetAttributeList().SetAttribute(msidSemantics.release());
+    sdp->GetAttributeList().SetAttribute(std::move(msidSemantics));
   }
 }
 
@@ -536,26 +537,26 @@ nsresult SdpHelper::CopyStickyParams(const SdpMediaSection& source,
   // There's no reason to renegotiate rtcp-mux
   if (sourceAttrs.HasAttribute(SdpAttribute::kRtcpMuxAttribute)) {
     destAttrs.SetAttribute(
-        new SdpFlagAttribute(SdpAttribute::kRtcpMuxAttribute));
+        MakeUnique<SdpFlagAttribute>(SdpAttribute::kRtcpMuxAttribute));
   }
 
   // mid should stay the same
   if (sourceAttrs.HasAttribute(SdpAttribute::kMidAttribute)) {
-    destAttrs.SetAttribute(new SdpStringAttribute(SdpAttribute::kMidAttribute,
-                                                  sourceAttrs.GetMid()));
+    destAttrs.SetAttribute(MakeUnique<SdpStringAttribute>(
+        SdpAttribute::kMidAttribute, sourceAttrs.GetMid()));
   }
 
   // Keep RTCP mode setting
   if (sourceAttrs.HasAttribute(SdpAttribute::kRtcpRsizeAttribute) &&
       source.GetMediaType() == SdpMediaSection::kVideo) {
     destAttrs.SetAttribute(
-        new SdpFlagAttribute(SdpAttribute::kRtcpRsizeAttribute));
+        MakeUnique<SdpFlagAttribute>(SdpAttribute::kRtcpRsizeAttribute));
   }
 
   // Keep extmap-allow-mixed setting
   if (sourceAttrs.HasAttribute(SdpAttribute::kExtmapAllowMixedAttribute)) {
     destAttrs.SetAttribute(
-        new SdpFlagAttribute(SdpAttribute::kExtmapAllowMixedAttribute));
+        MakeUnique<SdpFlagAttribute>(SdpAttribute::kExtmapAllowMixedAttribute));
   }
   return NS_OK;
 }
@@ -652,7 +653,7 @@ void SdpHelper::NegotiateAndAddExtmaps(
     return;
   }
 
-  UniquePtr<SdpExtmapAttributeList> localExtmap(new SdpExtmapAttributeList);
+  auto localExtmap = MakeUnique<SdpExtmapAttributeList>();
   auto& theirExtmap = remoteMsection.GetAttributeList().GetExtmap().mExtmaps;
   for (const auto& theirExt : theirExtmap) {
     for (auto& ourExt : localExtensions) {
@@ -682,7 +683,7 @@ void SdpHelper::NegotiateAndAddExtmaps(
   }
 
   if (!localExtmap->mExtmaps.empty()) {
-    localMsection->GetAttributeList().SetAttribute(localExtmap.release());
+    localMsection->GetAttributeList().SetAttribute(std::move(localExtmap));
   }
 }
 
@@ -758,11 +759,11 @@ static bool IsValidIceToken(const std::string& aToken) {
   return true;
 }
 
-nsresult SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
-                                                const sdp::SdpType aType) {
+Maybe<dom::PCError> SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
+                                                           sdp::SdpType aType) {
   BundledMids bundledMids;
   nsresult rv = GetBundledMids(aSdp, &bundledMids);
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_SUCCESS(rv, Some(dom::PCError::InvalidAccessError));
 
   for (size_t level = 0; level < aSdp.GetMediaSectionCount(); ++level) {
     const auto& msection = aSdp.GetMediaSection(level);
@@ -771,19 +772,22 @@ nsresult SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
       if (mediaAttrs.GetIceUfrag().empty()) {
         SDP_SET_ERROR("Invalid description, no ice-ufrag attribute at level "
                       << level);
-        return NS_ERROR_INVALID_ARG;
+        return Some(dom::PCError::InvalidAccessError);
       }
 
       if (mediaAttrs.GetIceUfrag().size() < kMinIceUfragLength) {
         SDP_SET_ERROR("Invalid description, ice-ufrag is too short at level "
                       << level);
-        return NS_ERROR_INVALID_ARG;
+        // Bug 2036111 - Syntax Errors Should Be Parser Generated
+        return Some(dom::PCError::SyntaxError);
       }
 
       if (mediaAttrs.GetIceUfrag().size() > kMaxIceUfragLength) {
         SDP_SET_ERROR("Invalid description, ice-ufrag is too long at level "
                       << level);
-        return NS_ERROR_INVALID_ARG;
+        // Bug 2027782 - need a WPT for this
+        // Bug 2036111 - Syntax Errors Should Be Parser Generated
+        return Some(dom::PCError::SyntaxError);
       }
 
       if (!IsValidIceToken(mediaAttrs.GetIceUfrag())) {
@@ -791,25 +795,28 @@ nsresult SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
             "Invalid description, ice-ufrag contains invalid characters at "
             "level "
             << level);
-        return NS_ERROR_INVALID_ARG;
+        // Bug 2036111 - Syntax Errors Should Be Parser Generated
+        return Some(dom::PCError::SyntaxError);
       }
 
       if (mediaAttrs.GetIcePwd().empty()) {
         SDP_SET_ERROR("Invalid description, no ice-pwd attribute at level "
                       << level);
-        return NS_ERROR_INVALID_ARG;
+        return Some(dom::PCError::InvalidAccessError);
       }
 
       if (mediaAttrs.GetIcePwd().size() < kMinIcePwdLength) {
         SDP_SET_ERROR("Invalid description, ice-pwd is too short at level "
                       << level);
-        return NS_ERROR_INVALID_ARG;
+        // Bug 2036111 - Syntax Errors Should Be Parser Generated
+        return Some(dom::PCError::SyntaxError);
       }
 
       if (mediaAttrs.GetIcePwd().size() > kMaxIcePwdLength) {
         SDP_SET_ERROR("Invalid description, ice-pwd is too long at level "
                       << level);
-        return NS_ERROR_INVALID_ARG;
+        // Bug 2036111 - Syntax Errors Should Be Parser Generated
+        return Some(dom::PCError::SyntaxError);
       }
 
       if (!IsValidIceToken(mediaAttrs.GetIcePwd())) {
@@ -817,13 +824,14 @@ nsresult SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
             "Invalid description, ice-pwd contains invalid characters at "
             "level "
             << level);
-        return NS_ERROR_INVALID_ARG;
+        // Bug 2056743 - ice-ufrag/pwd WPTs expect wrong error types
+        return Some(dom::PCError::SyntaxError);
       }
 
       if (!mediaAttrs.HasAttribute(SdpAttribute::kFingerprintAttribute)) {
         SDP_SET_ERROR("Invalid description, no fingerprint attribute at level "
                       << level);
-        return NS_ERROR_INVALID_ARG;
+        return Some(dom::PCError::InvalidAccessError);
       }
 
       const SdpFingerprintAttributeList& fingerprints(
@@ -833,7 +841,7 @@ nsresult SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
             "Invalid description, no supported fingerprint algorithms present "
             "at level "
             << level);
-        return NS_ERROR_INVALID_ARG;
+        return Some(dom::PCError::InvalidAccessError);
       }
 
       if (mediaAttrs.HasAttribute(SdpAttribute::kSetupAttribute, true)) {
@@ -842,7 +850,7 @@ nsresult SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
               "Invalid description, illegal setup attribute \"holdconn\" "
               "at level "
               << level);
-          return NS_ERROR_INVALID_ARG;
+          return Some(dom::PCError::InvalidAccessError);
         }
 
         if (aType == sdp::kAnswer &&
@@ -850,15 +858,15 @@ nsresult SdpHelper::ValidateTransportAttributes(const Sdp& aSdp,
           SDP_SET_ERROR(
               "Invalid answer, illegal setup attribute \"actpass\" at level "
               << level);
-          return NS_ERROR_INVALID_ARG;
+          return Some(dom::PCError::InvalidAccessError);
         }
       } else if (aType == sdp::kOffer) {
         SDP_SET_ERROR("Invalid offer, no setup attribute at level " << level);
-        return NS_ERROR_INVALID_ARG;
+        return Some(dom::PCError::InvalidAccessError);
       }
     }
   }
-  return NS_OK;
+  return Nothing();
 }
 
 }  // namespace mozilla

@@ -3,9 +3,11 @@
 
 do_get_profile();
 
-const { openAIEngine, FEATURE_MAJOR_VERSIONS } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs"
-);
+// TODO: Bug 2053495 - Refactor tests upon pref removal.
+Services.prefs.setBoolPref("browser.smartwindow.mistralRelease", false);
+registerCleanupFunction(() => {
+  Services.prefs.clearUserPref("browser.smartwindow.mistralRelease");
+});
 
 const {
   FALLBACK_MODELS,
@@ -14,8 +16,13 @@ const {
   getCachedModelsData,
   getCurrentModelName,
   _clearModelsDataCacheForTesting,
+  _setRemoteClientForTesting,
+  _clearRemoteClientForTesting,
+  getRemoteClient,
+  FEATURE_MAJOR_VERSIONS,
+  MODEL_FEATURES,
 } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/aiwindow/ui/modules/AIWindowConstants.sys.mjs"
+  "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs"
 );
 
 const { sinon } = ChromeUtils.importESModule(
@@ -23,27 +30,37 @@ const { sinon } = ChromeUtils.importESModule(
 );
 
 add_task(async function test_getModelForChoice_with_remote_settings_data() {
+  _clearModelsDataCacheForTesting();
   const sb = sinon.createSandbox();
   try {
     const fakeRecords = [
       {
+        kind: "params",
         feature: "chat",
-        version: "2.19",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.19`,
         model: "qwen3-235b-a22b-instruct-2507-maas",
         model_choice_id: "2",
         owner_name: "Alibaba",
         is_default: true,
       },
       {
+        kind: "params",
         feature: "chat",
-        version: "2.13",
-        model: "gemini-2.5-flash-lite",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.13`,
+        model: "gemini-3.1-flash-lite",
         model_choice_id: "1",
         owner_name: "Google",
+        model_details: {
+          model: "gemini-3.1-flash-lite",
+          ownerName: "Google",
+          labelId: "fast",
+          shortName: "Gemini 3.1 Flash Lite",
+          brandName: "Gemini",
+        },
       },
     ];
 
-    sb.stub(openAIEngine, "getRemoteClient").returns({
+    _setRemoteClientForTesting({
       get: sb.stub().resolves(fakeRecords),
     });
 
@@ -51,7 +68,13 @@ add_task(async function test_getModelForChoice_with_remote_settings_data() {
 
     Assert.deepEqual(
       result,
-      { model: "gemini-2.5-flash-lite", ownerName: "Google" },
+      {
+        model: "gemini-3.1-flash-lite",
+        ownerName: "Google",
+        labelId: "fast",
+        shortName: "Gemini 3.1 Flash Lite",
+        brandName: "Gemini",
+      },
       "Should return correct model data for choice 1"
     );
   } finally {
@@ -62,7 +85,7 @@ add_task(async function test_getModelForChoice_with_remote_settings_data() {
 add_task(async function test_getModelForChoice_fallback_when_not_found() {
   const sb = sinon.createSandbox();
   try {
-    sb.stub(openAIEngine, "getRemoteClient").returns({
+    _setRemoteClientForTesting({
       get: sb.stub().resolves([]),
     });
 
@@ -70,7 +93,7 @@ add_task(async function test_getModelForChoice_fallback_when_not_found() {
 
     Assert.deepEqual(
       result,
-      { model: "gemini-2.5-flash-lite", ownerName: "Google" },
+      { model: "gemini-3.1-flash-lite", ownerName: "Google", labelId: "fast" },
       "Should return fallback data for choice 1"
     );
   } finally {
@@ -83,7 +106,7 @@ add_task(async function test_getModelForChoice_custom_model() {
 
   Assert.deepEqual(
     result,
-    { model: "custom-model", ownerName: "" },
+    { model: "custom-model", ownerName: "", labelId: "custom" },
     "Should return custom model data for choice 0"
   );
 });
@@ -94,44 +117,84 @@ add_task(async function test_getAllModelsData_with_remote_settings() {
   try {
     const fakeRecords = [
       {
+        kind: "params",
         feature: "chat",
-        version: "2.19",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.19`,
         model: "qwen3-235b-a22b-instruct-2507-maas",
         model_choice_id: "2",
         owner_name: "Alibaba",
         is_default: true,
+        model_details: {
+          model: "qwen3-235b-a22b-instruct-2507-maas",
+          ownerName: "Alibaba",
+          labelId: "allpurpose",
+          shortName: "Qwen 3 235B",
+          brandName: "Qwen",
+        },
       },
       {
+        kind: "params",
         feature: "chat",
-        version: "2.13",
-        model: "gemini-2.5-flash-lite",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.13`,
+        model: "gemini-3.1-flash-lite",
         model_choice_id: "1",
         owner_name: "Google",
+        model_details: {
+          model: "gemini-3.1-flash-lite",
+          ownerName: "Google",
+          labelId: "fast",
+          shortName: "Gemini 3.1 Flash Lite",
+          brandName: "Gemini",
+        },
       },
       {
+        kind: "params",
         feature: "chat",
-        version: "2.10",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.10`,
         model: "gpt-oss-120b",
         model_choice_id: "3",
         owner_name: "OpenAI",
+        model_details: {
+          model: "gpt-oss-120b",
+          ownerName: "OpenAI",
+          labelId: "personal",
+          shortName: "GPT OSS 120B",
+          brandName: "GPT OSS",
+        },
       },
     ];
 
-    sb.stub(openAIEngine, "getRemoteClient").returns({
+    _setRemoteClientForTesting({
       get: sb.stub().resolves(fakeRecords),
+      on: sb.stub(),
     });
 
     const result = await getAllModelsData();
     Assert.deepEqual(
       result,
       {
-        0: { model: "custom-model", ownerName: "" },
-        1: { model: "gemini-2.5-flash-lite", ownerName: "Google" },
+        0: { model: "custom-model", ownerName: "", labelId: "custom" },
+        1: {
+          model: "gemini-3.1-flash-lite",
+          ownerName: "Google",
+          labelId: "fast",
+          shortName: "Gemini 3.1 Flash Lite",
+          brandName: "Gemini",
+        },
         2: {
           model: "qwen3-235b-a22b-instruct-2507-maas",
           ownerName: "Alibaba",
+          labelId: "allpurpose",
+          shortName: "Qwen 3 235B",
+          brandName: "Qwen",
         },
-        3: { model: "gpt-oss-120b", ownerName: "OpenAI" },
+        3: {
+          model: "gpt-oss-120b",
+          ownerName: "OpenAI",
+          labelId: "personal",
+          shortName: "GPT OSS 120B",
+          brandName: "GPT OSS",
+        },
       },
       "Should return all model choices with correct data"
     );
@@ -156,15 +219,17 @@ add_task(async function test_getCachedModelsData_returns_rs_data_after_fetch() {
   try {
     const fakeRecords = [
       {
+        kind: "params",
         feature: "chat",
-        version: `${FEATURE_MAJOR_VERSIONS.chat}.13`, // RS only loads the current major version for chat
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.13`, // RS only loads the current major version for chat
         model: "gemini-rs-model",
         model_choice_id: "1",
         owner_name: "Google",
       },
     ];
-    sb.stub(openAIEngine, "getRemoteClient").returns({
+    _setRemoteClientForTesting({
       get: sb.stub().resolves(fakeRecords),
+      on: sb.stub(),
     });
 
     await getAllModelsData();
@@ -192,15 +257,17 @@ add_task(
     try {
       const fakeRecords = [
         {
+          kind: "params",
           feature: "chat",
-          version: `${FEATURE_MAJOR_VERSIONS.chat}.13`, // RS only loads the current major version for chat
+          version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.13`, // RS only loads the current major version for chat
           model: "gemini-rs-model",
           model_choice_id: "1",
           owner_name: "Google",
         },
       ];
-      sb.stub(openAIEngine, "getRemoteClient").returns({
+      _setRemoteClientForTesting({
         get: sb.stub().resolves(fakeRecords),
+        on: sb.stub(),
       });
 
       Assert.equal(
@@ -238,33 +305,103 @@ add_task(async function test_getAllModelsData_with_fallbacks() {
   try {
     const fakeRecords = [
       {
+        kind: "params",
         feature: "chat",
-        version: "2.19",
-        model: "gemini-2.5-flash-lite",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.19`,
+        model: "gemini-3.1-flash-lite",
         model_choice_id: "1",
         owner_name: "Google",
+        model_details: {
+          model: "gemini-3.1-flash-lite",
+          ownerName: "Google",
+          labelId: "fast",
+          shortName: "Gemini 3.1 Flash Lite",
+          brandName: "Gemini",
+        },
       },
     ];
 
-    sb.stub(openAIEngine, "getRemoteClient").returns({
+    _setRemoteClientForTesting({
       get: sb.stub().resolves(fakeRecords),
+      on: sb.stub(),
     });
 
     const result = await getAllModelsData();
     Assert.deepEqual(
       result,
       {
-        0: { model: "custom-model", ownerName: "" },
-        1: { model: "gemini-2.5-flash-lite", ownerName: "Google" },
+        0: { model: "custom-model", ownerName: "", labelId: "custom" },
+        1: {
+          model: "gemini-3.1-flash-lite",
+          ownerName: "Google",
+          labelId: "fast",
+          shortName: "Gemini 3.1 Flash Lite",
+          brandName: "Gemini",
+        },
         2: {
           model: "qwen3-235b-a22b-instruct-2507-maas",
           ownerName: "Alibaba",
+          labelId: "allpurpose",
         },
-        3: { model: "gpt-oss-120b", ownerName: "OpenAI" },
+        3: {
+          model: "gpt-oss-120b",
+          ownerName: "OpenAI",
+          labelId: "personal",
+        },
       },
       "Should return all model choices with correct data"
     );
   } finally {
     sb.restore();
+  }
+});
+
+add_task(async function test_cache_refreshes_on_sync() {
+  _clearModelsDataCacheForTesting();
+  _clearRemoteClientForTesting();
+  const sb = sinon.createSandbox();
+  try {
+    const initialRecords = [
+      {
+        kind: "params",
+        feature: "chat",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.1`,
+        model: "initial-model",
+        model_choice_id: "1",
+        owner_name: "Google",
+      },
+    ];
+    const updatedRecords = [
+      {
+        kind: "params",
+        feature: "chat",
+        version: `${FEATURE_MAJOR_VERSIONS[MODEL_FEATURES.CHAT]}.2`,
+        model: "updated-model",
+        model_choice_id: "1",
+        owner_name: "Google",
+      },
+    ];
+
+    const client = getRemoteClient();
+    const getStub = sb.stub(client, "get").resolves(initialRecords);
+
+    await getAllModelsData();
+    Assert.equal(
+      getCachedModelsData()["1"].model,
+      "initial-model",
+      "cache has initial data"
+    );
+
+    getStub.resolves(updatedRecords);
+    await client.emit("sync", { data: { current: updatedRecords } });
+
+    Assert.equal(
+      getCachedModelsData()["1"].model,
+      "updated-model",
+      "cache updated with new data after sync"
+    );
+  } finally {
+    sb.restore();
+    _clearRemoteClientForTesting();
   }
 });

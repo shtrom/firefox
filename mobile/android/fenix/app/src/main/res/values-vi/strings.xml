@@ -23,12 +23,16 @@
   <string name="content_description_normal_browsing">Duyệt web thông thường</string>
   <!-- Placeholder text shown in the search bar before a user enters text for the default engine -->
   <string name="search_hint">Tìm kiếm hoặc nhập địa chỉ</string>
+  <!-- Shorter placeholder text shown in the search bar when an additional action (voice search) is rendered alongside the hint. -->
+  <string name="search_hint_short">Tìm kiếm</string>
   <!-- Placeholder text shown in the search bar before a user enters text for a general engine -->
   <string name="search_hint_general_engine">Tìm kiếm trên mạng</string>
   <!-- Placeholder text shown in search bar when using history search -->
   <string name="history_search_hint">Tìm kiếm lịch sử</string>
   <!-- Placeholder text shown in search bar when using bookmarks search -->
   <string name="bookmark_search_hint">Tìm kiếm dấu trang</string>
+  <!-- Content description for the toolbar back button while searching bookmarks -->
+  <string name="bookmark_close_search_description">Quay lại và đóng tìm kiếm</string>
   <!-- Placeholder text shown in search bar when using tabs search -->
   <string name="tab_search_hint">Tìm kiếm thẻ</string>
   <!-- Placeholder text shown in the search bar when using application search engines -->
@@ -70,7 +74,7 @@
   <!-- Text for the menu button to remove a recently saved bookmark from the user's home screen -->
   <string name="home_bookmarks_menu_item_remove">Xóa</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">%1$s - Một sản phẩm của Mozilla.</string>
+  <string name="about_content" tools:ignore="BrandUsage">%1$s - Một sản phẩm của Mozilla.</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">Những lầm tưởng phổ biến về duyệt web riêng tư</string>
   <!-- Text to be announced by the accessibility service to inform the user that the private browsing mode is currently active. -->
@@ -104,12 +108,6 @@
   <string name="open_in_app_cfr_negative_button_text">Bỏ qua</string>
   <!-- Private browsing erase action "contextual feature recommendation" (CFR) -->
 
-  <!--
-    Address bar swipe "contextual feature recommendation" (CFR)
-
-    Text for the message displayed in the contextual feature recommendation popup promoting swipe of address bar.
-  -->
-  <string name="address_bar_swipe_cfr_message_2">Vuốt thanh công cụ sang trái hoặc phải để chuyển đổi các thẻ.</string>
   <!-- Text for the info dialog when camera permissions have been denied but user tries to access a camera feature. -->
   <string name="camera_permissions_needed_message">Cần có quyền truy cập máy ảnh. Đi tới cài đặt Android, chạm vào quyền và chạm cho phép.</string>
   <!-- Text for the positive action button to go to Android Settings to grant permissions. -->
@@ -147,6 +145,8 @@
   <string name="home_screen_shortcut_open_new_private_tab_2">Thẻ riêng tư mới</string>
   <!-- Shortcut action to open Passwords screen -->
   <string name="home_screen_shortcut_passwords">Mật khẩu</string>
+  <!-- Shortcut action to open uninstall survey -->
+  <string name="home_screen_shortcut_uninstall_survey">Gỡ cài đặt, tại sao chứ?</string>
   <!--
     Recent Tabs
 
@@ -314,14 +314,6 @@
   <!-- Content description (not visible, for screen readers etc.) for recommended extensions in main menu -->
   <string name="browser_menu_recommended_extensions_content_description">Thông tin thêm</string>
   <!--
-    Menu "contextual feature recommendation" (CFR)
-
-    Text for the title in the contextual feature recommendation popup promoting the menu feature.
-  -->
-  <string name="menu_cfr_title">Mới: thanh menu được sắp xếp hợp lý</string>
-  <!-- Text for the message in the contextual feature recommendation popup promoting the menu feature. -->
-  <string name="menu_cfr_body">Tìm thấy những gì bạn cần nhanh hơn, từ duyệt web riêng tư đến hành động lưu.</string>
-  <!--
     Extensions management fragment
 
     Text displayed when there are no extensions to be shown
@@ -330,21 +322,9 @@
   <!--
     Browser Toolbar
 
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">Màn hình chính</string>
-  <!--
-    Browser Toolbar
-
     Content description for the translate page toolbar button that opens the translations dialog when no translation has occurred.
   -->
   <string name="browser_toolbar_translate">Dịch trang</string>
-  <!--
-    Content description (not visible, for screen readers etc.) for the translate page toolbar button that opens the translations dialog when the page is translated successfully.
-    %1$s is the name of the language that is displayed in the original page. (For example: English)
-    %2$s is the name of the language which the page was translated to. (For example: French)
-  -->
-  <string name="browser_toolbar_translated_successfully">Đã dịch trang từ %1$s sang %2$s.</string>
   <!-- CFR description for the browser toolbar describing the "Shake to summarize feature" -->
   <string name="browser_toolbar_summarize_cfr_description">Lắc thiết bị của bạn để tóm tắt trang này trong vài giây. ⚡️</string>
   <!--
@@ -375,8 +355,6 @@
   <string name="ai_controls_banner_headline">Bạn luôn có quyền lựa chọn trong %s</string>
   <!-- Supporting text for the AI controls banner. %s is a learn more link using ai_controls_learn_more as text. -->
   <string name="ai_controls_banner_supporting_text_2">Điều đó bao gồm cả việc có nên sử dụng các tính năng được tăng cường bằng trí tuệ nhân tạo hay không. %s</string>
-  <!-- Supporting text for the AI controls banner -->
-  <string name="ai_controls_banner_supporting_text">Điều đó bao gồm cả việc có nên sử dụng các tính năng được tăng cường bằng trí tuệ nhân tạo hay không.</string>
   <!-- Link text for learning more about AI controls -->
   <string name="ai_controls_learn_more">Tìm hiểu thêm</string>
   <!-- Title for the block AI enhancements toggle -->
@@ -424,12 +402,6 @@
   <!--
     Search Fragment
 
-    Button in the search view that lets a user search by scanning a QR code
-  -->
-  <string name="search_scan_button_2">Quét mã QR</string>
-  <!--
-    Search Fragment
-
     Button in the search view that lets a user navigate to the site in their clipboard
   -->
   <string name="awesomebar_clipboard_title">Điền liên kết từ bộ nhớ tạm</string>
@@ -464,68 +436,14 @@
   <string name="search_suggestions_delete_history_item_snackbar">Đã xoá %1$s khỏi lịch sử</string>
   <!-- Content description (not visible, for screen readers etc.): Button shown near a history search result allowing to delete it from browsing history. -->
   <string name="mozac_browser_awesomebar_remove_suggestion" tools:ignore="UnusedResources">Xoá mục lịch sử này</string>
+  <!-- Button in the app links prompt that keeps the user in the browser instead of opening the external app. %1$s is the name of the app (for example "Firefox"). -->
+  <string name="applinks_prompt_negative_button">Ở lại %1$s</string>
   <!--
     Home onboarding
 
     Content description (not visible, for screen readers etc.): Close button for the home onboarding dialog
   -->
   <string name="onboarding_home_content_description_close_button">Đóng</string>
-  <!--
-    Juno first user onboarding flow experiment, strings are marked unused as they are only referenced by Nimbus experiments.
-
-    Description for learning more about our privacy notice.
-  -->
-  <string name="juno_onboarding_privacy_notice_text" tools:ignore="BrandUsage">Thông báo về quyền riêng tư Firefox</string>
-  <!-- Title for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_title_nimbus_2">Chúng tôi thích giữ an toàn cho bạn</string>
-  <!-- Description for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_description_nimbus_3">Trình duyệt được hỗ trợ phi lợi nhuận của chúng tôi giúp ngăn các công ty bí mật theo dõi bạn trên web.</string>
-  <!-- Text for the button to set firefox as default browser on the device -->
-  <string name="juno_onboarding_default_browser_positive_button" tools:ignore="UnusedResources">Đặt làm trình duyệt mặc định</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_default_browser_negative_button" tools:ignore="UnusedResources">Không phải bây giờ</string>
-  <!-- Title for sign in to sync screen. -->
-  <string name="juno_onboarding_sign_in_title_2">Luôn mã hóa khi bạn chuyển đổi giữa nhiều thiết bị</string>
-  <!--
-    Description for sign in to sync screen. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_sign_in_description_3" tools:ignore="BrandUsage">Firefox mã hóa mật khẩu, dấu trang và nhiều nội dung khác khi bạn đồng bộ hóa.</string>
-  <!-- Text for the button to sign in to sync on the device -->
-  <string name="juno_onboarding_sign_in_positive_button" tools:ignore="UnusedResources">Đăng nhập</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_sign_in_negative_button" tools:ignore="UnusedResources">Không phải bây giờ</string>
-  <!--
-    Title for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_title_nimbus_2" tools:ignore="BrandUsage">Thông báo giúp bạn an toàn hơn với Firefox</string>
-  <!--
-    Description for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_description_nimbus_2" tools:ignore="BrandUsage">Gửi các thẻ giữa các thiết bị của bạn một cách an toàn và khám phá các tính năng bảo mật khác trong Firefox.</string>
-  <!-- Text for the button to request notification permission on the device -->
-  <string name="juno_onboarding_enable_notifications_positive_button" tools:ignore="UnusedResources">Bật thông báo</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_enable_notifications_negative_button" tools:ignore="UnusedResources">Không phải bây giờ</string>
-  <!--
-    Title for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_title" tools:ignore="BrandUsage,UnusedResources">Hãy thử tiện ích Firefox tìm kiếm</string>
-  <!--
-    Description for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_description" tools:ignore="BrandUsage,UnusedResources">Với Firefox trên màn hình chính, bạn sẽ dễ dàng truy cập vào trình duyệt ưu tiên quyền riêng tư để chặn các trình theo dõi trên nhiều trang web.</string>
-  <!--
-    Text for the button to add search widget on the device used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_positive_button" tools:ignore="BrandUsage,UnusedResources">Thêm tiện ích Firefox</string>
-  <!-- Text for the button to dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_add_search_widget_negative_button" tools:ignore="UnusedResources">Không phải bây giờ</string>
   <!-- Title for the privacy preferences dialog shown during onboarding. Note: The word "Firefox" should NOT be translated. -->
   <string name="onboarding_preferences_dialog_title" tools:ignore="BrandUsage">Hãy giúp chúng tôi cải thiện Firefox</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
@@ -545,17 +463,13 @@
   <!-- Button text to reopen firefox after the crash is processed %s is the name of the app (for example "Firefox") -->
   <string name="startup_crash_restart">Mở lại %s</string>
   <!-- Title for the usage data option in the privacy preferences dialog shown during onboarding. Note: The word "Mozilla" should NOT be translated. -->
-  <string name="onboarding_preferences_dialog_usage_data_title">Gửi dữ liệu kỹ thuật và tương tác tới Mozilla</string>
+  <string name="onboarding_preferences_dialog_usage_data_title" tools:ignore="BrandUsage">Gửi dữ liệu kỹ thuật và tương tác tới Mozilla</string>
   <string name="onboarding_preferences_dialog_usage_data_description_2" tools:ignore="BrandUsage">Dữ liệu về thiết bị, cấu hình phần cứng của bạn và cách bạn sử dụng Firefox giúp cải thiện các tính năng, hiệu suất và sự ổn định cho mọi người.</string>
   <string name="onboarding_preferences_dialog_usage_data_learn_more_2">Tìm hiểu thêm</string>
   <!-- Positive button label for the privacy preferences dialog shown during onboarding. -->
   <string name="onboarding_preferences_dialog_positive_button">Xong</string>
   <!-- Terms of service onboarding title card label. 'Firefox' intentionally hardcoded here -->
   <string name="onboarding_welcome_to_firefox" tools:ignore="BrandUsage">Chào mừng đến với Firefox</string>
-  <!-- Terms of service sub header label. -->
-  <string name="onboarding_terms_of_service_sub_header_2">Duyệt web nhanh và an toàn</string>
-  <!-- Terms of service onboarding page continue button label. -->
-  <string name="onboarding_term_of_service_agree_and_continue_button_label_2">Tiếp tục</string>
   <!-- Line one of the terms of service onboarding page. %1$s is replaced by an active link, using onboarding_term_of_service_line_one_link_text_2 as text (“Firefox Terms of Use”). -->
   <string name="onboarding_term_of_service_line_one_2">Bằng cách tiếp tục, bạn đã đồng ý với %1$s.</string>
   <!-- Used as text for the link in onboarding_term_of_service_line_one_2. -->
@@ -623,16 +537,6 @@
   <string name="onboarding_redesign_sync_positive_button" tools:ignore="UnusedResources">Bắt đầu đồng bộ hóa</string>
   <!-- Sync onboarding redesign negative button text. -->
   <string name="onboarding_redesign_sync_negative_button" tools:ignore="UnusedResources">Không phải bây giờ</string>
-  <!-- Marketing onboarding page title. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_title" tools:ignore="BrandUsage,UnusedResources">Giúp chúng tôi phát triển Firefox</string>
-  <!-- Marketing onboarding page body. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_body" tools:ignore="BrandUsage,UnusedResources">Khi bạn chia sẻ cách bạn phát hiện ra Firefox và sử dụng nó, bạn sẽ giúp chúng tôi giới thiệu trình duyệt này với nhiều người hơn.</string>
-  <!-- Marketing onboarding page opt-out checkbox. Unchecking the box does not increase data collection. Our data practices remain the same. 'Mozilla' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_opt_out_checkbox">Chia sẻ dữ liệu với các đối tác công nghệ tiếp thị của Mozilla. Dữ liệu này không bao giờ được bán hoặc sử dụng để hiển thị quảng cáo cho bạn.</string>
-  <!-- Marketing onboarding page clickable link text to "learn more" on how data is used. -->
-  <string name="onboarding_marketing_learn_more" tools:ignore="UnusedResources">Cách chúng tôi sử dụng dữ liệu</string>
-  <!-- Marketing onboarding page button label. Button to confirm choice and start browsing. -->
-  <string name="onboarding_marketing_positive_button" tools:ignore="UnusedResources">Xác nhận và bắt đầu duyệt web</string>
   <!-- Marketing onboarding page title variant. “One last thing” refers to the final step or action in the onboarding process that we’re asking users to take before they can start using the browser. -->
   <string name="onboarding_marketing_title_1" tools:ignore="UnusedResources">Một điều nữa</string>
   <!-- Marketing onboarding page body variant. 'Firefox' is intentionally hardcoded. -->
@@ -712,12 +616,12 @@
   <!-- Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded. -->
   <string name="nova_onboarding_marketing_body_2" tools:ignore="BrandUsage">Chia sẻ cách bạn khám phá ra Firefox và bạn sử dụng nó với các đối tác tiếp thị của Mozilla. Dữ liệu này không bao giờ được bán.</string>
   <!-- Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded. -->
-  <string name="nova_onboarding_marketing_body_3" tools:ignore="BrandUsage">Bạn có thể giúp chúng tôi tiếp cận nhiều người hơn bằng cách cho phép Mozilla thông báo cho các kênh mà chúng tôi quảng bá Firefox rằng bạn là người dùng Firefox.</string>
+  <string name="nova_onboarding_marketing_body_3" tools:ignore="BrandUsage,UnusedResources">Bạn có thể giúp chúng tôi tiếp cận nhiều người hơn bằng cách cho phép Mozilla thông báo cho các kênh mà chúng tôi quảng bá Firefox rằng bạn là người dùng Firefox.</string>
   <!--
     Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
     “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
   -->
-  <string name="nova_onboarding_marketing_body_4" tools:ignore="BrandUsage">Bạn có thể giúp chúng tôi tiếp cận nhiều người hơn bằng cách cho phép Mozilla thông báo cho nền tảng bạn vừa sử dụng rằng bạn đang dùng Firefox.</string>
+  <string name="nova_onboarding_marketing_body_4" tools:ignore="BrandUsage,UnusedResources">Bạn có thể giúp chúng tôi tiếp cận nhiều người hơn bằng cách cho phép Mozilla thông báo cho nền tảng bạn vừa sử dụng rằng bạn đang dùng Firefox.</string>
   <!--
     Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
     “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
@@ -729,12 +633,31 @@
     %1$s is replaced by an active link, using nova_onboarding_marketing_body_link_text as text (“How we use the data”).
   -->
   <string name="nova_onboarding_marketing_body_6" tools:ignore="BrandUsage,UnusedResources">Hãy giúp chúng tôi tiếp cận nhiều người hơn bằng cách cho phép Mozilla thông báo cho nền tảng bạn đang sử dụng rằng bạn đang dùng Firefox. %1$s</string>
+  <!--
+    Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
+    “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
+    %1$s is replaced by an active link, using nova_onboarding_marketing_body_link_text_1 as text (“Learn More”).
+  -->
+  <string name="nova_onboarding_marketing_body_7" tools:ignore="BrandUsage">Bạn có thể giúp chúng tôi tiếp cận nhiều người hơn bằng cách cho phép Mozilla thông báo cho nền tảng bạn vừa sử dụng rằng bạn đang dùng Firefox. %1$s</string>
+  <!-- Marketing onboarding additional body text. 'Firefox' is intentionally hardcoded. -->
+  <string name="nova_onboarding_marketing_body_line_two" tools:ignore="BrandUsage">Firefox tự hào là một công ty độc lập và tận tâm bảo vệ mạng internet mở trước các tập đoàn công nghệ độc quyền.</string>
+  <!--
+    Marketing onboarding additional body text. 'Firefox' is intentionally hardcoded.
+    “Allowing” refers to the main button “Allow and Continue”; the ask for the user is to allow communicating back to the platform.
+  -->
+  <string name="nova_onboarding_marketing_body_line_three" tools:ignore="BrandUsage">Vui lòng cân nhắc cho phép để Firefox có thể tiếp tục.</string>
   <!-- Marketing onboarding body link text. -->
   <string name="nova_onboarding_marketing_body_link_text">Cách chúng tôi sử dụng dữ liệu</string>
+  <!-- Marketing onboarding body link text. -->
+  <string name="nova_onboarding_marketing_body_link_text_1">Tìm hiểu thêm</string>
   <!-- Marketing onboarding primary button text. 'Firefox' is intentionally hardcoded. -->
-  <string name="nova_onboarding_marketing_primary_button_text" tools:ignore="BrandUsage">Giúp đỡ Firefox</string>
+  <string name="nova_onboarding_marketing_primary_button_text" tools:ignore="BrandUsage,UnusedResources">Giúp đỡ Firefox</string>
+  <!-- Marketing onboarding primary button text. -->
+  <string name="nova_onboarding_marketing_primary_button_text_3">Có</string>
   <!-- Marketing onboarding secondary button text. -->
-  <string name="nova_onboarding_marketing_secondary_button_text">Không, cảm ơn</string>
+  <string name="nova_onboarding_marketing_secondary_button_text" tools:ignore="UnusedResources">Không, cảm ơn</string>
+  <!-- Marketing onboarding secondary button text. -->
+  <string name="nova_onboarding_marketing_secondary_button_text_2">Không</string>
   <!-- Notifications onboarding title. 'Firefox' is intentionally hardcoded. -->
   <string name="nova_onboarding_notifications_title" tools:ignore="BrandUsage,UnusedResources">Thông báo giúp bạn an toàn hơn với Firefox</string>
   <!-- Notifications onboarding subtitle. 'Firefox' is intentionally hardcoded. -->
@@ -767,41 +690,6 @@
   <string name="nova_onboarding_app_icon_prompt_body" tools:ignore="UnusedResources">Hãy cá nhân hóa màn hình chính của bạn.</string>
   <!-- ==== End of Project "Nova" onboarding strings ==== -->
 
-  <!-- Onboarding header for the toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_title" tools:ignore="UnusedResources">Chọn vị trí cho thanh công cụ</string>
-  <!-- Onboarding sub header for toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_description" tools:ignore="UnusedResources">Giữ tìm kiếm trong tầm tay.</string>
-  <!-- Onboarding label for 'Save and continue' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_continue_button">Lưu và tiếp tục</string>
-  <!-- Onboarding toolbar selection card label for 'top' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_top_option">Trên cùng</string>
-  <!-- Onboarding toolbar selection card label for 'bottom' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_bottom_option">Dưới cùng</string>
-  <!-- Onboarding toolbar selection card content description for the main image. -->
-  <string name="onboarding_customize_toolbar_main_image_content_description">Hình ảnh tiêu đề lớn của chế độ xem lựa chọn thanh công cụ hiển thị thanh công cụ được minh họa.</string>
-  <!-- Onboarding toolbar selection card content description for the toolbar placement image. -->
-  <string name="onboarding_customize_toolbar_placement_bottom_content_description">Hình ảnh thanh công cụ phía dưới</string>
-  <string name="onboarding_customize_toolbar_placement_top_content_description">Hình ảnh thanh công cụ phía trên</string>
-  <!-- Action label for toolbar options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_toolbar_a11y_action_label_select">chọn</string>
-  <!-- Onboarding header for the theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_title" tools:ignore="UnusedResources">Chọn chủ đề</string>
-  <!-- Onboarding sub header for theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_description" tools:ignore="UnusedResources">Xem web với giao diện phù hợp.</string>
-  <!-- Onboarding label for 'Save and start browsing' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_start_button">Lưu và bắt đầu duyệt</string>
-  <!-- Onboarding theme selection card label for 'dark' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_dark_option">Tối</string>
-  <!-- Onboarding theme selection card label for 'light' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_light_option">Sáng</string>
-  <!-- Onboarding theme selection card label for 'System auto' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_system_option">Theo hệ thống</string>
-  <!-- Onboarding theme selection card content description for the main image. -->
-  <string name="onboarding_customize_theme_main_image_content_description">Hình ảnh tiêu đề lớn của chế độ xem lựa chọn chủ đề hiển thị các công cụ minh họa của nghệ sĩ và người xây dựng.</string>
-  <!-- Onboarding theme selection card content description for the theme selection image. %1$s is placeholder for either 'system', 'light' or 'dark'. -->
-  <string name="onboarding_customize_theme_content_description">Hình ảnh chủ đề %1$s</string>
-  <!-- Action label for options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_theme_a11y_action_label_select">chọn</string>
   <!--
     Widget Picker
 
@@ -889,40 +777,8 @@
   <string name="preferences_pbm_lock_screen_title">Sử dụng khóa màn hình để ẩn các thẻ trong chế độ duyệt riêng tư</string>
   <!-- Informs the user how to access the tabs when "Use screen lock to hide tabs in private browsing" is enabled -->
   <string name="preferences_pbm_lock_screen_summary_3">Xem các thẻ bằng vân tay, mã PIN hoặc mở khóa bằng khuôn mặt. Bật tính năng này cũng ngăn chặn việc chụp và chia sẻ màn hình.</string>
-  <!-- Label for cookie banner section in quick settings panel. -->
-  <string name="cookie_banner_blocker">Trình chặn biểu ngữ cookie</string>
   <!-- Preference for removing cookie/consent banners from sites automatically in private mode. See reduce_cookie_banner_summary for additional context. -->
   <string name="preferences_cookie_banner_reduction_private_mode">Trình chặn biểu ngữ cookie trong trình duyệt riêng tư</string>
-  <!-- Text for indicating cookie banner handling is off this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_off_for_site">Tắt cho trang web này</string>
-  <!-- Text for cancel button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_cancel_button">Hủy bỏ</string>
-  <!-- Text for request support button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_request_support_button_2">Gửi yêu cầu</string>
-  <!-- Text for title indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_title_2">Yêu cầu hỗ trợ cho trang web này?</string>
-  <!-- Label for the snackBar, after the user reports with success a website where cookie banner reducer did not work -->
-  <string name="cookie_banner_handling_report_site_snack_bar_text_2">Đã gửi yêu cầu</string>
-  <!-- Text for indicating cookie banner handling is on this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_on_for_site">Bật cho trang web này</string>
-  <!-- Text for indicating that a request for unsupported site was sent to Nimbus (it's a Mozilla library for experiments), this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site_request_submitted_2">Đã gửi yêu cầu hỗ trợ</string>
-  <!-- Text for indicating cookie banner handling is currently not supported for this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site">Trang web hiện tại không được hỗ trợ</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is on this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_on_for_site_1">Bật trình chặn biểu ngữ cookie cho %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is off this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_off_for_site_1">Tắt trình chặn biểu ngữ cookie cho %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner reducer didn't work for the current site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_title_unsupported_site_request_2">%1$s không thể tự động từ chối yêu cầu cookie trên trang web này. Bạn có thể gửi yêu cầu hỗ trợ trang web này trong tương lai.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is off for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_off_for_site_1">Tắt và %1$s sẽ xóa cookie và tải lại trang web này. Điều này có thể khiến bạn bị đăng xuất hoặc bị xóa sạch giỏ hàng.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is on for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_on_for_site_3">Bật và %1$s sẽ thử tự động từ chối tất cả các biểu ngữ cookie trên trang web này.</string>
-  <!-- Title for the cookie banner re-engagement CFR, the placeholder is replaced with app name. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="cookie_banner_cfr_title">%1$s vừa từ chối cookie cho bạn</string>
-  <!-- Message for the cookie banner re-engagement CFR -->
-  <string name="cookie_banner_cfr_message">Ít phiền nhiễu hơn, ít cookie theo dõi bạn hơn trên trang web này.</string>
   <!-- Description of the preference to enable "HTTPS-Only" mode. -->
   <string name="preferences_https_only_summary">Tự động cố gắng kết nối với các trang web bằng giao thức mã hóa HTTPS để tăng cường bảo mật.</string>
   <!-- Summary of https only preference if https only is set to off -->
@@ -946,7 +802,7 @@
   <!-- Preference for accessibility -->
   <string name="preferences_accessibility">Trợ năng</string>
   <!-- Preference to override the Mozilla account server -->
-  <string name="preferences_override_account_server">Máy chủ tài khoản Mozilla tùy chỉnh</string>
+  <string name="preferences_override_account_server" tools:ignore="BrandUsage">Máy chủ tài khoản Mozilla tùy chỉnh</string>
   <!-- Preference to override the Sync token server -->
   <string name="preferences_override_sync_tokenserver">Tùy chỉnh máy chủ đồng bộ hóa</string>
   <!-- Preference category for account information -->
@@ -967,6 +823,8 @@
   <string name="preferences_toolbar_shortcut">Phím tắt thanh công cụ</string>
   <!-- Preference for gestures based actions -->
   <string name="preferences_toolbar_select_shortcut">Chọn một phím tắt</string>
+  <!-- Title of a menu option allowing to change the shortcut button shown in the toolbar -->
+  <string name="toolbar_shortcut_menu_edit_option">Chỉnh sửa lối tắt</string>
   <!-- Preference for gestures based actions -->
   <string name="preferences_gestures">Cử chỉ</string>
   <!-- Preference for settings related to visual options -->
@@ -974,7 +832,7 @@
   <!-- Preference description shown in the banner prompting the user to sign in for sync features -->
   <string name="preferences_sign_in_description">Đồng bộ hóa các thẻ, dấu trang, mật khẩu và hơn thế nữa.</string>
   <!-- Preference shown instead of account display name while account profile information isn't available yet. -->
-  <string name="preferences_account_default_name_2">Tài khoản Mozilla</string>
+  <string name="preferences_account_default_name_2" tools:ignore="BrandUsage">Tài khoản Mozilla</string>
   <!-- Preference text for account title when there was an error syncing FxA -->
   <string name="preferences_account_sync_error">Kết nối lại để tiếp tục đồng bộ hóa</string>
   <!-- Preference for language -->
@@ -1022,7 +880,7 @@
   <!-- Summary for preference to show Firefox Suggest search suggestions for web content -->
   <string name="preferences_show_nonsponsored_suggestions_summary">Nhận đề xuất từ ​​web liên quan đến tìm kiếm của bạn</string>
   <!-- Preference title for switch preference to show search optimization cards -->
-  <string name="preferences_show_search_optimization_cards">Nhận các đề xuất từ Mozilla khi bạn nhập</string>
+  <string name="preferences_show_search_optimization_cards" tools:ignore="BrandUsage">Nhận các đề xuất từ Mozilla khi bạn nhập</string>
   <!-- Preference for link sharing -->
   <string name="preferences_link_sharing">Chia sẻ liên kết</string>
   <!-- Title for the link sharing toggle. %1$s is replaced by the brand name (e.g. Firefox). -->
@@ -1075,6 +933,12 @@
   <string name="notifications_allowed_summary">Đã cho phép</string>
   <!-- Summary for notification preference indicating notifications are not allowed -->
   <string name="notifications_not_allowed_summary">Không cho phép</string>
+  <!-- Preference for local network access / nearby devices in Android 17 -->
+  <string name="preferences_local_network_access">Truy cập mạng cục bộ / Thiết bị lân cận</string>
+  <!-- Summary for local network access preference indicating access is allowed -->
+  <string name="local_network_access_allowed_summary">Đã cho phép</string>
+  <!-- Summary for local network access preference indicating access is not allowed -->
+  <string name="local_network_access_not_allowed_summary">Không cho phép</string>
   <!--
     Add-on Permissions
 
@@ -1134,10 +998,14 @@
   <string name="customize_toggle_pocket_sponsored">Câu chuyện được tài trợ</string>
   <!-- Title for the opening wallpaper settings screen -->
   <string name="customize_wallpapers">Hình nền</string>
+  <!-- Label for the menu item that opens the customize homepage settings screen. -->
+  <string name="browser_menu_customize_homepage">Tùy chỉnh trang chủ</string>
+  <!-- Label for the menu item that opens the wallpaper settings screen. -->
+  <string name="browser_menu_change_wallpaper">Thay đổi hình nền</string>
   <!-- Title for the customize home screen section with sponsored shortcuts. -->
   <string name="customize_toggle_contile">Các lối tắt được tài trợ</string>
   <!-- Title for the customize home screen section that toggles the Homepage sports widget. -->
-  <string name="customize_toggle_world_cup" tools:ignore="UnusedResources">World Cup</string>
+  <string name="customize_toggle_world_cup">World Cup</string>
   <!--
     Wallpapers
 
@@ -1350,7 +1218,7 @@
   <string name="preferences_usage_data_description_1" tools:ignore="BrandUsage">Dữ liệu về thiết bị, cấu hình phần cứng và cách sử dụng của bạn giúp chúng tôi cải thiện các tính năng, hiệu suất và độ ổn định của Firefox.</string>
   <!-- Preference switch for daily usage ping data collection -->
   <string name="preferences_daily_usage_ping_title">Ping sử dụng hàng ngày</string>
-  <string name="preferences_daily_usage_ping_description">Điều này giúp Mozilla ước tính số người dùng đang hoạt động.</string>
+  <string name="preferences_daily_usage_ping_description" tools:ignore="BrandUsage">Điều này giúp Mozilla ước tính số người dùng đang hoạt động.</string>
   <string name="preferences_daily_usage_ping_learn_more">Tìm hiểu thêm về ping sử dụng hàng ngày</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
   <string name="crash_reporting_snack_bar_message">Đã gửi báo cáo</string>
@@ -1376,7 +1244,7 @@
   <!-- Title for studies preferences -->
   <string name="preference_experiments_2">Nghiên cứu</string>
   <!-- Summary for studies preferences -->
-  <string name="preference_experiments_summary_2">Cho phép Mozilla cài đặt và chạy các nghiên cứu</string>
+  <string name="preference_experiments_summary_2" tools:ignore="BrandUsage">Cho phép Mozilla cài đặt và chạy các nghiên cứu</string>
   <!--
     Turn On Sync Preferences
 
@@ -1435,6 +1303,11 @@
   <string name="preference_light_theme">Sáng</string>
   <!-- Preference for using dark theme -->
   <string name="preference_dark_theme">Tối</string>
+  <!--
+    Preference for using the OLED theme. For localization, this can be translated as "True Black", "Maximum Darkness",
+    or "Full dark" if needed.
+  -->
+  <string name="preference_oled_theme">Nền đen</string>
   <!-- Preference for using using dark or light theme automatically set by battery -->
   <string name="preference_auto_battery_theme">Đặt theo trình tiết kiệm pin</string>
   <!-- Preference for using following device theme -->
@@ -1477,8 +1350,6 @@
   <string name="library_desktop_bookmarks_unfiled">Dấu trang khác</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">Lịch sử</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">Thẻ mới</string>
   <!-- Settings Page Title -->
   <string name="settings_title">Cài đặt</string>
   <!-- Content description (not visible, for screen readers etc.): "Close button for library settings" -->
@@ -1583,6 +1454,16 @@
   <string name="preferences_inactive_tabs">Chuyển các thẻ cũ sang không hoạt động</string>
   <!-- Title of inactive tabs preference -->
   <string name="preferences_inactive_tabs_title">Các thẻ mà bạn chưa xem trong hai tuần sẽ được chuyển vào phần không hoạt động.</string>
+  <!-- Title for the preference to enable or disable the tab groups feature -->
+  <string name="preferences_tab_groups_feature">Bật Nhóm thẻ</string>
+  <!--
+    Privacy report
+
+    Category header of a preference that allows a user to enable or disable the privacy report feature
+  -->
+  <string name="preferences_privacy_report">Báo cáo về quyền riêng tư</string>
+  <!-- Title of the privacy report preference that allows a user to enable or disable the feature -->
+  <string name="preferences_privacy_report_title">Bật báo cáo về quyền riêng tư</string>
   <!--
     Studies
 
@@ -1637,10 +1518,14 @@
   <string name="add_tab">Thêm thẻ</string>
   <!-- Content description (not visible, for screen readers etc.): Add tab button. Adds a news tab when pressed -->
   <string name="add_private_tab">Thêm thẻ riêng tư</string>
+  <!-- Content description (not visible, for screen readers etc.): Create tab group button. Opens the create tab group sheet when pressed -->
+  <string name="create_tab_group_content_description">Tạo nhóm thẻ</string>
   <!-- Text for the tab search bar placeholder -->
   <string name="tab_manager_search_bar_placeholder">Tìm kiếm thẻ của bạn</string>
   <!-- Text shown in the menu to view recently closed tabs -->
   <string name="tab_tray_menu_recently_closed">Các thẻ đã đóng gần đây</string>
+  <!-- Text shown in the menu to select all tabs. -->
+  <string name="tab_tray_menu_select_all_tabs">Chọn tất cả</string>
   <!-- Text shown in the menu to view account settings -->
   <string name="tab_tray_menu_account_settings">Cài đặt tài khoản</string>
   <!-- Text shown in the menu to view tab settings -->
@@ -1703,6 +1588,14 @@
   <string name="pwa_site_controls_title_private">%1$s (Chế độ riêng tư)</string>
   <!-- Content description (not visible, for screen readers etc.) for the button to open the Tab Search feature to search through tabs. -->
   <string name="tab_manager_open_tab_search">Mở tìm kiếm thẻ</string>
+  <!-- Title for introducing tab groups via an onboarding card shown in the tab manager. -->
+  <string name="tab_group_onboarding_item_title">Tạo một nhóm thẻ</string>
+  <!-- Description for tab groups onboarding shown in the tab manager when in grid view. -->
+  <string name="tab_group_onboarding_grid_item_description">Kéo một thẻ lên thẻ khác để nhóm chúng lại.</string>
+  <!-- Description for tab groups onboarding shown in the tab manager when in list view. -->
+  <string name="tab_group_onboarding_list_item_description">Chọn nhiều thẻ để tạo nhóm.</string>
+  <!-- Content description (accessibility label) for button to dismiss the tab group onboarding item. -->
+  <string name="tab_group_onboarding_item_dismiss_content_description">Bỏ qua giới thiệu nhóm thẻ</string>
   <!-- The header text displayed on the tab groups page when no tab groups are open -->
   <string name="tab_manager_empty_tab_groups_page_header">Thử sử dụng nhóm thẻ để giảm thao tác cuộn, tập trung làm việc hơn</string>
   <!-- The description displayed on the tab groups page when no tab groups are open -->
@@ -1780,6 +1673,36 @@
   <string name="close_tab_and_delete_group_confirmation_dialog_confirm">Xoá nhóm</string>
   <!-- Text shown on the cancel button in the Close last tab and delete tab group confirmation dialog. -->
   <string name="close_tab_and_delete_group_confirmation_dialog_cancel">Huỷ bỏ</string>
+  <!-- Content description for the three dot button next to a tab group" -->
+  <string name="tab_group_three_dot_button_content_description">Tùy chọn khác</string>
+  <!-- Text shown on the edit button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_edit">Chỉnh sửa</string>
+  <!-- Text shown on the ungroup button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_ungroup">Tách nhóm</string>
+  <!-- Text shown on the delete button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_delete">Xóa</string>
+  <!-- Text shown on the share button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_share">Chia sẻ</string>
+  <!-- Text shown on the close button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_close">Đóng</string>
+  <!-- Title for the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_title">Tách nhóm thẻ?</string>
+  <!-- Text shown in the body of the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_body">Các thẻ sẽ vẫn mở trên thiết bị này, nhưng nhóm sẽ bị xóa.</string>
+  <!-- Text shown on the Don't Ask Again checkbox button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_dont_ask_again">Đừng hỏi lại</string>
+  <!-- Text shown on the confirm button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_confirm">Tách nhóm</string>
+  <!-- Text shown on the cancel button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_cancel">Hủy bỏ</string>
+  <!-- Custom accessibility action to reorder a tab up rather than dragging. -->
+  <string name="custom_accessibility_action_reorder_tab_up">Chuyển thẻ lên trên</string>
+  <!-- Custom accessibility action to reorder a tab left rather than dragging. -->
+  <string name="custom_accessibility_action_reorder_tab_left">Chuyển thẻ sang trái</string>
+  <!-- Custom accessibility action to reorder a tab right rather than dragging. -->
+  <string name="custom_accessibility_action_reorder_tab_right">Chuyển thẻ sang phải</string>
+  <!-- Custom accessibility action to reorder a tab down rather than dragging. -->
+  <string name="custom_accessibility_action_reorder_tab_down">Chuyển thẻ xuống dưới</string>
   <!--
     Color labels for tab groups, used for accessibility and selection UI.
 
@@ -1794,8 +1717,6 @@
   <string name="tab_group_color_pink">Hồng</string>
   <!-- Tab group color: Purple -->
   <string name="tab_group_color_purple">Tía</string>
-  <!-- Tab group color: Violet -->
-  <string name="tab_group_color_violet">Tím</string>
   <!-- Tab group color: Blue -->
   <string name="tab_group_color_blue">Xanh dương</string>
   <!-- Tab group color: Cyan -->
@@ -1812,8 +1733,6 @@
   <string name="history_search_1">Nhập từ tìm kiếm</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">Xóa lịch sử</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">Đã xóa lịch sử</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">Đã xóa %1$s</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -2049,33 +1968,37 @@
   <!-- The error message of the URL text field when an invalid URL has been entered. -->
   <string name="webcompat_reporter_url_error_invalid">Vui lòng nhập một URL hợp lệ</string>
   <!-- The label/title of a field in the Web Compat Reporter feature for explaining a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_label_whats_broken_2">Cái gì bị hỏng?</string>
-  <!-- The placeholder text for the dropdown where a user selects a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_2">Chọn một lý do</string>
-  <!-- The error message of the dropdown, prompting the user to select a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_error">Hãy chọn một nguyên nhân</string>
-  <!-- The label/title of an optional field in the Web Compat Reporter feature for adding additional information. -->
-  <string name="webcompat_reporter_label_description">Mô tả vấn đề (không bắt buộc)</string>
-  <!-- The button text for navigating away from the feature to provide more information on the broken site's bug report. -->
-  <string name="webcompat_reporter_add_more_info">Thêm thông tin</string>
+  <string name="webcompat_reporter_label_whats_broken_3">Điều gì hoạt động không đúng?</string>
+  <!-- Content description for the icon button that clears the selected broken site reason in the WebCompat Reporter. -->
+  <string name="webcompat_reporter_clear_reason_content_description">Xoá lý do đã chọn</string>
+  <!-- The error message of the description when the user selects "Something else" as the reason, but left the description empty or too short. -->
+  <string name="webcompat_reporter_description_error">Vui lòng nhập ít nhất 10 ký tự</string>
+  <!-- The label/title of a mandatory field in the Web Compat Reporter feature for adding additional information. -->
+  <string name="webcompat_reporter_label_mandatory_description">Hãy mô tả sự cố một cách chi tiết để giúp chúng tôi điều tra</string>
+  <!-- The label/title of a optional field in the Web Compat Reporter feature for adding additional information. -->
+  <string name="webcompat_reporter_label_optional_description">Hãy mô tả chi tiết sự cố để giúp chúng tôi điều tra (không bắt buộc)</string>
   <!-- The button text for the cancel button to leave the Web Compat Reporter feature. -->
   <string name="webcompat_reporter_cancel">Hủy bỏ</string>
   <!-- The button text for the send button to submit the provided form data. -->
-  <string name="webcompat_reporter_send">Gửi</string>
+  <string name="webcompat_reporter_send_report">Gửi báo cáo</string>
   <!-- Text for a snackbar to confirm the successful submission of a WebCompat report. -->
   <string name="webcompat_reporter_success_snackbar_text_2">Đã gửi báo cáo</string>
   <!-- Placeholder text for the description field to prompt the user on what they should type. -->
-  <string name="webcompat_reporter_problem_description_placeholder_text">Chuyện gì đã xảy ra? Chuyện gì đáng lẽ phải xảy ra?</string>
+  <string name="webcompat_reporter_problem_description_placeholder_text_2">Chuyện gì đã xảy ra? Bạn mong đợi điều gì sẽ xảy ra? Vui lòng cung cấp các bước để tái hiện sự cố.</string>
   <!-- Label of the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. -->
-  <string name="webcompat_reporter_etp_checkbox_text">Gửi URL bị chặn bởi tính năng trình chống theo dõi</string>
-  <!-- Description text for the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. It informs the user when checked, the report will include the list of URLs that were blocked by Enhanced Tracking Protection on the current page. -->
-  <string name="webcompat_reporter_etp_checkbox_description">Trình chống theo dõi nâng cao có thể chặn các trình theo dõi và tập lệnh mà một số trang web cần để hoạt động bình thường.</string>
+  <string name="webcompat_reporter_etp_checkbox_text_2">Gửi danh sách các mục bị chặn bởi tính năng trình chống theo dõi</string>
   <!-- The button text for the preview report button to view a preview of the report. -->
   <string name="webcompat_reporter_preview_report">Xem trước báo cáo</string>
   <!-- The title shown at the top of the WebCompat Report preview panel. This appears after the user taps the “Preview” button before sending a report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_header">Xem trước báo cáo</string>
   <!-- Label for the “Send” button shown in the WebCompat Report preview panel, which the user taps to submit the report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_send">Gửi</string>
+  <!-- Title for the Edit URL confirmation dialog in the WebCompatReporter -->
+  <string name="webcompat_reporter_edit_url_dialog_title">Chỉnh sửa URL trang web</string>
+  <!-- Text shown on the save button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_save">Lưu</string>
+  <!-- Text shown on the dismiss button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_dismiss">Bỏ qua</string>
   <!--
     These reason strings are dropdown options on a WebCompat reporter form, indicating what is broken on the site.
 
@@ -2095,7 +2018,9 @@
   <!-- Broken site reason text for site asked to turn off ad blocker -->
   <string name="webcompat_reporter_reason_turn_off_adblocker">Trang web yêu cầu tắt trình chặn quảng cáo</string>
   <!-- Broken site reason text for browser isn’t supported or blocked -->
-  <string name="webcompat_reporter_reason_notsupported">Trình duyệt không được hỗ trợ hoặc bị chặn</string>
+  <string name="webcompat_reporter_reason_notsupported_2">Trình duyệt không được hỗ trợ hoặc bị chặn</string>
+  <!-- Broken site reason text for the site being deceptive -->
+  <string name="webcompat_reporter_reason_site_is_deceptive">Trang web lừa đảo/gây hiểu nhầm</string>
   <!-- Broken site reason text for something else -->
   <string name="webcompat_reporter_reason_other">Điều gì đó khác</string>
   <!--
@@ -2105,7 +2030,7 @@
   -->
   <string name="tab_crash_title_2">Xin lỗi. %1$s không thể tải trang đó.</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">Gửi báo cáo lỗi đến Mozilla</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">Gửi báo cáo lỗi đến Mozilla</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">Đóng thẻ</string>
   <!-- Restore tab button text on the tab crash page -->
@@ -2204,12 +2129,8 @@
   <string name="edit_bookmark_folder_fragment_title">Chỉnh sửa thư mục</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">URL</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">THƯ MỤC</string>
   <!-- Text indicating which folder a bookmark or folder will be saved in -->
   <string name="bookmark_save_in_label">Lưu vào</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">TÊN</string>
   <!-- Label for a text input field for a bookmark or folder name -->
   <string name="bookmark_name_label_normal_case">Tên</string>
   <!-- Bookmark select folder screen title -->
@@ -2253,30 +2174,24 @@
   <string name="bookmark_empty_list_root_title">Giữ tất cả các dấu trang yêu thích của bạn ở cùng một chỗ</string>
   <!-- Bookmark screen folder description. %s is the count of bookmark folder children -->
   <string name="bookmarks_folder_description">Dấu trang trong thư mục: %s</string>
-  <!-- Description for the bookmark list empty state when you're not signed into sync. -->
-  <string name="bookmark_empty_list_guest_description">Lưu các trang web khi bạn duyệt. Đăng nhập để lấy dấu trang từ các thiết bị được đồng bộ hóa khác.</string>
   <!-- Text for the button to navigate to sync authentication -->
   <string name="bookmark_empty_list_guest_cta">Đăng nhập để đồng bộ hóa</string>
-  <!-- Description for the bookmark list empty state when you're signed into sync. -->
-  <string name="bookmark_empty_list_authenticated_description">Lưu các trang web khi bạn duyệt. Chúng tôi cũng sẽ lấy dấu trang từ các thiết bị được đồng bộ hóa khác cho bạn.</string>
   <!-- Description for the bookmark list empty state when you're in an empty folder. -->
   <string name="bookmark_empty_list_folder_description">Thêm dấu trang khi bạn duyệt để bạn có thể tìm thấy các trang web yêu thích của mình sau này.</string>
   <!-- Description for the add new folder button when selecting a folder. -->
   <string name="bookmark_select_folder_new_folder_button_title">Thư mục mới</string>
   <!-- Bookmark snackbar message for moving a single item. %1$s is the title of the item being moved and %2$s is the new parent folder of the bookmark -->
   <string name="bookmark_moved_single_item">Đã chuyển %1$s sang %2$s</string>
+  <!-- Text for bookmark search page when there are no results. -->
+  <string name="bookmark_no_search_results">Không có kết quả phù hợp.</string>
+  <!-- Additional text for bookmark search page when there are no results. -->
+  <string name="bookmark_no_search_results_additional_text">Hãy thử từ khoá tìm kiếm khác!</string>
   <!--
     Site Permissions
 
     Button label that take the user to the Android App setting
   -->
   <string name="phone_feature_go_to_settings">Đi đến Cài đặt</string>
-  <!--
-    Content description (not visible, for screen readers etc.): Quick settings sheet
-    to give users access to site specific information / settings. For example:
-    Secure settings status and a button to modify site permissions
-  -->
-  <string name="quick_settings_sheet">Bảng cài đặt nhanh</string>
   <!-- Label that indicates that this option it the recommended one -->
   <string name="phone_feature_recommended">Được đề xuất</string>
   <!-- Button label for clearing all the information of site permissions -->
@@ -2373,8 +2288,6 @@
   <string name="collections_header">Bộ sưu tập</string>
   <!-- Content description (not visible, for screen readers etc.): Opens the collection menu when pressed -->
   <string name="collection_menu_button_content_description">Menu bộ sưu tập</string>
-  <!-- Label to describe what collections are to a new user without any collections -->
-  <string name="no_collections_description2">Thu thập những thứ quan trọng đối với bạn.\nNhóm các tìm kiếm, trang web và thẻ tương tự lại với nhau để truy cập nhanh sau này.</string>
   <!-- Title for the "select tabs" step of the collection creator -->
   <string name="create_collection_select_tabs">Chọn các thẻ</string>
   <!-- Title for the "select collection" step of the collection creator -->
@@ -2468,6 +2381,10 @@
   <string name="sync_sign_in">Đăng nhập để đồng bộ hóa</string>
   <!-- An option from the share dialog to send link to all other sync devices -->
   <string name="sync_send_to_all">Gửi đến tất cả các thiết bị</string>
+  <!-- Text displayed when no other sync devices are available for link sharing -->
+  <string name="sync_no_devices_available">Không có sẵn thiết bị nào</string>
+  <!-- Text displayed when no other sync devices are available for link sharing. -->
+  <string name="sync_no_devices_available_description">Mọi thiết bị đã đăng nhập và đồng bộ hóa với tài khoản này sẽ hiển thị ở đây.</string>
   <!-- An option from the share dialog to reconnect to sync -->
   <string name="sync_reconnect">Kết nối lại với Sync</string>
   <!-- Text displayed when sync is offline and cannot be accessed -->
@@ -2524,6 +2441,8 @@
   <string name="preferences_take_survey">Thực hiện khảo sát</string>
   <!-- Preference for not taking the short survey. -->
   <string name="preferences_not_take_survey">Không, cảm ơn</string>
+  <!-- Error message shown in a Toast when the system fails to trigger the device uninstallation prompt. -->
+  <string name="uninstall_survey_error_failed">Không thể mở cửa sổ gỡ cài đặt hệ thống, vui lòng sử dụng trực tiếp chức năng gỡ cài đặt hệ thống.</string>
   <!--
     Snackbar
 
@@ -2669,10 +2588,8 @@
   <!--
     Enhanced Tracking Protection
 
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
+    Preference title for enhanced tracking protection settings
   -->
-  <string name="etp_settings">Cài đặt bảo vệ</string>
-  <!-- Preference title for enhanced tracking protection settings -->
   <string name="preference_enhanced_tracking_protection">Trình chống theo dõi nâng cao</string>
   <!-- Preference summary for enhanced tracking protection settings on/off switch -->
   <string name="preference_enhanced_tracking_protection_summary">Bây giờ với tính năng Trình chống cookie chung, hàng rào mạnh mẽ nhất của chúng tôi đối với các trình theo dõi trên nhiều trang web.</string>
@@ -2680,7 +2597,7 @@
   <string name="preference_enhanced_tracking_protection_explanation_2">%s bảo vệ bạn khỏi các trình theo dõi phổ biến nhất đang theo dõi những điều bạn làm trên internet.</string>
   <!-- Text displayed that links to website about enhanced tracking protection -->
   <string name="preference_enhanced_tracking_protection_explanation_learn_more">Tìm hiểu thêm</string>
-  <plurals name="trackers_blocked_count">
+  <plurals name="trackers_blocked_count_2">
     <!--
       Trackers blocked card on homepage
 
@@ -2760,12 +2677,8 @@
   <string name="preference_enhanced_tracking_protection_custom_cryptominers">Trình đào tiền điện tử</string>
   <!-- Preference for enhanced tracking protection for the custom protection settings -->
   <string name="preference_enhanced_tracking_protection_custom_known_fingerprinters">Dấu vết đã biết</string>
-  <!-- Button label for navigating to the Enhanced Tracking Protection details -->
-  <string name="enhanced_tracking_protection_details">Chi tiết</string>
   <!-- Header for categories that are being being blocked by current Enhanced Tracking Protection settings -->
   <string name="enhanced_tracking_protection_blocked">Đã chặn</string>
-  <!-- Header for categories that are being not being blocked by current Enhanced Tracking Protection settings -->
-  <string name="enhanced_tracking_protection_allowed">Đã cho phép</string>
   <!-- Category of trackers (social media trackers) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_social_media_trackers_title">Trình theo dõi truyền thông xã hội</string>
   <!-- Description of social media trackers that can be blocked by Enhanced Tracking Protection -->
@@ -2788,10 +2701,6 @@
   <string name="etp_tracking_content_title">Trình theo dõi nội dung</string>
   <!-- Description of tracking content that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_tracking_content_description">Chặn các trình theo dõi từ quảng cáo, video và nội dung khác từ bên ngoài. Có thể ảnh hưởng đến một số chức năng của trang web.</string>
-  <!-- Enhanced Tracking Protection message that protection is currently on for this site -->
-  <string name="etp_panel_on">Bảo vệ đã BẬT trên trang web này</string>
-  <!-- Enhanced Tracking Protection message that protection is currently off for this site -->
-  <string name="etp_panel_off">Bảo vệ đã TẮT cho trang web này</string>
   <!-- Header for exceptions list for which sites enhanced tracking protection is always off -->
   <string name="enhanced_tracking_protection_exceptions">Trình chống theo dõi nâng cao đã bị tắt cho các trang web này</string>
   <!--
@@ -2816,13 +2725,6 @@
   <string name="etp_suspected_fingerprinters_description">Cho phép bảo vệ khỏi dấu vết để ngăn chặn những dấu vết đáng ngờ.</string>
   <!-- Category of trackers (fingerprinters) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_known_fingerprinters_title">Dấu vết đã biết</string>
-  <!--
-    Description of the SmartBlock Enhanced Tracking Protection feature. The * symbol is intentionally hardcoded here,
-    as we use it on the UI to indicate which trackers have been partially unblocked.
-  -->
-  <string name="preference_etp_smartblock_description">Một số trình theo dõi được đánh dấu bên dưới đã được bỏ chặn một phần trên trang này vì bạn đã tương tác với chúng *.</string>
-  <!-- Text displayed that links to website about enhanced tracking protection SmartBlock -->
-  <string name="preference_etp_smartblock_learn_more">Tìm hiểu thêm</string>
   <!--
     Content description (not visible, for screen readers etc.):
     Enhanced tracking protection exception preference icon for ETP settings.
@@ -3070,6 +2972,8 @@
   <string name="saved_logins_sort_strategy_last_used">Sử dụng lần cuối</string>
   <!-- Content description (not visible, for screen readers etc.) -->
   <string name="saved_logins_menu_dropdown_chevron_icon_content_description_2">Menu sắp xếp mật khẩu</string>
+  <!-- Label for button to import passwords from file. -->
+  <string name="passwords_import_menu_button">Nhập từ tập tin</string>
   <!--
     Email Masks
 
@@ -3100,10 +3004,12 @@
   <string name="ip_protection_title">VPN</string>
   <!-- Label for the browser VPN toggle on the settings screen -->
   <string name="ip_protection_toggle_label">VPN</string>
+  <!-- Content description for the browser VPN settings screen top bar back button -->
+  <string name="ip_protection_navigate_back_button_content_description">Điều hướng quay lại</string>
   <!-- Headline for the browser VPN promo card. %s is the name of the app (for example "Firefox"). -->
   <string name="ip_protection_promo_headline">VPN tích hợp sẵn của %s</string>
-  <!-- Body text for the browser VPN promo card -->
-  <string name="ip_protection_promo_body">Duyệt web an toàn hơn nhờ tính năng ẩn vị trí, ngay cả khi sử dụng Wi-Fi công cộng.</string>
+  <!-- Body text for the browser VPN promo card . %s is a learn more link using ip_protection_learn_more as text. -->
+  <string name="ip_protection_promo_body_2">Duyệt web an toàn hơn nhờ tính năng ẩn vị trí, ngay cả khi sử dụng Wi-Fi công cộng. %s</string>
   <!-- Link text that opens additional information about the browser VPN -->
   <string name="ip_protection_learn_more">Tìm hiểu thêm</string>
   <!-- Label for the monthly data allowance section on the browser VPN settings screen -->
@@ -3155,6 +3061,8 @@
   <string name="ip_protection_toolbar_pill_description">VPN đang bật.</string>
   <!-- Label for the button that starts the browser VPN authentication or authorization flow on the settings screen -->
   <string name="ip_protection_get_started">Bắt đầu</string>
+  <!-- Label for the "connecting" state of the button that starts the browser VPN authentication or authorization flow on the settings screen -->
+  <string name="ip_protection_connecting">Đang kết nối…</string>
   <!-- Headline for the browser VPN onboarding card. %s is the name of the app (for example "Firefox"). -->
   <string name="ip_protection_onboarding_card_headline">Hãy thử VPN tích hợp sẵn của %s</string>
   <!--
@@ -3165,6 +3073,14 @@
   <string name="ip_protection_onboarding_body">%1$s bằng cách ẩn vị trí của bạn, ngay cả khi sử dụng Wi-Fi công cộng. Nhận %2$d GB miễn phí mỗi tháng.</string>
   <!-- Used as text for a link in ip_protection_onboarding_body. Make sure to adapt capitalization if the link is in the middle of the sentence. -->
   <string name="ip_protection_onboarding_body_link">Duyệt web với tính năng bảo vệ bổ sung</string>
+  <!--
+    The body of the VPN onboarding card for a promotion that provides unlimited data bandwidth for a certain time.
+    %1$s is a localized date (for example "Jun 9") indicating the end of the promotional period.
+    %2$s is a link using ip_protection_onboarding_body_link_promo (“Learn more”) as text. It links to a support article about VPN on Firefox.
+  -->
+  <string name="ip_protection_onboarding_body_promo">Bật tính năng này để duyệt web riêng tư và khó bị theo dõi hơn. Thử ngay để có băng thông không giới hạn đến hết %1$s. %2$s</string>
+  <!-- Used as text for a link in ip_protection_onboarding_body. Make sure to adapt capitalization if the link is in the middle of the sentence. -->
+  <string name="ip_protection_onboarding_body_link_promo">Tìm hiểu thêm</string>
   <!-- Label for the dismiss button on the onboarding bottom sheet. -->
   <string name="ip_protection_onboarding_not_now_button">Để sau</string>
   <!-- Snackbar (in-app pop-up notification) text to signal the browser VPN connection error -->
@@ -3174,6 +3090,42 @@
     %1$d is the total monthly allowance in GB (for example "50").
   -->
   <string name="ip_protection_data_limit_reached_snackbar">Đã sử dụng %1$d GB dữ liệu VPN. Dung lượng sẽ được đặt lại vào tháng sau.</string>
+  <!-- Snackbar (in-app pop-up notification) action button text that takes the user to the VPN settings screen. -->
+  <string name="ip_protection_data_limit_reached_snackbar_action">Cài đặt</string>
+  <!-- Description shown on the browser VPN settings screen prompting the user to turn the VPN on. -->
+  <string name="ip_protection_settings_description" tools:ignore="UnusedResources">Hãy bật VPN để duyệt web riêng tư hơn và khó bị theo dõi hơn.</string>
+  <!-- Title shown on the browser VPN settings screen for location selection section. -->
+  <string name="ip_protection_location_title" tools:ignore="UnusedResources">Địa điểm</string>
+  <!-- Label for the Recommended server location option which is automatically selected by the browser. -->
+  <string name="ip_protection_recommended_location" tools:ignore="UnusedResources">Được đề xuất</string>
+  <!-- Headline for the card that promotes the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_headline" tools:ignore="UnusedResources,BrandUsage">Bảo vệ tốt hơn với Mozilla VPN</string>
+  <!-- Body for the card that promotes the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_body" tools:ignore="UnusedResources">Chọn từ hơn 300 địa điểm và bảo vệ tất cả ứng dụng của bạn trên tối đa 5 thiết bị.</string>
+  <!-- Label for the button that takes the user to get the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_button" tools:ignore="UnusedResources,BrandUsage">Tải Mozilla VPN</string>
+  <!-- Title for the browser VPN location picker screen. -->
+  <string name="ip_protection_location_picker_title" tools:ignore="UnusedResources">Chọn địa điểm VPN</string>
+  <!-- Description for what it means to use the Recommended setting and let the app automatically pick the best server location. -->
+  <string name="ip_protection_location_fastest_description" tools:ignore="BrandUsage">Firefox sẽ tìm kiếm địa điểm nhanh nhất có thể</string>
+  <!-- Description for an unavailable VPN location in the location list. -->
+  <string name="ip_protection_location_unavailable_description">Không sẵn sàng</string>
+  <!-- Error message shown when the selected browser VPN location is unavailable. -->
+  <string name="ip_protection_location_unavailable" tools:ignore="UnusedResources">Địa điểm không khả dụng. Vui lòng chọn địa điểm khác.</string>
+  <!-- Snackbar (in-app pop-up notification) text shown when the previously selected browser VPN location is unavailable and the recommended location was used instead. -->
+  <string name="ip_protection_location_unavailable_recommended_snackbar" tools:ignore="UnusedResources">Địa điểm VPN đã chọn không khả dụng. Đã kết nối đến địa điểm được đề xuất.</string>
+  <!-- Title for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_locations_unavailable_title">Địa điểm không khả dụng</string>
+  <!-- Description for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_locations_unavailable_description">Đã chuyển đến địa điểm được đề xuất.</string>
+  <!-- Title for the browser VPN location selection screen (displayed in the app bar) -->
+  <string name="ip_protection_locations_title">Chọn địa điểm VPN</string>
+  <!-- Content description for the browser VPN location selection screen top bar back button -->
+  <string name="ip_protection_locations_navigate_back_button_content_description">Điều hướng quay lại</string>
+  <!-- Title for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_location_unavailable_title" tools:ignore="UnusedResources">Địa điểm trước đó không khả dụng</string>
+  <!-- Description for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_location_unavailable_recommended_description" tools:ignore="UnusedResources">Đã kết nối đến địa điểm được đề xuất.</string>
   <!--
     Autofill
 
@@ -3326,8 +3278,6 @@
   <string name="addresses_save_button">Lưu</string>
   <!-- The text for the "Cancel" button for cancelling adding, updating or deleting an address -->
   <string name="addresses_cancel_button">Hủy bỏ</string>
-  <!-- The text for the "Delete address" button for deleting an address -->
-  <string name="addressess_delete_address_button">Xóa địa chỉ</string>
   <!-- The title for the "Delete address" confirmation dialog -->
   <string name="addressess_confirm_dialog_message_2">Xoá địa chỉ này?</string>
   <!-- The text for the positive button on "Delete address" dialog -->
@@ -3382,16 +3332,8 @@
   <string name="phone_feature_blocked_step_permissions"><![CDATA[2. Chạm <b>Quyền</b>]]></string>
   <!-- Third step for the allowing a permission (%1$s is the permission name, for example "Camera"). -->
   <string name="phone_feature_blocked_step_feature"><![CDATA[3. Gạt công tắc <b>%1$s</b> sang BẬT]]></string>
-  <!-- Label that indicates a site is using a secure connection -->
-  <string name="quick_settings_sheet_secure_connection_2">Kết nối an toàn</string>
-  <!-- Label that indicates a site is using a insecure connection -->
-  <string name="quick_settings_sheet_insecure_connection_2">Kết nối không an toàn</string>
-  <!-- Label that indicates a site is displaying a local document -->
-  <string name="quick_settings_sheet_local_page">Trang này được lưu trữ trên thiết bị của bạn.</string>
   <!-- Label to clear site data -->
   <string name="clear_site_data">Xóa cookie và dữ liệu trang web</string>
-  <!-- Confirmation message for a dialog confirming if the user wants to delete all data for current site. %s is the domain of the site. -->
-  <string name="confirm_clear_site_data"><![CDATA[Bạn có chắc chắn muốn xóa tất cả cookie và dữ liệu của trang web <b>%s</b> không?]]></string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for all sites -->
   <string name="confirm_clear_permissions_on_all_sites">Bạn có thật sự muốn xóa tất cả quyền hạn trên mọi trang web?</string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for a site -->
@@ -3404,11 +3346,6 @@
   <string name="browser_menu_add_to_shortcuts">Thêm vào lối tắt</string>
   <!-- Browser menu button that removes a shortcut from the home fragment -->
   <string name="browser_menu_remove_from_shortcuts">Xóa khỏi lối tắt</string>
-  <!--
-    text shown before the issuer name to indicate who its verified by, %1$s is the name of
-    the certificate authority that verified the ticket
-  -->
-  <string name="certificate_info_verified_by">Được xác minh bởi: %1$s</string>
   <!-- Message in delete confirmation dialog for password -->
   <string name="login_deletion_confirmation_2">Bạn có chắc chắn muốn xóa mật khẩu này?</string>
   <!-- Positive action of a dialog asking to delete -->
@@ -3472,10 +3409,26 @@
     which navigates the user to a screen displaying all the shortcuts.
   -->
   <string name="homepage_shortcuts_show_all_content_description">Hiển thị tất cả lối tắt</string>
+  <!--
+    Label for the button in the shortcuts home screen section that expands the section to show
+    every shortcut.
+  -->
+  <string name="homepage_shortcuts_show_all">Hiện tất cả</string>
+  <!--
+    Label for the button in the shortcuts home screen section that collapses the section back
+    to showing only the first shortcuts.
+  -->
+  <string name="homepage_shortcuts_show_less">Hiện ít hơn</string>
   <!-- Label for the "Add shortcut" button displayed as a tile. -->
   <string name="homepage_shortcuts_add_shortcut">Thêm lối tắt</string>
+  <!-- Title for the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_add_to_homepage">Thêm vào trang chủ</string>
+  <!-- Label for the "Add website" button in the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_add_website">Thêm trang web</string>
   <!-- Title text for the "Enter a Website URL" dialog for adding a shortcut. -->
   <string name="homepage_shortcuts_add_website_title">Nhập URL trang web</string>
+  <!-- Title for the "Popular sites" section in the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_popular_sites">Trang web phổ biến</string>
   <!-- Title text displayed in the dialog when shortcuts limit is reached. -->
   <string name="shortcut_max_limit_title">Đã đạt đến giới hạn lối tắt</string>
   <!-- Content description text displayed in the dialog when shortcut limit is reached. -->
@@ -3562,8 +3515,6 @@
   <string name="default_browser_experiment_card_title">Đặt làm trình duyệt mặc định của bạn</string>
   <!-- Default browser card text -->
   <string name="default_browser_experiment_card_text" tools:ignore="BrandUsage">Đặt các liên kết từ trang web, email và tin nhắn để tự động mở trong Firefox.</string>
-  <!-- Content description for close button in collection placeholder. -->
-  <string name="remove_home_collection_placeholder_content_description">Xóa</string>
   <!-- Content description radio buttons with a link to more information -->
   <string name="radio_preference_info_content_description">Chạm để biết thêm chi tiết</string>
   <!-- Content description for the action bar "up" button -->
@@ -3595,20 +3546,10 @@
     Action label for elements that can be collapsed if interacting with them. Talkback will append this to say "Double tap to collapse".
   -->
   <string name="a11y_action_label_collapse">thu gọn</string>
-  <!-- Current state for elements that can be collapsed if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_collapsed">thu gọn</string>
   <!-- Action label for elements that can be expanded if interacting with them. Talkback will append this to say "Double tap to expand". -->
   <string name="a11y_action_label_expand">mở rộng</string>
-  <!-- Current state for elements that can be expanded if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_expanded">mở rộng</string>
   <!-- Action label for links to a website containing documentation about a wallpaper collection. Talkback will append this to say "Double tap to open link to learn more about this collection". -->
   <string name="a11y_action_label_wallpaper_collection_learn_more">mở liên kết để tìm hiểu thêm về bộ sưu tập này</string>
-  <!-- Content description for headings announced by accessibility service. %s is the text of the heading. Talkback will announce the text and then speak the word "Heading" indicating to the user that this text is a heading for a section. -->
-  <string name="a11y_heading">%s, Tiêu đề</string>
-  <!-- Title for dialog displayed when trying to access links present in a text. -->
-  <string name="a11y_links_title">Liên kết</string>
-  <!-- Additional content description for text bodies that contain urls. -->
-  <string name="a11y_links_available">Liên kết khả dụng</string>
   <!-- Translations feature -->
 
   <!--
@@ -3875,8 +3816,18 @@
     %s is the name of the app (for example "Firefox").
   -->
   <string name="protection_panel_banner_protected_title">%s đang bảo vệ</string>
-  <!-- Description text for the protection panel banner when tracking protection is enabled. -->
-  <string name="protection_panel_banner_protected_description">Bạn đã được bảo vệ. Nếu chúng tôi phát hiện ra điều gì đó, chúng tôi sẽ cho bạn biết.</string>
+  <plurals name="protection_panel_banner_protected_blocked_trackers_description">
+    <!--
+      Description text for the protection panel banner when privacy dashboard is enabled.
+      %1$d is the number of trackers blocked.
+    -->
+    <item quantity="other">%1$d trình theo dõi đã chặn trên trang này.</item>
+  </plurals>
+  <!--
+    Description text for the protection panel banner when privacy dashboard is enabled.
+    and there are no trackers blocked.
+  -->
+  <string name="protection_panel_banner_protected_no_blocked_trackers_description">Bạn đã được bảo vệ.</string>
   <!-- Label text for the Enhanced Tracking Protection toggle. -->
   <string name="protection_panel_etp_toggle_label">Trình chống theo dõi nâng cao</string>
   <!-- Toggle if Enhanced Tracking Protection is turned on -->
@@ -3892,25 +3843,61 @@
     %d is a placeholder for the number of trackers blocked.
   -->
   <string name="protection_panel_num_trackers_blocked">Trình theo dõi bị chặn: %d</string>
-  <!-- Text for when no trackers have been blocked. -->
-  <string name="protection_panel_no_trackers_blocked">Không tìm thấy trình theo dõi</string>
   <!-- Text for when tracking protection is disabled and no trackers are blocked. -->
   <string name="protection_panel_etp_disabled_no_trackers_blocked">Trình theo dõi không bị chặn</string>
   <!-- Link text to navigate to privacy and security settings from the protection panel. -->
   <string name="protection_panel_privacy_and_security_settings_2">Cài đặt quyền riêng tư</string>
   <!-- Title text for the protection panel permissions section. -->
   <string name="protection_panel_permissions_title">Quyền hạn</string>
-  <!--
-    Text for displaying the total number of trackers blocked in the trackers blocked panel.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_total_num_trackers_blocked">Trình theo dõi bị chặn: %d</string>
-  <!--
-    Text for displaying the number of trackers blocked for a specific tracker category in the trackers blocked panel.
-    %s is a placeholder for the name of the tracker category.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_categorical_num_trackers_blocked">%s: %d</string>
+  <plurals name="trackers_blocked_panel_total_num_trackers_blocked_2">
+    <!--
+      Text for displaying the total number of trackers blocked in the trackers blocked panel.
+      %1$d is a placeholder for the number of trackers blocked.
+    -->
+    <item quantity="other">%1$d trình theo dõi đã chặn trên trang này</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_social_media_trackers">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked social media trackers.
+      %1$d is a placeholder for the number of social media trackers blocked.
+    -->
+    <item quantity="other">%1$d trình theo dõi truyền thông xã hội</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_cross_site_cookies">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked cross-site tracking cookies.
+      %1$d is a placeholder for the number of cross-site tracking cookies blocked.
+    -->
+    <item quantity="other">%1$d cookie theo dõi liên trang web</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_cryptominers">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked cryptomining scripts.
+      %1$d is a placeholder for the number of cryptominers blocked.
+    -->
+    <item quantity="other">%1$d trình đào tiền điện tử</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_fingerprinters">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked fingerprinter scripts.
+      %1$d is a placeholder for the number of fingerprinters blocked.
+    -->
+    <item quantity="other">%1$d dấu vết</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_trackers_2">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked generic tracking scripts.
+      %1$d is a placeholder for the number of trackers blocked.
+    -->
+    <item quantity="other">%1$d trình theo dõi nội dung</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_trackers_blocked_this_week_2">
+    <!--
+      Text for displaying the number of trackers blocked this week in the trackers blocked panel.
+      %1$d is a placeholder for the number of trackers blocked this week.
+    -->
+    <item quantity="other">%1$d trình theo dõi bị chặn trong tuần này</item>
+  </plurals>
   <!--
     Description text for a dialog confirming whether the user wants to delete all data for current site.
     %s is a placeholder for the base domain of website.
@@ -3931,6 +3918,8 @@
     %s is a placeholder for the name of the certificate authority that issued the certificate.
   -->
   <string name="connection_security_panel_verified_by">Đã xác minh bởi %s</string>
+  <!-- Content description (not visible, for screen readers etc.) for the handle used to drag the protections dashboard to the bottom of the screen and close it. -->
+  <string name="tracker_protections_dashboard_close_handlebar_content_description">Đóng bảng điều khiển</string>
   <!--
     Text for the connection security panel when the site uses a QWAC.
     %s is a placeholder for the organization for which the certificate was issued.
@@ -4054,6 +4043,26 @@
   <string name="microsurvey_sync_title" tools:ignore="BrandUsage,UnusedResources">Bạn hài lòng với trải nghiệm đồng bộ hóa trong Firefox như thế nào?</string>
   <!-- Text shown in the survey title for 'describe your experience so far' microsurvey. Note: The word "Firefox" should NOT be translated. -->
   <string name="microsurvey_describe_your_experience_title" tools:ignore="BrandUsage,UnusedResources">Giúp chúng tôi cải thiện Firefox. Trải nghiệm của bạn cho đến nay được mô tả như thế nào?</string>
+  <!--
+    Uninstall Survey
+
+    Title text for the uninstall survey dialog, asking the user for the reason they are removing the app
+  -->
+  <string name="microsurvey_uninstall_survey_title">Ý kiến ​​phản hồi của bạn rất quan trọng. Tại sao bạn gỡ cài đặt?</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_1_v2">Chậm hoặc không ổn định</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_2_v2">Trang web không hoạt động đúng cách</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_3_v2">Thiếu tính năng tôi cần</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_4_v2">Video, tải xuống hoặc đa phương tiện không hoạt động</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_5_v2">Khó sử dụng hoặc thiết kế khó thao tác</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_6_v2">Quan ngại về quyền riêng tư và bảo mật</string>
+  <!-- Button label shown at the bottom of the uninstall survey -->
+  <string name="uninstall_survey_button_label">Gửi phản hồi và gỡ cài đặt</string>
   <!--
     Accessibility
 
@@ -4425,17 +4434,17 @@
   <!-- Section header for the South America confederation group in the sports widget country selector. -->
   <string name="sports_widget_confederation_south_america">Nam Mỹ</string>
   <!-- Country name for England in the sports widget. England cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
-  <string name="sports_widget_country_england" tools:ignore="UnusedResources">Anh</string>
+  <string name="sports_widget_country_england">Anh</string>
   <!-- Country name for Scotland in the sports widget. Scotland cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
-  <string name="sports_widget_country_scotland" tools:ignore="UnusedResources">Scotland</string>
+  <string name="sports_widget_country_scotland">Scotland</string>
   <!-- Label shown on the sports widget scoreboard when a match is currently being played live. -->
   <string name="sports_widget_match_live">TRỰC TIẾP</string>
   <!-- Title shown on the sports widget champion scoreboard row celebrating the soccer tournament winner. -->
-  <string name="sports_widget_champions_title" tools:ignore="UnusedResources">Nhà vô địch World Cup 2026</string>
+  <string name="sports_widget_champions_title">Nhà vô địch World Cup 2026</string>
   <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament runners-up. Runners-up means second place. -->
   <string name="sports_widget_runner_up_title" tools:ignore="UnusedResources">Á quân</string>
   <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament third place winners. -->
-  <string name="sports_widget_third_place_title" tools:ignore="UnusedResources">Hạng ba</string>
+  <string name="sports_widget_third_place_title">Hạng ba</string>
   <!-- Round name shown on the sports widget for the Round of 32 stage in the soccer tournament. -->
   <string name="sports_widget_round_of_32">Vòng 32</string>
   <!-- Round name shown on the sports widget for the Round of 16 stage in the soccer tournament. -->
@@ -4449,9 +4458,9 @@
   <!-- Round name shown on the sports widget for the bronze final stage in the soccer tournament. -->
   <string name="sports_widget_bronze_final">Tranh Hạng Ba</string>
   <!-- Sports widget error card message shown when match data fails to load. -->
-  <string name="sports_widget_error_load_failed">Thông tin trận đấu hiện không khả dụng. Vui lòng làm mới trang sau vài phút.</string>
+  <string name="sports_widget_error_load_failed" tools:ignore="UnusedResources">Thông tin trận đấu hiện không khả dụng. Vui lòng làm mới trang sau vài phút.</string>
   <!-- Sports widget error card message shown when the network connection is interrupted and live updates pause. -->
-  <string name="sports_widget_error_connection_interrupted">Kết nối bị gián đoạn — cập nhật trực tiếp đã bị tạm dừng.</string>
+  <string name="sports_widget_error_connection_interrupted" tools:ignore="UnusedResources">Kết nối bị gián đoạn — cập nhật trực tiếp đã bị tạm dừng.</string>
   <!-- Sports widget action label to refresh match data after an error. -->
   <string name="sports_widget_error_refresh">Làm mới</string>
   <!-- Sports widget group stage label for group A in the soccer tournament. -->
@@ -4489,7 +4498,7 @@
   <!-- Sports widget match status suffix appended to match scores (e.g., "3 - 2 (Full time)") to indicate the match has been completed. -->
   <string name="sports_widget_match_full_time_suffix">(Hết giờ)</string>
   <!-- Sports widget match status to indicate the match has been completed. -->
-  <string name="sports_widget_match_full_time_2" tools:ignore="UnusedResources">Hết giờ</string>
+  <string name="sports_widget_match_full_time_2">Hết giờ</string>
   <!--
     Sports widget card title encouraging the user to follow the soccer tournament. “Keep tabs on” is an informal expression
     meaning to stay updated on or regularly follow something (in this case, World Cup matches and updates).
@@ -4521,7 +4530,7 @@
   <!-- Sports widget match status label shown during halftime of a match. -->
   <string name="sports_widget_halftime" tools:ignore="UnusedResources">Nghỉ giữa hiệp</string>
   <!-- Sports widget match status label shown during extra time of a match. -->
-  <string name="sports_widget_extra_time" tools:ignore="UnusedResources">Hiệp phụ</string>
+  <string name="sports_widget_extra_time">Hiệp phụ</string>
   <!-- Sports widget match status label shown during penalties of a match. -->
   <string name="sports_widget_penalties">Luân lưu</string>
   <!--
@@ -4543,11 +4552,11 @@
   -->
   <string name="sports_widget_countdown_minutes">P</string>
   <!-- Content description (for accessibility, not displayed) for the close button on the sports widget team / country selector. -->
-  <string name="sports_widget_close_team_selection_sheet_content_description" tools:ignore="UnusedResources">Đóng bảng lựa chọn đội</string>
+  <string name="sports_widget_close_team_selection_sheet_content_description">Đóng bảng lựa chọn đội</string>
   <!-- Content description (for accessibility, not displayed) for the close button on the sports widget card. -->
   <string name="sports_widget_close_content_description">Đóng</string>
   <!-- Content description (for accessibility, not displayed) for the overflow (more options) menu button on the sports widget card. -->
-  <string name="sports_widget_more_options_content_description" tools:ignore="UnusedResources">Tuỳ chọn khác</string>
+  <string name="sports_widget_more_options_content_description">Tuỳ chọn khác</string>
   <!--
     Content description (for accessibility, not displayed) announcing the time remaining until the soccer tournament kickoff.
     %1$d is the number of days, %2$d is the number of hours, and %3$d is the number of minutes.
@@ -4559,30 +4568,44 @@
     Content description (for accessibility, not displayed)  announcing an upcoming soccer match.
     %1$s is the home team name, %2$s is the away team name, %3$s is the match date, %4$s is the kickoff time.
   -->
-  <string name="sports_widget_upcoming_match_content_description" tools:ignore="UnusedResources">Sắp tới: %1$s vs %2$s, %3$s vào lúc %4$s</string>
+  <string name="sports_widget_upcoming_match_content_description">Sắp tới: %1$s vs %2$s, %3$s vào lúc %4$s</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing a soccer match.
+    %1$s is the home team name, %2$s is the away team name, %3$s is trailing context
+    (e.g. formatted score "1 - 2 (Full time)", upcoming match info "Jun 19 5:00 PM",
+    or a match status like "Full time").
+  -->
+  <string name="sports_widget_match_content_description">%1$s vs %2$s, %3$s</string>
   <!--
     Content description (for accessibility, not displayed)  used for the sports widget card header announcing a live match for a group or stage.
     %s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32,
     or Final represented by sports_widget_final).
   -->
-  <string name="sports_widget_live_game_content_description" tools:ignore="UnusedResources">%s, trực tiếp</string>
+  <string name="sports_widget_live_game_content_description">%s, trực tiếp</string>
   <!--
     Content description (for accessibility, not displayed) announcing a live score.
     %1$s is the home team name, %2$d is the home team score, %3$s is the away team name, %4$d is the away team score,
     and %5$s is the match elapsed time (e.g. 72 minutes).
   -->
-  <string name="sports_widget_live_score_content_description" tools:ignore="UnusedResources">%1$s %2$d, %3$s %4$d, %5$s, trực tiếp</string>
+  <string name="sports_widget_live_score_content_description">%1$s %2$d, %3$s %4$d, %5$s, trực tiếp</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing the elapsed minutes of a live match.
+    %1$s is the clock value, which may be a plain number (e.g. "72") or include extra time (e.g. "90+3").
+  -->
+  <string name="sports_widget_match_elapsed_minutes">Thời gian đã trôi qua bằng phút: %1$s</string>
   <!--
     Content description (for accessibility, not displayed) for a paginated item.
     %1$s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32),
     %2$d is the current page number, and %3$d is the total number of pages.
   -->
-  <string name="sports_widget_page_position_content_description" tools:ignore="UnusedResources">%1$s, trang %2$d của %3$d</string>
+  <string name="sports_widget_page_position_content_description">%1$s, trang %2$d của %3$d</string>
   <!--
     Content description (for accessibility, not displayed) for a page within the World Cup final results carousel.
     %1$d is the current page number, and %2$d is the total number of pages.
   -->
   <string name="sports_widget_final_results_page_content_description" tools:ignore="UnusedResources">Kết quả cuối cùng World Cup, trang %1$d của %2$d</string>
+  <!-- Content description (for accessibility, not displayed) for the World Cup final results page. -->
+  <string name="sports_widget_final_results_content_description">Kết quả cuối cùng World Cup</string>
   <!-- Content description (for accessibility, not displayed) for the remove button that removes the sports widget from the homepage. -->
   <string name="sports_widget_remove_content_description" tools:ignore="UnusedResources">Xoá World Cup khỏi trang chủ</string>
   <!-- Title shown on the sports widget immediately after the user has followed a team. %s is the selected team (e.g., "USA"). -->
@@ -4594,11 +4617,17 @@
   <!-- Sports widget match status label shown during second half of a match. -->
   <string name="sports_widget_second_half" tools:ignore="UnusedResources">Hiệp 2</string>
   <!-- Sports widget error card title shown when the user is offline. -->
-  <string name="sports_widget_error_connection_offline_title" tools:ignore="UnusedResources">Có vẻ như bạn đang ngoại tuyến.</string>
+  <string name="sports_widget_error_connection_offline_title">Có vẻ như bạn đang ngoại tuyến.</string>
   <!-- Sports widget error card description shown when the user is offline. -->
-  <string name="sports_widget_error_connection_offline_description" tools:ignore="UnusedResources">Kiểm tra kết nối internet của bạn và thử lại.</string>
+  <string name="sports_widget_error_connection_offline_description">Kiểm tra kết nối internet của bạn và thử lại.</string>
   <!-- Sports widget general group stage label in the soccer tournament. -->
   <string name="sports_widget_group_stage">Vòng bảng</string>
+  <!-- Sports widget error card title shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_title">Hiện chưa có thông tin trận đấu.</string>
+  <!-- Sports widget error card description shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_description">Hãy thử làm mới lại sau vài phút.</string>
+  <!-- Content description (for accessibility, not displayed) for teams which have not yet been determined in the match schedule. -->
+  <string name="sports_widget_team_to_be_determined">Đội sẽ được xác định sau</string>
   <!-- ==== End of Terms of use popup prompt. ==== -->
 
   <!--
@@ -4613,4 +4642,114 @@
   <string name="privacy_notice_updated_homepage_message_privacy_notice" tools:ignore="UnusedResources">Thông báo về quyền riêng tư</string>
   <!-- The second active link used in privacy_notice_updated_homepage_message -->
   <string name="privacy_notice_updated_homepage_message_learn_more" tools:ignore="UnusedResources">Tìm hiểu thêm</string>
+  <!--
+    Collections migration homepage card
+
+    Title shown on the collections to tab groups migration card on the homepage.
+  -->
+  <string name="collections_migration_homepage_banner_title">Bộ sưu tập bây giờ trở thành nhóm</string>
+  <!-- Message shown on the collections to tab groups migration card on the homepage. -->
+  <string name="collections_migration_homepage_card_message">Cách đơn giản hơn để sắp xếp các thẻ của bạn</string>
+  <!-- Link text shown on the collections to tab groups migration card that opens the tab groups page in the tab manager. -->
+  <string name="collections_migration_homepage_card_link">Xem nhóm thẻ của tôi</string>
+  <!-- Google Lens prototype related strings -->
+  <string name="preferences_debug_settings_google_lens_integration">Kích hoạt tính năng Google Ống kính được tích hợp</string>
+  <!-- Lens image search button content description -->
+  <string name="lens_search_content_description">Tìm kiếm bằng hình ảnh</string>
+  <!-- Content description for the gallery picker button in the Lens camera screen -->
+  <string name="content_description_gallery">Chọn ảnh từ thư viện để gửi đến Google Ống kính</string>
+  <!-- Content description for the shutter button in the Lens camera screen -->
+  <string name="content_description_take_photo">Chụp ảnh và gửi lên Google Ống kính</string>
+  <!-- Image context menu entry that sends the long-pressed image to Google Lens -->
+  <string name="context_menu_open_image_with_google_lens">Tìm kiếm với Google Ống kính</string>
+  <!-- Toast shown when the user denies the camera permission requested by the Lens camera screen -->
+  <string name="lens_camera_permission_denied">Quyền hạn bị từ chối</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the photo they capture will be sent to Google Lens for a visual search.
+  -->
+  <string name="lens_camera_title_lens">Google Ống kính</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the camera is being used to scan a QR code.
+  -->
+  <string name="lens_camera_title_qr">Mã QR</string>
+  <!-- Title for the Google Lens Search Settings page feature toggle -->
+  <string name="search_settings_google_lens_title">Bật tìm kiếm bằng Google Ống kính</string>
+  <!-- Description for the Google Lens Search Settings page feature toggle -->
+  <string name="search_settings_google_lens_description">Gửi hình ảnh lên Google để tìm kiếm trực quan.</string>
+  <!-- Caption shown under the Google Lens toggle clarifying when the feature is available -->
+  <string name="preferences_google_lens_availability_caption">Chỉ khả dụng khi Google được bật ở trên và là công cụ tìm kiếm đang hoạt động khi bạn duyệt web.</string>
+  <!-- Content description for the Google Lens half of the camera mode toggle -->
+  <string name="lens_camera_mode_lens">Google Ống kính</string>
+  <!-- Content description for the QR scanner half of the camera mode toggle -->
+  <string name="lens_camera_mode_qr">Quét mã QR</string>
+  <!-- Toast shown when the user picks an image from the gallery in QR mode but no QR code is found in it -->
+  <string name="lens_camera_qr_no_code_found">Không có mã QR nào trong ảnh</string>
+  <!-- Title of the bottom sheet shown the first time the user opens the Google Lens camera screen -->
+  <string name="lens_opt_out_title">Tìm kiếm nó với Google Ống kính</string>
+  <!-- Description of the bottom sheet shown the first time the user opens the Google Lens camera screen -->
+  <string name="lens_opt_out_description">Chọn một hình ảnh hoặc sử dụng máy ảnh của bạn để tìm kiếm kết quả với Google Ống kính.</string>
+  <!-- Text of the link in the first-run Google Lens bottom sheet that opens the Search settings page -->
+  <string name="lens_opt_out_settings_link">Cài đặt Google Ống kính</string>
+  <!-- Button in the first-run Google Lens bottom sheet that dismisses it and starts the camera -->
+  <string name="lens_opt_out_try_it_now_button">Thử ngay bây giờ</string>
+  <!-- Button in the first-run Google Lens bottom sheet that leaves Google Lens without using it -->
+  <string name="lens_opt_out_not_now_button">Để sau</string>
+  <!--
+    Firefox Labs
+
+    Firefox Labs is the name of a screen in Settings to allow users to learn about
+    experimental and in-development features, and turn those features on and off.
+    The "Labs" portion can be localized, "Firefox" must be treated as a brand and kept
+    in English.
+  -->
+  <string name="firefox_labs_title" tools:ignore="BrandUsage">Firefox Labs</string>
+  <!-- Banner title text on the Firefox Labs screen. -->
+  <string name="firefox_labs_banner_title_2">Hãy thử các tính năng thử nghiệm của chúng tôi!</string>
+  <!--
+    Banner description text on the Firefox Labs screen. Provides information on what Firefox Labs does. %s is the name of the app (for example "Firefox Nightly").
+    Text will appear under the Firefox Labs banner title.
+  -->
+  <string name="firefox_labs_experimental_description">Chúng đang trong quá trình phát triển và cải tiến nên có thể ảnh hưởng đến cách thức hoạt động của %s.</string>
+  <!-- The link text shown when a feedback URL for a Firefox Labs feature is available. The feedback URL page will allow users to provide opinions and suggestions. -->
+  <string name="firefox_labs_share_feedback">Chia sẻ phản hồi</string>
+  <!-- Content description for the share feedback link on a Firefox Labs feature. This text will be used by screen readers to provide more context on the feedback link. %s is the name of the Firefox Labs feature. -->
+  <string name="firefox_labs_share_feedback_content_description">Chia sẻ phản hồi cho %s.</string>
+  <!-- Button text on the Firefox Labs screen for restoring all toggles back to the default settings. The button will turn off any experimental features. -->
+  <string name="firefox_labs_restore_default_button_text">Khôi phục về mặc định</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when toggling "on" or "off" an experimental feature that requires a restart. -->
+  <string name="firefox_labs_feature_dialog_title">Yêu cầu khởi động lại</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the positive button when toggling "on" and "off" experimental features. This prompts the user to confirm that they want to restart the app. -->
+  <string name="firefox_labs_dialog_restart_button">Khởi động lại</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the negative button when toggling "on" and "off" experimental features. This is used to cancel the action and return to the previous screen. -->
+  <string name="firefox_labs_dialog_cancel_button">Huỷ bỏ</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. -->
+  <string name="firefox_labs_restore_defaults_dialog_title">Yêu cầu khởi động lại</string>
+  <!-- The description used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_restore_defaults_dialog_message">Để khôi phục về mặc định, hãy khởi động lại %s.</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "on" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_enable_dialog_message">Để bật tính năng này, hãy khởi động lại %s.</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "off" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_disable_dialog_message">Để tắt tính năng này, hãy khởi động lại %s.</string>
+  <!-- Helper text shown beneath a Firefox Labs item when it is blocked from being turned on. -->
+  <string name="firefox_labs_feature_conflict">Tính năng hiện chưa khả dụng để dùng thử.</string>
+  <!-- Text displayed on the Firefox Labs screen when there are no Labs experimental features present. -->
+  <string name="firefox_labs_no_labs_available_description">Chưa có tính năng thử nghiệm nào để thử bây giờ</string>
+  <!-- Title of the Firefox Labs Sandboxing experiment. -->
+  <string name="firefox_labs_website_isolation_title" tools:ignore="UnusedResources">Cô lập trang web</string>
+  <!-- Description of the Firefox Labs Sandboxing experiment. -->
+  <string name="firefox_labs_website_isolation_description" tools:ignore="UnusedResources">Một lớp bảo vệ bổ sung giữa các trang web giúp bảo vệ dữ liệu của bạn giữa các thẻ. Có thể ảnh hưởng đến hiệu suất, độ ổn định, khả năng tương thích của trang web và cách lưu lịch sử duyệt web.</string>
+  <!--
+    PDF viewer toolbar and buttons
+
+    Content description for accessibility (used by screen readers): Description for the button that triggers the start of a signature workflow on the PDF displayed on the screen.
+  -->
+  <string name="pdf_tools_sign_content_description">Ký PDF</string>
+  <!-- Content description for accessibility (used by screen readers): Description of the button that downloads the PDF displayed on the screen to the user's device. -->
+  <string name="pdf_tools_download_content_description">Tải xuống PDF</string>
+  <!-- Content description for accessibility (used by screen readers): Description for the button that opens the printing dialogue window for the PDF displayed on the screen. -->
+  <string name="pdf_tools_print_content_description">In PDF</string>
+  <!-- Content description for accessibility (used by screen readers): Description for the button that opens the sharing options for the PDF being displayed on the screen. -->
+  <string name="pdf_tools_share_content_description">Chia sẻ PDF</string>
 </resources>

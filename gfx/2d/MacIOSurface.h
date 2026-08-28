@@ -10,9 +10,9 @@
 #  include <QuartzCore/QuartzCore.h>
 #  include <dlfcn.h>
 
-#  include "mozilla/gfx/Types.h"
-#  include "mozilla/Maybe.h"
 #  include "CFTypeRefPtr.h"
+#  include "mozilla/Maybe.h"
+#  include "mozilla/gfx/Types.h"
 
 namespace mozilla {
 namespace gl {
@@ -53,30 +53,31 @@ class MacIOSurface final
   typedef mozilla::gfx::ColorRange ColorRange;
   typedef mozilla::gfx::ColorDepth ColorDepth;
 
+  enum class AllowAlpha : bool { No, Yes };
+
   // The usage count of the IOSurface is increased by 1 during the lifetime
   // of the MacIOSurface instance.
   // MacIOSurface holds a reference to the corresponding IOSurface.
 
   static already_AddRefed<MacIOSurface> CreateIOSurface(int aWidth, int aHeight,
-                                                        bool aHasAlpha = true);
+                                                        AllowAlpha aAllowAlpha);
   static already_AddRefed<MacIOSurface> CreateBiPlanarSurface(
       const IntSize& aYSize, const IntSize& aCbCrSize,
       ChromaSubsampling aChromaSubsampling, YUVColorSpace aColorSpace,
       TransferFunction aTransferFunction, ColorRange aColorRange,
-      ColorDepth aColorDepth);
-  static already_AddRefed<MacIOSurface> CreateSinglePlanarSurface(
-      const IntSize& aSize, YUVColorSpace aColorSpace,
-      TransferFunction aTransferFunction, ColorRange aColorRange);
+      ColorDepth aColorDepth, AllowAlpha aAllowAlpha);
   static void ReleaseIOSurface(MacIOSurface* aIOSurface);
   static already_AddRefed<MacIOSurface> LookupSurface(
-      IOSurfaceID aSurfaceID, bool aHasAlpha, YUVColorSpace aColorSpace,
-      TransferFunction aTransferFunction);
+      IOSurfaceID aSurfaceID, YUVColorSpace aColorSpace,
+      TransferFunction aTransferFunction, AllowAlpha aAllowAlpha);
   static mozilla::gfx::SurfaceFormat SurfaceFormatForPixelFormat(
-      OSType aPixelFormat, bool aHasAlpha);
+      OSType aPixelFormat, AllowAlpha aAllowAlpha);
+  static bool HasAlphaForPixelFormat(OSType aPixelFormat);
 
   explicit MacIOSurface(CFTypeRefPtr<IOSurfaceRef> aIOSurfaceRef,
-                        bool aHasAlpha, YUVColorSpace aColorSpace,
-                        TransferFunction aTransferFunction);
+                        YUVColorSpace aColorSpace,
+                        TransferFunction aTransferFunction,
+                        AllowAlpha aAllowAlpha);
 
   ~MacIOSurface();
   IOSurfaceID GetIOSurfaceID() const;
@@ -118,6 +119,7 @@ class MacIOSurface final
     OSType format = GetPixelFormat();
     return (format == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ||
             format == kCVPixelFormatType_420YpCbCr10BiPlanarFullRange ||
+            format == kCVPixelFormatType_422YpCbCr8BiPlanarFullRange ||
             format == kCVPixelFormatType_422YpCbCr10BiPlanarFullRange ||
             format == kCVPixelFormatType_422YpCbCr8FullRange);
   }

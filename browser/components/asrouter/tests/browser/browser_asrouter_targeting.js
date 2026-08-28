@@ -8,11 +8,11 @@ ChromeUtils.defineESModuleGetters(this, {
   ASRouterTargeting: "resource:///modules/asrouter/ASRouterTargeting.sys.mjs",
   AttributionCode:
     "moz-src:///browser/components/attribution/AttributionCode.sys.mjs",
+  BrowserInitState: "resource:///modules/BrowserGlue.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   BuiltInThemes: "resource:///modules/BuiltInThemes.sys.mjs",
   CFRMessageProvider: "resource:///modules/asrouter/CFRMessageProvider.sys.mjs",
   ClientID: "resource://gre/modules/ClientID.sys.mjs",
-  ExperimentAPI: "resource://nimbus/ExperimentAPI.sys.mjs",
   FxAccounts: "resource://gre/modules/FxAccounts.sys.mjs",
   HomePage: "resource:///modules/HomePage.sys.mjs",
   InfoBar: "resource:///modules/asrouter/InfoBar.sys.mjs",
@@ -28,6 +28,8 @@ ChromeUtils.defineESModuleGetters(this, {
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SelectableProfileService:
     "resource:///modules/profiles/SelectableProfileService.sys.mjs",
+  SessionStartup:
+    "moz-src:///browser/components/sessionstore/SessionStartup.sys.mjs",
   ShellService: "moz-src:///browser/components/shell/ShellService.sys.mjs",
   sinon: "resource://testing-common/Sinon.sys.mjs",
   Spotlight: "resource:///modules/asrouter/Spotlight.sys.mjs",
@@ -42,6 +44,11 @@ ChromeUtils.defineESModuleGetters(this, {
 const { DefaultBrowserCheck } = ChromeUtils.importESModule(
   "moz-src:///browser/components/DefaultBrowserCheck.sys.mjs"
 );
+
+const FirefoxViewTestUtils = ChromeUtils.importESModule(
+  "resource://testing-common/FirefoxViewTestUtils.sys.mjs"
+);
+FirefoxViewTestUtils.init(this);
 
 const testFeatureCallout = {
   id: "TEST_MESSAGE",
@@ -86,12 +93,12 @@ const testCrashDumpFiles = [
   {
     path: "/path/to/crash1.dmp",
     id: "crash1",
-    date: new Date(2026, 1, 1).getTime(), // Feb 1, 2026
+    date: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
   },
   {
     path: "/path/to/crash2.dmp",
     id: "crash2",
-    date: new Date(2026, 2, 1).getTime(), // Mar 1, 2026
+    date: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
   },
   {
     path: "/path/to/crash3.dmp",
@@ -610,6 +617,111 @@ add_task(async function checkisDefaultBrowser() {
     message,
     "should select correct item by isDefaultBrowser"
   );
+});
+
+add_task(async function checkisDefaultHandler_pdf() {
+  const expected = ShellService.isDefaultHandlerFor(".pdf");
+  const result = await ASRouterTargeting.Environment.isDefaultHandler.pdf;
+  is(
+    typeof result,
+    "boolean",
+    "isDefaultHandler.pdf should be a boolean value"
+  );
+  is(
+    result,
+    expected,
+    "isDefaultHandler.pdf should equal ShellService.isDefaultHandlerFor('.pdf')"
+  );
+  const message = {
+    id: "pdf_test",
+    targeting: `isDefaultHandler.pdf == ${expected.toString()}`,
+  };
+  is(
+    await ASRouterTargeting.findMatchingMessage({ messages: [message] }),
+    message,
+    "should select correct item by isDefaultHandler.pdf"
+  );
+});
+
+add_task(async function checkisDefaultHandler_html() {
+  const expected = ShellService.isDefaultHandlerFor(".html");
+  const result = await ASRouterTargeting.Environment.isDefaultHandler.html;
+  is(
+    typeof result,
+    "boolean",
+    "isDefaultHandler.html should be a boolean value"
+  );
+  is(
+    result,
+    expected,
+    "isDefaultHandler.html should equal ShellService.isDefaultHandlerFor('.html')"
+  );
+  const message = {
+    id: "html_test",
+    targeting: `isDefaultHandler.html == ${expected.toString()}`,
+  };
+  is(
+    await ASRouterTargeting.findMatchingMessage({ messages: [message] }),
+    message,
+    "should select correct item by isDefaultHandler.html"
+  );
+});
+
+add_task(async function checkisDefaultHandler_mailto() {
+  const expected = ShellService.isDefaultHandlerFor("mailto");
+  const result = await ASRouterTargeting.Environment.isDefaultHandler.mailto;
+  is(
+    typeof result,
+    "boolean",
+    "isDefaultHandler.mailto should be a boolean value"
+  );
+  is(
+    result,
+    expected,
+    "isDefaultHandler.mailto should equal ShellService.isDefaultHandlerFor('mailto')"
+  );
+  const message = {
+    id: "mailto_test",
+    targeting: `isDefaultHandler.mailto == ${expected.toString()}`,
+  };
+  is(
+    await ASRouterTargeting.findMatchingMessage({ messages: [message] }),
+    message,
+    "should select correct item by isDefaultHandler.mailto"
+  );
+});
+
+add_task(async function checkMailtoHandlerHost() {
+  const result = await ASRouterTargeting.Environment.mailtoHandlerHost;
+  ok(
+    result === null || typeof result === "string",
+    "mailtoHandlerHost should be null or a host string"
+  );
+
+  const nullMessage = {
+    id: "mailto_host_null_test",
+    targeting: "mailtoHandlerHost == null",
+  };
+  const nullMatch = await ASRouterTargeting.findMatchingMessage({
+    messages: [nullMessage],
+  });
+  ok(
+    nullMatch === nullMessage || nullMatch === null,
+    "should be able to target on mailtoHandlerHost == null"
+  );
+
+  if (typeof result === "string") {
+    ok(result.includes("."), `should return a host (got "${result}")`);
+    const message = {
+      id: "mailto_host_test",
+      targeting: `mailtoHandlerHost == "${result}"`,
+    };
+    is(
+      await ASRouterTargeting.findMatchingMessage({ messages: [message] }),
+      message,
+      "should select correct item by mailtoHandlerHost"
+    );
+  }
 });
 
 add_task(async function checkisPrivateWindow_false() {
@@ -1186,6 +1298,59 @@ add_task(async function check_pinned_tabs() {
   );
 });
 
+add_task(async function check_has_active_ai_window() {
+  is(
+    await ASRouterTargeting.Environment.hasActiveAIWindow,
+    false,
+    "No active Smart Window without one open"
+  );
+});
+
+add_task(async function check_has_active_ai_window_true() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.smartwindow.enabled", true]],
+  });
+
+  const win = await BrowserTestUtils.openNewBrowserWindow();
+  win.document.documentElement.setAttribute("ai-window", "");
+
+  is(
+    await ASRouterTargeting.Environment.hasActiveAIWindow,
+    true,
+    "Should detect an active Smart Window while one is open"
+  );
+
+  win.document.documentElement.removeAttribute("ai-window");
+  await BrowserTestUtils.closeWindow(win);
+  await SpecialPowers.popPrefEnv();
+});
+
+add_task(async function check_tabsOpenInTopWindow() {
+  const baseline = await ASRouterTargeting.Environment.tabsOpenInTopWindow;
+
+  const tab1 = BrowserTestUtils.addTab(gBrowser, "about:blank");
+  is(
+    await ASRouterTargeting.Environment.tabsOpenInTopWindow,
+    baseline + 1,
+    "Should count one additional tab"
+  );
+
+  const tab2 = BrowserTestUtils.addTab(gBrowser, "about:blank");
+  is(
+    await ASRouterTargeting.Environment.tabsOpenInTopWindow,
+    baseline + 2,
+    "Should count two additional tabs"
+  );
+
+  BrowserTestUtils.removeTab(tab2);
+  BrowserTestUtils.removeTab(tab1);
+  is(
+    await ASRouterTargeting.Environment.tabsOpenInTopWindow,
+    baseline,
+    "Should return to baseline after closing tabs"
+  );
+});
+
 class FakeTabWithNote extends EventTarget {
   /**
    * @param {string} canonicalUrl
@@ -1348,54 +1513,6 @@ add_task(async function checkPatternsValid() {
   for (const message of messages) {
     Assert.ok(new MatchPatternSet(message.trigger.patterns));
   }
-});
-
-add_task(async function check_isChinaRepack() {
-  const prefDefaultBranch = Services.prefs.getDefaultBranch("distribution.");
-  const originalDistributionId = prefDefaultBranch.getCharPref("id", "");
-  const messages = [
-    { id: "msg_for_china_repack", targeting: "isChinaRepack == true" },
-    { id: "msg_for_everyone_else", targeting: "isChinaRepack == false" },
-  ];
-
-  is(
-    await ASRouterTargeting.Environment.isChinaRepack,
-    false,
-    "Fx w/o partner repack info set is not China repack"
-  );
-  is(
-    (await ASRouterTargeting.findMatchingMessage({ messages })).id,
-    "msg_for_everyone_else",
-    "should select the message for non China repack users"
-  );
-
-  prefDefaultBranch.setCharPref("id", "MozillaOnline");
-
-  is(
-    await ASRouterTargeting.Environment.isChinaRepack,
-    true,
-    "Fx with `distribution.id` set to `MozillaOnline` is China repack"
-  );
-  is(
-    (await ASRouterTargeting.findMatchingMessage({ messages })).id,
-    "msg_for_china_repack",
-    "should select the message for China repack users"
-  );
-
-  prefDefaultBranch.setCharPref("id", "Example");
-
-  is(
-    await ASRouterTargeting.Environment.isChinaRepack,
-    false,
-    "Fx with `distribution.id` set to other string is not China repack"
-  );
-  is(
-    (await ASRouterTargeting.findMatchingMessage({ messages })).id,
-    "msg_for_everyone_else",
-    "should select the message for non China repack users"
-  );
-
-  prefDefaultBranch.setCharPref("id", originalDistributionId);
 });
 
 add_task(async function check_userId() {
@@ -1680,6 +1797,8 @@ add_task(async function test_distributionId() {
 });
 
 add_task(async function test_fxViewButtonAreaType_default() {
+  FirefoxViewTestUtils.enableFirefoxViewButton(window);
+
   is(
     typeof (await ASRouterTargeting.Environment.fxViewButtonAreaType),
     "string",
@@ -2372,10 +2491,6 @@ add_task(async function activeNotifications_default_prompt_shown() {
 
   const win = await BrowserTestUtils.openNewBrowserWindow();
 
-  let visibilityChange = new Promise(res =>
-    win.document.addEventListener("visibilitychange", res, { once: true })
-  );
-
   sb.stub(DefaultBrowserCheck, "willCheckDefaultBrowser").returns(true);
   const promptSpy = sb.spy(DefaultBrowserCheck, "prompt");
 
@@ -2383,15 +2498,31 @@ add_task(async function activeNotifications_default_prompt_shown() {
 
   Assert.equal(promptSpy.callCount, 1, "default prompt should be called");
 
-  // activeNotifications are updated by visibilitychanges, so make sure we get
-  // one before testing it.
-  await visibilityChange;
+  // BrowserGlue doesn't await the prompt, and the dialog only opens after
+  // some some async things happen (eg pin checks, localization), so we should
+  // wait for it to actually be showing in the window that received it
+  const [promptWin] = promptSpy.firstCall.args;
+  await TestUtils.waitForCondition(
+    () => promptWin.gDialogBox?.isOpen,
+    "Waiting for the default browser prompt to open",
+    100,
+    100
+  );
+  // activeNotifications only inspects the top window, so make sure that's the
+  // window showing the prompt.
+  await SimpleTest.promiseFocus(promptWin);
 
   is(
     await ASRouterTargeting.Environment.activeNotifications,
     true,
     "activeNotifications should be true if the set to default prompt is being shown"
   );
+  let dialogClosed = BrowserTestUtils.waitForEvent(
+    promptWin,
+    "DOMModalDialogClosed"
+  );
+  promptWin.gDialogBox.dialog?.close();
+  await dialogClosed;
   await BrowserTestUtils.closeWindow(win);
   sb.restore();
 });
@@ -2670,6 +2801,16 @@ add_task(async function test_newtabAddonVersion() {
 });
 
 add_task(async function check_backupsInfo() {
+  if (AppConstants.platform === "macosx") {
+    // Bug 2033325: backupsInfo short-circuits on macOS.
+    Assert.deepEqual(
+      await ASRouterTargeting.Environment.backupsInfo,
+      { found: false },
+      "Should return {found: false} on macOS"
+    );
+    return;
+  }
+
   const sandbox = sinon.createSandbox();
   registerCleanupFunction(() => sandbox.restore());
 
@@ -2732,10 +2873,18 @@ add_task(async function check_backupArchiveEnabled() {
 
   await pushPrefs(["browser.backup.archive.enabled", true]);
 
+  // Backup is disabled whenever SQLite at-rest encryption is on, so the
+  // targeting value is false regardless of the killswitch in that build.
+  const sqliteEncryptionDisablesBackup = Services.prefs.getBoolPref(
+    "security.storage.encryption.sqlite.enabled",
+    false
+  );
   is(
     await ASRouterTargeting.Environment.backupArchiveEnabled,
-    true,
-    "should return true if the killswitch is not on"
+    !sqliteEncryptionDisablesBackup,
+    sqliteEncryptionDisablesBackup
+      ? "should be false when SQLite at-rest encryption disables backup"
+      : "should return true if the killswitch is not on"
   );
   await SpecialPowers.popPrefEnv();
   const archiveExperiment = await NimbusTestUtils.enrollWithFeatureConfig({
@@ -2761,10 +2910,18 @@ add_task(async function check_backupRestoreEnabled() {
 
   await pushPrefs(["browser.backup.restore.enabled", true]);
 
+  // Backup is disabled whenever SQLite at-rest encryption is on, so the
+  // targeting value is false regardless of the killswitch in that build.
+  const sqliteEncryptionDisablesBackup = Services.prefs.getBoolPref(
+    "security.storage.encryption.sqlite.enabled",
+    false
+  );
   is(
     await ASRouterTargeting.Environment.backupRestoreEnabled,
-    true,
-    "should return true if the killswitch is not on"
+    !sqliteEncryptionDisablesBackup,
+    sqliteEncryptionDisablesBackup
+      ? "should be false when SQLite at-rest encryption disables backup"
+      : "should return true if the killswitch is not on"
   );
   await SpecialPowers.popPrefEnv();
   await pushPrefs(["browser.backup.restore.enabled", true]);
@@ -2967,4 +3124,137 @@ add_task(async function check_daysSinceLastCrash_returnsDaysSinceLastCrash() {
   } finally {
     sandbox.restore();
   }
+});
+
+add_task(async function check_crashCountInLastDay_noCrashesReturnsZero() {
+  const sandbox = sinon.createSandbox();
+  try {
+    sandbox.stub(QueryCache.getters.crashData, "get").resolves([]);
+    is(
+      await ASRouterTargeting.Environment.crashCountInLastDay,
+      0,
+      "should return 0 for empty crash dumps"
+    );
+  } finally {
+    sandbox.restore();
+  }
+});
+
+add_task(async function check_crashCountInLastDay_onlyCountsRecentCrashes() {
+  const sandbox = sinon.createSandbox();
+  try {
+    sandbox.stub(QueryCache.getters.crashData, "get").resolves([
+      ...testCrashDumpFiles,
+      {
+        path: "/path/to/crash4.dmp",
+        id: "crash4",
+        date: new Date().getTime() - 60 * 60 * 1000,
+      },
+    ]);
+    is(
+      await ASRouterTargeting.Environment.crashCountInLastDay,
+      1,
+      "should only count the crash from within the last 24 hours"
+    );
+  } finally {
+    sandbox.restore();
+  }
+});
+
+add_task(async function check_crashCountInLastWeek_noCrashesReturnsZero() {
+  const sandbox = sinon.createSandbox();
+  try {
+    sandbox.stub(QueryCache.getters.crashData, "get").resolves([]);
+    is(
+      await ASRouterTargeting.Environment.crashCountInLastWeek,
+      0,
+      "should return 0 for empty crash dumps"
+    );
+  } finally {
+    sandbox.restore();
+  }
+});
+
+add_task(async function check_crashCountInLastWeek_onlyCountsRecentCrashes() {
+  const sandbox = sinon.createSandbox();
+  try {
+    sandbox.stub(QueryCache.getters.crashData, "get").resolves([
+      ...testCrashDumpFiles,
+      {
+        path: "/path/to/crash4.dmp",
+        id: "crash4",
+        date: new Date().getTime() - 2 * 24 * 60 * 60 * 1000,
+      },
+      {
+        path: "/path/to/crash5.dmp",
+        id: "crash5",
+        date: new Date().getTime() - 5 * 24 * 60 * 60 * 1000,
+      },
+    ]);
+    is(
+      await ASRouterTargeting.Environment.crashCountInLastWeek,
+      2,
+      "should only count crashes from within the last 7 days"
+    );
+  } finally {
+    sandbox.restore();
+  }
+});
+
+add_task(async function check_previousSessionCrashed() {
+  const sandbox = sinon.createSandbox();
+  try {
+    sandbox.stub(SessionStartup, "previousSessionCrashed").get(() => true);
+    is(
+      ASRouterTargeting.Environment.previousSessionCrashed,
+      true,
+      "should be true when the previous session crashed"
+    );
+
+    const message = {
+      id: "check_previousSessionCrashed",
+      targeting: "previousSessionCrashed",
+    };
+    is(
+      (await ASRouterTargeting.findMatchingMessage({ messages: [message] }))
+        ?.id,
+      message.id,
+      "should select message targeting previousSessionCrashed when it is true"
+    );
+
+    sandbox.restore();
+    sandbox.stub(SessionStartup, "previousSessionCrashed").get(() => false);
+    is(
+      ASRouterTargeting.Environment.previousSessionCrashed,
+      false,
+      "should be false when the previous session did not crash"
+    );
+    is(
+      await ASRouterTargeting.findMatchingMessage({ messages: [message] }),
+      null,
+      "should not select message targeting previousSessionCrashed when it is false"
+    );
+  } finally {
+    sandbox.restore();
+  }
+});
+
+add_task(async function check_isLaunchOnLogin() {
+  const result = ASRouterTargeting.Environment.isLaunchOnLogin;
+  is(typeof result, "boolean", "isLaunchOnLogin should be a boolean");
+  is(
+    result,
+    BrowserInitState.isLaunchOnLogin,
+    "isLaunchOnLogin should reflect BrowserInitState.isLaunchOnLogin"
+  );
+
+  const message = {
+    id: "check_isLaunchOnLogin",
+    targeting: `isLaunchOnLogin == ${BrowserInitState.isLaunchOnLogin}`,
+  };
+  is(
+    (await ASRouterTargeting.findMatchingMessage({ messages: [message] })).id,
+    message.id,
+    "should select message matching current isLaunchOnLogin value"
+  );
 });

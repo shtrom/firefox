@@ -180,7 +180,6 @@
   cursor: text;
 }
 
-/* stylelint-disable-next-line media-query-no-invalid */
 @media -moz-pref("layout.css.always_underline_links") {
   :any-link {
     text-decoration: underline !important;
@@ -534,29 +533,25 @@ parsererror|sourcetext {
   animation-play-state: inherit;
 }
 
-/* Avoid exposing these keyframe names when view transitions are disabled */
-/* stylelint-disable-next-line media-query-no-invalid */
-@media -moz-pref("dom.viewTransitions.enabled") {
-  /* Default cross-fade transition */
-  @keyframes -ua-view-transition-fade-out {
-    to {
-      opacity: 0;
-    }
+/* Default cross-fade transition */
+@keyframes -ua-view-transition-fade-out {
+  to {
+    opacity: 0;
   }
-  @keyframes -ua-view-transition-fade-in {
-    from {
-      opacity: 0;
-    }
+}
+@keyframes -ua-view-transition-fade-in {
+  from {
+    opacity: 0;
   }
+}
 
-  /* Keyframes for blending when there are 2 images */
-  @keyframes -ua-mix-blend-mode-plus-lighter {
-    from {
-      mix-blend-mode: plus-lighter;
-    }
-    to {
-      mix-blend-mode: plus-lighter;
-    }
+/* Keyframes for blending when there are 2 images */
+@keyframes -ua-mix-blend-mode-plus-lighter {
+  from {
+    mix-blend-mode: plus-lighter;
+  }
+  to {
+    mix-blend-mode: plus-lighter;
   }
 }
 

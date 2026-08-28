@@ -10,7 +10,6 @@ import mozilla.appservices.adsclient.MozAdsClientApiException
 import mozilla.components.concept.base.crash.CrashReporting
 import mozilla.components.support.test.any
 import mozilla.components.support.test.mock
-import mozilla.components.support.test.nullable
 import mozilla.components.support.test.whenever
 import org.junit.After
 import org.junit.Assert.assertFalse
@@ -34,10 +33,11 @@ class MozAdsUseCasesTest {
         clientField.isAccessible = true
         clientField.set(MozAdsClientProvider, client)
 
-        useCases = MozAdsUseCases(
-            adsClientProvider = lazy { MozAdsClientProvider },
-            crashReporter = crashReporter,
-        )
+        useCases =
+            MozAdsUseCases(
+                adsClientProvider = lazy { MozAdsClientProvider },
+                crashReporter = crashReporter,
+            )
     }
 
     @After
@@ -54,17 +54,18 @@ class MozAdsUseCasesTest {
     }
 
     @Test
-    fun `GIVEN Ads client API exception WHEN recording a click interaction THEN log error and return false`() = runTest {
-        val clickUrl = "https://firefox.com/click"
-        val exception = MozAdsClientApiException.Other("test error")
+    fun `GIVEN Ads client API exception WHEN recording a click interaction THEN log error and return false`() =
+        runTest {
+            val clickUrl = "https://firefox.com/click"
+            val exception = MozAdsClientApiException.Other("test error")
 
-        whenever(client.recordClick(clickUrl = any(), options = nullable())).thenThrow(exception)
+            whenever(client.recordClick(clickUrl = clickUrl)).thenThrow(exception)
 
-        assertFalse(useCases.recordClickInteraction(clickUrl = clickUrl))
-        verify(client).recordClick(clickUrl = clickUrl)
-        verify(crashReporter).recordCrashBreadcrumb(breadcrumb = any())
-        verify(crashReporter).submitCaughtException(exception)
-    }
+            assertFalse(useCases.recordClickInteraction(clickUrl = clickUrl))
+            verify(client).recordClick(clickUrl = clickUrl)
+            verify(crashReporter).recordCrashBreadcrumb(breadcrumb = any())
+            verify(crashReporter).submitCaughtException(exception)
+        }
 
     @Test
     fun `WHEN recording an impression interaction THEN true is returned`() = runTest {
@@ -75,15 +76,16 @@ class MozAdsUseCasesTest {
     }
 
     @Test
-    fun `GIVEN Ads client API exception WHEN recording an impression interaction THEN log error and return false`() = runTest {
-        val impressionUrl = "https://firefox.com/click"
-        val exception = MozAdsClientApiException.Other("test error")
+    fun `GIVEN Ads client API exception WHEN recording an impression interaction THEN log error and return false`() =
+        runTest {
+            val impressionUrl = "https://firefox.com/click"
+            val exception = MozAdsClientApiException.Other("test error")
 
-        whenever(client.recordImpression(impressionUrl = any(), options = nullable())).thenThrow(exception)
+            whenever(client.recordImpression(impressionUrl = impressionUrl)).thenThrow(exception)
 
-        assertFalse(useCases.recordImpressionInteraction(impressionUrl = impressionUrl))
-        verify(client).recordImpression(impressionUrl = impressionUrl)
-        verify(crashReporter).recordCrashBreadcrumb(breadcrumb = any())
-        verify(crashReporter).submitCaughtException(exception)
-    }
+            assertFalse(useCases.recordImpressionInteraction(impressionUrl = impressionUrl))
+            verify(client).recordImpression(impressionUrl = impressionUrl)
+            verify(crashReporter).recordCrashBreadcrumb(breadcrumb = any())
+            verify(crashReporter).submitCaughtException(exception)
+        }
 }

@@ -9,15 +9,17 @@ use super::feature::{Evaluator, QueryFeatureDescription};
 use super::feature::{FeatureFlags, KeywordDiscriminant};
 use crate::context::QuirksMode;
 use crate::custom_properties::{
-    self, ComputedSubstitutionFunctions, VariableValue as CustomVariableValue,
+    self, ComputedSubstitutionFunctions, SubstitutionFunctionKind,
+    VariableValue as CustomVariableValue,
 };
 use crate::derives::*;
 use crate::dom::AttributeTracker;
 use crate::parser::{Parse, ParserContext};
-use crate::properties::{self, CSSWideKeyword};
+use crate::properties::CSSWideKeyword;
 use crate::properties_and_values::value::{ComputedValueComponent as Component, ValueInner};
 use crate::selector_map::PrecomputedHashSet;
 use crate::str::{starts_with_ignore_ascii_case, string_as_ascii_lowercase};
+use crate::stylesheets::container_rule::AttrReferenceSet;
 use crate::stylesheets::{CssRuleType, Origin, UrlExtraData};
 use crate::values::computed::{self, CSSPixelLength, ToComputedValue};
 use crate::values::specified::{
@@ -819,14 +821,18 @@ impl QueryExpressionValue {
                     )
                 };
 
-            if properties::enabled_arbitrary_substitution_functions()
-                .iter()
-                .any(|n| n.eq_ignore_ascii_case(name))
-            {
+            if SubstitutionFunctionKind::from_ident(name).is_ok() {
                 return Ok(Self::Function(Box::new(parse_func(input)?)));
             }
         }
         Err(input.new_custom_error(StyleParseErrorKind::UnspecifiedError))
+    }
+
+    fn collect_attribute_references(&self, references: &mut AttrReferenceSet) {
+        match self {
+            Self::Function(f) => f.collect_attribute_references(references),
+            _ => {},
+        }
     }
 }
 
@@ -1147,6 +1153,32 @@ impl QueryStyleRange {
                 }
             },
             _ => None,
+        }
+    }
+
+    /// Get all the attributes referenced inside of an attr() function within
+    /// all our QueryExpressionValues.
+    pub fn collect_attribute_references(&self, references: &mut AttrReferenceSet) {
+        match self {
+            QueryStyleRange::StyleRange2 {
+                value1,
+                op1: _,
+                value2,
+            } => {
+                value1.collect_attribute_references(references);
+                value2.collect_attribute_references(references);
+            },
+            QueryStyleRange::StyleRange3 {
+                value1,
+                op1: _,
+                value2,
+                op2: _,
+                value3,
+            } => {
+                value1.collect_attribute_references(references);
+                value2.collect_attribute_references(references);
+                value3.collect_attribute_references(references);
+            },
         }
     }
 }

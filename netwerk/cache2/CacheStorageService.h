@@ -5,26 +5,26 @@
 #ifndef CacheStorageService_h_
 #define CacheStorageService_h_
 
+#include "mozilla/AtomicBitfields.h"
+#include "mozilla/Atomics.h"
 #include "mozilla/LinkedList.h"
-#include "nsICacheStorageService.h"
-#include "nsIMemoryReporter.h"
-#include "nsINamed.h"
-#include "nsITimer.h"
-#include "nsICacheTesting.h"
-
-#include "nsClassHashtable.h"
-#include "nsTHashMap.h"
-#include "nsString.h"
-#include "nsThreadUtils.h"
-#include "nsProxyRelease.h"
 #include "mozilla/Monitor.h"
 #include "mozilla/Mutex.h"
 #include "mozilla/StaticMutex.h"
-#include "mozilla/AtomicBitfields.h"
-#include "mozilla/Atomics.h"
 #include "mozilla/TimeStamp.h"
+#include "nsClassHashtable.h"
+#include "nsICacheStorageService.h"
+#include "nsICacheTesting.h"
+#include "nsIMemoryReporter.h"
+#include "nsINamed.h"
+#include "nsITimer.h"
+#include "nsProxyRelease.h"
+#include "nsString.h"
 #include "nsTArray.h"
+#include "nsTHashMap.h"
+#include "nsThreadUtils.h"
 
+class nsICacheEntry;
 class nsIURI;
 class nsICacheEntryDoomCallback;
 class nsICacheStorageVisitor;
@@ -142,8 +142,7 @@ class CacheStorageService final : public nsICacheStorageService,
   static void GetCacheEntryInfo(CacheEntry* aEntry,
                                 EntryInfoCallback* aCallback);
 
-  nsresult GetCacheIndexEntryAttrs(CacheStorage const* aStorage,
-                                   const nsACString& aURI,
+  nsresult GetCacheIndexEntryAttrs(CacheStorage const* aStorage, nsIURI* aURI,
                                    const nsACString& aIdExtension,
                                    bool* aHasAltData, uint32_t* aFileSizeKb);
 
@@ -153,6 +152,11 @@ class CacheStorageService final : public nsICacheStorageService,
   size_t SizeOfExcludingThis(mozilla::MallocSizeOf mallocSizeOf) const;
   size_t SizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf) const;
   MOZ_DEFINE_MALLOC_SIZE_OF(MallocSizeOf)
+
+  void NoteNoVarySearchEntry(const nsACString& aContextKey,
+                             const nsACString& aBasePath,
+                             const nsACString& aFullKey);
+  void NoteNoVarySearchEntry(nsICacheEntry* aEntry, nsIURI* aURI);
 
  private:
   virtual ~CacheStorageService();
@@ -247,7 +251,7 @@ class CacheStorageService final : public nsICacheStorageService,
    * Get, or create when not existing and demanded, an entry for the storage
    * and uri+id extension.
    */
-  nsresult AddStorageEntry(CacheStorage const* aStorage, const nsACString& aURI,
+  nsresult AddStorageEntry(CacheStorage const* aStorage, nsIURI* aURI,
                            const nsACString& aIdExtension, uint32_t aFlags,
                            CacheEntryHandle** aResult);
 
@@ -255,16 +259,14 @@ class CacheStorageService final : public nsICacheStorageService,
    * Check existance of an entry.  This may throw NS_ERROR_NOT_AVAILABLE
    * when the information cannot be obtained synchronously w/o blocking.
    */
-  nsresult CheckStorageEntry(CacheStorage const* aStorage,
-                             const nsACString& aURI,
+  nsresult CheckStorageEntry(CacheStorage const* aStorage, nsIURI* aURI,
                              const nsACString& aIdExtension, bool* aResult);
 
   /**
    * Removes the entry from the related entry hash table, if still present
    * and returns it.
    */
-  nsresult DoomStorageEntry(CacheStorage const* aStorage,
-                            const nsACString& aURI,
+  nsresult DoomStorageEntry(CacheStorage const* aStorage, nsIURI* aURI,
                             const nsACString& aIdExtension,
                             nsICacheEntryDoomCallback* aCallback);
 
@@ -335,8 +337,7 @@ class CacheStorageService final : public nsICacheStorageService,
   nsresult DoomStorageEntries(const nsACString& aContextKey,
                               nsILoadContextInfo* aContext, bool aDiskStorage,
                               bool aPin, nsICacheEntryDoomCallback* aCallback);
-  nsresult AddStorageEntry(const nsACString& aContextKey,
-                           const nsACString& aURI,
+  nsresult AddStorageEntry(const nsACString& aContextKey, nsIURI* aURI,
                            const nsACString& aIdExtension, bool aWriteToDisk,
                            bool aSkipSizeCheck, bool aPin, uint32_t aFlags,
                            CacheEntryHandle** aResult);

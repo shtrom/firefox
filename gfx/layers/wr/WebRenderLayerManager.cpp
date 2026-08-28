@@ -5,6 +5,9 @@
 #include "WebRenderLayerManager.h"
 
 #include "GeckoProfiler.h"
+#include "LayerUserData.h"
+#include "WebRenderCanvasRenderer.h"
+#include "mozilla/PerfStats.h"
 #include "mozilla/StaticPrefs_apz.h"
 #include "mozilla/StaticPrefs_layers.h"
 #include "mozilla/dom/BrowserChild.h"
@@ -15,11 +18,8 @@
 #include "mozilla/layers/TextureClient.h"
 #include "mozilla/layers/TransactionIdAllocator.h"
 #include "mozilla/layers/WebRenderBridgeChild.h"
-#include "mozilla/PerfStats.h"
 #include "nsDisplayList.h"
 #include "nsLayoutUtils.h"
-#include "WebRenderCanvasRenderer.h"
-#include "LayerUserData.h"
 
 #ifdef XP_WIN
 #  include "gfxDWriteFonts.h"
@@ -351,7 +351,15 @@ void WebRenderLayerManager::EndTransactionWithoutLayer(
     diplayListBuilder = offscreenBuilder.get();
   }
 
-  diplayListBuilder->Begin();
+  // The grid this display list's coordinates are authored on. It comes from the
+  // document being painted, not the widget, because full zoom applies to
+  // content but not chrome, so the two differ within one WebRender document.
+  const int32_t appUnitsPerDevPixel =
+      aDisplayListBuilder ? aDisplayListBuilder->RootReferenceFrame()
+                                ->PresContext()
+                                ->AppUnitsPerDevPixel()
+                          : AppUnitsPerCSSPixel();
+  diplayListBuilder->Begin(appUnitsPerDevPixel);
 
   wr::IpcResourceUpdateQueue resourceUpdates(WrBridge());
   wr::usize builderDumpIndex = 0;

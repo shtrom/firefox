@@ -1,5 +1,6 @@
 ChromeUtils.defineESModuleGetters(this, {
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
+  AppConstants: "resource://gre/modules/AppConstants.sys.mjs",
 });
 
 /**
@@ -23,7 +24,7 @@ async function waitForWindowReadyForPopupNotifications(win) {
 // tests to be run.
 /* global tests */
 function setup() {
-  // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+  // eslint-disable-next-line sdl/no-insecure-url
   BrowserTestUtils.openNewForegroundTab(gBrowser, "http://example.com/").then(
     goNext
   );
@@ -120,7 +121,7 @@ function BasicNotification(testId) {
     },
   ];
   this.options = {
-    // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+    // eslint-disable-next-line sdl/no-insecure-url
     name: "http://example.com",
     eventCallback: eventName => {
       switch (eventName) {
@@ -302,6 +303,7 @@ function triggerMainCommand(popup) {
   ok(!!notifications.length, "at least one notification displayed");
   let notification = notifications[0];
   info("Triggering main command for notification " + notification.id);
+  notification.button.performUpdate?.();
   EventUtils.synthesizeMouseAtCenter(notification.button, {});
 }
 
@@ -317,8 +319,8 @@ function triggerSecondaryCommand(popup, index) {
   }
 
   // Extra secondary actions appear in a menu.
-  notification.secondaryButton.nextElementSibling.focus();
-
+  notification.secondaryButton.performUpdate?.();
+  notification.secondaryButton.chevronButtonEl.focus();
   popup.addEventListener(
     "popupshown",
     function () {
@@ -350,8 +352,10 @@ function triggerSecondaryCommand(popup, index) {
     "Open the popup to trigger secondary command for notification " +
       notification.id
   );
+
+  const isMac = AppConstants.platform == "macosx";
   EventUtils.synthesizeKey("KEY_ArrowDown", {
-    altKey: !navigator.platform.includes("Mac"),
+    altKey: !isMac,
   });
 }
 

@@ -26,7 +26,8 @@ class BrowserBridgeChild : public PBrowserBridgeChild {
 
   BrowserChild* Manager() {
     MOZ_ASSERT(CanSend());
-    return static_cast<BrowserChild*>(PBrowserBridgeChild::Manager());
+    return mozilla::ipc::ActorCast<BrowserChild>(
+        PBrowserBridgeChild::Manager());
   }
 
   TabId GetTabId() { return mId; }
@@ -88,6 +89,9 @@ class BrowserBridgeChild : public PBrowserBridgeChild {
       const nsRect& aRect, const AxisScrollParams& aVertical,
       const AxisScrollParams& aHorizontal, const ScrollFlags& aScrollFlags,
       const int32_t& aAppUnitsPerDevPixel);
+
+  mozilla::ipc::IPCResult RecvScrollForKeyboard(
+      const mozilla::layers::KeyboardScrollAction& aAction);
 
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
   mozilla::ipc::IPCResult RecvSubFrameCrashed();

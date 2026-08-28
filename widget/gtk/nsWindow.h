@@ -9,46 +9,40 @@
 #include <gtk/gtk.h>
 
 #include "CompositorWidget.h"
+#include "IMContextWrapper.h"
+#include "LookAndFeel.h"
 #include "MozContainer.h"
-#include "WaylandSurfaceLock.h"
 #include "VsyncSource.h"
+#include "WaylandSurfaceLock.h"
 #include "mozilla/EventForwards.h"
 #include "mozilla/Maybe.h"
+#include "mozilla/RWLock.h"
 #include "mozilla/RefPtr.h"
 #include "mozilla/TouchEvents.h"
 #include "mozilla/UniquePtr.h"
-#include "mozilla/RWLock.h"
 #include "mozilla/gfx/BaseMargin.h"
 #include "mozilla/widget/WindowSurface.h"
 #include "mozilla/widget/WindowSurfaceProvider.h"
-#include "nsIWidget.h"
 #include "nsIDragService.h"
+#include "nsIWidget.h"
 #include "nsRefPtrHashtable.h"
-#include "IMContextWrapper.h"
-#include "LookAndFeel.h"
 
 #ifdef ACCESSIBILITY
 #  include "mozilla/a11y/LocalAccessible.h"
 #endif
-
 #ifdef MOZ_X11
 #  include <gdk/gdkx.h>
+
 #  include "X11UndefineNone.h"
-#endif
-#ifdef MOZ_WAYLAND
-#  include <gdk/gdkwayland.h>
-#  include "base/thread.h"
-#  include "nsClipboardWayland.h"
 #endif
 
 #ifdef MOZ_LOGGING
-
 #  undef LOG
 #  undef LOGVERBOSE
 
+#  include "Units.h"
 #  include "mozilla/Logging.h"
 #  include "nsTArray.h"
-#  include "Units.h"
 
 extern mozilla::LazyLogModule gWidgetLog;
 extern mozilla::LazyLogModule gWidgetDragLog;
@@ -276,7 +270,7 @@ class nsWindow : public nsIWidget {
   void PerformFullscreenTransition(FullscreenTransitionStage aStage,
                                    uint16_t aDuration, nsISupports* aData,
                                    nsIRunnable* aCallback) override;
-  already_AddRefed<Screen> GetWidgetScreen() override;
+  already_AddRefed<mozilla::widget::Screen> GetWidgetScreen() override;
   nsresult MakeFullScreen(bool aFullScreen) override;
   void HideWindowChrome(bool aShouldHide) override;
 
@@ -317,10 +311,6 @@ class nsWindow : public nsIWidget {
 
   void OnVisibilityNotifyEvent(GdkVisibilityState aState);
   void OnWindowStateEvent(GtkWidget* aWidget, GdkEventWindowState* aEvent);
-  void OnDragDataReceivedEvent(GtkWidget* aWidget, GdkDragContext* aDragContext,
-                               gint aX, gint aY,
-                               GtkSelectionData* aSelectionData, guint aInfo,
-                               guint aTime, gpointer aData);
   gboolean OnPropertyNotifyEvent(GtkWidget* aWidget, GdkEventProperty* aEvent);
   gboolean OnTouchEvent(GdkEventTouch* aEvent);
   gboolean OnTouchpadPinchEvent(GdkEventTouchpadPinch* aEvent);
@@ -414,7 +404,7 @@ class nsWindow : public nsIWidget {
 
   nsresult SynthesizeNativeMouseEvent(
       LayoutDeviceIntPoint aPoint, NativeMouseMessage aNativeMessage,
-      mozilla::MouseButton aButton, nsIWidget::Modifiers aModifierFlags,
+      mozilla::MouseButton aButton, nsIWidget::NativeModifiers aModifierFlags,
       nsISynthesizedEventCallback* aCallback) override;
 
   nsresult SynthesizeNativeMouseMove(
@@ -422,12 +412,12 @@ class nsWindow : public nsIWidget {
       nsISynthesizedEventCallback* aCallback) override {
     return SynthesizeNativeMouseEvent(
         aPoint, NativeMouseMessage::Move, mozilla::MouseButton::eNotPressed,
-        nsIWidget::Modifiers::NO_MODIFIERS, aCallback);
+        nsIWidget::NativeModifiers::NO_MODIFIERS, aCallback);
   }
 
   nsresult SynthesizeNativeMouseScrollEvent(
       LayoutDeviceIntPoint aPoint, uint32_t aNativeMessage, double aDeltaX,
-      double aDeltaY, double aDeltaZ, uint32_t aModifierFlags,
+      double aDeltaY, double aDeltaZ, nsIWidget::NativeModifiers aModifierFlags,
       uint32_t aAdditionalFlags,
       nsISynthesizedEventCallback* aCallback) override;
 
@@ -550,6 +540,9 @@ class nsWindow : public nsIWidget {
 
   void ConfigureToplevelWindow();
   virtual void ConfigureToplevelWindowNative() {};
+
+  // Native implementation of OnMap() event for X11/Wayland.
+  virtual void OnMapNative() {};
 
   virtual void EnableVSyncSource() {};
   virtual void DisableVSyncSource() {};
@@ -780,6 +773,7 @@ class nsWindow : public nsIWidget {
 
   float mLastMotionPressure = 0.0f;
 
+  // Input region margin is stored in layout (scaled) coordinates.
   InputRegion mInputRegion;
 
   bool DragInProgress(void);

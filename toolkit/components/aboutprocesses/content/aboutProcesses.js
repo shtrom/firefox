@@ -36,7 +36,7 @@ const { AppConstants } = ChromeUtils.importESModule(
 
 ChromeUtils.defineESModuleGetters(this, {
   ContextualIdentityService:
-    "resource://gre/modules/ContextualIdentityService.sys.mjs",
+    "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(this, "ProfilerPopupBackground", function () {
@@ -960,6 +960,10 @@ var View = {
 
       case "pkcs11Module":
         fluentName = "about-processes-utility-actor-pkcs11-module";
+        break;
+
+      case "hwInference":
+        fluentName = "about-processes-utility-actor-hw-inference";
         break;
 
       default:

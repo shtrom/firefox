@@ -17,6 +17,7 @@
 #include "mozilla/ContentIterator.h"
 #include "mozilla/MruCache.h"
 #include "mozilla/StaticPtr.h"
+#include "mozilla/dom/AncestorIterator.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/HTMLCollectionBinding.h"
@@ -28,6 +29,7 @@
 #include "nsGenericHTMLElement.h"
 #include "nsGkAtoms.h"
 #include "nsIContent.h"
+#include "nsIContentInlines.h"
 #include "nsTHashtable.h"
 #include "nsWrapperCacheInlines.h"
 
@@ -128,84 +130,6 @@ JSObject* EmptyContentList::WrapObject(JSContext* cx,
                                        JS::Handle<JSObject*> aGivenProto) {
   return HTMLCollection_Binding::Wrap(cx, this, aGivenProto);
 }
-
-mozilla::dom::Element* EmptyContentList::Item(uint32_t aIndex) {
-  return nullptr;
-}
-
-mozilla::dom::Element* EmptyContentList::GetFirstNamedElement(
-    const nsAString& aName, bool& aFound) {
-  aFound = false;
-  return nullptr;
-}
-
-void EmptyContentList::GetSupportedNames(nsTArray<nsString>& aNames) {}
-
-Element* SimpleHTMLCollection::Item(uint32_t aIndex) {
-  nsIContent* content = mElements.SafeElementAt(aIndex);
-  MOZ_ASSERT(!content || content->IsElement(),
-             "SimpleHTMLCollection only contains elements");
-  return static_cast<Element*>(content);
-}
-
-Element* SimpleHTMLCollection::GetFirstNamedElement(const nsAString& aName,
-                                                    bool& aFound) {
-  aFound = false;
-  RefPtr<nsAtom> name = NS_Atomize(aName);
-  for (uint32_t i = 0; i < mElements.Length(); i++) {
-    MOZ_DIAGNOSTIC_ASSERT(mElements[i]);
-    Element* element = mElements[i]->AsElement();
-    if (element->GetID() == name ||
-        (element->HasName() &&
-         element->GetParsedAttr(nsGkAtoms::name)->GetAtomValue() == name)) {
-      aFound = true;
-      return element;
-    }
-  }
-  return nullptr;
-}
-
-void SimpleHTMLCollection::GetSupportedNames(nsTArray<nsString>& aNames) {
-  AutoTArray<nsAtom*, 8> atoms;
-  for (uint32_t i = 0; i < mElements.Length(); i++) {
-    MOZ_DIAGNOSTIC_ASSERT(mElements[i]);
-    Element* element = mElements[i]->AsElement();
-
-    nsAtom* id = element->GetID();
-    MOZ_ASSERT(id != nsGkAtoms::_empty);
-    if (id && !atoms.Contains(id)) {
-      atoms.AppendElement(id);
-    }
-
-    if (element->HasName()) {
-      nsAtom* name = element->GetParsedAttr(nsGkAtoms::name)->GetAtomValue();
-      MOZ_ASSERT(name && name != nsGkAtoms::_empty);
-      if (name && !atoms.Contains(name)) {
-        atoms.AppendElement(name);
-      }
-    }
-  }
-
-  nsString* names = aNames.AppendElements(atoms.Length());
-  for (uint32_t i = 0; i < atoms.Length(); i++) {
-    atoms[i]->ToString(names[i]);
-  }
-}
-
-JSObject* SimpleHTMLCollection::WrapObject(JSContext* aCx,
-                                           JS::Handle<JSObject*> aGivenProto) {
-  return HTMLCollection_Binding::Wrap(aCx, this, aGivenProto);
-}
-
-SimpleHTMLCollection::~SimpleHTMLCollection() = default;
-
-NS_IMPL_CYCLE_COLLECTION_INHERITED(SimpleHTMLCollection, HTMLCollection, mRoot)
-
-NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(SimpleHTMLCollection)
-NS_INTERFACE_MAP_END_INHERITING(HTMLCollection)
-
-NS_IMPL_ADDREF_INHERITED(SimpleHTMLCollection, HTMLCollection)
-NS_IMPL_RELEASE_INHERITED(SimpleHTMLCollection, HTMLCollection)
 
 struct ContentListCache
     : public MruCache<ContentListKey, ContentList*, ContentListCache> {
@@ -540,13 +464,27 @@ Element* ContentList::NamedItem(const nsAString& aName, bool aDoFlush) {
   return mNamedItemsCache->Get(name);
 }
 
-void ContentList::GetSupportedNames(nsTArray<nsString>& aNames,
-                                    FilterElementWithName aFilter) {
-  BringSelfUpToDate(true);
+Element* HTMLCollection::DefaultGetFirstNamedElement(const nsAString& aName,
+                                                     bool& aFound) {
+  aFound = false;
+  RefPtr<nsAtom> name = NS_Atomize(aName);
+  for (nsIContent* content : mElements) {
+    MOZ_DIAGNOSTIC_ASSERT(content);
+    Element* element = content->AsElement();
+    if (element->GetID() == name ||
+        (element->HasName() &&
+         element->GetParsedAttr(nsGkAtoms::name)->GetAtomValue() == name)) {
+      aFound = true;
+      return element;
+    }
+  }
+  return nullptr;
+}
 
+void HTMLCollection::GetSupportedNames(nsTArray<nsString>& aNames,
+                                       FilterElementWithName aFilter) {
   AutoTArray<nsAtom*, 8> atoms;
-  for (uint32_t i = 0; i < mElements.Length(); ++i) {
-    nsIContent* content = mElements.ElementAt(i);
+  for (nsIContent* content : mElements) {
     if (content->HasID()) {
       nsAtom* id = content->GetID();
       MOZ_ASSERT(id != nsGkAtoms::_empty, "Empty ids don't get atomized");
@@ -555,7 +493,7 @@ void ContentList::GetSupportedNames(nsTArray<nsString>& aNames,
       }
     }
 
-    if (nsGenericHTMLElement* el = nsGenericHTMLElement::FromNode(content)) {
+    if (auto* el = nsGenericHTMLElement::FromNode(content)) {
       // XXXbz should we be checking for particular tags here?  How
       // stable is this part of the spec?
       // Note: nsINode::HasName means the name is exposed on the document,
@@ -1045,8 +983,7 @@ LabelsNodeList::LabelsNodeList(nsGenericHTMLElement* aLabeledElement,
                                nsContentListMatchFunc aMatchFunc,
                                nsContentListDestroyFunc aDestroyFunc)
     : ContentList(aSubtreeRoot, aMatchFunc, aDestroyFunc, aLabeledElement) {
-  WatchLabeledDescendantsOfNearestAncestorLabel(aLabeledElement);
-  if (ShadowRoot* shadow = ShadowRoot::FromNodeOrNull(aSubtreeRoot)) {
+  if (auto* shadow = ShadowRoot::FromNodeOrNull(aSubtreeRoot)) {
     shadow->Host()->AddReferenceTargetChangeObserver(ResetRootsCallback, this);
   }
   mRoots.AppendElement(aSubtreeRoot);
@@ -1056,9 +993,8 @@ LabelsNodeList::LabelsNodeList(nsGenericHTMLElement* aLabeledElement,
 LabelsNodeList::~LabelsNodeList() {
   for (nsINode* root : mRoots) {
     root->RemoveMutationObserver(this);
-    if (ShadowRoot* shadow = ShadowRoot::FromNodeOrNull(root)) {
-      Element* host = shadow->GetHost();
-      if (host) {
+    if (auto* shadow = ShadowRoot::FromNodeOrNull(root)) {
+      if (Element* host = shadow->GetHost()) {
         host->RemoveReferenceTargetChangeObserver(ResetRootsCallback, this);
       }
     }
@@ -1137,49 +1073,15 @@ void LabelsNodeList::NodeWillBeDestroyed(nsINode* aNode) {
 
 // static
 bool LabelsNodeList::ResetRootsCallback(void* aData) {
-  LabelsNodeList* list = (LabelsNodeList*)aData;
+  auto* list = (LabelsNodeList*)aData;
   list->ResetRoots();
   return true;
-}
-
-// static
-bool LabelsNodeList::SetDirtyCallback(void* aData) {
-  LabelsNodeList* list = (LabelsNodeList*)aData;
-  list->SetDirty();
-  return true;
-}
-
-void LabelsNodeList::WatchLabeledDescendantsOfNearestAncestorLabel(
-    Element* labeledHost) {
-  if (!StaticPrefs::dom_shadowdom_referenceTarget_enabled()) {
-    return;
-  }
-  MOZ_ASSERT(labeledHost);
-  Element* parentElement = labeledHost->GetParentElement();
-  while (parentElement) {
-    if (HTMLLabelElement* label = HTMLLabelElement::FromNode(parentElement)) {
-      // Use GetControlForBindings() to get the element in the same scope as the
-      // label, instead of the deep labeled element.
-      if (Element* labeledElement = label->GetControlForBindings()) {
-        if (labeledElement != labeledHost) {
-          // If the labeled element's reference target changes such that it's no
-          // longer labelable, our labeled element might become the target for
-          // the ancestor label.
-          labeledElement->AddReferenceTargetChangeObserver(SetDirtyCallback,
-                                                           this);
-        }
-      }
-      return;
-    }
-    parentElement = parentElement->GetParentElement();
-  }
 }
 
 void LabelsNodeList::ResetRoots() {
   MOZ_ASSERT(mIsLiveList, "LabelsNodeList is always a live list");
 
-  nsGenericHTMLElement* labeledElement =
-      static_cast<nsGenericHTMLElement*>(mData);
+  auto* labeledElement = static_cast<nsGenericHTMLElement*>(mData);
   MOZ_ASSERT(labeledElement, "Must have labeled element");
 
   nsTArray<nsINode*> newRoots;
@@ -1196,7 +1098,6 @@ void LabelsNodeList::ResetRoots() {
       break;
     }
     labeledElementOrHost = shadowRoot->Host();
-    WatchLabeledDescendantsOfNearestAncestorLabel(labeledElementOrHost);
     shadowRoot = labeledElementOrHost->GetContainingShadow();
   }
 
@@ -1205,9 +1106,8 @@ void LabelsNodeList::ResetRoots() {
   if (!labeledElementOrHostIsInShadowTree) {
     // `labeledHost` is either `labeledElement`, or the shadow host which has
     // `labeledElement` as its resolved reference target.
-    DocumentOrShadowRoot* doc = labeledElementOrHost->GetUncomposedDoc();
-    if (doc) {
-      newRoots.AppendElement(&doc->AsNode());
+    if (Document* doc = labeledElementOrHost->GetUncomposedDoc()) {
+      newRoots.AppendElement(doc);
     } else if (newRoots.IsEmpty()) {
       newRoots.AppendElement(labeledElementOrHost->SubtreeRoot());
     }
@@ -1225,9 +1125,8 @@ void LabelsNodeList::ResetRoots() {
 
     // Only the outermost shadow root should have this as a
     // ReferenceTargetChangedObserver, to avoid duplicated notifications.
-    if (ShadowRoot* shadow = ShadowRoot::FromNodeOrNull(root)) {
-      Element* host = shadow->GetHost();
-      if (host) {
+    if (auto* shadow = ShadowRoot::FromNodeOrNull(root)) {
+      if (Element* host = shadow->GetHost()) {
         host->RemoveReferenceTargetChangeObserver(ResetRootsCallback, this);
       }
     }
@@ -1242,7 +1141,7 @@ void LabelsNodeList::ResetRoots() {
   mRootNode = mRoots.LastElement();
 
   if (labeledElementOrHostIsInShadowTree) {
-    ShadowRoot* shadow = ShadowRoot::FromNodeOrNull(mRootNode);
+    auto* shadow = ShadowRoot::FromNodeOrNull(mRootNode);
     MOZ_ASSERT(shadow);
     shadow->Host()->AddReferenceTargetChangeObserver(ResetRootsCallback, this);
   }
@@ -1253,7 +1152,7 @@ void LabelsNodeList::ResetRoots() {
 }
 
 nsINode* LabelsNodeList::GetNextNode(nsINode* aCurrent) {
-  nsGenericHTMLElement* labeledElement = (nsGenericHTMLElement*)mData;
+  auto* labeledElement = (nsGenericHTMLElement*)mData;
   MOZ_ASSERT(labeledElement, "Must have labeled element");
   MOZ_ASSERT(mRootNode, "Must have root node");
 
@@ -1313,7 +1212,7 @@ void LabelsNodeList::PopulateSelf(uint32_t aNeededLength,
 void LabelsNodeList::LastRelease() {
   for (nsINode* root : mRoots) {
     root->RemoveMutationObserver(this);
-    if (ShadowRoot* shadow = ShadowRoot::FromNodeOrNull(root)) {
+    if (auto* shadow = ShadowRoot::FromNodeOrNull(root)) {
       if (Element* host = shadow->GetHost()) {
         host->RemoveReferenceTargetChangeObserver(ResetRootsCallback, this);
       }

@@ -5,13 +5,7 @@
 package org.mozilla.fenix.ui.efficiency.pageObjects
 
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.ViewMatchers.isChecked
-import androidx.test.espresso.matcher.ViewMatchers.isNotChecked
-import androidx.test.espresso.matcher.ViewMatchers.withId
-import org.mozilla.fenix.R
-import org.mozilla.fenix.ext.settings
+import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.TestHelper.appContext
 import org.mozilla.fenix.ui.efficiency.helpers.BasePage
@@ -23,19 +17,21 @@ import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.SettingsHTTPSOnlyModeSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.SettingsSelectors
 
-class SettingsHTTPSOnlyModePage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *>) : BasePage(composeRule) {
+class SettingsHTTPSOnlyModePage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule, *>) :
+    BasePage(composeRule) {
     override val pageName = "SettingsHTTPSOnlyModePage"
 
     init {
         NavigationRegistry.register(
             from = "HomePage",
             to = pageName,
-            steps = listOf(
-                NavigationStep.Click(HomeSelectors.MAIN_MENU_BUTTON),
-                NavigationStep.Click(MainMenuSelectors.SETTINGS_BUTTON),
-                NavigationStep.Swipe(SettingsSelectors.HTTPS_ONLY_MODE_BUTTON),
-                NavigationStep.Click(SettingsSelectors.HTTPS_ONLY_MODE_BUTTON),
-            ),
+            steps =
+                listOf(
+                    NavigationStep.Click(HomeSelectors.MAIN_MENU_BUTTON),
+                    NavigationStep.Click(MainMenuSelectors.SETTINGS_BUTTON),
+                    NavigationStep.Swipe(SettingsSelectors.HTTPS_ONLY_MODE_BUTTON),
+                    NavigationStep.Click(SettingsSelectors.HTTPS_ONLY_MODE_BUTTON),
+                ),
         )
 
         NavigationRegistry.register(
@@ -49,21 +45,21 @@ class SettingsHTTPSOnlyModePage(composeRule: AndroidComposeTestRule<HomeActivity
         return SettingsHTTPSOnlyModeSelectors.all.filter { it.groups.contains(group) }
     }
 
-    override fun navigateToPage(url: String): SettingsHTTPSOnlyModePage {
-        super.navigateToPage(url)
+    override fun navigateToPage(url: String, forceNavigation: Boolean): SettingsHTTPSOnlyModePage {
+        super.navigateToPage(url, forceNavigation)
         return this
     }
 
     fun enableHttpsOnlyMode(): SettingsHTTPSOnlyModePage {
-        if (!appContext.settings().shouldUseHttpsOnly) {
+        if (!appContext.components.settings.shouldUseHttpsOnly) {
             mozClick(SettingsHTTPSOnlyModeSelectors.HTTPS_ONLY_MODE_TOGGLE)
         }
         return this
     }
 
     fun verifyHttpsOnlyAllTabsSelected(): SettingsHTTPSOnlyModePage {
-        onView(withId(R.id.https_only_all_tabs)).check(matches(isChecked()))
-        onView(withId(R.id.https_only_private_tabs)).check(matches(isNotChecked()))
+        mozVerifyElementIsChecked(SettingsHTTPSOnlyModeSelectors.HTTPS_ONLY_ALL_TABS_OPTION)
+        mozVerifyElementIsNotChecked(SettingsHTTPSOnlyModeSelectors.HTTPS_ONLY_PRIVATE_TABS_OPTION)
         return this
     }
 }

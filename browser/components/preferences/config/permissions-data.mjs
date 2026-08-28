@@ -57,19 +57,13 @@ Preferences.addAll([
 
   { id: PREF_NORMANDY_ENABLED, type: "bool" },
   { id: "nimbus.rollouts.enabled", type: "bool" },
-]);
 
-// Study opt out
-if (lazy.AppConstants.MOZ_DATA_REPORTING) {
-  Preferences.addAll([
-    // Preference instances for prefs that we need to monitor while the page is open.
-    { id: PREF_OPT_OUT_STUDIES_ENABLED, type: "bool" },
-    { id: PREF_ADDON_RECOMMENDATIONS_ENABLED, type: "bool" },
-    { id: PREF_UPLOAD_ENABLED, type: "bool" },
-    { id: "datareporting.usage.uploadEnabled", type: "bool" },
-    { id: "dom.private-attribution.submission.enabled", type: "bool" },
-  ]);
-}
+  // Preference instances for prefs that we need to monitor while the page is open.
+  { id: PREF_OPT_OUT_STUDIES_ENABLED, type: "bool" },
+  { id: PREF_ADDON_RECOMMENDATIONS_ENABLED, type: "bool" },
+  { id: PREF_UPLOAD_ENABLED, type: "bool" },
+  { id: "datareporting.usage.uploadEnabled", type: "bool" },
+]);
 
 /**
  * Displays a dialog for managing permission exceptions for a specific permission type.
@@ -486,11 +480,19 @@ Preferences.addSetting(
       const profilesBackupEnabledValue = /** @type {string} */ (
         dataCollectionPrefDeps.profilesBackupEnabled.value
       );
-      let profilesEnabledOn = JSON.parse(profilesBackupEnabledValue || "{}");
+      let profilesEnabledOn;
+      try {
+        let parsed = JSON.parse(profilesBackupEnabledValue || "[]");
+        // The pref may still be in the legacy object format
+        // ({profileId: true, ...}) that BackupService migrates on read.
+        profilesEnabledOn = Array.isArray(parsed)
+          ? parsed
+          : Object.keys(parsed);
+      } catch {
+        profilesEnabledOn = [];
+      }
       let currentId = currentProfile.id;
-      let otherProfilesEnabled = Object.keys(profilesEnabledOn).some(
-        id => id != currentId
-      );
+      let otherProfilesEnabled = profilesEnabledOn.some(id => id != currentId);
       return otherProfilesEnabled && anyPrefChanged;
     },
   })
@@ -535,8 +537,7 @@ SettingGroupManager.registerGroups({
             control: "moz-box-button",
             l10nId: "permissions-localhost2",
             controlAttrs: {
-              ".iconSrc":
-                "chrome://browser/skin/notification-icons/local-host.svg",
+              ".iconSrc": "chrome://global/skin/icons/local-host.svg",
               "search-l10n-ids":
                 "permissions-remove.label,permissions-remove-all.label,permissions-site-localhost-window.title,permissions-site-localhost-desc,permissions-site-localhost-disable-label,permissions-site-localhost-disable-desc,",
             },
@@ -671,6 +672,9 @@ SettingGroupManager.registerGroups({
             id: "preferencesPrivacyProfiles",
             control: "moz-message-bar",
             l10nId: "data-collection-preferences-across-profiles",
+            controlAttrs: {
+              role: "status",
+            },
             items: [
               {
                 id: "privacyProfilesLink",
@@ -690,6 +694,9 @@ SettingGroupManager.registerGroups({
             control: "moz-message-bar",
             l10nId: "data-collection-health-report-telemetry-disabled",
             supportPage: "telemetry-clientid",
+            controlAttrs: {
+              role: "status",
+            },
           },
           {
             id: "backup-multi-profile-warning-message-bar",

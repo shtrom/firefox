@@ -1,30 +1,33 @@
 From: Michael Froman <mfroman@mozilla.com>
-Date: Fri, 30 Jan 2026 18:55:00 +0000
-Subject: Bug 2005262 - better logging in
- ModuleRtpRtcpImpl2::RegisterRtpHeaderExtension. r=ng
+Date: Wed, 8 Apr 2026 10:58:00 -0500
+Subject: Bug 2030139 - (fix-bb3693c382) fix linux builds for constexpr
+ containing std::string
 
-Differential Revision: https://phabricator.services.mozilla.com/D281051
-Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/b44955c4c033ebaf31b40701f12f7cb0dc035ba8
+Mercurial Revision: https://hg.mozilla.org/mozilla-central/rev/cab51cf0d4e9e67e9f5b053128d05e859d47b7c2
 ---
- modules/rtp_rtcp/source/rtp_rtcp_impl2.cc | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
+ modules/portal/pipewire_utils.cc | 9 +++++++++
+ 1 file changed, 9 insertions(+)
 
-diff --git a/modules/rtp_rtcp/source/rtp_rtcp_impl2.cc b/modules/rtp_rtcp/source/rtp_rtcp_impl2.cc
-index c12f80e3d5..baeddc0da7 100644
---- a/modules/rtp_rtcp/source/rtp_rtcp_impl2.cc
-+++ b/modules/rtp_rtcp/source/rtp_rtcp_impl2.cc
-@@ -586,9 +586,13 @@ void ModuleRtpRtcpImpl2::SetExtmapAllowMixed(bool extmap_allow_mixed) {
+diff --git a/modules/portal/pipewire_utils.cc b/modules/portal/pipewire_utils.cc
+index 850726cc58..7008696b7d 100644
+--- a/modules/portal/pipewire_utils.cc
++++ b/modules/portal/pipewire_utils.cc
+@@ -28,9 +28,18 @@
  
- void ModuleRtpRtcpImpl2::RegisterRtpHeaderExtension(absl::string_view uri,
-                                                     int id) {
-+  RTC_LOG(LS_INFO) << "RegisterRtpHeaderExtension uri:'" << uri << "' id: " << id;
-   bool registered =
-       rtp_sender_->packet_generator.RegisterRtpHeaderExtension(uri, id);
--  RTC_CHECK(registered);
-+  if (!registered) {
-+    RTC_LOG(LS_WARNING) << "RegisterRtpHeaderExtension failed to register uri:'" << uri << "' id: " << id;
-+  }
-+  RTC_DCHECK(registered);
- }
+ namespace webrtc {
  
- void ModuleRtpRtcpImpl2::DeregisterSendRtpHeaderExtension(
++#if defined(__GNUC__) && defined(WEBRTC_MOZILLA_BUILD)
++// Mozilla linux builds are using -std=gnu++20, which doesn't approve
++// of using std::string in a constexpr.  PipewireVersion now contains
++// std::string as of libwebrtc commit d167fe9296.
++static const PipeWireVersion kReentrantDeinitMinVersion = {.major = 0,
++                                                           .minor = 3,
++                                                           .micro = 49};
++#else
+ constexpr PipeWireVersion kReentrantDeinitMinVersion = {.major = 0,
+                                                         .minor = 3,
+                                                         .micro = 49};
++#endif
+ 
+ PipeWireVersion PipeWireVersion::Parse(const std::string_view& version) {
+   std::vector<std::string_view> parsed_version = split(version, '.');

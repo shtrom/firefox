@@ -166,7 +166,7 @@ add_task(async function test_dismiss_Relay_optin_shows_Relay_again_later() {
       await clickRelayItemAndWaitForPopup(acPopup);
 
       const secondaryDismissButton = notificationPopup.querySelector(
-        "button.popup-notification-secondary-button"
+        "moz-button.popup-notification-secondary-button"
       );
       await clickButtonAndWaitForPopupToClose(secondaryDismissButton);
 
@@ -183,7 +183,8 @@ add_task(async function test_dismiss_Relay_optin_shows_Relay_again_later() {
 
 async function clickThruMoreActionsToDisableRelay(notificationPopup) {
   notificationPopup
-    .querySelector("button.popup-notification-dropmarker")
+    .querySelector("moz-button.popup-notification-secondary-button")
+    .shadowRoot.querySelector("#chevron-button")
     .click();
   const menuPopup = document.querySelector(
     "[data-l10n-id='popup-notification-more-actions-button']"
@@ -299,12 +300,12 @@ add_task(
 add_task(
   async function test_unauthenticated_browser_use_email_mask_opens_fxa_signin() {
     const relayParams = {
-      service: "relay",
       utm_source: "relay-integration",
       utm_medium: "firefox-desktop",
     };
     const fxaSigninUrlString =
       await gFxAccounts.constructor.config.promiseConnectAccountURI(
+        "relay",
         "relay_integration",
         relayParams
       );
@@ -345,7 +346,7 @@ add_task(
         await clickRelayItemAndWaitForPopup(acPopup);
 
         const primaryButton = notificationPopup.querySelector(
-          "button.popup-notification-primary-button"
+          "moz-button.popup-notification-primary-button"
         );
 
         // oauth makes checking the url as a string difficult.

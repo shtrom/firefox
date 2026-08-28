@@ -362,6 +362,7 @@ bool InvokeFromInterpreterStub(JSContext* cx,
 void* GetContextSensitiveInterpreterStub();
 
 bool CheckOverRecursed(JSContext* cx);
+bool CheckOverRecursedResumingGenerator(JSContext* cx);
 bool CheckOverRecursedBaseline(JSContext* cx, BaselineFrame* frame);
 
 [[nodiscard]] bool MutatePrototype(JSContext* cx, Handle<PlainObject*> obj,
@@ -449,13 +450,7 @@ JSObject* CreateGenerator(JSContext* cx, HandleFunction, HandleScript,
                                  const jsbytecode* pc);
 [[nodiscard]] bool FinalSuspend(JSContext* cx, HandleObject obj,
                                 const jsbytecode* pc);
-[[nodiscard]] bool InterpretResume(JSContext* cx, HandleObject obj,
-                                   Value* stackValues, MutableHandleValue rval);
 [[nodiscard]] bool DebugAfterYield(JSContext* cx, BaselineFrame* frame);
-[[nodiscard]] bool GeneratorThrowOrReturn(
-    JSContext* cx, BaselineFrame* frame,
-    Handle<AbstractGeneratorObject*> genObj, HandleValue arg,
-    int32_t resumeKindArg);
 
 [[nodiscard]] bool GlobalDeclInstantiationFromIon(JSContext* cx,
                                                   HandleScript script,
@@ -709,9 +704,9 @@ void DateFillLocalTimeSlots(DateObject* dateObj);
 double DateNow(JSContext* cx);
 double DateParse(JSContext* cx, const JSString* str);
 double DateLocalTimeToUTC(JSContext* cx, int64_t localTime);
-double DateYearFromTime(JSContext* cx, double utcTime);
-double DateMonthFromTime(JSContext* cx, double utcTime);
-double DateDateFromTime(JSContext* cx, double utcTime);
+void DateYearFromTime(JSContext* cx, double utcTime, JS::Value* result);
+void DateMonthFromTime(JSContext* cx, double utcTime, JS::Value* result);
+void DateDateFromTime(JSContext* cx, double utcTime, JS::Value* result);
 JSObject* NewDateObject(JSContext* cx, double utcTime);
 
 JSAtom* AtomizeStringNoGC(JSContext* cx, JSString* str);

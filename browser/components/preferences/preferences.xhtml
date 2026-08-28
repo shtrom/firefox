@@ -12,7 +12,7 @@
 
 <head>
   <!-- @CSP: We should remove 'unsafe-inline' from style-src, see Bug 1579160 -->
-  <meta http-equiv="Content-Security-Policy" content="default-src chrome:; img-src chrome: moz-icon: moz-remote-image: https: blob: data:; style-src chrome: data: 'unsafe-inline'; object-src 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src chrome:; img-src chrome: moz-icon: moz-remote-image: page-icon: https: blob: data:; style-src chrome: data: 'unsafe-inline'; object-src 'none'" />
 
   <title data-l10n-id="settings-page-title"></title>
 
@@ -33,10 +33,7 @@
     href="chrome://browser/skin/preferences/applications.css"
   />
   <link rel="stylesheet" href="chrome://browser/skin/preferences/search.css" />
-  <link
-    rel="stylesheet"
-    href="chrome://browser/skin/preferences/containers.css"
-  />
+  <link rel="stylesheet" href="chrome://browser/content/usercontext/usercontext.css" />
   <link rel="stylesheet" href="chrome://browser/skin/preferences/privacy.css" />
   <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-group.css" />
   <link rel="stylesheet" href="chrome://browser/content/preferences/widgets/setting-pane.css" />
@@ -50,18 +47,20 @@
   <link rel="localization" href="browser/preferences/preferences.ftl"/>
   <link rel="localization" href="toolkit/branding/brandings.ftl"/>
   <link rel="localization" href="toolkit/firefoxlabs/features.ftl"/>
+  <link rel="localization" href="toolkit/global/mozPageHeader.ftl"/>
 
   <!-- Temporary until localization is done -->
   <link rel="localization" href="preview/smartTabGroups.ftl"/>
   <link rel="localization" href="preview/privacyPreferences.ftl"/>
   <link rel="localization" href="browser/ipProtection.ftl"/>
-  <link rel="localization" href="preview/aiFeatures.ftl"/>
+  <link rel="localization" href="browser/aiFeatures.ftl"/>
 
   <!-- Links below are only used for search-l10n-ids into subdialogs -->
   <link rel="localization" href="browser/aboutDialog.ftl"/>
   <link rel="localization" href="browser/backupSettings.ftl"/>
   <link rel="localization" href="browser/genai.ftl"/>
   <link rel="localization" href="browser/search.ftl"/>
+  <link rel="localization" href="browser/preferences/browserIcon.ftl"/>
   <link rel="localization" href="browser/preferences/clearSiteData.ftl"/>
   <link rel="localization" href="browser/preferences/colors.ftl"/>
   <link rel="localization" href="browser/preferences/connection.ftl"/>
@@ -96,6 +95,7 @@
   <script type="module" src="chrome://browser/content/preferences/widgets/setting-control.mjs"></script>
   <script type="module" src="chrome://browser/content/preferences/widgets/security-privacy-card.mjs"></script>
   <script type="module" src="chrome://global/content/elements/moz-input-color.mjs"></script>
+  <script type="module" src="chrome://browser/content/usercontext/container-select.mjs"></script>
   <script type="module" src="chrome://browser/content/preferences/widgets/sync-device-name.mjs"></script>
   <script type="module" src="chrome://browser/content/preferences/widgets/sync-engines-list.mjs"></script>
   <script type="module" src="chrome://browser/content/preferences/widgets/update-information.mjs"></script>
@@ -115,15 +115,6 @@
   <hbox flex="1">
 
     <html:moz-page-nav id="categories" data-l10n-id="category-nav-heading" allownoselection="true">
-      <html:nav-notice
-        id="policies-container"
-        slot="subheading"
-        hidden="true"
-        href="about:policies"
-        iconsrc="chrome://global/skin/icons/info.svg"
-        data-l10n-id="managed-notice-nav"
-      />
-
       <html:moz-page-nav-button id="category-general"
         hidden="true"
         view="paneGeneral"
@@ -213,7 +204,6 @@
       <!-- Hidden sub-page entries (CSS display:none via .hidden-category).
            These keep gotoPref() routing working for sub-pages that are
            navigated to from within other panes. -->
-      <html:moz-page-nav-button class="hidden-category" view="paneContainers"/>
       <html:moz-page-nav-button class="hidden-category" view="paneProfiles"/>
       <html:moz-page-nav-button class="hidden-category" view="paneTranslations"/>
 
@@ -244,7 +234,7 @@
             id="policies-container-content"
             hidden="true"
             href="about:policies"
-            iconsrc="chrome://global/skin/icons/info.svg"
+            iconsrc="chrome://global/skin/icons/organizational-unit.svg"
             data-l10n-id="managed-notice-nav"
           />
           <html:moz-input-search
@@ -259,7 +249,6 @@
 #include home.inc.xhtml
 #include search.inc.xhtml
 #include privacy.inc.xhtml
-#include containers.inc.xhtml
 #include sync.inc.xhtml
 #include moreFromMozilla.inc.xhtml
         </vbox>
@@ -275,8 +264,11 @@
           aria-labelledby="dialogTitle">
       <hbox class="dialogTitleBar" align="center">
         <label class="dialogTitle" flex="1"/>
-        <button class="dialogClose close-icon"
-                data-l10n-id="close-button"/>
+        <html:moz-button class="dialogClose"
+                         type="icon ghost"
+                         size="small"
+                         iconsrc="chrome://global/skin/icons/close.svg"
+                         data-l10n-id="close-button"/>
       </hbox>
       <browser class="dialogFrame"
                autoscroll="false"

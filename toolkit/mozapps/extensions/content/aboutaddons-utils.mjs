@@ -1,7 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-/* globals windowRoot */
 
 import { gViewController } from "./view-controller.mjs";
 
@@ -49,6 +48,13 @@ XPCOMUtils.defineLazyPreferenceGetter(
   false
 );
 
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "BROWSER_NOVA_ENABLED",
+  "browser.nova.enabled",
+  false
+);
+
 export const UPDATES_RECENT_TIMESPAN = 2 * 24 * 3600000; // 2 days (in milliseconds)
 
 export const HTML_NS = "http://www.w3.org/1999/xhtml";
@@ -93,6 +99,10 @@ export function isDiscoverEnabled() {
   }
 
   return true;
+}
+
+export function isBrowserNovaEnabled() {
+  return lazy.BROWSER_NOVA_ENABLED;
 }
 
 export function getBrowserElement() {
@@ -217,6 +227,28 @@ export function openOptionsInTab(optionsURL) {
   return false;
 }
 
+export function openAboutSettingsInTab() {
+  let mainWindow = window.windowRoot.window;
+  if ("switchToTabHavingURI" in mainWindow) {
+    let hasAboutSettings = mainWindow.switchToTabHavingURI(
+      "about:settings",
+      false,
+      {
+        ignoreFragment: "whenComparing",
+      }
+    );
+    if (!hasAboutSettings) {
+      let systemPrincipal = Services.scriptSecurityManager.getSystemPrincipal();
+      mainWindow.switchToTabHavingURI("about:preferences", true, {
+        ignoreFragment: "whenComparing",
+        triggeringPrincipal: systemPrincipal,
+      });
+    }
+    return true;
+  }
+  return false;
+}
+
 export function shouldShowPermissionsPrompt(addon) {
   if (!addon.isWebExtension || addon.seen) {
     return false;
@@ -272,6 +304,18 @@ export function isCorrectlySigned(addon) {
   // Add-ons without an "isCorrectlySigned" property are correctly signed as
   // they aren't the correct type for signing.
   return addon.isCorrectlySigned !== false;
+}
+
+export function isUnsignedWarningMessageDisabled() {
+  // While running in automation, in a local build or in a Thunderbird
+  // application instance, allow to hide the unsigned add-on message bars
+  // through the related about:config preference.
+  return (
+    (Cu.isInAutomation ||
+      !lazy.AppConstants.MOZILLA_OFFICIAL ||
+      lazy.AppConstants.MOZ_APP_NAME === "thunderbird") &&
+    Services.prefs.getBoolPref("extensions.ui.disableUnsignedWarnings", false)
+  );
 }
 
 export function isDisabledUnsigned(addon) {
@@ -539,14 +583,11 @@ export async function getAddonMessageInfo(
       type: "error",
     };
   } else if (
-    (Cu.isInAutomation || !lazy.AppConstants.MOZILLA_OFFICIAL) &&
-    Services.prefs.getBoolPref("extensions.ui.disableUnsignedWarnings", false)
+    !isCorrectlySigned(addon) &&
+    // In automation, local builds and Thunderbird application instances
+    // we allow to disable the unsigned addons message bar.
+    !isUnsignedWarningMessageDisabled()
   ) {
-    // In local builds, when this pref is set, pretend the file is correctly
-    // signed even if it isn't so that the UI looks like what users would
-    // normally see.
-    return {};
-  } else if (!isCorrectlySigned(addon)) {
     return {
       linkSumoPage: "unsigned-addons",
       messageId: "details-notification-unsigned2",
@@ -700,7 +741,9 @@ export function nl2br(text) {
  */
 export function getScreenshotUrlForAddon(addon) {
   if (addon.id == "default-theme@mozilla.org") {
-    return "chrome://mozapps/content/extensions/default-theme/preview.svg";
+    return !lazy.BROWSER_NOVA_ENABLED
+      ? "chrome://mozapps/content/extensions/default-theme/preview.svg"
+      : "chrome://mozapps/content/extensions/default-theme/preview-nova.svg";
   }
   const builtInThemePreview = lazy.BuiltInThemes.previewForBuiltInThemeId(
     addon.id
@@ -869,9 +912,11 @@ export var DiscoveryAPI = {
 };
 
 /**
- * @param {Element} el The button element.
+ * @param {string} [path] Optional path to append to the base AMO URL.
+ * @param {object} [options]
+ * @param {string} [options.utmContent="aboutaddons"] UTM content parameter for tracking.
  */
-export function openAmoInTab(el, path) {
+export function openAmoInTab(path, { utmContent = "aboutaddons" } = {}) {
   let amoUrl = Services.urlFormatter.formatURLPref(
     "extensions.getAddons.link.url"
   );
@@ -880,8 +925,8 @@ export function openAmoInTab(el, path) {
     amoUrl += path;
   }
 
-  amoUrl = formatUTMParams("find-more-link-bottom", amoUrl);
-  windowRoot.window.openTrustedLinkIn(amoUrl, "tab");
+  amoUrl = formatUTMParams(utmContent, amoUrl);
+  window.windowRoot.window.openTrustedLinkIn(amoUrl, "tab");
 }
 
 // DOMParser instance used by AboutAddonsElementMixin to parse the

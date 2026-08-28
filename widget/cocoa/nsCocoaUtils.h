@@ -8,10 +8,10 @@
 #import <Cocoa/Cocoa.h>
 
 #include "InputData.h"
-#include "nsRect.h"
-#include "imgIContainer.h"
-#include "nsTArray.h"
 #include "Units.h"
+#include "imgIContainer.h"
+#include "nsRect.h"
+#include "nsTArray.h"
 
 // This must be the last include:
 #include "nsObjCExceptions.h"
@@ -36,6 +36,8 @@ extern NSString* const kUrlsWithTitlesPboardType;
 extern NSString* const kMozWildcardPboardType;
 extern NSString* const kMozCustomTypesPboardType;
 extern NSString* const kMozFileUrlsPboardType;
+extern NSString* const kWebCustomFormatPboardTypePrefix;
+extern NSString* const kWebCustomFormatMapPboardType;
 
 @interface UTIHelper : NSObject
 + (NSString*)stringFromPboardType:(NSString*)aType;
@@ -420,7 +422,7 @@ class nsCocoaUtils {
    * to native modifier flags of macOS.
    */
   static NSEventModifierFlags ConvertWidgetModifiersToMacModifierFlags(
-      nsIWidget::Modifiers aNativeModifiers);
+      nsIWidget::NativeModifiers aNativeModifiers);
 
   /**
    * Get the mouse button, which depends on the event's type and buttonNumber.
@@ -517,6 +519,11 @@ class nsCocoaUtils {
   static void SetTransferDataForTypeFromPasteboardItem(
       nsITransferable* aTransferable, const nsCString& aFlavor,
       NSPasteboardItem* aItem);
+
+  /**
+   * Converts a POPUPPOSITION value to the closest corresponding NSRectEdge.
+   */
+  static NSRectEdge PopupPositionToNSRectEdge(int8_t aPosition);
 
  private:
   /**

@@ -1136,7 +1136,7 @@ UploadLastDir::Observe(nsISupports* aSubject, char const* aTopic,
 // construction, destruction
 //
 
-HTMLInputElement::HTMLInputElement(already_AddRefed<dom::NodeInfo>&& aNodeInfo,
+HTMLInputElement::HTMLInputElement(already_AddRefed<dom::NodeInfo> aNodeInfo,
                                    FromParser aFromParser, FromClone aFromClone)
     : TextControlElement(std::move(aNodeInfo), aFromParser,
                          FormControlType(kInputDefaultType->value)),
@@ -1360,12 +1360,6 @@ void HTMLInputElement::BeforeSetAttr(int32_t aNameSpaceID, nsAtom* aName,
         }
       }
     }
-
-    if (aName == nsGkAtoms::webkitdirectory) {
-      glean::dom::webkit_directory_used
-          .EnumGet(glean::dom::WebkitDirectoryUsedLabel::eTrue)
-          .Add();
-    }
   }
 
   return nsGenericHTMLFormControlElementWithState::BeforeSetAttr(
@@ -1379,25 +1373,6 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
                                     bool aNotify) {
   if (aNameSpaceID == kNameSpaceID_None) {
     bool needValidityUpdate = false;
-    if (aName == nsGkAtoms::src) {
-      nsAttrValueOrString value(aValue);
-      mSrcTriggeringPrincipal = nsContentUtils::GetAttrTriggeringPrincipal(
-          this, value.String(), aSubjectPrincipal);
-      if (aNotify && mType == FormControlType::InputImage) {
-        if (aValue) {
-          // Mark channel as urgent-start before load image if the image load is
-          // initiated by a user interaction.
-          mUseUrgentStartForChannel = UserActivation::IsHandlingUserInput();
-
-          LoadImage(value.String(), true, aNotify, eImageLoadType_Normal,
-                    mSrcTriggeringPrincipal);
-        } else {
-          // Null value means the attr got unset; drop the image
-          CancelImageRequests(aNotify);
-        }
-      }
-    }
-
     if (aName == nsGkAtoms::value) {
       // If the element has a value in value mode, the value content attribute
       // is the default value. So if the elements value didn't change from the
@@ -1411,11 +1386,9 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
       // even if the value doesn't change.
       UpdateStepMismatchValidityState();
       needValidityUpdate = true;
-    }
-
-    // Checked must be set no matter what type of control it is, since
-    // mChecked must reflect the new value
-    if (aName == nsGkAtoms::checked) {
+    } else if (aName == nsGkAtoms::checked) {
+      // Checked must be set no matter what type of control it is, since
+      // mChecked must reflect the new value
       if (IsRadioOrCheckbox()) {
         SetStates(ElementState::DEFAULT, !!aValue, aNotify);
       }
@@ -1429,9 +1402,7 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
         }
       }
       needValidityUpdate = true;
-    }
-
-    if (aName == nsGkAtoms::type) {
+    } else if (aName == nsGkAtoms::type) {
       FormControlType newType;
       if (!aValue) {
         // We're now a text input.
@@ -1443,19 +1414,8 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
         HandleTypeChange(newType, aNotify);
         needValidityUpdate = true;
       }
-    }
-
-    // When name or type changes, radio should be added to radio group.
-    // If we are not done creating the radio, we also should not do it.
-    if ((aName == nsGkAtoms::name || (aName == nsGkAtoms::type && !mForm)) &&
-        mType == FormControlType::InputRadio && (mForm || mDoneCreating)) {
-      AddToRadioGroup();
-      UpdateValueMissingValidityStateForRadio(false);
-      needValidityUpdate = true;
-    }
-
-    if (aName == nsGkAtoms::required || aName == nsGkAtoms::disabled ||
-        aName == nsGkAtoms::readonly) {
+    } else if (aName == nsGkAtoms::required || aName == nsGkAtoms::disabled ||
+               aName == nsGkAtoms::readonly) {
       if (aName == nsGkAtoms::disabled) {
         // This *has* to be called *before* validity state check because
         // UpdateBarredFromConstraintValidation and
@@ -1481,6 +1441,23 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
         UpdateBarredFromConstraintValidation();
       }
       needValidityUpdate = true;
+    } else if (aName == nsGkAtoms::src) {
+      nsAttrValueOrString value(aValue);
+      mSrcTriggeringPrincipal = nsContentUtils::GetAttrTriggeringPrincipal(
+          this, value.String(), aSubjectPrincipal);
+      if (aNotify && mType == FormControlType::InputImage) {
+        if (aValue) {
+          // Mark channel as urgent-start before load image if the image load is
+          // initiated by a user interaction.
+          mUseUrgentStartForChannel = UserActivation::IsHandlingUserInput();
+
+          LoadImage(value.String(), true, aNotify, eImageLoadType_Normal,
+                    mSrcTriggeringPrincipal);
+        } else {
+          // Null value means the attr got unset; drop the image
+          CancelImageRequests(aNotify);
+        }
+      }
     } else if (aName == nsGkAtoms::maxlength) {
       UpdateTooLongValidityState();
       if (auto* editor = GetExtantTextEditor()) {
@@ -1510,7 +1487,7 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
       // call above or else the following assert will not be valid.
       // We don't assert the state of underflow during creation since
       // DoneCreatingElement sanitizes.
-      UpdateRangeOverflowValidityState();
+      UpdateRangeValidityStates();
       needValidityUpdate = true;
       MOZ_ASSERT(!mDoneCreating || mType != FormControlType::InputRange ||
                      !GetValidityState(VALIDITY_STATE_RANGE_UNDERFLOW),
@@ -1519,7 +1496,7 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
       UpdateHasRange(aNotify);
       mInputType->MinMaxStepAttrChanged();
       // See corresponding @max comment
-      UpdateRangeUnderflowValidityState();
+      UpdateRangeValidityStates();
       UpdateStepMismatchValidityState();
       needValidityUpdate = true;
       MOZ_ASSERT(!mDoneCreating || mType != FormControlType::InputRange ||
@@ -1554,9 +1531,22 @@ void HTMLInputElement::AfterSetAttr(int32_t aNameSpaceID, nsAtom* aName,
       needValidityUpdate = true;
     } else if (aName == nsGkAtoms::colorspace || aName == nsGkAtoms::alpha) {
       UpdateColor();
+    } else if (aName == nsGkAtoms::webkitdirectory) {
+      glean::dom::webkit_directory_used
+          .EnumGet(glean::dom::WebkitDirectoryUsedLabel::eTrue)
+          .Add();
     }
 
-    if (CreatesDateTimeWidget()) {
+    // When name or type changes, radio should be added to radio group.
+    // If we are not done creating the radio, we also should not do it.
+    if (mType == FormControlType::InputRadio) {
+      if ((aName == nsGkAtoms::name || (aName == nsGkAtoms::type && !mForm)) &&
+          (mForm || mDoneCreating)) {
+        AddToRadioGroup();
+        UpdateValueMissingValidityStateForRadio(false);
+        needValidityUpdate = true;
+      }
+    } else if (CreatesDateTimeWidget()) {
       if (aName == nsGkAtoms::value || aName == nsGkAtoms::readonly ||
           aName == nsGkAtoms::tabindex || aName == nsGkAtoms::required ||
           aName == nsGkAtoms::disabled) {
@@ -3597,9 +3587,10 @@ void HTMLInputElement::FinishRangeThumbDrag(WidgetGUIEvent* aEvent) {
     PresShell::ReleaseCapturingContent();
   }
   if (aEvent) {
-    nsRangeFrame* rangeFrame = do_QueryFrame(GetPrimaryFrame());
-    SetValueOfRangeForUserEvent(rangeFrame->GetValueAtEventPoint(aEvent),
-                                SnapToTickMarks::Yes);
+    if (nsRangeFrame* rangeFrame = do_QueryFrame(GetPrimaryFrame())) {
+      SetValueOfRangeForUserEvent(rangeFrame->GetValueAtEventPoint(aEvent),
+                                  SnapToTickMarks::Yes);
+    }
   }
   mIsDraggingRange = false;
   FireChangeEventIfNeeded();
@@ -3918,13 +3909,6 @@ nsresult HTMLInputElement::PostHandleEvent(EventChainPostVisitor& aVisitor) {
       }
 
       switch (aVisitor.mEvent->mMessage) {
-        case eFocus: {
-          if (IsSingleLineTextControl(false)) {
-            TextControlElement::OnFocus(*aVisitor.mEvent);
-          }
-          break;
-        }
-
         case eKeyDown: {
           // For compatibility with the other browsers, we should active this
           // element at least when a checkbox or a radio button.
@@ -4152,16 +4136,66 @@ nsresult HTMLInputElement::PostHandleEvent(EventChainPostVisitor& aVisitor) {
               aVisitor.mEvent->IsTrusted() &&
               aVisitor.mEvent->AsMouseEvent()->mButton ==
                   MouseButton::ePrimary) {
+            const auto IsClickedOn = [&](const Element* aButton) {
+              if (!aButton) {
+                return false;
+              }
+              if (aButton == aVisitor.mEvent->mOriginalTarget) {
+                return true;
+              }
+              // During the button click, the button may have been recreated.
+              // First, check whether the mouseup occurred on the new button.
+              nsIContent* mouseUpContent =
+                  aVisitor.mPresContext->EventStateManager()
+                      ->GetMouseUpTargetContent(MouseButton::ePrimary);
+              if (!mouseUpContent) [[unlikely]] {
+                return false;
+              }
+              if (!mouseUpContent->IsElement()) {
+                // FYI: We don't use shadow DOM in the native anonymous subtree.
+                // Therefore, it should be fine not to use
+                // GetFlattenedTreeParentElement() here.
+                mouseUpContent = mouseUpContent->GetAsElementOrParentElement();
+              }
+              if (aButton != mouseUpContent) {
+                return false;
+              }
+              // Then, check whether the mousedown target is disconnected and
+              // the same button as the new button.
+              nsIContent* mouseDownContent =
+                  aVisitor.mPresContext->EventStateManager()
+                      ->GetMouseDownTargetContent(MouseButton::ePrimary);
+              if (!mouseDownContent || mouseDownContent->IsInComposedDoc()) {
+                return false;
+              }
+              if (!mouseDownContent->IsElement()) {
+                // FYI: We don't use shadow DOM in the native anonymous subtree.
+                // Therefore, it should be fine not to use
+                // GetFlattenedTreeParentElement() here.
+                mouseDownContent =
+                    mouseDownContent->GetAsElementOrParentElement();
+                if (!mouseDownContent) [[unlikely]] {
+                  return false;
+                }
+              }
+              MOZ_ASSERT_IF(
+                  mouseDownContent->AsElement()->GetPseudoElementType() ==
+                      mouseUpContent->AsElement()->GetPseudoElementType(),
+                  mouseDownContent->NodeInfo()->NameAtom() ==
+                      mouseUpContent->NodeInfo()->NameAtom());
+              return mouseDownContent->AsElement()->GetPseudoElementType() ==
+                     mouseUpContent->AsElement()->GetPseudoElementType();
+            };
             // TODO(emilio): Handling this should ideally not move focus.
             if (mType == FormControlType::InputSearch) {
               Element* button = GetTextEditorButton();
-              if (button && aVisitor.mEvent->mOriginalTarget == button) {
+              if (IsClickedOn(button)) {
                 SetUserInput(EmptyString(),
                              *nsContentUtils::GetSystemPrincipal());
               }
             } else if (mType == FormControlType::InputPassword) {
               Element* button = GetTextEditorButton();
-              if (button && aVisitor.mEvent->mOriginalTarget == button) {
+              if (IsClickedOn(button)) {
                 SetRevealPassword(!RevealPassword());
               }
             }
@@ -4757,6 +4791,7 @@ void HTMLInputElement::HandleTypeChange(FormControlType aNewType,
   UpdateReadOnlyState(aNotify);
   UpdateCheckedState(aNotify);
   UpdateIndeterminateState(aNotify);
+  UpdateHasRange(aNotify);
   const bool isDefault = IsRadioOrCheckbox()
                              ? DefaultChecked()
                              : (mForm && mForm->IsDefaultSubmitElement(this));
@@ -4844,8 +4879,6 @@ void HTMLInputElement::HandleTypeChange(FormControlType aNewType,
     RemoveStates(ElementState::REQUIRED_STATES, aNotify);
   }
 
-  UpdateHasRange(aNotify);
-
   // Update validity states, but not element state.  We'll update
   // element state later, as part of this attribute change.
   UpdateAllValidityStatesButNotElementState();
@@ -4855,9 +4888,9 @@ void HTMLInputElement::HandleTypeChange(FormControlType aNewType,
   UpdateBarredFromConstraintValidation();
 
   // Changing type might change auto directionality of this or the assigned slot
-  const bool autoDirAssociated = IsAutoDirectionalityAssociated(mType);
-  if (IsAutoDirectionalityAssociated(oldType) != autoDirAssociated) {
-    ResetDirFormAssociatedElement(this, aNotify, true);
+  if (IsAutoDirectionalityAssociated(oldType) !=
+      IsAutoDirectionalityAssociated(mType)) {
+    ResetDirFormAssociatedElement(this, aNotify, HasDirAuto());
   }
   // Special case for <input type=tel> as specified in
   // https://html.spec.whatwg.org/multipage/dom.html#the-directionality
@@ -6800,7 +6833,7 @@ bool HTMLInputElement::DoesMinMaxApply() const {
     case FormControlType::InputColor:
       return false;
     default:
-      MOZ_ASSERT_UNREACHABLE("Unexpected input type in DoesRequiredApply()");
+      MOZ_ASSERT_UNREACHABLE("Unexpected input type in DoesMinMaxApply()");
       return false;
 #else   // DEBUG
     default:
@@ -6885,42 +6918,40 @@ void HTMLInputElement::SetCustomValidity(const nsAString& aError) {
 }
 
 bool HTMLInputElement::IsTooLong() {
-  if (!mValueChanged || !mLastValueChangeWasInteractive) {
-    return false;
-  }
-
-  return mInputType->IsTooLong();
+  return WasValueChangedInteractively() && mInputType->IsTooLong();
 }
 
 bool HTMLInputElement::IsTooShort() {
-  if (!mValueChanged || !mLastValueChangeWasInteractive) {
-    return false;
-  }
-
-  return mInputType->IsTooShort();
+  return WasValueChangedInteractively() && mInputType->IsTooShort();
 }
 
 bool HTMLInputElement::IsValueMissing() const {
   // Should use UpdateValueMissingValidityStateForRadio() for type radio.
   MOZ_ASSERT(mType != FormControlType::InputRadio);
 
-  return mInputType->IsValueMissing();
+  MOZ_ASSERT_IF(!IsRequired(), !mInputType->IsValueMissing());
+  return IsRequired() && mInputType->IsValueMissing();
 }
 
 bool HTMLInputElement::HasTypeMismatch() const {
-  return mInputType->HasTypeMismatch();
+  MOZ_ASSERT_IF(!DoesTypeMismatchApply(), !mInputType->HasTypeMismatch());
+  return DoesTypeMismatchApply() && mInputType->HasTypeMismatch();
 }
 
 Maybe<bool> HTMLInputElement::HasPatternMismatch() const {
-  return mInputType->HasPatternMismatch();
+  MOZ_ASSERT_IF(!mHasPatternAttribute,
+                mInputType->HasPatternMismatch() == Some(false));
+  return mHasPatternAttribute ? mInputType->HasPatternMismatch() : Some(false);
 }
 
 bool HTMLInputElement::IsRangeOverflow() const {
-  return mInputType->IsRangeOverflow();
+  MOZ_ASSERT_IF(!mHasRange, !mInputType->IsRangeOverflow());
+  return mHasRange && mInputType->IsRangeOverflow();
 }
 
 bool HTMLInputElement::IsRangeUnderflow() const {
-  return mInputType->IsRangeUnderflow();
+  MOZ_ASSERT_IF(!mHasRange, !mInputType->IsRangeUnderflow());
+  return mHasRange && mInputType->IsRangeUnderflow();
 }
 
 bool HTMLInputElement::ValueIsStepMismatch(const Decimal& aValue) const {
@@ -6940,10 +6971,14 @@ bool HTMLInputElement::ValueIsStepMismatch(const Decimal& aValue) const {
 }
 
 bool HTMLInputElement::HasStepMismatch() const {
-  return mInputType->HasStepMismatch();
+  MOZ_ASSERT_IF(!DoesStepApply(), !mInputType->HasStepMismatch());
+  return DoesStepApply() && mInputType->HasStepMismatch();
 }
 
-bool HTMLInputElement::HasBadInput() const { return mInputType->HasBadInput(); }
+bool HTMLInputElement::HasBadInput() const {
+  MOZ_ASSERT_IF(!DoesBadInputApply(), !mInputType->HasBadInput());
+  return DoesBadInputApply() && mInputType->HasBadInput();
+}
 
 void HTMLInputElement::UpdateTooLongValidityState() {
   SetValidityState(VALIDITY_STATE_TOO_LONG, IsTooLong());
@@ -7020,14 +7055,16 @@ void HTMLInputElement::UpdatePatternMismatchValidityState() {
   }
 }
 
-void HTMLInputElement::UpdateRangeOverflowValidityState() {
+void HTMLInputElement::UpdateRangeValidityStates() {
+  const bool wasOutOfRange = GetValidityState(VALIDITY_STATE_RANGE_OVERFLOW) ||
+                             GetValidityState(VALIDITY_STATE_RANGE_UNDERFLOW);
   SetValidityState(VALIDITY_STATE_RANGE_OVERFLOW, IsRangeOverflow());
-  UpdateInRange(true);
-}
-
-void HTMLInputElement::UpdateRangeUnderflowValidityState() {
   SetValidityState(VALIDITY_STATE_RANGE_UNDERFLOW, IsRangeUnderflow());
-  UpdateInRange(true);
+  const bool isOutOfRange = GetValidityState(VALIDITY_STATE_RANGE_OVERFLOW) ||
+                            GetValidityState(VALIDITY_STATE_RANGE_UNDERFLOW);
+  if (wasOutOfRange != isOutOfRange) {
+    UpdateInRange(true);
+  }
 }
 
 void HTMLInputElement::UpdateStepMismatchValidityState() {
@@ -7052,8 +7089,7 @@ void HTMLInputElement::UpdateAllValidityStatesButNotElementState() {
   UpdateValueMissingValidityState();
   UpdateTypeMismatchValidityState();
   UpdatePatternMismatchValidityState();
-  UpdateRangeOverflowValidityState();
-  UpdateRangeUnderflowValidityState();
+  UpdateRangeValidityStates();
   UpdateStepMismatchValidityState();
   UpdateBadInputValidityState();
 }

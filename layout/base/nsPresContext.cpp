@@ -558,7 +558,7 @@ void nsPresContext::PreferenceChanged(const char* aPrefName) {
     mPresShell->MaybeReflowForInflationScreenSizeChange();
   }
 
-  auto changeHint = nsChangeHint{0};
+  auto changeHint = nsChangeHint_Empty;
   auto restyleHint = RestyleHint{0};
   if (prefName.EqualsLiteral(GFX_MISSING_FONTS_NOTIFY_PREF)) {
     if (StaticPrefs::gfx_missing_fonts_notify()) {
@@ -703,9 +703,6 @@ void nsPresContext::Init(nsDeviceContext* aDeviceContext) {
       mRefreshDriver = MakeRefPtr<nsRefreshDriver>(this);
     }
   }
-
-  mFragmentainerAwarePositioningEnabled =
-      StaticPrefs::layout_abspos_fragmentainer_aware_positioning_enabled();
 
   // Register callbacks so we're notified when the preferences change
   Preferences::RegisterPrefixCallbacks(nsPresContext::PreferenceChanged,
@@ -887,6 +884,18 @@ void nsPresContext::SetColorSchemeOverride(
   }
 }
 
+void nsPresContext::SetLinkParametersOverride(
+    const StyleLinkParameters& aLinkParameters) {
+  if (mLinkParameters == aLinkParameters) {
+    return;
+  }
+  mLinkParameters = aLinkParameters;
+
+  // Link params affect env() functions, so we need to re-cascade but there's no
+  // need to re-selector-match.
+  RebuildAllStyleData(nsChangeHint(0), RestyleHint::RecascadeSubtree());
+}
+
 void nsPresContext::UpdateAnimationsPlayBackRateMultiplier(double aMultiplier) {
   if (mAnimationsPlayBackRateMultiplier == aMultiplier) {
     return;
@@ -913,7 +922,11 @@ void nsPresContext::RecomputeBrowsingContextDependentData() {
     auto systemZoom = LookAndFeel::SystemZoomSettings();
     SetFullZoom(browsingContext->FullZoom() * systemZoom.mFullZoom);
     SetTextZoom(browsingContext->TextZoom() * systemZoom.mTextZoom);
-    SetOverrideDPPX(browsingContext->OverrideDPPX());
+    if (doc->ShouldResistFingerprinting(RFPTarget::WindowDevicePixelRatio)) {
+      SetOverrideDPPX(nsRFPService::GetDevicePixelRatioAtZoom(GetFullZoom()));
+    } else {
+      SetOverrideDPPX(browsingContext->OverrideDPPX());
+    }
   }
 
   auto* top = browsingContext->Top();

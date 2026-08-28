@@ -3,10 +3,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // HttpLog.h should generally be included first
-#include "HttpLog.h"
-
 #include "nsHttp.h"
+
+#include <errno.h>
+#include <string.h>
+
+#include <functional>
+
 #include "CacheControlParser.h"
+#include "HttpLog.h"
 #include "PLDHashTable.h"
 #include "mozilla/DataMutex.h"
 #include "mozilla/OriginAttributes.h"
@@ -14,19 +19,16 @@
 #include "mozilla/StaticPrefs_network.h"
 #include "nsCRT.h"
 #include "nsContentUtils.h"
+#include "nsHttpHandler.h"
 #include "nsHttpRequestHead.h"
 #include "nsHttpResponseHead.h"
-#include "nsHttpHandler.h"
 #include "nsICacheEntry.h"
 #include "nsIRequest.h"
 #include "nsIStandardURL.h"
 #include "nsJSUtils.h"
+#include "nsLiteralString.h"
 #include "nsStandardURL.h"
 #include "sslerr.h"
-#include <errno.h>
-#include <functional>
-#include "nsLiteralString.h"
-#include <string.h>
 
 namespace mozilla {
 namespace net {
@@ -1046,7 +1048,7 @@ void CreatePushHashKey(const nsCString& scheme, const nsCString& hostHeader,
 
   if (NS_FAILED(rv)) {
     // Fallback to plain text copy - this may end up behaving poorly
-    outOrigin = fullOrigin;
+    outOrigin = std::move(fullOrigin);
   }
 
   outKey = outOrigin;
@@ -1164,18 +1166,19 @@ nsLiteralCString HttpVersionToTelemetryLabel(HttpVersion version) {
   return "unknown"_ns;
 }
 
-ProxyDNSStrategy GetProxyDNSStrategyHelper(const char* aType, uint32_t aFlag) {
+nsIHttpChannelInternal::ProxyDNSStrategy GetProxyDNSStrategyHelper(
+    const char* aType, uint32_t aFlag) {
   if (!aType) {
-    return ProxyDNSStrategy::ORIGIN;
+    return nsIHttpChannelInternal::PROXY_DNS_STRATEGY_ORIGIN;
   }
 
   if (!(aFlag & nsIProxyInfo::TRANSPARENT_PROXY_RESOLVES_HOST)) {
     if (aType == kProxyType_SOCKS) {
-      return ProxyDNSStrategy::ORIGIN;
+      return nsIHttpChannelInternal::PROXY_DNS_STRATEGY_ORIGIN;
     }
   }
 
-  return ProxyDNSStrategy::PROXY;
+  return nsIHttpChannelInternal::PROXY_DNS_STRATEGY_PROXY;
 }
 
 }  // namespace net

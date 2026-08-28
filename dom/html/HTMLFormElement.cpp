@@ -33,6 +33,7 @@
 #include "nsDocShell.h"
 #include "nsDocShellLoadState.h"
 #include "nsError.h"
+#include "nsExternalHelperAppService.h"
 #include "nsFocusManager.h"
 #include "nsGkAtoms.h"
 #include "nsHTMLDocument.h"
@@ -95,7 +96,7 @@ static constexpr const nsAttrValue::EnumTableEntry* kFormDefaultAutocomplete =
     &kFormAutocompleteTable[0];
 
 HTMLFormElement::HTMLFormElement(
-    already_AddRefed<mozilla::dom::NodeInfo>&& aNodeInfo)
+    already_AddRefed<mozilla::dom::NodeInfo> aNodeInfo)
     : nsGenericHTMLElement(std::move(aNodeInfo)),
       mControls(new HTMLFormControlsCollection(this)),
       mPendingSubmission(nullptr),
@@ -602,7 +603,7 @@ nsresult HTMLFormElement::PostHandleEvent(EventChainPostVisitor& aVisitor) {
         case eFormSubmit: {
           if (!aVisitor.mEvent->IsTrusted()) {
             // Warning about the form submission is from untrusted event.
-            OwnerDoc()->WarnOnceAbout(
+            OwnerDoc()->WarnOnceAndReportAbout(
                 DeprecatedOperations::eFormSubmissionUntrustedEvent);
           }
           RefPtr<Event> event = aVisitor.mDOMEvent;
@@ -809,6 +810,10 @@ nsresult HTMLFormElement::SubmitSubmission(
     return NS_OK;
   }
 
+  if (doc->GetSandboxFlags() & SANDBOXED_FORMS) {
+    return NS_OK;
+  }
+
   // javascript URIs are not really submissions; they just call a function.
   // Also, they may synchronously call submit(), and we want them to be able to
   // do so while still disallowing other double submissions. (Bug 139798)
@@ -878,6 +883,19 @@ nsresult HTMLFormElement::SubmitSubmission(
     const bool hasValidUserGestureActivation =
         doc->HasValidTransientUserGestureActivation();
     loadState->SetHasValidUserGestureActivation(hasValidUserGestureActivation);
+
+    // For protocols that would launch without a prompt (e.g. mailto), consume
+    // the transient user gesture activation here, at the same point the
+    // activation value is captured on the load state, so a single gesture can't
+    // chain multiple launches. This keeps form submission consistent with link
+    // clicks (nsDocShell::OnLinkClick) and scripted navigation
+    // (BrowsingContext::Navigate). The pre-consume value is already recorded on
+    // the load state above. See bug 299116.
+    if (nsAutoCString scheme; NS_SUCCEEDED(actionURI->GetScheme(scheme))) {
+      nsExternalHelperAppService::MaybeConsumeUserActivationForExternalScheme(
+          doc->GetWindowContext(), loadState->TriggeringPrincipal(), scheme);
+    }
+
     loadState->SetTextDirectiveUserActivation(
         doc->ConsumeTextDirectiveUserActivation() ||
         hasValidUserGestureActivation);
@@ -886,15 +904,12 @@ nsresult HTMLFormElement::SubmitSubmission(
       loadState->SetUserNavigationInvolvement(
           UserNavigationInvolvement::Activation);
     }
-    if (FormData* formData = aFormSubmission->GetFormData();
-        formData && formData->GetSubmitterElement()) {
-      loadState->SetSourceElement(formData->GetSubmitterElement());
+    if (Element* element = aFormSubmission->GetSubmitterElement()) {
+      loadState->SetSourceElement(element);
     } else {
       loadState->SetSourceElement(this);
     }
-
-    nsCOMPtr<nsIPrincipal> nodePrincipal = NodePrincipal();
-    rv = container->OnLinkClickSync(this, loadState, false, nodePrincipal);
+    nsresult rv = container->OnFormSubmit(this, loadState);
     NS_ENSURE_SUBMIT_SUCCESS(rv);
 
     mTargetContext = loadState->TargetBrowsingContext().GetMaybeDiscarded();

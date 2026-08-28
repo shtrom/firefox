@@ -4,8 +4,7 @@
 
 package mozilla.components.feature.summarize.content
 
-import mozilla.components.concept.llm.ErrorCode
-import mozilla.components.concept.llm.Llm
+import kotlinx.coroutines.CancellationException
 import mozilla.components.feature.summarize.ext.shouldUseReaderModeContent
 
 /**
@@ -14,62 +13,69 @@ import mozilla.components.feature.summarize.ext.shouldUseReaderModeContent
  * @property metadata Metadata associated with the page, such as title and author.
  * @property body The main textual content of the page.
  */
-
 data class Content(
     val metadata: PageMetadata = PageMetadata(),
     val body: String = "",
 )
 
 /**
+ * Thrown when the page declares its content to be gated, for example behind a paywall. Raised as soon as the metadata
+ * is known so the body is never extracted.
+ */
+class PaywalledContentException : Exception("Page content is gated and will not be summarized")
+
+/**
  * Provides the [Content] of a web page for summarization.
  *
- * Use [fromPage] to create an instance backed by a [PageContentExtractor] and
- * [PageMetadataExtractor], or supply a custom implementation.
+ * Use [fromPage] to create an instance backed by a [PageContentExtractor] and [PageMetadataExtractor], or supply a
+ * custom implementation.
  */
 fun interface ContentProvider {
-    /**
-     * Returns the page [Content], or a failure if the content could not be retrieved.
-     */
+    /** Returns the page [Content], or a failure if the content could not be retrieved. */
     suspend fun getContent(): Result<Content>
-
-    /**
-     * An exception that occurs while providing content.
-     */
-    data class Exception(val originalCause: Throwable) :
-        Llm.Exception("Could not extract content: ${originalCause::javaClass.name}", errorCode)
 
     companion object {
         /**
          * Creates a [ContentProvider] that derives [Content] from the given extractors.
          *
-         * Metadata failures are non-fatal and fall back to a default [PageMetadata].
-         * Content failures are propagated and cause the returned [Result] to fail.
+         * Metadata failures are non-fatal and fall back to a default [PageMetadata]. Content failures are propagated
+         * and cause the returned [Result] to fail.
+         *
+         * Gated pages fail with a [PaywalledContentException] before the body is extracted.
          *
          * @param pageContentExtractor Extracts the main textual content of the page.
          * @param pageMetadataExtractor Extracts metadata such as the page title and author.
          */
+        @Suppress("TooGenericExceptionCaught")
         fun fromPage(
             pageTitle: String,
             pageContentExtractor: PageContentExtractor,
             pageMetadataExtractor: PageMetadataExtractor,
         ) = ContentProvider {
-            runCatching {
-                val metadata = pageMetadataExtractor
-                    .getPageMetadata()
-                    .getOrDefault(PageMetadata())
-                    .copy(pageTitle = pageTitle)
-                val content = pageContentExtractor.getPageContent(
-                    options = PageContentExtractor.Options(
-                        shouldUseReaderModeContent = metadata.shouldUseReaderModeContent,
-                    ),
-                ).getOrElse {
-                    throw it as? Llm.Exception ?: Exception(it)
+            try {
+                val metadata =
+                    pageMetadataExtractor.getPageMetadata().getOrDefault(PageMetadata()).copy(pageTitle = pageTitle)
+
+                if (metadata.isGated) {
+                    throw PaywalledContentException()
                 }
 
-                Content(metadata, content)
+                val content =
+                    pageContentExtractor
+                        .getPageContent(
+                            options =
+                                PageContentExtractor.Options(
+                                    shouldUseReaderModeContent = metadata.shouldUseReaderModeContent
+                                )
+                        )
+                        .getOrThrow()
+
+                Result.success(Content(metadata, content))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Result.failure(e)
             }
         }
     }
 }
-
-private val errorCode = ErrorCode(3001)

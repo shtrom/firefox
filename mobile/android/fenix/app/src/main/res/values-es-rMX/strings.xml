@@ -23,12 +23,16 @@
   <string name="content_description_normal_browsing">Navegación normal</string>
   <!-- Placeholder text shown in the search bar before a user enters text for the default engine -->
   <string name="search_hint">Buscar o ingresar dirección</string>
+  <!-- Shorter placeholder text shown in the search bar when an additional action (voice search) is rendered alongside the hint. -->
+  <string name="search_hint_short">Buscar</string>
   <!-- Placeholder text shown in the search bar before a user enters text for a general engine -->
   <string name="search_hint_general_engine">Buscar en la web</string>
   <!-- Placeholder text shown in search bar when using history search -->
   <string name="history_search_hint">Buscar el historial</string>
   <!-- Placeholder text shown in search bar when using bookmarks search -->
   <string name="bookmark_search_hint">Buscar marcadores</string>
+  <!-- Content description for the toolbar back button while searching bookmarks -->
+  <string name="bookmark_close_search_description">Retroceder y cerrar búsqueda</string>
   <!-- Placeholder text shown in search bar when using tabs search -->
   <string name="tab_search_hint">Buscar pestañas</string>
   <!-- Placeholder text shown in the search bar when using application search engines -->
@@ -70,7 +74,7 @@
   <!-- Text for the menu button to remove a recently saved bookmark from the user's home screen -->
   <string name="home_bookmarks_menu_item_remove">Eliminar</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">%1$s es producido por Mozilla.</string>
+  <string name="about_content" tools:ignore="BrandUsage">%1$s es producido por Mozilla.</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">Mitos comunes sobre la navegación privada</string>
   <!-- Text to be announced by the accessibility service to inform the user that the private browsing mode is currently active. -->
@@ -104,12 +108,6 @@
   <string name="open_in_app_cfr_negative_button_text">Descartar</string>
   <!-- Private browsing erase action "contextual feature recommendation" (CFR) -->
 
-  <!--
-    Address bar swipe "contextual feature recommendation" (CFR)
-
-    Text for the message displayed in the contextual feature recommendation popup promoting swipe of address bar.
-  -->
-  <string name="address_bar_swipe_cfr_message_2">Desliza la barra de herramientas hacia la izquierda o hacia la derecha para cambiar de pestaña.</string>
   <!-- Text for the info dialog when camera permissions have been denied but user tries to access a camera feature. -->
   <string name="camera_permissions_needed_message">Se necesita acceso a la cámara. Ve a los ajustes de Android, presiona permisos y permitir.</string>
   <!-- Text for the positive action button to go to Android Settings to grant permissions. -->
@@ -147,6 +145,8 @@
   <string name="home_screen_shortcut_open_new_private_tab_2">Pestaña privada</string>
   <!-- Shortcut action to open Passwords screen -->
   <string name="home_screen_shortcut_passwords">Contraseñas</string>
+  <!-- Shortcut action to open uninstall survey -->
+  <string name="home_screen_shortcut_uninstall_survey">Desinstalar, ¿por qué?</string>
   <!--
     Recent Tabs
 
@@ -314,14 +314,6 @@
   <!-- Content description (not visible, for screen readers etc.) for recommended extensions in main menu -->
   <string name="browser_menu_recommended_extensions_content_description">Más información</string>
   <!--
-    Menu "contextual feature recommendation" (CFR)
-
-    Text for the title in the contextual feature recommendation popup promoting the menu feature.
-  -->
-  <string name="menu_cfr_title">Nuevo: menú simplificado</string>
-  <!-- Text for the message in the contextual feature recommendation popup promoting the menu feature. -->
-  <string name="menu_cfr_body">Encuentra lo que necesitas más rápido, desde navegación privada hasta acciones para guardar contenido.</string>
-  <!--
     Extensions management fragment
 
     Text displayed when there are no extensions to be shown
@@ -330,21 +322,9 @@
   <!--
     Browser Toolbar
 
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">Pantalla de inicio</string>
-  <!--
-    Browser Toolbar
-
     Content description for the translate page toolbar button that opens the translations dialog when no translation has occurred.
   -->
   <string name="browser_toolbar_translate">Traducir página</string>
-  <!--
-    Content description (not visible, for screen readers etc.) for the translate page toolbar button that opens the translations dialog when the page is translated successfully.
-    %1$s is the name of the language that is displayed in the original page. (For example: English)
-    %2$s is the name of the language which the page was translated to. (For example: French)
-  -->
-  <string name="browser_toolbar_translated_successfully">Página traducida de %1$s a %2$s.</string>
   <!-- CFR description for the browser toolbar describing the "Shake to summarize feature" -->
   <string name="browser_toolbar_summarize_cfr_description">Agita tu dispositivo para resumir esta página en segundos. ⚡️</string>
   <!--
@@ -375,8 +355,6 @@
   <string name="ai_controls_banner_headline">Siempre hay opciones en %s</string>
   <!-- Supporting text for the AI controls banner. %s is a learn more link using ai_controls_learn_more as text. -->
   <string name="ai_controls_banner_supporting_text_2">Esto incluye decidir si se usan funciones mejoradas con IA. %s</string>
-  <!-- Supporting text for the AI controls banner -->
-  <string name="ai_controls_banner_supporting_text">Esto incluye la opción de utilizar funciones mejoradas con IA.</string>
   <!-- Link text for learning more about AI controls -->
   <string name="ai_controls_learn_more">Más información</string>
   <!-- Title for the block AI enhancements toggle -->
@@ -424,12 +402,6 @@
   <!--
     Search Fragment
 
-    Button in the search view that lets a user search by scanning a QR code
-  -->
-  <string name="search_scan_button_2">Escanear código QR</string>
-  <!--
-    Search Fragment
-
     Button in the search view that lets a user navigate to the site in their clipboard
   -->
   <string name="awesomebar_clipboard_title">Pegar enlace del portapapeles</string>
@@ -464,68 +436,14 @@
   <string name="search_suggestions_delete_history_item_snackbar">Se eliminó %1$s del historial</string>
   <!-- Content description (not visible, for screen readers etc.): Button shown near a history search result allowing to delete it from browsing history. -->
   <string name="mozac_browser_awesomebar_remove_suggestion" tools:ignore="UnusedResources">Eliminar esta entrada del historial</string>
+  <!-- Button in the app links prompt that keeps the user in the browser instead of opening the external app. %1$s is the name of the app (for example "Firefox"). -->
+  <string name="applinks_prompt_negative_button">Quédate en %1$s</string>
   <!--
     Home onboarding
 
     Content description (not visible, for screen readers etc.): Close button for the home onboarding dialog
   -->
   <string name="onboarding_home_content_description_close_button">Cerrar</string>
-  <!--
-    Juno first user onboarding flow experiment, strings are marked unused as they are only referenced by Nimbus experiments.
-
-    Description for learning more about our privacy notice.
-  -->
-  <string name="juno_onboarding_privacy_notice_text" tools:ignore="BrandUsage">Aviso de privacidad de Firefox</string>
-  <!-- Title for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_title_nimbus_2">Nos encanta mantenerte a salvo</string>
-  <!-- Description for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_description_nimbus_3">Nuestro navegador respaldado por una organización sin fines de lucro ayuda a evitar que las empresas te sigan en secreto por la web.</string>
-  <!-- Text for the button to set firefox as default browser on the device -->
-  <string name="juno_onboarding_default_browser_positive_button" tools:ignore="UnusedResources">Establecer como navegador predeterminado</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_default_browser_negative_button" tools:ignore="UnusedResources">Ahora no</string>
-  <!-- Title for sign in to sync screen. -->
-  <string name="juno_onboarding_sign_in_title_2">Mantén todo cifrado cuando pases de un dispositivo a otro</string>
-  <!--
-    Description for sign in to sync screen. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_sign_in_description_3" tools:ignore="BrandUsage">Firefox cifra tus contraseñas, marcadores y más cuando estás sincronizado.</string>
-  <!-- Text for the button to sign in to sync on the device -->
-  <string name="juno_onboarding_sign_in_positive_button" tools:ignore="UnusedResources">Iniciar sesión</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_sign_in_negative_button" tools:ignore="UnusedResources">Ahora no</string>
-  <!--
-    Title for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_title_nimbus_2" tools:ignore="BrandUsage">Las notificaciones te ayudan a estar más seguro con Firefox</string>
-  <!--
-    Description for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_description_nimbus_2" tools:ignore="BrandUsage">Envía pestañas entre dispositivos de forma segura y descubre otras funcionalidades de privacidad de Firefox.</string>
-  <!-- Text for the button to request notification permission on the device -->
-  <string name="juno_onboarding_enable_notifications_positive_button" tools:ignore="UnusedResources">Activar las notificaciones</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_enable_notifications_negative_button" tools:ignore="UnusedResources">Ahora no</string>
-  <!--
-    Title for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_title" tools:ignore="BrandUsage,UnusedResources">Prueba el widget de búsqueda de Firefox</string>
-  <!--
-    Description for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_description" tools:ignore="BrandUsage,UnusedResources">Con Firefox en tu pantalla de inicio, tendrás fácil acceso al navegador que prioriza la privacidad y bloquea los rastreadores entre sitios.</string>
-  <!--
-    Text for the button to add search widget on the device used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_positive_button" tools:ignore="BrandUsage,UnusedResources">Agregar widget de Firefox</string>
-  <!-- Text for the button to dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_add_search_widget_negative_button" tools:ignore="UnusedResources">Ahora no</string>
   <!-- Title for the privacy preferences dialog shown during onboarding. Note: The word "Firefox" should NOT be translated. -->
   <string name="onboarding_preferences_dialog_title" tools:ignore="BrandUsage">Ayúdanos a mejorar Firefox</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
@@ -545,17 +463,13 @@
   <!-- Button text to reopen firefox after the crash is processed %s is the name of the app (for example "Firefox") -->
   <string name="startup_crash_restart">Reabrir %s</string>
   <!-- Title for the usage data option in the privacy preferences dialog shown during onboarding. Note: The word "Mozilla" should NOT be translated. -->
-  <string name="onboarding_preferences_dialog_usage_data_title">Enviar datos técnicos y de interacción a Mozilla</string>
+  <string name="onboarding_preferences_dialog_usage_data_title" tools:ignore="BrandUsage">Enviar datos técnicos y de interacción a Mozilla</string>
   <string name="onboarding_preferences_dialog_usage_data_description_2" tools:ignore="BrandUsage">Los datos sobre tu dispositivo, la configuración de hardware y cómo usas Firefox ayudan a mejorar las funciones, el rendimiento y la estabilidad para todas las personas.</string>
   <string name="onboarding_preferences_dialog_usage_data_learn_more_2">Más información</string>
   <!-- Positive button label for the privacy preferences dialog shown during onboarding. -->
   <string name="onboarding_preferences_dialog_positive_button">Hecho</string>
   <!-- Terms of service onboarding title card label. 'Firefox' intentionally hardcoded here -->
   <string name="onboarding_welcome_to_firefox" tools:ignore="BrandUsage">Te damos la bienvenida a Firefox</string>
-  <!-- Terms of service sub header label. -->
-  <string name="onboarding_terms_of_service_sub_header_2">Navegación web rápida y segura</string>
-  <!-- Terms of service onboarding page continue button label. -->
-  <string name="onboarding_term_of_service_agree_and_continue_button_label_2">Continuar</string>
   <!-- Line one of the terms of service onboarding page. %1$s is replaced by an active link, using onboarding_term_of_service_line_one_link_text_2 as text (“Firefox Terms of Use”). -->
   <string name="onboarding_term_of_service_line_one_2">Al continuar, aceptas los %1$s.</string>
   <!-- Used as text for the link in onboarding_term_of_service_line_one_2. -->
@@ -623,16 +537,6 @@
   <string name="onboarding_redesign_sync_positive_button" tools:ignore="UnusedResources">Empezar a sincronizar</string>
   <!-- Sync onboarding redesign negative button text. -->
   <string name="onboarding_redesign_sync_negative_button" tools:ignore="UnusedResources">Ahora no</string>
-  <!-- Marketing onboarding page title. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_title" tools:ignore="BrandUsage,UnusedResources">Ayúdanos a hacer crecer Firefox</string>
-  <!-- Marketing onboarding page body. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_body" tools:ignore="BrandUsage,UnusedResources">Cuando compartes cómo descubriste Firefox y lo utilizas, nos ayudas a presentar nuestro navegador a más personas.</string>
-  <!-- Marketing onboarding page opt-out checkbox. Unchecking the box does not increase data collection. Our data practices remain the same. 'Mozilla' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_opt_out_checkbox">Comparte datos con los socios de tecnología de marketing de Mozilla. Estos datos nunca se venden ni se usan para mostrarte anuncios.</string>
-  <!-- Marketing onboarding page clickable link text to "learn more" on how data is used. -->
-  <string name="onboarding_marketing_learn_more" tools:ignore="UnusedResources">Cómo utilizamos los datos</string>
-  <!-- Marketing onboarding page button label. Button to confirm choice and start browsing. -->
-  <string name="onboarding_marketing_positive_button" tools:ignore="UnusedResources">Confirmar y comenzar a navegar</string>
   <!-- Marketing onboarding page title variant. “One last thing” refers to the final step or action in the onboarding process that we’re asking users to take before they can start using the browser. -->
   <string name="onboarding_marketing_title_1" tools:ignore="UnusedResources">Una última cosa</string>
   <!-- Marketing onboarding page body variant. 'Firefox' is intentionally hardcoded. -->
@@ -712,12 +616,12 @@
   <!-- Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded. -->
   <string name="nova_onboarding_marketing_body_2" tools:ignore="BrandUsage">Comparte con los socios de marketing de Mozilla cómo descubriste Firefox y cómo lo usas. Estos datos nunca se venden.</string>
   <!-- Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded. -->
-  <string name="nova_onboarding_marketing_body_3" tools:ignore="BrandUsage">Puedes ayudarnos a llegar a más personas permitiendo que Mozilla informe a los canales donde promocionamos Firefox que eres usuario de Firefox.</string>
+  <string name="nova_onboarding_marketing_body_3" tools:ignore="BrandUsage,UnusedResources">Puedes ayudarnos a llegar a más personas permitiendo que Mozilla informe a los canales donde promocionamos Firefox que eres usuario de Firefox.</string>
   <!--
     Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
     “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
   -->
-  <string name="nova_onboarding_marketing_body_4" tools:ignore="BrandUsage">Puedes ayudarnos a llegar a más personas permitiendo que Mozilla informe a la plataforma desde la que accediste que utilizas Firefox.</string>
+  <string name="nova_onboarding_marketing_body_4" tools:ignore="BrandUsage,UnusedResources">Puedes ayudarnos a llegar a más personas permitiendo que Mozilla informe a la plataforma desde la que accediste que utilizas Firefox.</string>
   <!--
     Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
     “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
@@ -729,12 +633,31 @@
     %1$s is replaced by an active link, using nova_onboarding_marketing_body_link_text as text (“How we use the data”).
   -->
   <string name="nova_onboarding_marketing_body_6" tools:ignore="BrandUsage,UnusedResources">Ayúdanos a llegar a más personas: permite que Mozilla informe a la plataforma de origen que utilizas Firefox. %1$s</string>
+  <!--
+    Marketing onboarding body. 'Firefox' and 'Mozilla' are intentionally hardcoded.
+    “Platform you came from” refers to the external app, website, store, campaign, or other source that directed the user to Firefox.
+    %1$s is replaced by an active link, using nova_onboarding_marketing_body_link_text_1 as text (“Learn More”).
+  -->
+  <string name="nova_onboarding_marketing_body_7" tools:ignore="BrandUsage">Puedes ayudarnos a aumentar nuestro alcance si autorizas a Mozilla a comunicarle a la plataforma desde la que accediste que utilizas Firefox. %1$s</string>
+  <!-- Marketing onboarding additional body text. 'Firefox' is intentionally hardcoded. -->
+  <string name="nova_onboarding_marketing_body_line_two" tools:ignore="BrandUsage">Firefox se enorgullece de ser independiente y dedicarse a defender la web abierta contra los monopolios tecnológicos.</string>
+  <!--
+    Marketing onboarding additional body text. 'Firefox' is intentionally hardcoded.
+    “Allowing” refers to the main button “Allow and Continue”; the ask for the user is to allow communicating back to the platform.
+  -->
+  <string name="nova_onboarding_marketing_body_line_three" tools:ignore="BrandUsage">Te invitamos a darnos tu autorización para contribuir a que Firefox logre su misión.</string>
   <!-- Marketing onboarding body link text. -->
   <string name="nova_onboarding_marketing_body_link_text">Cómo utilizamos los datos</string>
+  <!-- Marketing onboarding body link text. -->
+  <string name="nova_onboarding_marketing_body_link_text_1">Más información</string>
   <!-- Marketing onboarding primary button text. 'Firefox' is intentionally hardcoded. -->
-  <string name="nova_onboarding_marketing_primary_button_text" tools:ignore="BrandUsage">Ayuda Firefox</string>
+  <string name="nova_onboarding_marketing_primary_button_text" tools:ignore="BrandUsage,UnusedResources">Ayuda Firefox</string>
+  <!-- Marketing onboarding primary button text. -->
+  <string name="nova_onboarding_marketing_primary_button_text_3">Sí</string>
   <!-- Marketing onboarding secondary button text. -->
-  <string name="nova_onboarding_marketing_secondary_button_text">No, gracias</string>
+  <string name="nova_onboarding_marketing_secondary_button_text" tools:ignore="UnusedResources">No, gracias</string>
+  <!-- Marketing onboarding secondary button text. -->
+  <string name="nova_onboarding_marketing_secondary_button_text_2">No</string>
   <!-- Notifications onboarding title. 'Firefox' is intentionally hardcoded. -->
   <string name="nova_onboarding_notifications_title" tools:ignore="BrandUsage,UnusedResources">Las notificaciones te ayudan a estar más seguro con Firefox</string>
   <!-- Notifications onboarding subtitle. 'Firefox' is intentionally hardcoded. -->
@@ -768,41 +691,6 @@
   <string name="nova_onboarding_app_icon_prompt_body" tools:ignore="UnusedResources">Dale un toque de identidad a la pantalla de inicio.</string>
   <!-- ==== End of Project "Nova" onboarding strings ==== -->
 
-  <!-- Onboarding header for the toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_title" tools:ignore="UnusedResources">Selecciona una ubicación para la barra de herramientas</string>
-  <!-- Onboarding sub header for toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_description" tools:ignore="UnusedResources">Mantén las búsquedas al alcance.</string>
-  <!-- Onboarding label for 'Save and continue' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_continue_button">Guardar y continuar</string>
-  <!-- Onboarding toolbar selection card label for 'top' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_top_option">Superior</string>
-  <!-- Onboarding toolbar selection card label for 'bottom' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_bottom_option">Inferior</string>
-  <!-- Onboarding toolbar selection card content description for the main image. -->
-  <string name="onboarding_customize_toolbar_main_image_content_description">Imagen de encabezado grande de la vista de selección de la barra de herramientas que muestra una barra de herramientas ilustrada.</string>
-  <!-- Onboarding toolbar selection card content description for the toolbar placement image. -->
-  <string name="onboarding_customize_toolbar_placement_bottom_content_description">Imagen de la barra de herramientas inferior</string>
-  <string name="onboarding_customize_toolbar_placement_top_content_description">Imagen de la barra de herramientas superior</string>
-  <!-- Action label for toolbar options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_toolbar_a11y_action_label_select">seleccionar</string>
-  <!-- Onboarding header for the theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_title" tools:ignore="UnusedResources">Selecciona un tema</string>
-  <!-- Onboarding sub header for theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_description" tools:ignore="UnusedResources">Mira la web de la mejor manera.</string>
-  <!-- Onboarding label for 'Save and start browsing' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_start_button">Guardar y comenzar a navegar</string>
-  <!-- Onboarding theme selection card label for 'dark' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_dark_option">Oscuro</string>
-  <!-- Onboarding theme selection card label for 'light' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_light_option">Claro</string>
-  <!-- Onboarding theme selection card label for 'System auto' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_system_option">Automático del sistema</string>
-  <!-- Onboarding theme selection card content description for the main image. -->
-  <string name="onboarding_customize_theme_main_image_content_description">Imagen de encabezado grande de la vista de selección de tema que muestra un artista y herramientas de construcción ilustrados.</string>
-  <!-- Onboarding theme selection card content description for the theme selection image. %1$s is placeholder for either 'system', 'light' or 'dark'. -->
-  <string name="onboarding_customize_theme_content_description">Imagen del tema %1$s</string>
-  <!-- Action label for options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_theme_a11y_action_label_select">seleccionar</string>
   <!--
     Widget Picker
 
@@ -890,40 +778,8 @@
   <string name="preferences_pbm_lock_screen_title">Usa el bloqueo de pantalla para ocultar las pestañas en la navegación privada</string>
   <!-- Informs the user how to access the tabs when "Use screen lock to hide tabs in private browsing" is enabled -->
   <string name="preferences_pbm_lock_screen_summary_3">Visualiza las pestañas mediante huella digital, PIN o desbloqueo facial. Al activar esta función, también se impide la captura y el uso compartido de pantalla.</string>
-  <!-- Label for cookie banner section in quick settings panel. -->
-  <string name="cookie_banner_blocker">Bloqueador de anuncios de cookies</string>
   <!-- Preference for removing cookie/consent banners from sites automatically in private mode. See reduce_cookie_banner_summary for additional context. -->
   <string name="preferences_cookie_banner_reduction_private_mode">Bloqueador de anuncios de cookies en navegación privada</string>
-  <!-- Text for indicating cookie banner handling is off this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_off_for_site">Desactivar para este sitio</string>
-  <!-- Text for cancel button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_cancel_button">Cancelar</string>
-  <!-- Text for request support button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_request_support_button_2">Enviar solicitud</string>
-  <!-- Text for title indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_title_2">¿Solicitar soporte para este sitio?</string>
-  <!-- Label for the snackBar, after the user reports with success a website where cookie banner reducer did not work -->
-  <string name="cookie_banner_handling_report_site_snack_bar_text_2">Solicitud enviada</string>
-  <!-- Text for indicating cookie banner handling is on this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_on_for_site">Activar para este sitio</string>
-  <!-- Text for indicating that a request for unsupported site was sent to Nimbus (it's a Mozilla library for experiments), this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site_request_submitted_2">Solicitud de soporte enviada</string>
-  <!-- Text for indicating cookie banner handling is currently not supported for this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site">Sitio actualmente no soportado</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is on this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_on_for_site_1">¿Activar el bloqueo de aviso de cookies para %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is off this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_off_for_site_1">¿Desactivar el bloqueo de aviso de cookies para %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner reducer didn't work for the current site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_title_unsupported_site_request_2">%1$s no puede rechazar automáticamente las solicitudes de cookies en este sitio. Puedes enviar una solicitud para ayudar a este sitio en el futuro.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is off for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_off_for_site_1">Desactivalo y %1$s borrará las cookies y recargará la página. Esto puede desconectarte del sitio o vaciar tu carrito de compra.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is on for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_on_for_site_3">Actívalo y %1$s intentará rechazar automáticamente todos los anuncios de cookies en este sitio.</string>
-  <!-- Title for the cookie banner re-engagement CFR, the placeholder is replaced with app name. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="cookie_banner_cfr_title">%1$s acaba de rechazar las cookies por ti</string>
-  <!-- Message for the cookie banner re-engagement CFR -->
-  <string name="cookie_banner_cfr_message">Menos distracciones, menos cookies que te rastrean en este sitio.</string>
   <!-- Description of the preference to enable "HTTPS-Only" mode. -->
   <string name="preferences_https_only_summary">Intentar conectarse automáticamente a sitios que utilizan el protocolo de encriptación HTTPS para mayor seguridad.</string>
   <!-- Summary of https only preference if https only is set to off -->
@@ -947,7 +803,7 @@
   <!-- Preference for accessibility -->
   <string name="preferences_accessibility">Accesibilidad</string>
   <!-- Preference to override the Mozilla account server -->
-  <string name="preferences_override_account_server">Servidor de cuenta personalizado de Mozilla</string>
+  <string name="preferences_override_account_server" tools:ignore="BrandUsage">Servidor de cuenta personalizado de Mozilla</string>
   <!-- Preference to override the Sync token server -->
   <string name="preferences_override_sync_tokenserver">Servidor personalizado de Sync</string>
   <!-- Preference category for account information -->
@@ -975,7 +831,7 @@
   <!-- Preference description shown in the banner prompting the user to sign in for sync features -->
   <string name="preferences_sign_in_description">Sincroniza pestañas, marcadores, contraseñas y más.</string>
   <!-- Preference shown instead of account display name while account profile information isn't available yet. -->
-  <string name="preferences_account_default_name_2">Cuenta de Mozilla</string>
+  <string name="preferences_account_default_name_2" tools:ignore="BrandUsage">Cuenta de Mozilla</string>
   <!-- Preference text for account title when there was an error syncing FxA -->
   <string name="preferences_account_sync_error">Volver a conectarse para reanudar la sincronización</string>
   <!-- Preference for language -->
@@ -1023,7 +879,7 @@
   <!-- Summary for preference to show Firefox Suggest search suggestions for web content -->
   <string name="preferences_show_nonsponsored_suggestions_summary">Recibe sugerencias de la web relacionadas con tu búsqueda</string>
   <!-- Preference title for switch preference to show search optimization cards -->
-  <string name="preferences_show_search_optimization_cards">Recibir sugerencias de Mozilla al escribir</string>
+  <string name="preferences_show_search_optimization_cards" tools:ignore="BrandUsage">Recibir sugerencias de Mozilla al escribir</string>
   <!-- Preference for link sharing -->
   <string name="preferences_link_sharing">Compartir enlaces</string>
   <!-- Title for the link sharing toggle. %1$s is replaced by the brand name (e.g. Firefox). -->
@@ -1076,6 +932,12 @@
   <string name="notifications_allowed_summary">Permitido</string>
   <!-- Summary for notification preference indicating notifications are not allowed -->
   <string name="notifications_not_allowed_summary">No permitido</string>
+  <!-- Preference for local network access / nearby devices in Android 17 -->
+  <string name="preferences_local_network_access">Acceso a la red local / Dispositivos cercanos</string>
+  <!-- Summary for local network access preference indicating access is allowed -->
+  <string name="local_network_access_allowed_summary">Permitido</string>
+  <!-- Summary for local network access preference indicating access is not allowed -->
+  <string name="local_network_access_not_allowed_summary">No permitido</string>
   <!--
     Add-on Permissions
 
@@ -1135,10 +997,14 @@
   <string name="customize_toggle_pocket_sponsored">Historias patrocinadas</string>
   <!-- Title for the opening wallpaper settings screen -->
   <string name="customize_wallpapers">Fondos de pantalla</string>
+  <!-- Label for the menu item that opens the customize homepage settings screen. -->
+  <string name="browser_menu_customize_homepage">Personalizar página de inicio</string>
+  <!-- Label for the menu item that opens the wallpaper settings screen. -->
+  <string name="browser_menu_change_wallpaper">Cambiar fondo de pantalla</string>
   <!-- Title for the customize home screen section with sponsored shortcuts. -->
   <string name="customize_toggle_contile">Accesos directos patrocinados</string>
   <!-- Title for the customize home screen section that toggles the Homepage sports widget. -->
-  <string name="customize_toggle_world_cup" tools:ignore="UnusedResources">Mundial</string>
+  <string name="customize_toggle_world_cup">Mundial</string>
   <!--
     Wallpapers
 
@@ -1351,7 +1217,7 @@
   <string name="preferences_usage_data_description_1" tools:ignore="BrandUsage">Los datos sobre tu dispositivo, la configuración del hardware y el uso nos ayudan a mejorar las funciones, el rendimiento y la estabilidad de Firefox.</string>
   <!-- Preference switch for daily usage ping data collection -->
   <string name="preferences_daily_usage_ping_title">Ping de uso diario</string>
-  <string name="preferences_daily_usage_ping_description">Esto ayuda a Mozilla a estimar los usuarios activos.</string>
+  <string name="preferences_daily_usage_ping_description" tools:ignore="BrandUsage">Esto ayuda a Mozilla a estimar los usuarios activos.</string>
   <string name="preferences_daily_usage_ping_learn_more">Obtén más información sobre el ping de uso diario</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
   <string name="crash_reporting_snack_bar_message">Reporte enviado</string>
@@ -1377,7 +1243,7 @@
   <!-- Title for studies preferences -->
   <string name="preference_experiments_2">Estudios</string>
   <!-- Summary for studies preferences -->
-  <string name="preference_experiments_summary_2">Permite a Mozilla instalar y ejecutar estudios</string>
+  <string name="preference_experiments_summary_2" tools:ignore="BrandUsage">Permite a Mozilla instalar y ejecutar estudios</string>
   <!--
     Turn On Sync Preferences
 
@@ -1478,8 +1344,6 @@
   <string name="library_desktop_bookmarks_unfiled">Otros marcadores</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">Historial</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">Nueva pestaña</string>
   <!-- Settings Page Title -->
   <string name="settings_title">Ajustes</string>
   <!-- Content description (not visible, for screen readers etc.): "Close button for library settings" -->
@@ -1639,10 +1503,14 @@
   <string name="add_tab">Agregar pestaña</string>
   <!-- Content description (not visible, for screen readers etc.): Add tab button. Adds a news tab when pressed -->
   <string name="add_private_tab">Agregar pestaña privada</string>
+  <!-- Content description (not visible, for screen readers etc.): Create tab group button. Opens the create tab group sheet when pressed -->
+  <string name="create_tab_group_content_description">Crear grupo de pestañas</string>
   <!-- Text for the tab search bar placeholder -->
   <string name="tab_manager_search_bar_placeholder">Busca tus pestañas</string>
   <!-- Text shown in the menu to view recently closed tabs -->
   <string name="tab_tray_menu_recently_closed">Pestañas recientemente cerradas</string>
+  <!-- Text shown in the menu to select all tabs. -->
+  <string name="tab_tray_menu_select_all_tabs">Seleccionar todo</string>
   <!-- Text shown in the menu to view account settings -->
   <string name="tab_tray_menu_account_settings">Ajustes de la cuenta</string>
   <!-- Text shown in the menu to view tab settings -->
@@ -1705,6 +1573,14 @@
   <string name="pwa_site_controls_title_private">%1$s (Modo Privado)</string>
   <!-- Content description (not visible, for screen readers etc.) for the button to open the Tab Search feature to search through tabs. -->
   <string name="tab_manager_open_tab_search">Abrir búsqueda en pestañas</string>
+  <!-- Title for introducing tab groups via an onboarding card shown in the tab manager. -->
+  <string name="tab_group_onboarding_item_title">Crear un grupo de pestañas</string>
+  <!-- Description for tab groups onboarding shown in the tab manager when in grid view. -->
+  <string name="tab_group_onboarding_grid_item_description">Arrastra una pestaña sobre otra para agruparlas.</string>
+  <!-- Description for tab groups onboarding shown in the tab manager when in list view. -->
+  <string name="tab_group_onboarding_list_item_description">Selecciona varias pestañas para crear un grupo.</string>
+  <!-- Content description (accessibility label) for button to dismiss the tab group onboarding item. -->
+  <string name="tab_group_onboarding_item_dismiss_content_description">Descartar incorporación a grupo de pestañas</string>
   <!-- The header text displayed on the tab groups page when no tab groups are open -->
   <string name="tab_manager_empty_tab_groups_page_header">Prueba los grupos de pestañas: menos desplazamientos, más resultados</string>
   <!-- The description displayed on the tab groups page when no tab groups are open -->
@@ -1786,6 +1662,26 @@
   <string name="close_tab_and_delete_group_confirmation_dialog_confirm">Eliminar grupo</string>
   <!-- Text shown on the cancel button in the Close last tab and delete tab group confirmation dialog. -->
   <string name="close_tab_and_delete_group_confirmation_dialog_cancel">Cancelar</string>
+  <!-- Content description for the three dot button next to a tab group" -->
+  <string name="tab_group_three_dot_button_content_description">Más opciones</string>
+  <!-- Text shown on the edit button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_edit">Editar</string>
+  <!-- Text shown on the ungroup button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_ungroup">Desagrupar</string>
+  <!-- Text shown on the delete button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_delete">Eliminar</string>
+  <!-- Text shown on the close button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_close">Cerrar</string>
+  <!-- Title for the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_title">¿Desagrupar pestañas?</string>
+  <!-- Text shown in the body of the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_body">El grupo se eliminará, pero las pestañas permanecerán abiertas en el dispositivo.</string>
+  <!-- Text shown on the Don't Ask Again checkbox button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_dont_ask_again">No preguntar de nuevo</string>
+  <!-- Text shown on the confirm button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_confirm">Desagrupar</string>
+  <!-- Text shown on the cancel button in the Ungroup tab group confirmation dialog. -->
+  <string name="ungroup_tab_group_confirmation_dialog_cancel">Cancelar</string>
   <!--
     Color labels for tab groups, used for accessibility and selection UI.
 
@@ -1800,8 +1696,6 @@
   <string name="tab_group_color_pink">Rosa</string>
   <!-- Tab group color: Purple -->
   <string name="tab_group_color_purple">Púrpura</string>
-  <!-- Tab group color: Violet -->
-  <string name="tab_group_color_violet">Violeta</string>
   <!-- Tab group color: Blue -->
   <string name="tab_group_color_blue">Azul</string>
   <!-- Tab group color: Cyan -->
@@ -1818,8 +1712,6 @@
   <string name="history_search_1">Ingresa los términos de búsqueda</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">Eliminar historial</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">Historial eliminado</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">Se eliminó %1$s</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -2056,33 +1948,37 @@
   <!-- The error message of the URL text field when an invalid URL has been entered. -->
   <string name="webcompat_reporter_url_error_invalid">Por favor, introduce una URL válida</string>
   <!-- The label/title of a field in the Web Compat Reporter feature for explaining a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_label_whats_broken_2">¿Qué es lo que falla?</string>
-  <!-- The placeholder text for the dropdown where a user selects a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_2">Selecciona un motivo</string>
-  <!-- The error message of the dropdown, prompting the user to select a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_error">Por favor elige una razón</string>
-  <!-- The label/title of an optional field in the Web Compat Reporter feature for adding additional information. -->
-  <string name="webcompat_reporter_label_description">Describe el problema (opcional)</string>
-  <!-- The button text for navigating away from the feature to provide more information on the broken site's bug report. -->
-  <string name="webcompat_reporter_add_more_info">Agregar más información</string>
+  <string name="webcompat_reporter_label_whats_broken_3">¿Qué es lo que no funciona?</string>
+  <!-- Content description for the icon button that clears the selected broken site reason in the WebCompat Reporter. -->
+  <string name="webcompat_reporter_clear_reason_content_description">Borrar motivo seleccionado</string>
+  <!-- The error message of the description when the user selects "Something else" as the reason, but left the description empty or too short. -->
+  <string name="webcompat_reporter_description_error">Por favor, ingresa al menos 10 caracteres</string>
+  <!-- The label/title of a mandatory field in the Web Compat Reporter feature for adding additional information. -->
+  <string name="webcompat_reporter_label_mandatory_description">Describe el problema en detalle para ayudarnos a investigar la situación</string>
+  <!-- The label/title of a optional field in the Web Compat Reporter feature for adding additional information. -->
+  <string name="webcompat_reporter_label_optional_description">Describe el problema en detalle para ayudarnos a investigar (opcional)</string>
   <!-- The button text for the cancel button to leave the Web Compat Reporter feature. -->
   <string name="webcompat_reporter_cancel">Cancelar</string>
   <!-- The button text for the send button to submit the provided form data. -->
-  <string name="webcompat_reporter_send">Enviar</string>
+  <string name="webcompat_reporter_send_report">Enviar reporte</string>
   <!-- Text for a snackbar to confirm the successful submission of a WebCompat report. -->
   <string name="webcompat_reporter_success_snackbar_text_2">Reporte enviado</string>
   <!-- Placeholder text for the description field to prompt the user on what they should type. -->
-  <string name="webcompat_reporter_problem_description_placeholder_text">¿Qué pasó? ¿Qué debería haber pasado?</string>
+  <string name="webcompat_reporter_problem_description_placeholder_text_2">¿Qué pasó? ¿Qué esperabas que pasara? Incluye los pasos para reproducir el problema.</string>
   <!-- Label of the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. -->
-  <string name="webcompat_reporter_etp_checkbox_text">Enviar las URL bloqueadas por la protección contra el rastreo</string>
-  <!-- Description text for the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. It informs the user when checked, the report will include the list of URLs that were blocked by Enhanced Tracking Protection on the current page. -->
-  <string name="webcompat_reporter_etp_checkbox_description">La Protección de rastreo mejorada podría bloquear rastreadores y scripts que algunos sitios web necesitan para funcionar bien.</string>
+  <string name="webcompat_reporter_etp_checkbox_text_2">Enviar lista de elementos bloqueados por la protección de rastreo</string>
   <!-- The button text for the preview report button to view a preview of the report. -->
   <string name="webcompat_reporter_preview_report">Vista previa del informe</string>
   <!-- The title shown at the top of the WebCompat Report preview panel. This appears after the user taps the “Preview” button before sending a report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_header">Vista previa del reporte</string>
   <!-- Label for the “Send” button shown in the WebCompat Report preview panel, which the user taps to submit the report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_send">Enviar</string>
+  <!-- Title for the Edit URL confirmation dialog in the WebCompatReporter -->
+  <string name="webcompat_reporter_edit_url_dialog_title">Edita la URL del sitio web</string>
+  <!-- Text shown on the save button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_save">Guardar</string>
+  <!-- Text shown on the dismiss button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_dismiss">Descartar</string>
   <!--
     These reason strings are dropdown options on a WebCompat reporter form, indicating what is broken on the site.
 
@@ -2102,7 +1998,9 @@
   <!-- Broken site reason text for site asked to turn off ad blocker -->
   <string name="webcompat_reporter_reason_turn_off_adblocker">El sitio solicitó desactivar el bloqueador de anuncios</string>
   <!-- Broken site reason text for browser isn’t supported or blocked -->
-  <string name="webcompat_reporter_reason_notsupported">El navegador no es compatible o está bloqueado</string>
+  <string name="webcompat_reporter_reason_notsupported_2">El navegador no es compatible o está bloqueado</string>
+  <!-- Broken site reason text for the site being deceptive -->
+  <string name="webcompat_reporter_reason_site_is_deceptive">Este sitio es engañoso</string>
   <!-- Broken site reason text for something else -->
   <string name="webcompat_reporter_reason_other">Algo más</string>
   <!--
@@ -2112,7 +2010,7 @@
   -->
   <string name="tab_crash_title_2">Lo sentimos. %1$s no puede cargar esa página.</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">Enviar informe de fallos a Mozilla</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">Enviar informe de fallos a Mozilla</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">Cerrar pestaña</string>
   <!-- Restore tab button text on the tab crash page -->
@@ -2211,12 +2109,8 @@
   <string name="edit_bookmark_folder_fragment_title">Editar carpeta</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">URL</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">CARPETA</string>
   <!-- Text indicating which folder a bookmark or folder will be saved in -->
   <string name="bookmark_save_in_label">Guardar en</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">NOMBRE</string>
   <!-- Label for a text input field for a bookmark or folder name -->
   <string name="bookmark_name_label_normal_case">Nombre</string>
   <!-- Bookmark select folder screen title -->
@@ -2260,30 +2154,24 @@
   <string name="bookmark_empty_list_root_title">Mantén todos tus marcadores favoritos en un solo lugar</string>
   <!-- Bookmark screen folder description. %s is the count of bookmark folder children -->
   <string name="bookmarks_folder_description">Marcadores en la carpeta: %s</string>
-  <!-- Description for the bookmark list empty state when you're not signed into sync. -->
-  <string name="bookmark_empty_list_guest_description">Guarda sitios mientras navegas. Inicia sesión para obtener los marcadores de tus otros dispositivos sincronizados.</string>
   <!-- Text for the button to navigate to sync authentication -->
   <string name="bookmark_empty_list_guest_cta">Iniciar sesión para sincronizar</string>
-  <!-- Description for the bookmark list empty state when you're signed into sync. -->
-  <string name="bookmark_empty_list_authenticated_description">Guarda sitios mientras navegas. También te mostraremos los marcadores de tus otros dispositivos sincronizados.</string>
   <!-- Description for the bookmark list empty state when you're in an empty folder. -->
   <string name="bookmark_empty_list_folder_description">Agregar marcadores mientras navegas para que puedas encontrar después tus sitios favoritos.</string>
   <!-- Description for the add new folder button when selecting a folder. -->
   <string name="bookmark_select_folder_new_folder_button_title">Nueva carpeta</string>
   <!-- Bookmark snackbar message for moving a single item. %1$s is the title of the item being moved and %2$s is the new parent folder of the bookmark -->
   <string name="bookmark_moved_single_item">Movido de %1$s a %2$s</string>
+  <!-- Text for bookmark search page when there are no results. -->
+  <string name="bookmark_no_search_results">No se encontraron coincidencias.</string>
+  <!-- Additional text for bookmark search page when there are no results. -->
+  <string name="bookmark_no_search_results_additional_text">¡Prueba otra búsqueda!</string>
   <!--
     Site Permissions
 
     Button label that take the user to the Android App setting
   -->
   <string name="phone_feature_go_to_settings">Ir a Ajustes</string>
-  <!--
-    Content description (not visible, for screen readers etc.): Quick settings sheet
-    to give users access to site specific information / settings. For example:
-    Secure settings status and a button to modify site permissions
-  -->
-  <string name="quick_settings_sheet">Hoja de ajustes rápidos</string>
   <!-- Label that indicates that this option it the recommended one -->
   <string name="phone_feature_recommended">Recomendado</string>
   <!-- Button label for clearing all the information of site permissions -->
@@ -2363,9 +2251,9 @@
   <!-- Summary of studies data on quit preference if it is set to off -->
   <string name="studies_off">Desactivado</string>
   <!-- Toggle if desktop site is turned on -->
-  <string name="browser_feature_desktop_site_on">Activar</string>
+  <string name="browser_feature_desktop_site_on">Activado</string>
   <!-- Toggle if desktop site is turned off -->
-  <string name="browser_feature_desktop_site_off">Desactivar</string>
+  <string name="browser_feature_desktop_site_off">Desactivado</string>
   <!-- Category header of a preference that allows a user to alter settings related to web permissions. -->
   <string name="preferences_category_permissions">Permisos</string>
   <!-- Category header of a preference that allows a user to alter settings related to web content. -->
@@ -2380,8 +2268,6 @@
   <string name="collections_header">Colecciones</string>
   <!-- Content description (not visible, for screen readers etc.): Opens the collection menu when pressed -->
   <string name="collection_menu_button_content_description">Menú de la colección</string>
-  <!-- Label to describe what collections are to a new user without any collections -->
-  <string name="no_collections_description2">Recolecta las cosas que te importan.\nAgrupa las búsquedas, los sitios y las pestañas similares para acceder a ellas rápidamente.</string>
   <!-- Title for the "select tabs" step of the collection creator -->
   <string name="create_collection_select_tabs">Seleccionar pestañas</string>
   <!-- Title for the "select collection" step of the collection creator -->
@@ -2475,6 +2361,10 @@
   <string name="sync_sign_in">Iniciar sesión en Sync</string>
   <!-- An option from the share dialog to send link to all other sync devices -->
   <string name="sync_send_to_all">Enviar a todos los dispositivos</string>
+  <!-- Text displayed when no other sync devices are available for link sharing -->
+  <string name="sync_no_devices_available">No hay dispositivos disponibles</string>
+  <!-- Text displayed when no other sync devices are available for link sharing. -->
+  <string name="sync_no_devices_available_description">Los dispositivos conectados y sincronizados con esta cuenta aparecerán aquí.</string>
   <!-- An option from the share dialog to reconnect to sync -->
   <string name="sync_reconnect">Reconectar a Sync</string>
   <!-- Text displayed when sync is offline and cannot be accessed -->
@@ -2531,6 +2421,8 @@
   <string name="preferences_take_survey">Responder encuesta</string>
   <!-- Preference for not taking the short survey. -->
   <string name="preferences_not_take_survey">No, gracias</string>
+  <!-- Error message shown in a Toast when the system fails to trigger the device uninstallation prompt. -->
+  <string name="uninstall_survey_error_failed">No se pudo abrir la ventana de confirmación de desinstalación. Por favor, utiliza la función de desinstalación nativa del sistema.</string>
   <!--
     Snackbar
 
@@ -2676,10 +2568,8 @@
   <!--
     Enhanced Tracking Protection
 
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
+    Preference title for enhanced tracking protection settings
   -->
-  <string name="etp_settings">Ajustes de protección</string>
-  <!-- Preference title for enhanced tracking protection settings -->
   <string name="preference_enhanced_tracking_protection">Protección contra rastreo mejorada</string>
   <!-- Preference summary for enhanced tracking protection settings on/off switch -->
   <string name="preference_enhanced_tracking_protection_summary">Ahora con protección total de cookies, nuestra barrera más poderosa hasta el momento contra los rastreadores entre sitios.</string>
@@ -2687,7 +2577,7 @@
   <string name="preference_enhanced_tracking_protection_explanation_2">%s te protege de muchos de los rastreadores más comunes que rastrean lo que haces en línea.</string>
   <!-- Text displayed that links to website about enhanced tracking protection -->
   <string name="preference_enhanced_tracking_protection_explanation_learn_more">Saber más</string>
-  <plurals name="trackers_blocked_count">
+  <plurals name="trackers_blocked_count_2">
     <!--
       Trackers blocked card on homepage
 
@@ -2768,12 +2658,8 @@
   <string name="preference_enhanced_tracking_protection_custom_cryptominers">Criptomineros</string>
   <!-- Preference for enhanced tracking protection for the custom protection settings -->
   <string name="preference_enhanced_tracking_protection_custom_known_fingerprinters">Huellas dactilares conocidas</string>
-  <!-- Button label for navigating to the Enhanced Tracking Protection details -->
-  <string name="enhanced_tracking_protection_details">Detalles</string>
   <!-- Header for categories that are being being blocked by current Enhanced Tracking Protection settings -->
   <string name="enhanced_tracking_protection_blocked">Bloqueado</string>
-  <!-- Header for categories that are being not being blocked by current Enhanced Tracking Protection settings -->
-  <string name="enhanced_tracking_protection_allowed">Permitido</string>
   <!-- Category of trackers (social media trackers) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_social_media_trackers_title">Rastreadores de redes sociales</string>
   <!-- Description of social media trackers that can be blocked by Enhanced Tracking Protection -->
@@ -2796,10 +2682,6 @@
   <string name="etp_tracking_content_title">Contenido de rastreo</string>
   <!-- Description of tracking content that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_tracking_content_description">Bloquea la carga de anuncios externos, vídeos y contenido que contenga código de rastreo. Puede afectar a la funcionalidad del sitio web.</string>
-  <!-- Enhanced Tracking Protection message that protection is currently on for this site -->
-  <string name="etp_panel_on">Las protecciones están ACTIVAS para este sitio</string>
-  <!-- Enhanced Tracking Protection message that protection is currently off for this site -->
-  <string name="etp_panel_off">Las protecciones están INACTIVAS para este sitio</string>
   <!-- Header for exceptions list for which sites enhanced tracking protection is always off -->
   <string name="enhanced_tracking_protection_exceptions">La protección de rastreo mejorada está desactivada para estos sitios</string>
   <!--
@@ -2824,13 +2706,6 @@
   <string name="etp_suspected_fingerprinters_description">Habilita la protección de huellas digitales para detener a los detectores de huellas digitales sospechosos.</string>
   <!-- Category of trackers (fingerprinters) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_known_fingerprinters_title">Huellas dactilares conocidas</string>
-  <!--
-    Description of the SmartBlock Enhanced Tracking Protection feature. The * symbol is intentionally hardcoded here,
-    as we use it on the UI to indicate which trackers have been partially unblocked.
-  -->
-  <string name="preference_etp_smartblock_description">Algunos rastreadores marcados abajo han sido parcialmente desbloqueados en esta página porque interactuaste con ellos*.</string>
-  <!-- Text displayed that links to website about enhanced tracking protection SmartBlock -->
-  <string name="preference_etp_smartblock_learn_more">Saber más</string>
   <!--
     Content description (not visible, for screen readers etc.):
     Enhanced tracking protection exception preference icon for ETP settings.
@@ -3078,6 +2953,8 @@
   <string name="saved_logins_sort_strategy_last_used">Último uso</string>
   <!-- Content description (not visible, for screen readers etc.) -->
   <string name="saved_logins_menu_dropdown_chevron_icon_content_description_2">Menú para ordenar contraseñas</string>
+  <!-- Label for button to import passwords from file. -->
+  <string name="passwords_import_menu_button">Importar desde un archivo</string>
   <!--
     Email Masks
 
@@ -3108,10 +2985,12 @@
   <string name="ip_protection_title">VPN</string>
   <!-- Label for the browser VPN toggle on the settings screen -->
   <string name="ip_protection_toggle_label">VPN</string>
+  <!-- Content description for the browser VPN settings screen top bar back button -->
+  <string name="ip_protection_navigate_back_button_content_description">Regresar a la navegación</string>
   <!-- Headline for the browser VPN promo card. %s is the name of the app (for example "Firefox"). -->
   <string name="ip_protection_promo_headline">VPN integrada de %s</string>
-  <!-- Body text for the browser VPN promo card -->
-  <string name="ip_protection_promo_body">Navega con protección extra ocultando tu ubicación, incluso en redes Wi-Fi públicas.</string>
+  <!-- Body text for the browser VPN promo card . %s is a learn more link using ip_protection_learn_more as text. -->
+  <string name="ip_protection_promo_body_2">Navega con protección adicional al ocultar tu ubicación, incluso en redes Wi-Fi públicas. %s</string>
   <!-- Link text that opens additional information about the browser VPN -->
   <string name="ip_protection_learn_more">Saber más</string>
   <!-- Label for the monthly data allowance section on the browser VPN settings screen -->
@@ -3163,6 +3042,8 @@
   <string name="ip_protection_toolbar_pill_description">La VPN está activada.</string>
   <!-- Label for the button that starts the browser VPN authentication or authorization flow on the settings screen -->
   <string name="ip_protection_get_started">Comenzar</string>
+  <!-- Label for the "connecting" state of the button that starts the browser VPN authentication or authorization flow on the settings screen -->
+  <string name="ip_protection_connecting">Conectando…</string>
   <!-- Headline for the browser VPN onboarding card. %s is the name of the app (for example "Firefox"). -->
   <string name="ip_protection_onboarding_card_headline">Prueba la VPN integrada de %s</string>
   <!--
@@ -3173,6 +3054,14 @@
   <string name="ip_protection_onboarding_body">%1$s ocultando tu ubicación, incluso en redes Wi-Fi públicas. Disfruta de %2$d GB gratis cada mes.</string>
   <!-- Used as text for a link in ip_protection_onboarding_body. Make sure to adapt capitalization if the link is in the middle of the sentence. -->
   <string name="ip_protection_onboarding_body_link">Navega con protección extra</string>
+  <!--
+    The body of the VPN onboarding card for a promotion that provides unlimited data bandwidth for a certain time.
+    %1$s is a localized date (for example "Jun 9") indicating the end of the promotional period.
+    %2$s is a link using ip_protection_onboarding_body_link_promo (“Learn more”) as text. It links to a support article about VPN on Firefox.
+  -->
+  <string name="ip_protection_onboarding_body_promo">Actívala para que tu navegación sea más privada y difícil de rastrear. Pruébala ahora para obtener ancho de banda ilimitado a través de %1$s. %2$s</string>
+  <!-- Used as text for a link in ip_protection_onboarding_body. Make sure to adapt capitalization if the link is in the middle of the sentence. -->
+  <string name="ip_protection_onboarding_body_link_promo">Saber más</string>
   <!-- Label for the dismiss button on the onboarding bottom sheet. -->
   <string name="ip_protection_onboarding_not_now_button">Ahora no</string>
   <!-- Snackbar (in-app pop-up notification) text to signal the browser VPN connection error -->
@@ -3182,6 +3071,40 @@
     %1$d is the total monthly allowance in GB (for example "50").
   -->
   <string name="ip_protection_data_limit_reached_snackbar">Has usado %1$d GB de datos de la VPN. El acceso se restablecerá el próximo mes.</string>
+  <!-- Snackbar (in-app pop-up notification) action button text that takes the user to the VPN settings screen. -->
+  <string name="ip_protection_data_limit_reached_snackbar_action">Ajustes</string>
+  <!-- Description shown on the browser VPN settings screen prompting the user to turn the VPN on. -->
+  <string name="ip_protection_settings_description" tools:ignore="UnusedResources">Activa la VPN para que tu navegación sea más privada y más difícil de rastrear.</string>
+  <!-- Title shown on the browser VPN settings screen for location selection section. -->
+  <string name="ip_protection_location_title" tools:ignore="UnusedResources">Ubicación</string>
+  <!-- Label for the Recommended server location option which is automatically selected by the browser. -->
+  <string name="ip_protection_recommended_location" tools:ignore="UnusedResources">Recomendada</string>
+  <!-- Headline for the card that promotes the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_headline" tools:ignore="UnusedResources,BrandUsage">Protégete aun más con Mozilla VPN</string>
+  <!-- Body for the card that promotes the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_body" tools:ignore="UnusedResources">Elige entre más de 300 ubicaciones y protege todas tus aplicaciones en hasta 5 dispositivos.</string>
+  <!-- Label for the button that takes the user to get the standalone Mozilla VPN product. -->
+  <string name="ip_protection_mozilla_vpn_upsell_button" tools:ignore="UnusedResources,BrandUsage">Obtén Mozilla VPN</string>
+  <!-- Title for the browser VPN location picker screen. -->
+  <string name="ip_protection_location_picker_title" tools:ignore="UnusedResources">Elige una ubicación de VPN</string>
+  <!-- Description for what it means to use the Recommended setting and let the app automatically pick the best server location. -->
+  <string name="ip_protection_location_fastest_description" tools:ignore="BrandUsage">Firefox selecciona la ubicación más rápida</string>
+  <!-- Error message shown when the selected browser VPN location is unavailable. -->
+  <string name="ip_protection_location_unavailable" tools:ignore="UnusedResources">Ubicación no disponible. Elige otra ubicación.</string>
+  <!-- Snackbar (in-app pop-up notification) text shown when the previously selected browser VPN location is unavailable and the recommended location was used instead. -->
+  <string name="ip_protection_location_unavailable_recommended_snackbar" tools:ignore="UnusedResources">La ubicación de VPN seleccionada no está disponible. Conectado a la ubicación recomendada.</string>
+  <!-- Title for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_locations_unavailable_title">No hay ubicaciones disponibles</string>
+  <!-- Description for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_locations_unavailable_description">Conectado a la ubicación recomendada.</string>
+  <!-- Title for the browser VPN location selection screen (displayed in the app bar) -->
+  <string name="ip_protection_locations_title">Elige una ubicación de VPN</string>
+  <!-- Content description for the browser VPN location selection screen top bar back button -->
+  <string name="ip_protection_locations_navigate_back_button_content_description">Regresar</string>
+  <!-- Title for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_location_unavailable_title" tools:ignore="UnusedResources">La ubicación anterior no está disponible</string>
+  <!-- Description for the card shown to the user when we are unable to fetch server locations -->
+  <string name="ip_protection_location_unavailable_recommended_description" tools:ignore="UnusedResources">Conectado a la ubicación recomendada.</string>
   <!--
     Autofill
 
@@ -3334,8 +3257,6 @@
   <string name="addresses_save_button">Guardar</string>
   <!-- The text for the "Cancel" button for cancelling adding, updating or deleting an address -->
   <string name="addresses_cancel_button">Cancelar</string>
-  <!-- The text for the "Delete address" button for deleting an address -->
-  <string name="addressess_delete_address_button">Eliminar dirección</string>
   <!-- The title for the "Delete address" confirmation dialog -->
   <string name="addressess_confirm_dialog_message_2">¿Eliminar esta dirección?</string>
   <!-- The text for the positive button on "Delete address" dialog -->
@@ -3390,16 +3311,8 @@
   <string name="phone_feature_blocked_step_permissions"><![CDATA[2. Toca en <b>Permisos</b>]]></string>
   <!-- Third step for the allowing a permission (%1$s is the permission name, for example "Camera"). -->
   <string name="phone_feature_blocked_step_feature"><![CDATA[3. Cambia <b>%1$s</b> a activado]]></string>
-  <!-- Label that indicates a site is using a secure connection -->
-  <string name="quick_settings_sheet_secure_connection_2">Conexión segura</string>
-  <!-- Label that indicates a site is using a insecure connection -->
-  <string name="quick_settings_sheet_insecure_connection_2">La conexión no es segura</string>
-  <!-- Label that indicates a site is displaying a local document -->
-  <string name="quick_settings_sheet_local_page">Esta página se encuentra guardada en tu dispositivo.</string>
   <!-- Label to clear site data -->
   <string name="clear_site_data">Limpiar cookies y datos del sitio</string>
-  <!-- Confirmation message for a dialog confirming if the user wants to delete all data for current site. %s is the domain of the site. -->
-  <string name="confirm_clear_site_data"><![CDATA[¿Estás seguro de que deseas borrar todas las cookies y datos del sitio <b>%s</b>?]]></string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for all sites -->
   <string name="confirm_clear_permissions_on_all_sites">¿Seguro que quieres borrar todos los permisos de todos los sitios?</string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for a site -->
@@ -3412,11 +3325,6 @@
   <string name="browser_menu_add_to_shortcuts">Agregar a los atajos</string>
   <!-- Browser menu button that removes a shortcut from the home fragment -->
   <string name="browser_menu_remove_from_shortcuts">Eliminar de los atajos</string>
-  <!--
-    text shown before the issuer name to indicate who its verified by, %1$s is the name of
-    the certificate authority that verified the ticket
-  -->
-  <string name="certificate_info_verified_by">Verificado por: %1$s</string>
   <!-- Message in delete confirmation dialog for password -->
   <string name="login_deletion_confirmation_2">¿Estás seguro de que deseas eliminar esta contraseña?</string>
   <!-- Positive action of a dialog asking to delete -->
@@ -3482,8 +3390,14 @@
   <string name="homepage_shortcuts_show_all_content_description">Mostrar todos los accesos directos</string>
   <!-- Label for the "Add shortcut" button displayed as a tile. -->
   <string name="homepage_shortcuts_add_shortcut">Agregar acceso directo</string>
+  <!-- Title for the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_add_to_homepage">Agregar a la página de inicio</string>
+  <!-- Label for the "Add website" button in the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_add_website">Agregar sitio web</string>
   <!-- Title text for the "Enter a Website URL" dialog for adding a shortcut. -->
   <string name="homepage_shortcuts_add_website_title">Ingresa la dirección de un sitio web</string>
+  <!-- Title for the "Popular sites" section in the "Add to homepage" bottom sheet. -->
+  <string name="homepage_shortcuts_popular_sites">Sitios populares</string>
   <!-- Title text displayed in the dialog when shortcuts limit is reached. -->
   <string name="shortcut_max_limit_title">Alcanzado el límite para atajos</string>
   <!-- Content description text displayed in the dialog when shortcut limit is reached. -->
@@ -3570,8 +3484,6 @@
   <string name="default_browser_experiment_card_title">Cambia tu navegador predeterminado</string>
   <!-- Default browser card text -->
   <string name="default_browser_experiment_card_text" tools:ignore="BrandUsage">Configura enlaces de sitios web, correos electrónicos y mensajes para que se abran automáticamente en Firefox.</string>
-  <!-- Content description for close button in collection placeholder. -->
-  <string name="remove_home_collection_placeholder_content_description">Eliminar</string>
   <!-- Content description radio buttons with a link to more information -->
   <string name="radio_preference_info_content_description">Clic para más detalles</string>
   <!-- Content description for the action bar "up" button -->
@@ -3603,20 +3515,10 @@
     Action label for elements that can be collapsed if interacting with them. Talkback will append this to say "Double tap to collapse".
   -->
   <string name="a11y_action_label_collapse">contraer</string>
-  <!-- Current state for elements that can be collapsed if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_collapsed">colapsado</string>
   <!-- Action label for elements that can be expanded if interacting with them. Talkback will append this to say "Double tap to expand". -->
   <string name="a11y_action_label_expand">aumentar</string>
-  <!-- Current state for elements that can be expanded if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_expanded">expandido</string>
   <!-- Action label for links to a website containing documentation about a wallpaper collection. Talkback will append this to say "Double tap to open link to learn more about this collection". -->
   <string name="a11y_action_label_wallpaper_collection_learn_more">abrir enlace para saber más sobre esta colección</string>
-  <!-- Content description for headings announced by accessibility service. %s is the text of the heading. Talkback will announce the text and then speak the word "Heading" indicating to the user that this text is a heading for a section. -->
-  <string name="a11y_heading">%s, Cabecera</string>
-  <!-- Title for dialog displayed when trying to access links present in a text. -->
-  <string name="a11y_links_title">Enlaces</string>
-  <!-- Additional content description for text bodies that contain urls. -->
-  <string name="a11y_links_available">Enlaces disponibles</string>
   <!-- Translations feature -->
 
   <!--
@@ -3883,8 +3785,19 @@
     %s is the name of the app (for example "Firefox").
   -->
   <string name="protection_panel_banner_protected_title">%s está en guardia</string>
-  <!-- Description text for the protection panel banner when tracking protection is enabled. -->
-  <string name="protection_panel_banner_protected_description">Tienes protección. Si detectamos algo, te lo haremos saber.</string>
+  <plurals name="protection_panel_banner_protected_blocked_trackers_description">
+    <!--
+      Description text for the protection panel banner when privacy dashboard is enabled.
+      %1$d is the number of trackers blocked.
+    -->
+    <item quantity="one">%1$d rastreador bloqueado en este sitio.</item>
+    <item quantity="other">%1$d rastreadores bloqueados en este sitio.</item>
+  </plurals>
+  <!--
+    Description text for the protection panel banner when privacy dashboard is enabled.
+    and there are no trackers blocked.
+  -->
+  <string name="protection_panel_banner_protected_no_blocked_trackers_description">Tu protección está activa.</string>
   <!-- Label text for the Enhanced Tracking Protection toggle. -->
   <string name="protection_panel_etp_toggle_label">Protección de seguimiento mejorada</string>
   <!-- Toggle if Enhanced Tracking Protection is turned on -->
@@ -3900,25 +3813,68 @@
     %d is a placeholder for the number of trackers blocked.
   -->
   <string name="protection_panel_num_trackers_blocked">Rastreadores bloqueados: %d</string>
-  <!-- Text for when no trackers have been blocked. -->
-  <string name="protection_panel_no_trackers_blocked">No se encontraron rastreadores</string>
   <!-- Text for when tracking protection is disabled and no trackers are blocked. -->
   <string name="protection_panel_etp_disabled_no_trackers_blocked">Los rastreadores no están bloqueados</string>
   <!-- Link text to navigate to privacy and security settings from the protection panel. -->
   <string name="protection_panel_privacy_and_security_settings_2">Ajustes de privacidad</string>
   <!-- Title text for the protection panel permissions section. -->
   <string name="protection_panel_permissions_title">Permisos</string>
-  <!--
-    Text for displaying the total number of trackers blocked in the trackers blocked panel.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_total_num_trackers_blocked">Rastreadores bloqueados: %d</string>
-  <!--
-    Text for displaying the number of trackers blocked for a specific tracker category in the trackers blocked panel.
-    %s is a placeholder for the name of the tracker category.
-    %d is a placeholder for the number of trackers blocked.
-  -->
-  <string name="trackers_blocked_panel_categorical_num_trackers_blocked">%s: %d</string>
+  <plurals name="trackers_blocked_panel_total_num_trackers_blocked_2">
+    <!--
+      Text for displaying the total number of trackers blocked in the trackers blocked panel.
+      %1$d is a placeholder for the number of trackers blocked.
+    -->
+    <item quantity="one">%1$d rastreador bloqueado en este sitio</item>
+    <item quantity="other">%1$d rastreadores bloqueados en este sitio</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_social_media_trackers">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked social media trackers.
+      %1$d is a placeholder for the number of social media trackers blocked.
+    -->
+    <item quantity="one">%1$d rastreador de social media</item>
+    <item quantity="other">%1$d rastreadores de social media</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_cross_site_cookies">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked cross-site tracking cookies.
+      %1$d is a placeholder for the number of cross-site tracking cookies blocked.
+    -->
+    <item quantity="one">Cookie de rastreo entre sitios en tu historial (%1$d)</item>
+    <item quantity="other">Cookies de rastreo entre sitios en tu historial (%1$d)</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_cryptominers">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked cryptomining scripts.
+      %1$d is a placeholder for the number of cryptominers blocked.
+    -->
+    <item quantity="one">%1$d criptominero</item>
+    <item quantity="other">%1$d criptomineros</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_fingerprinters">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked fingerprinter scripts.
+      %1$d is a placeholder for the number of fingerprinters blocked.
+    -->
+    <item quantity="one">%1$d rastreador de identidad digital</item>
+    <item quantity="other">%1$d rastreadores de identidad digital</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_trackers_2">
+    <!--
+      Text for displaying in the trackers blocked panel the total number of blocked generic tracking scripts.
+      %1$d is a placeholder for the number of trackers blocked.
+    -->
+    <item quantity="one">Contenido de rastreo en tu navegación (%1$d)</item>
+    <item quantity="other">Contenidos de rastreo en tu navegación (%1$d)</item>
+  </plurals>
+  <plurals name="trackers_blocked_panel_num_trackers_blocked_this_week_2">
+    <!--
+      Text for displaying the number of trackers blocked this week in the trackers blocked panel.
+      %1$d is a placeholder for the number of trackers blocked this week.
+    -->
+    <item quantity="one">%1$d rastreador bloqueado esta semana</item>
+    <item quantity="other">%1$d rastreadores bloqueados esta semana</item>
+  </plurals>
   <!--
     Description text for a dialog confirming whether the user wants to delete all data for current site.
     %s is a placeholder for the base domain of website.
@@ -3939,6 +3895,8 @@
     %s is a placeholder for the name of the certificate authority that issued the certificate.
   -->
   <string name="connection_security_panel_verified_by">Verificado por %s</string>
+  <!-- Content description (not visible, for screen readers etc.) for the handle used to drag the protections dashboard to the bottom of the screen and close it. -->
+  <string name="tracker_protections_dashboard_close_handlebar_content_description">Cerrar panel de control</string>
   <!--
     Text for the connection security panel when the site uses a QWAC.
     %s is a placeholder for the organization for which the certificate was issued.
@@ -4062,6 +4020,26 @@
   <string name="microsurvey_sync_title" tools:ignore="BrandUsage,UnusedResources">¿Qué tan satisfactoria es la experiencia de sincronización en Firefox?</string>
   <!-- Text shown in the survey title for 'describe your experience so far' microsurvey. Note: The word "Firefox" should NOT be translated. -->
   <string name="microsurvey_describe_your_experience_title" tools:ignore="BrandUsage,UnusedResources">Ayúdanos a mejorar Firefox. ¿Qué opción describe mejor tu experiencia hasta ahora?</string>
+  <!--
+    Uninstall Survey
+
+    Title text for the uninstall survey dialog, asking the user for the reason they are removing the app
+  -->
+  <string name="microsurvey_uninstall_survey_title">Tu opinión es importante. ¿Por qué estás desinstalando la aplicación?</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_1_v2">Navegador lento o inestable</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_2_v2">Los sitios web no funcionan correctamente</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_3_v2">Faltan funcionalidades que necesito</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_4_v2">No funcionan los videos, descargas o archivos multimedia</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_5_v2">Es difícil de usar o está mal diseñado</string>
+  <!-- Uninstall survey answer option -->
+  <string name="uninstall_survey_option_6_v2">Por motivos de privacidad o seguridad</string>
+  <!-- Button label shown at the bottom of the uninstall survey -->
+  <string name="uninstall_survey_button_label">Enviar comentario y desinstalar</string>
   <!--
     Accessibility
 
@@ -4433,17 +4411,17 @@
   <!-- Section header for the South America confederation group in the sports widget country selector. -->
   <string name="sports_widget_confederation_south_america">Sudamérica</string>
   <!-- Country name for England in the sports widget. England cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
-  <string name="sports_widget_country_england" tools:ignore="UnusedResources">Inglaterra</string>
+  <string name="sports_widget_country_england">Inglaterra</string>
   <!-- Country name for Scotland in the sports widget. Scotland cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
-  <string name="sports_widget_country_scotland" tools:ignore="UnusedResources">Escocia</string>
+  <string name="sports_widget_country_scotland">Escocia</string>
   <!-- Label shown on the sports widget scoreboard when a match is currently being played live. -->
   <string name="sports_widget_match_live">EN VIVO</string>
   <!-- Title shown on the sports widget champion scoreboard row celebrating the soccer tournament winner. -->
-  <string name="sports_widget_champions_title" tools:ignore="UnusedResources">Campeones del Mundial 2026</string>
+  <string name="sports_widget_champions_title">Campeones del Mundial 2026</string>
   <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament runners-up. Runners-up means second place. -->
   <string name="sports_widget_runner_up_title" tools:ignore="UnusedResources">Finalistas</string>
   <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament third place winners. -->
-  <string name="sports_widget_third_place_title" tools:ignore="UnusedResources">Tercer lugar</string>
+  <string name="sports_widget_third_place_title">Tercer lugar</string>
   <!-- Round name shown on the sports widget for the Round of 32 stage in the soccer tournament. -->
   <string name="sports_widget_round_of_32">Dieciseisavos de final</string>
   <!-- Round name shown on the sports widget for the Round of 16 stage in the soccer tournament. -->
@@ -4457,9 +4435,9 @@
   <!-- Round name shown on the sports widget for the bronze final stage in the soccer tournament. -->
   <string name="sports_widget_bronze_final">Tercer puesto</string>
   <!-- Sports widget error card message shown when match data fails to load. -->
-  <string name="sports_widget_error_load_failed">La información del partido no está disponible ahora. Intenta actualizar en unos minutos.</string>
+  <string name="sports_widget_error_load_failed" tools:ignore="UnusedResources">La información del partido no está disponible ahora. Intenta actualizar en unos minutos.</string>
   <!-- Sports widget error card message shown when the network connection is interrupted and live updates pause. -->
-  <string name="sports_widget_error_connection_interrupted">Conexión interrumpida: actualizaciones en vivo pausadas.</string>
+  <string name="sports_widget_error_connection_interrupted" tools:ignore="UnusedResources">Conexión interrumpida: actualizaciones en vivo pausadas.</string>
   <!-- Sports widget action label to refresh match data after an error. -->
   <string name="sports_widget_error_refresh">Actualizar</string>
   <!-- Sports widget group stage label for group A in the soccer tournament. -->
@@ -4497,7 +4475,7 @@
   <!-- Sports widget match status suffix appended to match scores (e.g., "3 - 2 (Full time)") to indicate the match has been completed. -->
   <string name="sports_widget_match_full_time_suffix">(Finalizado)</string>
   <!-- Sports widget match status to indicate the match has been completed. -->
-  <string name="sports_widget_match_full_time_2" tools:ignore="UnusedResources">Finalizado</string>
+  <string name="sports_widget_match_full_time_2">Finalizado</string>
   <!--
     Sports widget card title encouraging the user to follow the soccer tournament. “Keep tabs on” is an informal expression
     meaning to stay updated on or regularly follow something (in this case, World Cup matches and updates).
@@ -4529,7 +4507,7 @@
   <!-- Sports widget match status label shown during halftime of a match. -->
   <string name="sports_widget_halftime" tools:ignore="UnusedResources">Medio tiempo</string>
   <!-- Sports widget match status label shown during extra time of a match. -->
-  <string name="sports_widget_extra_time" tools:ignore="UnusedResources">Tiempo extra</string>
+  <string name="sports_widget_extra_time">Tiempo extra</string>
   <!-- Sports widget match status label shown during penalties of a match. -->
   <string name="sports_widget_penalties">Penaltis</string>
   <!--
@@ -4551,11 +4529,11 @@
   -->
   <string name="sports_widget_countdown_minutes">M</string>
   <!-- Content description (for accessibility, not displayed) for the close button on the sports widget team / country selector. -->
-  <string name="sports_widget_close_team_selection_sheet_content_description" tools:ignore="UnusedResources">Cerrar hoja de selección de equipo</string>
+  <string name="sports_widget_close_team_selection_sheet_content_description">Cerrar hoja de selección de equipo</string>
   <!-- Content description (for accessibility, not displayed) for the close button on the sports widget card. -->
   <string name="sports_widget_close_content_description">Cerrar</string>
   <!-- Content description (for accessibility, not displayed) for the overflow (more options) menu button on the sports widget card. -->
-  <string name="sports_widget_more_options_content_description" tools:ignore="UnusedResources">Más opciones</string>
+  <string name="sports_widget_more_options_content_description">Más opciones</string>
   <!--
     Content description (for accessibility, not displayed) announcing the time remaining until the soccer tournament kickoff.
     %1$d is the number of days, %2$d is the number of hours, and %3$d is the number of minutes.
@@ -4567,30 +4545,44 @@
     Content description (for accessibility, not displayed)  announcing an upcoming soccer match.
     %1$s is the home team name, %2$s is the away team name, %3$s is the match date, %4$s is the kickoff time.
   -->
-  <string name="sports_widget_upcoming_match_content_description" tools:ignore="UnusedResources">Próximamente: %1$s contra %2$s, %3$s en %4$s</string>
+  <string name="sports_widget_upcoming_match_content_description">Próximamente: %1$s contra %2$s, %3$s en %4$s</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing a soccer match.
+    %1$s is the home team name, %2$s is the away team name, %3$s is trailing context
+    (e.g. formatted score "1 - 2 (Full time)", upcoming match info "Jun 19 5:00 PM",
+    or a match status like "Full time").
+  -->
+  <string name="sports_widget_match_content_description">%1$s contra %2$s, %3$s</string>
   <!--
     Content description (for accessibility, not displayed)  used for the sports widget card header announcing a live match for a group or stage.
     %s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32,
     or Final represented by sports_widget_final).
   -->
-  <string name="sports_widget_live_game_content_description" tools:ignore="UnusedResources">%s, juego en vivo</string>
+  <string name="sports_widget_live_game_content_description">%s, juego en vivo</string>
   <!--
     Content description (for accessibility, not displayed) announcing a live score.
     %1$s is the home team name, %2$d is the home team score, %3$s is the away team name, %4$d is the away team score,
     and %5$s is the match elapsed time (e.g. 72 minutes).
   -->
-  <string name="sports_widget_live_score_content_description" tools:ignore="UnusedResources">%1$s %2$d, %3$s %4$d, %5$s, en vivo</string>
+  <string name="sports_widget_live_score_content_description">%1$s %2$d, %3$s %4$d, %5$s, en vivo</string>
+  <!--
+    Content description (for accessibility, not displayed) announcing the elapsed minutes of a live match.
+    %1$s is the clock value, which may be a plain number (e.g. "72") or include extra time (e.g. "90+3").
+  -->
+  <string name="sports_widget_match_elapsed_minutes">Tiempo transcurrido en minutos: %1$s</string>
   <!--
     Content description (for accessibility, not displayed) for a paginated item.
     %1$s is the soccer tournament group name or stage (e.g. Group A represented by sports_widget_group_a, Round of 32 represented by sports_widget_round_of_32),
     %2$d is the current page number, and %3$d is the total number of pages.
   -->
-  <string name="sports_widget_page_position_content_description" tools:ignore="UnusedResources">%1$s, página %2$d de %3$d</string>
+  <string name="sports_widget_page_position_content_description">%1$s, página %2$d de %3$d</string>
   <!--
     Content description (for accessibility, not displayed) for a page within the World Cup final results carousel.
     %1$d is the current page number, and %2$d is the total number of pages.
   -->
   <string name="sports_widget_final_results_page_content_description" tools:ignore="UnusedResources">Resultados finales de la Copa del Mundo, página %1$d de %2$d</string>
+  <!-- Content description (for accessibility, not displayed) for the World Cup final results page. -->
+  <string name="sports_widget_final_results_content_description">Resultados finales del Mundial</string>
   <!-- Content description (for accessibility, not displayed) for the remove button that removes the sports widget from the homepage. -->
   <string name="sports_widget_remove_content_description" tools:ignore="UnusedResources">Retira la Copa del Mundo de casa</string>
   <!-- Title shown on the sports widget immediately after the user has followed a team. %s is the selected team (e.g., "USA"). -->
@@ -4602,11 +4594,17 @@
   <!-- Sports widget match status label shown during second half of a match. -->
   <string name="sports_widget_second_half" tools:ignore="UnusedResources">Segundo tiempo</string>
   <!-- Sports widget error card title shown when the user is offline. -->
-  <string name="sports_widget_error_connection_offline_title" tools:ignore="UnusedResources">Parece que estás desconectado.</string>
+  <string name="sports_widget_error_connection_offline_title">Parece que estás desconectado.</string>
   <!-- Sports widget error card description shown when the user is offline. -->
-  <string name="sports_widget_error_connection_offline_description" tools:ignore="UnusedResources">Revisa tu conexión a internet e inténtalo de nuevo.</string>
+  <string name="sports_widget_error_connection_offline_description">Revisa tu conexión a internet e inténtalo de nuevo.</string>
   <!-- Sports widget general group stage label in the soccer tournament. -->
   <string name="sports_widget_group_stage">Fase de grupos</string>
+  <!-- Sports widget error card title shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_title">La información del partido no está disponible en este momento.</string>
+  <!-- Sports widget error card description shown when match data fails to load. -->
+  <string name="sports_widget_error_load_failed_description">Intenta actualizar en unos minutos.</string>
+  <!-- Content description (for accessibility, not displayed) for teams which have not yet been determined in the match schedule. -->
+  <string name="sports_widget_team_to_be_determined">Equipo por definir</string>
   <!-- ==== End of Terms of use popup prompt. ==== -->
 
   <!--
@@ -4621,4 +4619,88 @@
   <string name="privacy_notice_updated_homepage_message_privacy_notice" tools:ignore="UnusedResources">Política de privacidad</string>
   <!-- The second active link used in privacy_notice_updated_homepage_message -->
   <string name="privacy_notice_updated_homepage_message_learn_more" tools:ignore="UnusedResources">Más información</string>
+  <!-- Google Lens prototype related strings -->
+  <string name="preferences_debug_settings_google_lens_integration">Habilitar la integración de Google Lens</string>
+  <!-- Lens image search button content description -->
+  <string name="lens_search_content_description">Búsqueda con imagen</string>
+  <!-- Content description for the gallery picker button in the Lens camera screen -->
+  <string name="content_description_gallery">Selecciona una imagen de la galería para enviarla a Google Lens</string>
+  <!-- Content description for the shutter button in the Lens camera screen -->
+  <string name="content_description_take_photo">Toma una foto y envíala a Google Lens</string>
+  <!-- Image context menu entry that sends the long-pressed image to Google Lens -->
+  <string name="context_menu_open_image_with_google_lens">Buscar con Google Lens</string>
+  <!-- Toast shown when the user denies the camera permission requested by the Lens camera screen -->
+  <string name="lens_camera_permission_denied">Permiso denegado</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the photo they capture will be sent to Google Lens for a visual search.
+  -->
+  <string name="lens_camera_title_lens">Google Lens</string>
+  <!--
+    Title shown at the top of the camera screen, next to the close button, telling the
+    user that the camera is being used to scan a QR code.
+  -->
+  <string name="lens_camera_title_qr">Código QR</string>
+  <!-- Title for the Google Lens Search Settings page feature toggle -->
+  <string name="search_settings_google_lens_title">Habilitar búsqueda con Google Lens</string>
+  <!-- Description for the Google Lens Search Settings page feature toggle -->
+  <string name="search_settings_google_lens_description">Envía imágenes y fotos a Google para realizar búsquedas visuales.</string>
+  <!-- Caption shown under the Google Lens toggle clarifying when the feature is available -->
+  <string name="preferences_google_lens_availability_caption">Disponible solo si Google está habilitado y es tu motor de búsqueda activo al navegar.</string>
+  <!-- Content description for the Google Lens half of the camera mode toggle -->
+  <string name="lens_camera_mode_lens">Google Lens</string>
+  <!-- Content description for the QR scanner half of the camera mode toggle -->
+  <string name="lens_camera_mode_qr">Escáner de QR</string>
+  <!-- Toast shown when the user picks an image from the gallery in QR mode but no QR code is found in it -->
+  <string name="lens_camera_qr_no_code_found">No se encontró ningún código QR en la imagen</string>
+  <!-- Title of the bottom sheet shown the first time the user opens the Google Lens camera screen -->
+  <string name="lens_opt_out_title">Búscalo con Google Lens</string>
+  <!-- Description of the bottom sheet shown the first time the user opens the Google Lens camera screen -->
+  <string name="lens_opt_out_description">Elige una imagen o usa tu cámara para obtener resultados con Google Lens.</string>
+  <!-- Text of the link in the first-run Google Lens bottom sheet that opens the Search settings page -->
+  <string name="lens_opt_out_settings_link">Configuración de Google Lens</string>
+  <!-- Button in the first-run Google Lens bottom sheet that dismisses it and starts the camera -->
+  <string name="lens_opt_out_try_it_now_button">Pruébalo ahora</string>
+  <!-- Button in the first-run Google Lens bottom sheet that leaves Google Lens without using it -->
+  <string name="lens_opt_out_not_now_button">Ahora no</string>
+  <!--
+    Firefox Labs
+
+    Firefox Labs is the name of a screen in Settings to allow users to learn about
+    experimental and in-development features, and turn those features on and off.
+    The "Labs" portion can be localized, "Firefox" must be treated as a brand and kept
+    in English.
+  -->
+  <string name="firefox_labs_title" tools:ignore="BrandUsage">Firefox Labs</string>
+  <!-- Banner title text on the Firefox Labs screen. -->
+  <string name="firefox_labs_banner_title_2">¡Prueba nuestras funciones experimentales!</string>
+  <!--
+    Banner description text on the Firefox Labs screen. Provides information on what Firefox Labs does. %s is the name of the app (for example "Firefox Nightly").
+    Text will appear under the Firefox Labs banner title.
+  -->
+  <string name="firefox_labs_experimental_description">Están en desarrollo y evolución constante, lo que podría afectar el funcionamiento de %s.</string>
+  <!-- The link text shown when a feedback URL for a Firefox Labs feature is available. The feedback URL page will allow users to provide opinions and suggestions. -->
+  <string name="firefox_labs_share_feedback">Compartir comentarios</string>
+  <!-- Content description for the share feedback link on a Firefox Labs feature. This text will be used by screen readers to provide more context on the feedback link. %s is the name of the Firefox Labs feature. -->
+  <string name="firefox_labs_share_feedback_content_description">Compartir comentarios sobre %s.</string>
+  <!-- Button text on the Firefox Labs screen for restoring all toggles back to the default settings. The button will turn off any experimental features. -->
+  <string name="firefox_labs_restore_default_button_text">Restaurar valores predeterminados</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when toggling "on" or "off" an experimental feature that requires a restart. -->
+  <string name="firefox_labs_feature_dialog_title">Se necesita reiniciar</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the positive button when toggling "on" and "off" experimental features. This prompts the user to confirm that they want to restart the app. -->
+  <string name="firefox_labs_dialog_restart_button">Reiniciar</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the negative button when toggling "on" and "off" experimental features. This is used to cancel the action and return to the previous screen. -->
+  <string name="firefox_labs_dialog_cancel_button">Cancelar</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. -->
+  <string name="firefox_labs_restore_defaults_dialog_title">Se necesita reiniciar</string>
+  <!-- The description used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_restore_defaults_dialog_message">Para restablecer los valores predeterminados, reinicia %s.</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "on" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_enable_dialog_message">Para activar esta función, reinicia %s.</string>
+  <!-- The description text that is displayed in the confirmation dialog on the Firefox Labs screen for toggling "off" experimental features. %s is the name of the app (for example "Firefox Nightly") -->
+  <string name="firefox_labs_feature_disable_dialog_message">Para desactivar esta función, reinicia %s.</string>
+  <!-- Helper text shown beneath a Firefox Labs item when it is blocked from being turned on. -->
+  <string name="firefox_labs_feature_conflict">Funcionalidad no disponible para prueba.</string>
+  <!-- Text displayed on the Firefox Labs screen when there are no Labs experimental features present. -->
+  <string name="firefox_labs_no_labs_available_description">No hay funciones experimentales para probar en este momento</string>
 </resources>

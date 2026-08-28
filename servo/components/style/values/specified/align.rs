@@ -14,9 +14,18 @@ use style_traits::{CssWriter, KeywordsCollectFn, ParseError, SpecifiedValueInfo,
 
 /// Constants shared by multiple CSS Box Alignment properties
 #[derive(
-    Clone, Copy, Debug, Eq, MallocSizeOf, PartialEq, ToComputedValue, ToResolvedValue, ToShmem,
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    MallocSizeOf,
+    PartialEq,
+    Serialize,
+    ToComputedValue,
+    ToResolvedValue,
+    ToShmem,
 )]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[repr(C)]
 pub struct AlignFlags(u8);
 bitflags! {
@@ -157,16 +166,17 @@ pub enum AxisDirection {
     Clone,
     Copy,
     Debug,
+    Deserialize,
     Eq,
     MallocSizeOf,
     PartialEq,
+    Serialize,
     ToComputedValue,
     ToCss,
     ToResolvedValue,
     ToShmem,
     ToTyped,
 )]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[repr(C)]
 #[typed(todo_derive_fields)]
 pub struct ContentDistribution {
@@ -292,16 +302,17 @@ impl SpecifiedValueInfo for ContentDistribution {
     Copy,
     Debug,
     Deref,
+    Deserialize,
     Eq,
     MallocSizeOf,
     PartialEq,
+    Serialize,
     ToComputedValue,
     ToCss,
     ToResolvedValue,
     ToShmem,
     ToTyped,
 )]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[repr(C)]
 #[typed(todo_derive_fields)]
 pub struct SelfAlignment(pub AlignFlags);
@@ -364,7 +375,7 @@ impl SelfAlignment {
         let overflow_position = input
             .try_parse(parse_overflow_position)
             .unwrap_or(AlignFlags::empty());
-        let self_position = parse_self_position(input, axis)?;
+        let self_position = parse_self_position(input, axis, AllowAnchorCenter::Yes)?;
         Ok(SelfAlignment(overflow_position | self_position))
     }
 
@@ -430,16 +441,17 @@ impl SpecifiedValueInfo for SelfAlignment {
     Copy,
     Debug,
     Deref,
+    Deserialize,
     Eq,
     MallocSizeOf,
     PartialEq,
+    Serialize,
     ToComputedValue,
     ToCss,
     ToResolvedValue,
     ToShmem,
     ToTyped,
 )]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[repr(C)]
 #[typed(todo_derive_fields)]
 pub struct ItemPlacement(pub AlignFlags);
@@ -497,7 +509,7 @@ impl ItemPlacement {
         let overflow = input
             .try_parse(parse_overflow_position)
             .unwrap_or(AlignFlags::empty());
-        let self_position = parse_self_position(input, axis)?;
+        let self_position = parse_self_position(input, axis, AllowAnchorCenter::No)?;
         Ok(ItemPlacement(self_position | overflow))
     }
 }
@@ -515,9 +527,20 @@ impl SpecifiedValueInfo for ItemPlacement {
 ///
 /// <https://drafts.csswg.org/css-align/#justify-items-property>
 #[derive(
-    Clone, Copy, Debug, Deref, Eq, MallocSizeOf, PartialEq, ToCss, ToResolvedValue, ToShmem, ToTyped,
+    Clone,
+    Copy,
+    Debug,
+    Deref,
+    Deserialize,
+    Eq,
+    MallocSizeOf,
+    PartialEq,
+    Serialize,
+    ToCss,
+    ToResolvedValue,
+    ToShmem,
+    ToTyped,
 )]
-#[cfg_attr(feature = "servo", derive(Deserialize, Serialize))]
 #[repr(C)]
 pub struct JustifyItems(pub ItemPlacement);
 
@@ -637,10 +660,16 @@ fn list_overflow_position_keywords(f: KeywordsCollectFn) {
     f(&["safe", "unsafe"]);
 }
 
+enum AllowAnchorCenter {
+    No,
+    Yes,
+}
+
 // <self-position> | left | right in the inline axis.
 fn parse_self_position<'i, 't>(
     input: &mut Parser<'i, 't>,
     axis: AxisDirection,
+    allow_anchor_center: AllowAnchorCenter,
 ) -> Result<AlignFlags, ParseError<'i>> {
     // NOTE Please also update the `list_self_position_keywords`
     //      function below when this function is updated.
@@ -654,7 +683,7 @@ fn parse_self_position<'i, 't>(
         "self-end" => AlignFlags::SELF_END,
         "left" if axis == AxisDirection::Inline => AlignFlags::LEFT,
         "right" if axis == AxisDirection::Inline => AlignFlags::RIGHT,
-        "anchor-center" if static_prefs::pref!("layout.css.anchor-positioning.enabled") => AlignFlags::ANCHOR_CENTER,
+        "anchor-center" if matches!(allow_anchor_center, AllowAnchorCenter::Yes) => AlignFlags::ANCHOR_CENTER,
     })
 }
 
@@ -667,11 +696,8 @@ fn list_self_position_keywords(f: KeywordsCollectFn, axis: AxisDirection) {
         "center",
         "self-start",
         "self-end",
+        "anchor-center",
     ]);
-
-    if static_prefs::pref!("layout.css.anchor-positioning.enabled") {
-        f(&["anchor-center"]);
-    }
 
     if axis == AxisDirection::Inline {
         f(&["left", "right"]);

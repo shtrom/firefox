@@ -19,8 +19,10 @@
 #include "gc/BufferAllocator-inl.h"
 
 #if defined(XP_WIN)
+// clang-format off
 #  include "util/WindowsWrapper.h"
 #  include <psapi.h>
+// clang-format on
 #elif defined(__wasi__)
 // Nothing.
 #else
@@ -468,7 +470,7 @@ void BufferHolderObject::trace(JSTracer* trc, JSObject* obj) {
   NativeObject* holder = &obj->as<NativeObject>();
   void* buffer = holder->getFixedSlot(0).toPrivate();
   if (buffer) {
-    TraceBufferEdge(trc, obj, &buffer, "BufferHolderObject buffer");
+    TraceBufferEdge(trc, &buffer, "BufferHolderObject buffer");
     if (buffer != holder->getFixedSlot(0).toPrivate()) {
       holder->setFixedSlot(0, JS::PrivateValue(buffer));
     }
@@ -840,7 +842,7 @@ BEGIN_TEST(testBufferAllocator_stress) {
   std::srand(seed);
 
   Rooted<PlainObject*> holder(
-      cx, NewPlainObjectWithAllocKind(cx, gc::AllocKind::OBJECT2));
+      cx, NewPlainObject(cx, {.allocKind = gc::AllocKind::OBJECT2}));
   CHECK(holder);
 
   JS::NonIncrementalGC(cx, JS::GCOptions::Shrink, JS::GCReason::API);
@@ -933,7 +935,7 @@ static void traceAllocs(JSTracer* trc, void* data) {
   for (size_t i = 0; i < MaxLiveAllocs; i++) {
     void** bufferp = &liveAllocs[i];
     if (*bufferp) {
-      TraceBufferEdge(trc, holder, bufferp, "test buffer");
+      TraceBufferEdge(trc, bufferp, "test buffer");
     }
   }
 }
@@ -950,7 +952,8 @@ class VectorObject : public NativeObject {
 
   static VectorObject* create(JSContext* cx, bool nurseryOwned) {
     NewObjectKind kind = nurseryOwned ? GenericObject : TenuredObject;
-    auto* obj = NewObjectWithClassProtoAndKind<VectorObject>(cx, nullptr, kind);
+    auto* obj =
+        NewObjectWithClassProto<VectorObject>(cx, nullptr, {.newKind = kind});
     if (!obj) {
       return nullptr;
     }
@@ -1101,7 +1104,7 @@ class HashSetObject : public NativeObject {
   static HashSetObject* create(JSContext* cx, bool nurseryOwned) {
     NewObjectKind kind = nurseryOwned ? GenericObject : TenuredObject;
     auto* obj =
-        NewObjectWithClassProtoAndKind<HashSetObject>(cx, nullptr, kind);
+        NewObjectWithClassProto<HashSetObject>(cx, nullptr, {.newKind = kind});
     if (!obj) {
       return nullptr;
     }

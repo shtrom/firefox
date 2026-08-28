@@ -54,7 +54,6 @@ memory_watcher:
           event's `value` parameter.
           The stringified, comma-separated stats.
         type: string
-    telemetry_mirror: Memory_watcher_OnHighMemory_Stats
 
   process_oom_killed:
     type: event
@@ -137,7 +136,6 @@ memory_phc:
       - memshrink-telemetry-alerts@mozilla.com
       - pbone@mozilla.com
     expires: 160
-    telemetry_mirror: MEMORY_PHC_SLOP
 
   slots_allocated:
     type: custom_distribution
@@ -163,7 +161,6 @@ memory_phc:
       - memshrink-telemetry-alerts@mozilla.com
       - pbone@mozilla.com
     expires: 160
-    telemetry_mirror: MEMORY_PHC_SLOTS_ALLOCATED
 
   slots_freed:
     type: custom_distribution
@@ -189,7 +186,6 @@ memory_phc:
       - memshrink-telemetry-alerts@mozilla.com
       - pbone@mozilla.com
     expires: 160
-    telemetry_mirror: MEMORY_PHC_SLOTS_FREED
 
 cycle_collector:
   time:
@@ -239,7 +235,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: CYCLE_COLLECTOR_VISITED_REF_COUNTED
 
   worker_visited_ref_counted:
     type: custom_distribution
@@ -260,7 +255,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: CYCLE_COLLECTOR_WORKER_VISITED_REF_COUNTED
 
   visited_gced:
     type: custom_distribution
@@ -281,7 +275,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: CYCLE_COLLECTOR_VISITED_GCED
 
   worker_visited_gced:
     type: custom_distribution
@@ -302,7 +295,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: CYCLE_COLLECTOR_WORKER_VISITED_GCED
 
   collected:
     type: custom_distribution
@@ -323,7 +315,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: CYCLE_COLLECTOR_COLLECTED
 
   worker_collected:
     type: custom_distribution
@@ -344,7 +335,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: CYCLE_COLLECTOR_WORKER_COLLECTED
 
   need_gc:
     type: labeled_counter
@@ -363,7 +353,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: h#CYCLE_COLLECTOR_NEED_GC
 
   worker_need_gc:
     type: labeled_counter
@@ -382,7 +371,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: h#CYCLE_COLLECTOR_WORKER_NEED_GC
 
   full:
     type: labeled_timing_distribution
@@ -431,7 +419,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: h#CYCLE_COLLECTOR_FINISH_IGC
 
   sync_skippable:
     type: labeled_counter
@@ -450,7 +437,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: h#CYCLE_COLLECTOR_SYNC_SKIPPABLE
 
   time_between:
     type: labeled_timing_distribution
@@ -485,7 +471,6 @@ cycle_collector:
     notification_emails:
       - dev-telemetry-gc-alerts@mozilla.org
     expires: never
-    telemetry_mirror: CYCLE_COLLECTOR_SLICE_DURING_IDLE
 
   async_snow_white_freeing:
     type: labeled_timing_distribution
@@ -586,7 +571,6 @@ memory:
       - memshrink-telemetry-alerts@mozilla.com
       - amccreight@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_TOTAL
 
   distribution_among_content:
     type: labeled_custom_distribution
@@ -613,7 +597,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_DISTRIBUTION_AMONG_CONTENT
 
   unique:
     type: labeled_memory_distribution
@@ -648,7 +631,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_VSIZE
 
   vsize_max_contiguous:
     type: memory_distribution
@@ -665,7 +647,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_VSIZE_MAX_CONTIGUOUS
 
   js_compartments_system:
     type: custom_distribution
@@ -686,7 +667,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_JS_COMPARTMENTS_SYSTEM
 
   js_compartments_user:
     type: custom_distribution
@@ -707,7 +687,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_JS_COMPARTMENTS_USER
 
   js_realms_system:
     type: custom_distribution
@@ -729,7 +708,6 @@ memory:
       - memshrink-telemetry-alerts@mozilla.com
       - jdemooij@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_JS_REALMS_SYSTEM
 
   js_realms_user:
     type: custom_distribution
@@ -751,7 +729,6 @@ memory:
       - memshrink-telemetry-alerts@mozilla.com
       - jdemooij@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_JS_REALMS_USER
 
   js_gc_heap:
     type: labeled_memory_distribution
@@ -784,7 +761,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_STORAGE_SQLITE
 
   images_content_used_uncompressed:
     type: memory_distribution
@@ -801,7 +777,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_IMAGES_CONTENT_USED_UNCOMPRESSED
 
   heap_allocated:
     type: memory_distribution
@@ -818,7 +793,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_HEAP_ALLOCATED
 
   heap_overhead_fraction:
     type: custom_distribution
@@ -839,7 +813,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_HEAP_OVERHEAD_FRACTION
 
   ghost_windows:
     type: custom_distribution
@@ -859,7 +832,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: GHOST_WINDOWS
 
   low_memory_events_physical:
     type: custom_distribution
@@ -882,7 +854,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: LOW_MEMORY_EVENTS_PHYSICAL
 
   page_faults_hard:
     type: custom_distribution
@@ -903,7 +874,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: PAGE_FAULTS_HARD
 
   collection_time:
     type: timing_distribution
@@ -920,7 +890,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_COLLECTION_TIME
 
   free_purged_pages:
     type: timing_distribution
@@ -937,7 +906,6 @@ memory:
     notification_emails:
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_FREE_PURGED_PAGES_MS
 
   unique_content_startup:
     type: memory_distribution
@@ -955,7 +923,6 @@ memory:
       - amccreight@mozilla.com
       - memshrink-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: MEMORY_UNIQUE_CONTENT_STARTUP
 
 event:
   longtask:
@@ -975,7 +942,6 @@ event:
       - rjesup@mozilla.com
       - perf-telemetry-alerts@mozilla.com
     expires: never
-    telemetry_mirror: EVENT_LONGTASK
 
 xpcom:
   abi:
@@ -1453,58 +1419,12 @@ system.os:
       - update
       - third-party-modules
 
-  service_pack_major:
-    type: quantity
-    unit: version
-    lifetime: application
-    description: |
-      The Windows service pack's major version, according to WindowsVersionInfo.
-      Windows only.
-      e.g. 0
-    bugs:
-      - https://bugzilla.mozilla.org/show_bug.cgi?id=1950409
-    data_reviews:
-      - https://bugzilla.mozilla.org/show_bug.cgi?id=1950409
-    data_sensitivity:
-      - technical
-    notification_emails:
-      - gijs@mozilla.com
-    expires: never
-    send_in_pings:
-      - metrics
-      - sync
-      - update
-      - third-party-modules
-
-  service_pack_minor:
-    type: quantity
-    unit: version
-    lifetime: application
-    description: |
-      The Windows service pack's minor version, according to WindowsVersionInfo.
-      Windows only.
-      e.g. 0
-    bugs:
-      - https://bugzilla.mozilla.org/show_bug.cgi?id=1950409
-    data_reviews:
-      - https://bugzilla.mozilla.org/show_bug.cgi?id=1950409
-    data_sensitivity:
-      - technical
-    notification_emails:
-      - gijs@mozilla.com
-    expires: never
-    send_in_pings:
-      - metrics
-      - sync
-      - update
-      - third-party-modules
-
   windows_build_number:
     type: quantity
     unit: build number
     lifetime: application
     description: |
-      The Windows build number, according to WindowsVersionInfo.
+      The Windows build number, according to 'CurrentBuild' in the Windows registry.
       Windows only.
       e.g. 26100
       Expected in most cases to be identical to `client_info.windows_build_number`.

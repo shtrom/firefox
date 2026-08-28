@@ -13,11 +13,8 @@ import kotlinx.coroutines.launch
 import mozilla.components.feature.ipprotection.IPProtectionFxaAuthFlow.Companion.INTENT_ON_COMPLETE
 import org.mozilla.fenix.HomeActivity
 import org.mozilla.fenix.ext.components
-import org.mozilla.fenix.ext.settings
 
-/**
- * Processes incoming intents and sends them to the corresponding activity.
- */
+/** Processes incoming intents and sends them to the corresponding activity. */
 class AuthIntentReceiverActivity : Activity() {
 
     @VisibleForTesting
@@ -30,7 +27,7 @@ class AuthIntentReceiverActivity : Activity() {
             // the HomeActivity.
             val intent = intent?.let { Intent(intent) } ?: Intent()
 
-            if (settings().lastKnownMode.isPrivate) {
+            if (components.settings.lastKnownMode.isPrivate) {
                 components.intentProcessors.privateCustomTabIntentProcessor.process(intent)
             } else {
                 components.intentProcessors.customTabIntentProcessor.process(intent)

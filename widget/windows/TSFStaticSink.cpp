@@ -4,17 +4,18 @@
 
 #include "TSFStaticSink.h"
 
+#include <comutil.h>  // for _bstr_t
+#include <oleauto.h>  // for SysAllocString
+#include <olectl.h>
+
 #include "TSFTextStore.h"
 #include "TSFUtils.h"
 #include "WinIMEHandler.h"
 #include "WinMessages.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Logging.h"
+#include "mozilla/Utf16.h"
 #include "mozilla/glean/WidgetWindowsMetrics.h"
-
-#include <comutil.h>  // for _bstr_t
-#include <oleauto.h>  // for SysAllocString
-#include <olectl.h>
 
 extern mozilla::LazyLogModule gIMELog;  // defined in TSFUtils.cpp
 
@@ -78,8 +79,8 @@ bool TSFStaticSink::GetActiveTIPNameForTelemetry(nsAString& aName) {
   description.Assign(sInstance->mActiveTIPKeyboardDescription);
   static const uint32_t kMaxDescriptionLength = 72 - aName.Length();
   if (description.Length() > kMaxDescriptionLength) {
-    if (NS_IS_LOW_SURROGATE(description[kMaxDescriptionLength - 1]) &&
-        NS_IS_HIGH_SURROGATE(description[kMaxDescriptionLength - 2])) {
+    if (mozilla::IsLowSurrogate(description[kMaxDescriptionLength - 1]) &&
+        mozilla::IsHighSurrogate(description[kMaxDescriptionLength - 2])) {
       description.Truncate(kMaxDescriptionLength - 2);
     } else {
       description.Truncate(kMaxDescriptionLength - 1);
@@ -185,6 +186,10 @@ bool TSFStaticSink::IsATOKActiveInternal() {
 
 bool TSFStaticSink::IsSogouActive() {
   return IsSimplifiedChinese() && ActiveTIP() == TextInputProcessorID::Sogou;
+}
+
+bool TSFStaticSink::IsWeChatIMEActive() {
+  return IsSimplifiedChinese() && ActiveTIP() == TextInputProcessorID::WeChat;
 }
 
 void TSFStaticSink::ComputeActiveTextInputProcessor() {
@@ -466,6 +471,15 @@ TextInputProcessorID TSFStaticSink::ComputeActiveTIPAsSimplifiedChinese() {
       {0xa6, 0xea, 0x00, 0x06, 0x5b, 0x84, 0x43, 0x11}};
   if (mActiveTIPGUID == kSogouGUID) {
     return TextInputProcessorID::Sogou;
+  }
+  // {607FDF85-FCC8-4DBD-A365-41296F980C9C}
+  static constexpr GUID kWeChatGUID = {
+      0x607fdf85,
+      0xfcc8,
+      0x4dbd,
+      {0xa3, 0x65, 0x41, 0x29, 0x6f, 0x98, 0x0c, 0x9c}};
+  if (mActiveTIPGUID == kWeChatGUID) {
+    return TextInputProcessorID::WeChat;
   }
   // NOTE: There are some other Simplified Chinese TIPs installed in Windows:
   // * Chinese Simplified QuanPin (version 6.0)

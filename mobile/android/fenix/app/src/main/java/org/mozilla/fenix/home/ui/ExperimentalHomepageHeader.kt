@@ -40,12 +40,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import mozilla.components.ui.icons.R as iconsR
 import org.mozilla.fenix.R
 import org.mozilla.fenix.home.ui.HomepageTestTag.PRIVATE_BROWSING_HOMEPAGE_BUTTON
 import org.mozilla.fenix.theme.FirefoxTheme
 import org.mozilla.fenix.theme.PreviewThemeProvider
 import org.mozilla.fenix.theme.Theme
-import mozilla.components.ui.icons.R as iconsR
+import org.mozilla.fenix.wallpapers.WallpaperTheme
 
 private const val NEWS_BUTTON_ANIMATION_TRANSITION_DURATION = 600
 private const val NEWS_BUTTON_ANIMATION_DURATION = 2000L
@@ -54,38 +55,24 @@ private const val NEWS_BUTTON_ANIMATION_DELAY = 500L
 /**
  * Homepage header for the entry points experiment.
  *
- * @param wordmarkTextColor [Color] for the wordmark.
  * @param showStoriesButton Whether to show the stories button or not.
  * @param showButtonAnimation Whether to animate the news label on the stories button.
  * @param onPrivateModeTapped Callback for when the private mode button is tapped.
  * @param onStoriesTapped Callback for when the stories button is tapped.
  * @param onNewsAnimationShown Callback invoked when the news button animation starts playing.
- * @param onLogoClicked Callback for when the logo is clicked.
- * @param isSportsWidgetEnabled Whether to show the Firefox sports logo or not.
  */
 @Suppress("LongParameterList")
 @Composable
 fun ExperimentalHomepageHeader(
-    wordmarkTextColor: Color?,
     showStoriesButton: Boolean,
     showButtonAnimation: Boolean,
     onPrivateModeTapped: () -> Unit,
     onStoriesTapped: () -> Unit,
     onNewsAnimationShown: () -> Unit,
-    onLogoClicked: () -> Unit,
-    isSportsWidgetEnabled: Boolean,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(bottom = 16.dp),
-    ) {
+    Box(modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(bottom = 16.dp)) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(all = 16.dp),
+            modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(all = 16.dp),
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -101,19 +88,12 @@ fun ExperimentalHomepageHeader(
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(all = 16.dp),
+            modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(all = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.height(28.dp))
 
-            WordmarkAndLogo(
-                wordmarkTextColor = wordmarkTextColor,
-                onLogoClicked = onLogoClicked,
-                isSportsWidgetEnabled = isSportsWidgetEnabled,
-            )
+            WordmarkAndLogo(wordmarkTextColor = WallpaperTheme.onWallpaper)
         }
     }
 }
@@ -126,10 +106,7 @@ fun ExperimentalHomepageHeader(
 @Composable
 fun ExperimentalPrivateHomepageHeader(onHomeTapped: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(all = 16.dp),
+        modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(all = 16.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.End,
     ) {
@@ -141,17 +118,12 @@ fun ExperimentalPrivateHomepageHeader(onHomeTapped: () -> Unit) {
 private fun WordmarkAndLogo(
     wordmarkTextColor: Color?,
     modifier: Modifier = Modifier,
-    onLogoClicked: () -> Unit,
-    isSportsWidgetEnabled: Boolean,
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        WordmarkLogo(
-            onLogoClicked = onLogoClicked,
-            isSportsWidgetEnabled = isSportsWidgetEnabled,
-        )
+        WordmarkLogo()
         WordmarkText(wordmarkTextColor)
     }
 }
@@ -160,10 +132,11 @@ private fun WordmarkAndLogo(
 private fun PrivateModeButton(onClick: () -> Unit) {
     LeftChevronPillButton(
         onClick = onClick,
-        modifier = Modifier.semantics {
-            testTagsAsResourceId = true
-            testTag = PRIVATE_BROWSING_HOMEPAGE_BUTTON
-        },
+        modifier =
+            Modifier.semantics {
+                testTagsAsResourceId = true
+                testTag = PRIVATE_BROWSING_HOMEPAGE_BUTTON
+            },
     ) {
         Icon(
             painter = painterResource(iconsR.drawable.mozac_ic_private_mode_24),
@@ -227,20 +200,15 @@ private fun HomeButton(onClick: () -> Unit) {
 
 @Preview
 @Composable
-private fun HomepageHeaderPreview(
-    @PreviewParameter(PreviewThemeProvider::class) theme: Theme,
-) {
+private fun HomepageHeaderPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
     FirefoxTheme(theme) {
         Surface {
             ExperimentalHomepageHeader(
-                wordmarkTextColor = null,
                 showStoriesButton = true,
                 showButtonAnimation = false,
                 onPrivateModeTapped = {},
                 onStoriesTapped = {},
                 onNewsAnimationShown = {},
-                onLogoClicked = {},
-                isSportsWidgetEnabled = false,
             )
         }
     }
@@ -248,9 +216,7 @@ private fun HomepageHeaderPreview(
 
 @Preview
 @Composable
-private fun PrivateHomepageHeaderPreview(
-    @PreviewParameter(PreviewThemeProvider::class) theme: Theme,
-) {
+private fun PrivateHomepageHeaderPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
     FirefoxTheme(theme) {
         Surface {
             ExperimentalPrivateHomepageHeader {}

@@ -377,6 +377,10 @@ class JS_PUBLIC_API BaseProxyHandler {
                            ElementAdder* adder) const;
 
   virtual bool isScripted() const { return false; }
+
+  // Whether proxies with this handler may be transplanted/swapped via
+  // JS_TransplantObject or ProxyObject::swap.
+  virtual bool mayBeSwapped() const { return false; }
 };
 
 class JS_PUBLIC_API NurseryAllocableProxyHandler : public BaseProxyHandler {
@@ -479,16 +483,20 @@ inline const ProxyDataLayout* GetProxyDataLayout(const JSObject* obj) {
 JS_PUBLIC_API void SetValueInProxy(JS::Value* slot, const JS::Value& value);
 
 inline void SetProxyReservedSlotUnchecked(JSObject* obj, size_t n,
-                                          const JS::Value& extra) {
+                                          const JS::Value& value) {
   MOZ_ASSERT(n < JSCLASS_RESERVED_SLOTS(JS::GetClass(obj)));
 
   JS::Value* vp = &GetProxyDataLayout(obj)->values()->reservedSlots[n];
 
   // Trigger a barrier before writing the slot.
-  if (vp->isGCThing() || extra.isGCThing()) {
-    SetValueInProxy(vp, extra);
+  if (vp->isGCThing() || value.isGCThing()) {
+    SetValueInProxy(vp, value);
   } else {
-    *vp = extra;
+#ifdef JS_GC_CONCURRENT_MARKING
+    vp->atomicSet(value);
+#else
+    *vp = value;
+#endif
   }
 }
 

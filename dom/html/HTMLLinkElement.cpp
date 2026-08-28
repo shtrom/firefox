@@ -20,6 +20,7 @@
 #include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/dom/HTMLDNSPrefetch.h"
 #include "mozilla/dom/HTMLLinkElementBinding.h"
+#include "mozilla/dom/ModuleLoader.h"
 #include "mozilla/dom/ReferrerInfo.h"
 #include "mozilla/dom/ScriptLoader.h"
 #include "nsAttrValueInlines.h"
@@ -45,7 +46,7 @@ NS_IMPL_NS_NEW_HTML_ELEMENT(Link)
 namespace mozilla::dom {
 
 HTMLLinkElement::HTMLLinkElement(
-    already_AddRefed<mozilla::dom::NodeInfo>&& aNodeInfo)
+    already_AddRefed<mozilla::dom::NodeInfo> aNodeInfo)
     : nsGenericHTMLElement(std::move(aNodeInfo)) {}
 
 HTMLLinkElement::~HTMLLinkElement() { SupportsDNSPrefetch::Destroyed(*this); }

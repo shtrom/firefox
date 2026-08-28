@@ -127,7 +127,7 @@ bool LoggingEnabledFor(const char* aTopLevelProtocol, Side aSide,
   Tokenizer::Token t;
   while (tokens.Next(t)) {
     if (t.Type() == Tokenizer::TOKEN_WORD) {
-      auto filter = t.AsString();
+      const auto& filter = t.AsString();
 
       // Since aTopLevelProtocol never includes the "Parent" / "Child" suffix,
       // this will only occur when filter doesn't include it either, meaning
@@ -248,7 +248,12 @@ void SentinelReadError(const char* aClassName) {
   MOZ_CRASH_UNSAFE_PRINTF("incorrect sentinel when reading %s", aClassName);
 }
 
-ActorLifecycleProxy::ActorLifecycleProxy(IProtocol* aActor) : mActor(aActor) {
+ActorLifecycleProxy::ActorLifecycleProxy(IProtocol* aActor)
+#ifdef MOZ_THREAD_SAFETY_OWNERSHIP_CHECKS_SUPPORTED
+    : _mOwningThread(aActor->GetActorEventTarget()), mActor(aActor) {
+#else
+    : mActor(aActor) {
+#endif
   MOZ_ASSERT(mActor);
   MOZ_ASSERT(mActor->CanSend(),
              "Cannot create LifecycleProxy for non-connected actor!");
@@ -291,7 +296,9 @@ ActorLifecycleProxy::~ActorLifecycleProxy() {
 }
 
 WeakActorLifecycleProxy::WeakActorLifecycleProxy(ActorLifecycleProxy* aProxy)
-    : mProxy(aProxy), mActorEventTarget(GetCurrentSerialEventTarget()) {}
+    : mProxy(aProxy), mActorEventTarget(aProxy->Get()->GetActorEventTarget()) {
+  MOZ_ASSERT(mActorEventTarget->IsOnCurrentThread());
+}
 
 WeakActorLifecycleProxy::~WeakActorLifecycleProxy() {
   MOZ_DIAGNOSTIC_ASSERT(!mProxy, "Destroyed before mProxy was cleared?");

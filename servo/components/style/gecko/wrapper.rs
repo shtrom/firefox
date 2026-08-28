@@ -19,10 +19,7 @@ use crate::bloom::each_relevant_element_hash;
 use crate::context::{QuirksMode, SharedStyleContext, UpdateAnimationsTasks};
 use crate::data::{ElementDataMut, ElementDataRef, ElementDataWrapper};
 use crate::device::Device;
-use crate::dom::{
-    AttributeProvider, LayoutIterator, NodeInfo, OpaqueNode, TDocument, TElement, TNode,
-    TShadowRoot,
-};
+use crate::dom::{LayoutIterator, NodeInfo, OpaqueNode, TDocument, TElement, TNode, TShadowRoot};
 use crate::gecko::selector_parser::{NonTSPseudoClass, PseudoElement, SelectorImpl};
 use crate::gecko::snapshot_helpers;
 use crate::gecko_bindings::bindings;
@@ -746,7 +743,12 @@ impl<'le> GeckoElement<'le> {
     /// Returns a reference to the DOM slots for this Element, if they exist.
     #[inline]
     fn dom_slots(&self) -> Option<&structs::FragmentOrElement_nsDOMSlots> {
-        let slots = self.as_node().0.mSlots as *const structs::FragmentOrElement_nsDOMSlots;
+        // For the bit usage, see nsINode::mSlotsOrListenerManager.
+        let slots_or_elm = self.as_node().0.mSlotsOrListenerManager;
+        if slots_or_elm & structs::nsINode_kListenerManagerBit != 0 {
+            return None;
+        }
+        let slots = slots_or_elm as *const structs::FragmentOrElement_nsDOMSlots;
         unsafe { slots.as_ref() }
     }
 
@@ -970,6 +972,9 @@ fn selector_flags_to_node_flags(flags: ElementSelectorFlags) -> u32 {
     }
     if flags.contains(ElementSelectorFlags::RELATIVE_SELECTOR_SEARCH_DIRECTION_SIBLING) {
         gecko_flags |= NodeSelectorFlags::RelativeSelectorSearchDirectionSibling.0;
+    }
+    if flags.contains(ElementSelectorFlags::MAY_HAVE_TREE_COUNTING_FUNCTION) {
+        gecko_flags |= NodeSelectorFlags::MayHaveTreeCountingFunction.0;
     }
 
     gecko_flags
@@ -1528,7 +1533,9 @@ impl<'le> TElement for GeckoElement<'le> {
         let after_change_ui_style = after_change_style.get_ui();
         let existing_transitions = self.css_transitions_info();
 
-        if after_change_style.get_box().clone_display().is_none() {
+        if after_change_style.get_box().clone_display().is_none()
+            && !static_prefs::pref!("layout.css.display-animations.enabled")
+        {
             // We need to cancel existing transitions.
             return !existing_transitions.is_empty();
         }
@@ -1805,9 +1812,7 @@ impl<'le> TElement for GeckoElement<'le> {
             ElementSelectorFlags::empty()
         }
     }
-}
 
-impl<'le> AttributeProvider for GeckoElement<'le> {
     fn get_attr(&self, attr: &LocalName, namespace: &Namespace) -> Option<String> {
         //TODO(bug 2003334): Avoid unnecessary string copies/conversions here.
         let mut result = nsString::new();
@@ -1939,7 +1944,7 @@ impl<'le> ::selectors::Element for GeckoElement<'le> {
         let self_flags = flags.for_self();
         if !self_flags.is_empty() {
             self.as_node()
-                .set_selector_flags(selector_flags_to_node_flags(flags))
+                .set_selector_flags(selector_flags_to_node_flags(self_flags))
         }
 
         // Handle flags that apply to the parent.
@@ -2072,6 +2077,7 @@ impl<'le> ::selectors::Element for GeckoElement<'le> {
             | NonTSPseudoClass::Seeking
             | NonTSPseudoClass::Buffering
             | NonTSPseudoClass::Stalled
+            | NonTSPseudoClass::PictureInPicture
             | NonTSPseudoClass::Muted => self.state().intersects(pseudo_class.state_flag()),
             NonTSPseudoClass::Paused => {
                 self.is_html_media_element() && self.state().intersects(ElementState::PAUSED)

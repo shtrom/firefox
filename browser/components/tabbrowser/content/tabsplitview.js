@@ -116,6 +116,8 @@
       this.#observeTabChanges();
       this.#restorePanelWidths();
 
+      this.toggleAttribute("hidden", !this.visible);
+
       if (this.hasActiveTab) {
         this.#activate();
       }
@@ -161,6 +163,7 @@
               tab.setAttribute("aria-setsize", this.tabs.length);
               tab.updateSplitViewAriaLabel(index);
             });
+            this.toggleAttribute("hidden", !this.visible);
             this.dispatchEvent(
               new CustomEvent("SplitViewTabChange", {
                 bubbles: true,
@@ -170,7 +173,10 @@
             this.remove();
           }
 
-          if (mutations.length == 1 && mutations[0].removedNodes.length == 1) {
+          if (
+            this.tabs.length == 1 &&
+            mutations.some(mutation => mutation.removedNodes.length == 1)
+          ) {
             // We assume you end up with only one tab in a splitview when the other tab is closed,
             // in which case, move the remaining tab out via this.unsplitTabs.
             this.unsplitTabs("tab_close");
@@ -179,6 +185,8 @@
       }
       this.#tabChangeObserver.observe(this, {
         childList: true,
+        subtree: true,
+        attributeFilter: ["hidden"],
       });
     }
 
@@ -327,7 +335,7 @@
           this.documentGlobal === tab.documentGlobal
             ? tab
             : gBrowser.adoptTab(tab, {
-                tabIndex: gBrowser.tabs.at(-1)._tPos + 1,
+                tabIndex: gBrowser.tabs.at(-1).index + 1,
                 selectTab: tab.selected,
               });
         if (indexOfReplacedTab > -1 && indexOfReplacedTab < this.#tabs.length) {
@@ -408,20 +416,14 @@
      */
     replaceTab(tabToReplace, newTab) {
       let indexOfReplacedTab = this.tabs.indexOf(tabToReplace);
-      this.addTabs([newTab], { isSessionRestore: false, indexOfReplacedTab });
-
-      // Get the adopted tab reference from the split view's internal tabs array.
-      // If the tab was adopted from another window, the original newTab reference
-      // is stale and points to the tab in the old window.
-      let adoptedTab = this.#tabs[indexOfReplacedTab];
 
       // Select the adopted tab BEFORE removing the old one to prevent Firefox
       // from auto-selecting the wrong tab when the old selected tab is removed.
       if (tabToReplace.selected) {
-        gBrowser.selectedTab = adoptedTab;
+        gBrowser.selectedTab = newTab;
       }
-
       gBrowser.removeTab(tabToReplace);
+      this.addTabs([newTab], { isSessionRestore: false, indexOfReplacedTab });
 
       // We need to re-activate after removing one of the split view tabs
       this.#activate();

@@ -358,7 +358,9 @@ void nsDOMNavigationTiming::TTITimeout(nsITimer* aTimer) {
     TimeDuration elapsed = mTTFI - mNavigationStart;
     MOZ_ASSERT(elapsed.ToMilliseconds() > 0);
     TimeDuration elapsedLongTask =
-        lastLongTaskEnded.IsNull() ? 0 : lastLongTaskEnded - mNavigationStart;
+        lastLongTaskEnded.IsNull()
+            ? TimeDuration()
+            : TimeDuration(lastLongTaskEnded - mNavigationStart);
     nsPrintfCString marker(
         "TTFI after %dms (LongTask was at %dms) for URL %s",
         int(elapsed.ToMilliseconds()), int(elapsedLongTask.ToMilliseconds()),
@@ -629,6 +631,7 @@ void IPC::ParamTraits<nsDOMNavigationTiming*>::Write(
   WriteParam(aWriter, aParam->mDOMComplete);
   WriteParam(aWriter, aParam->mTTFI);
   WriteParam(aWriter, aParam->mDocShellHasBeenActiveSinceNavigationStart);
+  WriteParam(aWriter, aParam->mWasActivatedFromNavigationalPrefetch);
 }
 
 /* static */
@@ -665,7 +668,8 @@ bool IPC::ParamTraits<nsDOMNavigationTiming*>::Read(
       !ReadParam(aReader, &timing->mDOMComplete) ||
       !ReadParam(aReader, &timing->mTTFI) ||
       !ReadParam(aReader,
-                 &timing->mDocShellHasBeenActiveSinceNavigationStart)) {
+                 &timing->mDocShellHasBeenActiveSinceNavigationStart) ||
+      !ReadParam(aReader, &timing->mWasActivatedFromNavigationalPrefetch)) {
     return false;
   }
   timing->mNavigationType = nsDOMNavigationTiming::Type(type);

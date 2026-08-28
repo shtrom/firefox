@@ -180,7 +180,7 @@
     padding-inline: 0;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow-y: clip;
     overflow-x: hidden;
     min-height: calc(100% - var(--space-xsmall));
     inset-block: var(--space-xxsmall);
@@ -264,31 +264,60 @@
   }
 
   .manage-settings-footer {
-    padding: var(--space-xxlarge);
+    padding: var(--space-xlarge);
     display: flex;
     position: absolute;
     inset-block-end: 0;
-    background: var(--customize-menu-bg);
     inset-inline-start: 0;
     width: 100%;
+    // Fade background to transparent over the inline-end edge so the
+    // management panel scrollbar remains visible.
+    background: linear-gradient(to right, var(--customize-menu-bg) calc(100% - var(--space-xxlarge)), transparent);
+
+    &:dir(rtl) {
+      background: linear-gradient(to left, var(--customize-menu-bg) calc(100% - var(--space-xxlarge)), transparent);
+    }
 
     &::before {
       content: '';
+      pointer-events: none;
       position: absolute;
       // calc() used here (instead of a literal 40px) to satisfy the Acorn token lint rule
       // and to add a transparent-like gradient for the footer all while keeping it accessible
       // --space-xlarge (1.5rem) + --space-large (1rem) = 2.5rem = 40px at default font size.
       inset-block-start: calc((var(--space-xlarge) + var(--space-large)) * -1);
-      inset-inline-start: 0;
-      width: 100%;
+      inset-inline: 0;
       height: calc(var(--space-xlarge) + var(--space-large));
       background: linear-gradient(to bottom, transparent, var(--customize-menu-bg));
+      mask-image: linear-gradient(to right, black calc(100% - var(--space-xxlarge)), transparent);
+    }
+
+    &:dir(rtl)::before {
+      mask-image: linear-gradient(to left, black calc(100% - var(--space-xxlarge)), transparent);
     }
   }
 }
 
 .grid-skip {
   display: contents;
+}
+
+.appearance-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium);
+
+  h2 {
+    margin: 0;
+    font-weight: var(--font-weight-heading);
+    font-size: var(--font-size-root);
+  }
+
+  // Reduce the swatch gap for both the compact row picker and the full picker
+  // in ThemesManagementPanel (both use the compact-view spacing).
+  theme-picker {
+    --theme-picker-gap-column: var(--space-small);
+  }
 }
 
 .home-section {
@@ -338,56 +367,6 @@
   }
 
   .section {
-    .customize-menu-checkbox-label {
-      font-size: inherit;
-      margin-inline-start: var(--space-xsmall);
-    }
-
-    .check-wrapper {
-      position: relative;
-      display: flex;
-    }
-
-    .customize-menu-checkbox {
-      margin-inline-start: var(--space-xxsmall);
-      width: 16px;
-      height: 16px;
-      vertical-align: middle;
-      border: $customize-menu-border-tint;
-      box-sizing: border-box;
-      border-radius: var(--border-radius-small);
-      appearance: none;
-      background-color: var(--newtab-element-secondary-color);
-      flex-shrink: 0;
-
-      &:hover {
-        background-color: var(--newtab-element-secondary-hover-color);
-      }
-    }
-
-    .customize-menu-checkbox:checked {
-      -moz-context-properties: fill;
-      fill: var(--newtab-primary-element-text-color);
-      background: url('chrome://global/skin/icons/check.svg') center no-repeat;
-      background-color: var(--newtab-primary-action-background);
-
-      &:hover {
-        background-color: var(--newtab-primary-element-hover-color);
-      }
-
-      &:active {
-        background-color: var(--newtab-primary-element-active-color);
-      }
-
-      @media (forced-colors: active) {
-        fill: $black;
-      }
-    }
-
-    .customize-menu-checkbox:active + .checkmark {
-      fill: var(--newtab-element-secondary-color);
-    }
-
     #shortcuts-toggle {
       display: flex;
       flex-direction: column;
@@ -428,19 +407,19 @@
         padding-block: var(--space-medium);
       }
 
-      .check-wrapper {
-        margin-block-end: var(--space-small);
+      .customize-menu-checkbox {
+        // Reset the wider --input-width that moz-toggle (#pocket-toggle) sets on
+        // its host; it inherits across the slot and would otherwise reserve a
+        // toggle-sized gap between the checkbox and its label.
+        --input-width: var(--size-item-small);
+
+        margin-block-end: var(--space-medium);
       }
 
       // Prevent focus outline clipping by allowing overflow
-      &:has(moz-box-button:focus-within) {
+      &:has(moz-box-button:focus-within),
+      &:has(.customize-menu-checkbox:focus-within) {
         overflow: visible;
-      }
-    }
-
-    .more-info-top-wrapper {
-      .check-wrapper {
-        margin-block-start: var(--space-large);
       }
     }
   }
@@ -511,40 +490,15 @@
   box-shadow: $shadow-focus;
 }
 
-// Make sure form elements under the "Shortcuts" subsection don't change position on focus
-// by always having a 2px box shadow around them - one that blends in with the background.
-.home-section .section {
-  .customize-menu-checkbox {
-    outline: 0;
-    box-shadow: 0 0 0 2px light-dark(var(--newtab-background-color), var(--newtab-background-color-dark));
-  }
-}
-
 // Move the Shortcuts dropdown slightly down so that the box shadow is not cut off at the top
 // in active & focus states.
 .home-section .section .selector {
   margin-block-start: var(--space-xxsmall)
 }
 
-// Improve accessibility of shortcuts dropdown and sponsored shortcuts checkbox
-// by setting a bright 2px box shadow in active and focus states.
-.home-section .section
-{
-  .customize-menu-checkbox {
-    &:is(:focus-visible) {
-      box-shadow: 0 0 0 2px var(--color-accent-primary);
-      outline: var(--focus-outline); // For Windows high-contrast mode
-    }
-
-    &:is(:active) {
-      box-shadow: 0 0 0 2px var(--color-accent-primary-active);
-      outline: 0;
-    }
-  }
-}
-
 .sections-mgmt-panel,
-.widgets-mgmt-panel {
+.widgets-mgmt-panel,
+.themes-mgmt-panel {
   // Width of panel minus the margins
   height: 100%;
   inset-inline-start: var(--space-xlarge);
@@ -632,7 +586,11 @@
     &.widgets-mgmt-panel-enter,
     &.widgets-mgmt-panel-exit,
     &.widgets-mgmt-panel-enter-done,
-    &.widgets-mgmt-panel-exit-done {
+    &.widgets-mgmt-panel-exit-done,
+    &.themes-mgmt-panel-enter,
+    &.themes-mgmt-panel-exit,
+    &.themes-mgmt-panel-enter-done,
+    &.themes-mgmt-panel-exit-done {
       transition: transform 300ms;
     }
   }
@@ -640,7 +598,9 @@
   &.sections-mgmt-panel-enter-done,
   &.sections-mgmt-panel-enter-active,
   &.widgets-mgmt-panel-enter-done,
-  &.widgets-mgmt-panel-enter-active {
+  &.widgets-mgmt-panel-enter-active,
+  &.themes-mgmt-panel-enter-done,
+  &.themes-mgmt-panel-enter-active {
     transform: translateX(0);
   }
 }
@@ -742,6 +702,14 @@
 
 .widgets-mgmt-panel-container {
   padding-block: var(--space-medium);
+}
+
+.themes-mgmt-panel {
+  // Match the about:addons themes (paintbrush) icon.
+  .external-link {
+    margin-block-start: var(--space-large);
+    background-image: url('chrome://mozapps/skin/extensions/category-themes.svg');
+  }
 }
 
 // @nova-cleanup(remove-conditional): Remove .nova-enabled selector, make default behavior for #shortcuts-section, #widgets-section and #row-selector

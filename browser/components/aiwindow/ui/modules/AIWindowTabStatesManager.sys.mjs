@@ -15,7 +15,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/ui/modules/ChatStore.sys.mjs",
   SmartWindowTelemetry:
     "moz-src:///browser/components/aiwindow/ui/modules/SmartWindowTelemetry.sys.mjs",
-  SessionStore: "resource:///modules/sessionstore/SessionStore.sys.mjs",
+  SessionStore:
+    "moz-src:///browser/components/sessionstore/SessionStore.sys.mjs",
 });
 
 const SIDEBAR_EMPTY_CLOSE_COUNT_PREF =
@@ -46,6 +47,7 @@ const SESSION_STORE_KEY = "ai-window-tab-state";
 
 /**
  * @typedef {import("chrome://browser/content/aiwindow/components/ai-window/ai-window.mjs").SmartbarInputState} SmartbarInputState
+ * @typedef {import("chrome://browser/content/urlbar/SmartbarInput.mjs").ContextWebsite} ContextWebsite
  *
  * @typedef {{
  *   input: SmartbarInputState,
@@ -54,7 +56,16 @@ const SESSION_STORE_KEY = "ai-window-tab-state";
  *   conversationId: string,
  *   keepSidebarOpen: boolean,
  *   conversation: ChatConversation,
+ *   modelChoiceId: ?string,
+ *   contextChips: ContextWebsite[],
+ *   removedImplicitContextChip: boolean
  * }} TabState
+ */
+
+/**
+ * Map entry of TabState in #tabStates.
+ *
+ * @typedef {{ state: ?TabState }} TabStateEntry
  */
 
 export const EMPTY_SMARTBAR_INPUT_STATE = Object.freeze({
@@ -81,7 +92,7 @@ export class AIWindowTabStatesManager {
   /**
    * A map of tabs and their states
    *
-   * @type {WeakMap<MozTabbrowserTab, TabState>}
+   * @type {WeakMap<MozTabbrowserTab, TabStateEntry>}
    */
   #tabStates;
   /**
@@ -92,10 +103,6 @@ export class AIWindowTabStatesManager {
    * Promise that resolves when the initial sidebar restore is complete
    */
   #restorePromise;
-  /**
-   * True once #restoreInitialTabSidebar has completed
-   */
-  #restoreCompleted = false;
 
   constructor(win) {
     this.#init(win);
@@ -177,15 +184,14 @@ export class AIWindowTabStatesManager {
     tabContainer.addEventListener("TabOpen", this);
     tabContainer.addEventListener("TabSelect", this);
     tabContainer.addEventListener("TabClose", this);
+    tabContainer.addEventListener("SSTabRestoring", this);
 
     this.#tabsListener = this.#getTabsListener();
     this.#window.gBrowser.addProgressListener(this.#tabsListener);
 
     this.#setUpInitialTabs();
     this.#addWindowEventListeners();
-    this.#restorePromise = this.#restoreInitialTabSidebar().then(() => {
-      this.#restoreCompleted = true;
-    });
+    this.#restorePromise = this.#restoreInitialTabSidebar();
   }
 
   /**
@@ -196,6 +202,7 @@ export class AIWindowTabStatesManager {
     tabContainer.removeEventListener("TabOpen", this);
     tabContainer.removeEventListener("TabSelect", this);
     tabContainer.removeEventListener("TabClose", this);
+    tabContainer.removeEventListener("SSTabRestoring", this);
 
     this.#window.gBrowser.removeProgressListener(this.#tabsListener);
     this.#removeWindowEventListeners();
@@ -231,6 +238,16 @@ export class AIWindowTabStatesManager {
     this.#window.addEventListener(
       "ai-window:conversation-changed",
       this.#onConversationChanged
+    );
+
+    this.#window.addEventListener(
+      "ai-window:model-changed",
+      this.#onModelChanged
+    );
+
+    this.#window.addEventListener(
+      "ai-window:context-chips-changed",
+      this.#onContextChipsChanged
     );
 
     this.#window.addEventListener(
@@ -276,6 +293,11 @@ export class AIWindowTabStatesManager {
     this.#window.removeEventListener(
       "ai-window:conversation-changed",
       this.#onConversationChanged
+    );
+
+    this.#window.removeEventListener(
+      "ai-window:model-changed",
+      this.#onModelChanged
     );
 
     this.#window.removeEventListener(
@@ -330,6 +352,10 @@ export class AIWindowTabStatesManager {
       case "TabClose":
         this.#onTabClose(event);
         break;
+
+      case "SSTabRestoring":
+        this.#onTabRestoring(event);
+        break;
     }
   }
 
@@ -356,8 +382,9 @@ export class AIWindowTabStatesManager {
    * - When shouldOpenSidebar is true, openSidebar is called with the tab's conversation
    * - If conversation is null/undefined, openSidebar will kick off creating a new conversation
    * - AI Window tabs (AIWINDOW_URL) always close the sidebar regardless of state
-   * - If no convisationId is present but restore hasn't completed, we wait for restore to complete
-   *   and re-check state in case the conversationId is from a restored
+   * - If no conversationId is present, we wait for the restore to settle.
+   *   If the tab is pending or still being restored by SessionStore,
+   *   we return early so #onTabRestoring() can handle the restore
    *
    * @param {Event} event
    *
@@ -369,22 +396,40 @@ export class AIWindowTabStatesManager {
     }
 
     const tab = event.target;
-
-    const tabState = this.#getTabState(tab);
-    const convId = tabState?.state?.conversationId;
     const tabUrl = tab.linkedBrowser?.currentURI?.spec ?? "";
-    const isAIWindowTab = tabUrl === lazy.AIWINDOW_URL;
-    const shouldKeepSidebar = getKeepSidebarOpenState(
-      tabState?.state,
-      lazy.sidebarOpenByDefault
-    );
 
     // AI Window tab doesn't need sidebar
-    if (isAIWindowTab) {
+    if (tabUrl === lazy.AIWINDOW_URL) {
       lazy.AIWindowUI.restoreMemoriesState(this.#window, tab);
       lazy.AIWindowUI.closeSidebar(this.#window);
       return;
     }
+
+    let tabState = this.#getTabState(tab);
+
+    // A tab being restored  can fire TabSelect before
+    // SessionStore has written its conversationId or marked
+    // it pending/restoring, so we can't tell yet that it's a restore.
+    // Yield a microtask so SessionStore's synchronous restore setup runs,
+    // then hand off to #onTabRestoring rather than opening a fresh empty conversation
+    if (!tabState?.state?.conversationId) {
+      await Promise.resolve();
+      if (this.#window?.gBrowser.selectedTab !== tab) {
+        return;
+      }
+      if (
+        tab.hasAttribute("pending") ||
+        lazy.SessionStore.isTabRestoring(tab)
+      ) {
+        return;
+      }
+      tabState = this.#getTabState(tab);
+    }
+
+    const shouldKeepSidebar = getKeepSidebarOpenState(
+      tabState?.state,
+      lazy.sidebarOpenByDefault
+    );
 
     if (!shouldKeepSidebar) {
       lazy.AIWindowUI.updateSidebarInput(
@@ -395,34 +440,137 @@ export class AIWindowTabStatesManager {
       return;
     }
 
-    let conversation = tabState?.state?.conversation ?? null;
+    await this.#openSidebarForTab(tab, tabState);
+  }
 
-    if (convId && !conversation) {
+  /**
+   * Handles SSTabRestoring - SessionStore has restored the tab's custom values,
+   * so the persisted conversationId is now readable. Caches it into the tab
+   * state and, when this is the selected tab, opens its conversation in the
+   * sidebar
+   *
+   * @param {Event} event
+   *
+   * @private
+   */
+  async #onTabRestoring(event) {
+    if (!this.#window) {
+      return;
+    }
+
+    const tab = event.target;
+
+    // Pull the persisted conversationId into the cache
+    const tabState = this.#refreshTabStateFromSession(tab);
+    if (!tabState.state?.conversationId) {
+      return;
+    }
+
+    if (this.#window.gBrowser.selectedTab !== tab) {
+      return;
+    }
+
+    const tabUrl = tab.linkedBrowser?.currentURI?.spec ?? "";
+    if (tabUrl === lazy.AIWINDOW_URL) {
+      return;
+    }
+
+    if (!getKeepSidebarOpenState(tabState.state, lazy.sidebarOpenByDefault)) {
+      return;
+    }
+
+    await this.#openSidebarForTab(tab, tabState);
+  }
+
+  /**
+   * Opens the sidebar for the given tab's state, resolving the conversation
+   * from its conversationId
+   *
+   * @param {MozTabbrowserTab} tab
+   * @param {TabStateEntry} tabState
+   *
+   * @private
+   */
+  async #openSidebarForTab(tab, tabState) {
+    let conversation = tabState.state?.conversation ?? null;
+
+    if (tabState?.state?.conversationId && !conversation) {
       conversation = await this.#computeConversation(tab, tabState);
 
       // Bail if the user switched tabs while we were awaiting the DB lookup.
       if (this.#window?.gBrowser.selectedTab !== tab) {
         return;
       }
-    } else if (!convId && !this.#restoreCompleted) {
-      // Restore hasn't completed yet so we wait and re-read state in case this
-      // tab had a saved conversation that hasn't been loaded yet.
-      await this.#restorePromise;
-
-      if (this.#window?.gBrowser.selectedTab !== tab) {
-        return;
-      }
-
-      conversation = this.#getTabState(tab)?.state?.conversation ?? null;
     }
 
     lazy.AIWindowUI.openSidebar(this.#window, conversation);
-    if (tabState?.state) {
-      lazy.AIWindowUI.updateSidebarInput(
-        this.#window,
-        tabState.state.input ?? EMPTY_SMARTBAR_INPUT_STATE
-      );
+    this.#updateSidebarState(tabState);
+
+    lazy.AIWindowUI.updateSidebarModel(
+      this.#window,
+      this.#resolveTabModelChoice(tabState)
+    );
+  }
+
+  /**
+   * Re-read a tab's persisted state from SessionStore and merge it into the
+   * cache. The in-memory cache can be empty when TabSelect fires before the
+   * conversationId has been written so this recovers it.
+   * Only overwrites the cache when a persisted conversationId is found
+   *
+   * @param {MozTabbrowserTab} tab
+   * @returns {TabStateEntry}
+   *
+   * @private
+   */
+  #refreshTabStateFromSession(tab) {
+    if (!this.#tabStates) {
+      return {};
     }
+
+    let saved = null;
+    try {
+      const raw = lazy.SessionStore.getCustomTabValue(tab, SESSION_STORE_KEY);
+      saved = raw ? JSON.parse(raw) : null;
+    } catch {
+      saved = null;
+    }
+
+    const tabState = this.#tabStates.get(tab) ?? {};
+    if (saved?.conversationId) {
+      tabState.state = { ...(tabState.state ?? {}), ...saved };
+      this.#tabStates.set(tab, tabState);
+    }
+    return tabState;
+  }
+
+  /**
+   * Updates a tab's stored state with the conversation being opened into it,
+   * keeping the AIWindowTabStatesManager entry in sync and persisting the
+   * conversationId to SessionStore.
+   *
+   * @param {MozTabbrowserTab} tab
+   * @param {ChatConversation} conversation
+   */
+  setTabStateConversation(tab, conversation) {
+    if (!tab || !conversation) {
+      return;
+    }
+    this.#getTabState(tab, {
+      conversation,
+      conversationId: conversation.id,
+    });
+  }
+
+  /**
+   * Resolves the model choice override to apply per tab.
+   *
+   * @param {TabStateEntry} tabState
+   * @returns {?string}
+   */
+  #resolveTabModelChoice(tabState) {
+    const storedModelChoiceOverride = tabState.state?.modelChoiceId ?? null;
+    return storedModelChoiceOverride;
   }
 
   /**
@@ -432,7 +580,7 @@ export class AIWindowTabStatesManager {
    * is cached back into the tab state.
    *
    * @param {MozTabbrowserTab} tab
-   * @param {object} tabState
+   * @param {TabStateEntry} tabState
    * @returns {Promise<ChatConversation|null>}
    */
   async #computeConversation(tab, tabState) {
@@ -540,14 +688,27 @@ export class AIWindowTabStatesManager {
       );
     }
 
-    // Update the sidebar input when the sidebar ai-window connects
+    // Update the sidebar input and model when the sidebar ai-window connects
     if (mode === "sidebar" && selectedTab === tab) {
-      lazy.AIWindowUI.updateSidebarInput(
+      this.#updateSidebarState(tabState);
+      lazy.AIWindowUI.updateSidebarModel(
         this.#window,
-        tabState.state.input ?? EMPTY_SMARTBAR_INPUT_STATE
+        this.#resolveTabModelChoice(tabState)
       );
     }
   };
+
+  #updateSidebarState(tabState) {
+    lazy.AIWindowUI.updateSidebarInput(
+      this.#window,
+      tabState?.state?.input ?? EMPTY_SMARTBAR_INPUT_STATE
+    );
+    lazy.AIWindowUI.updateSidebarContextChips(
+      this.#window,
+      tabState?.state?.contextChips,
+      tabState?.state?.removedImplicitContextChip
+    );
+  }
 
   /**
    * On init, opens the sidebar for the currently selected tab if its persisted
@@ -601,10 +762,10 @@ export class AIWindowTabStatesManager {
    * Gets the state for the specified tab. Will update the state
    * if a newState is passed in.
    *
-   * @param {*} tab The browser tab to get state for
-   * @param {*} [newState=null] New state to update the tab with
+   * @param {MozTabbrowserTab} tab The browser tab to get state for
+   * @param {?Partial<TabState>} [newState=null] New state to update the tab with
    *
-   * @returns {TabState}
+   * @returns {TabStateEntry}
    *
    * @private
    */
@@ -727,14 +888,23 @@ export class AIWindowTabStatesManager {
 
   /**
    * Handles ai-window:conversation-changed events dispatched whenever
-   * an ai-window's active conversation is swapped. Triggers starter
-   * prompt loading when the conversation is empty and the current page
-   * URL differs from the one starters were already loaded for.
+   * an ai-window's active conversation is swapped. Keeps the tab state's
+   * conversation in sync with the live ai-window so consumers (e.g. the
+   * empty-close count) read the conversation the user actually engaged with,
+   * then triggers starter prompt loading when the conversation is empty and
+   * the current page URL differs from the one starters were already loaded for.
    *
    * @param {TabStateEvent} event
    */
   #onConversationChanged = event => {
     const { conversation, mode, tab } = event.detail;
+
+    if (tab && conversation) {
+      this.#getTabState(tab, {
+        conversation,
+        conversationId: conversation.id,
+      });
+    }
 
     if (!conversation || conversation.messageCount) {
       return;
@@ -747,6 +917,41 @@ export class AIWindowTabStatesManager {
     }
 
     lazy.AIWindowUI.updateStarterPrompts(this.#window, false, mode, tab);
+  };
+
+  /**
+   * Handles ai-window:model-changed events dispatched when the user selects
+   * a model from the smartbar.
+   *
+   * @param {TabStateEvent} event
+   */
+  #onModelChanged = event => {
+    const { tab, modelChoiceId } = event.detail;
+    const currentTabState = this.#getTabState(tab);
+    if (!currentTabState?.state) {
+      return;
+    }
+
+    this.#getTabState(tab, { ...currentTabState.state, modelChoiceId });
+  };
+
+  /**
+   * Handles ai-window:context-chips-changed events dispatched when the user adds
+   * at least one context chip in the smartbar header.
+   *
+   * @param {event} event
+   */
+  #onContextChipsChanged = event => {
+    const { tab, contextChips, removedImplicitContextChip } = event.detail;
+    const currentTabState = this.#getTabState(tab);
+    if (!currentTabState?.state) {
+      return;
+    }
+
+    this.#getTabState(tab, {
+      contextChips,
+      removedImplicitContextChip,
+    });
   };
 
   /**
@@ -768,8 +973,6 @@ export class AIWindowTabStatesManager {
       });
     }
 
-    const { conversation } = currentTabState.state;
-
     if (isOpen) {
       if (source === "toggle") {
         lazy.AIWindowUI.openSidebar(
@@ -777,28 +980,39 @@ export class AIWindowTabStatesManager {
           currentTabState?.state?.conversation ?? null
         );
       }
-      lazy.AIWindowUI.updateSidebarInput(
-        this.#window,
-        currentTabState?.state?.input ?? EMPTY_SMARTBAR_INPUT_STATE
-      );
+      this.#updateSidebarState(currentTabState);
     } else {
-      this.#updateEmptyCloseCount(conversation, isOpen, source);
+      this.#updateEmptyCloseCount(
+        currentTabState?.state?.conversation ?? null,
+        source
+      );
     }
   };
 
   /**
-   * Updates the empty-close count when the sidebar closes. Resets to 0
-   * if the user engaged in a conversation, otherwise increments.
-   * No-op once the prompt trigger count is reached.
+   * Updates the empty-close count when the sidebar closes. A started
+   * conversation means the user engaged with the sidebar, so the count is reset
+   * to 0 to keep the "keep closed" prompt from targeting active users. This
+   * reset runs even once the trigger count is reached, otherwise an engaged user
+   * stays stuck at the trigger and keeps seeing the prompt. An empty close
+   * increments the count, capped at the trigger.
    *
-   * @param {ChatConversation} conversation
-   * @param {boolean} isOpen
+   * @param {?ChatConversation} conversation The closed sidebar's conversation.
    * @param {'close' | 'toggle'} source
    */
-  #updateEmptyCloseCount(conversation, isOpen, source) {
+  #updateEmptyCloseCount(conversation, source) {
+    if (!["close", "toggle"].includes(source)) {
+      return;
+    }
+
+    if (conversation?.messageCount) {
+      if (lazy.sidebarEmptyCloseCount !== 0) {
+        Services.prefs.setIntPref(SIDEBAR_EMPTY_CLOSE_COUNT_PREF, 0);
+      }
+      return;
+    }
+
     if (
-      isOpen ||
-      !["close", "toggle"].includes(source) ||
       lazy.sidebarEmptyCloseCount >= SIDEBAR_EMPTY_CLOSE_PROMPT_TRIGGER_COUNT
     ) {
       return;
@@ -806,7 +1020,7 @@ export class AIWindowTabStatesManager {
 
     Services.prefs.setIntPref(
       SIDEBAR_EMPTY_CLOSE_COUNT_PREF,
-      conversation?.messages?.length ? 0 : lazy.sidebarEmptyCloseCount + 1
+      lazy.sidebarEmptyCloseCount + 1
     );
   }
 
@@ -827,8 +1041,7 @@ export class AIWindowTabStatesManager {
   };
 
   #onCloseSidebar = () => {
-    lazy.AIWindowUI.closeSidebar(this.#window);
-    this.#updateEmptyCloseCount(null, false, "close");
+    lazy.AIWindowUI.closeSidebar(this.#window, "toggle");
   };
 
   /**

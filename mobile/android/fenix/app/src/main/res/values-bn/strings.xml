@@ -30,7 +30,7 @@
   <!-- Content description for close button while in multiselect mode in tab tray -->
   <string name="tab_tray_close_multiselect_content_description">মাল্টিলেক্ট মোড থেকে প্রস্থান করুন</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">%1$s হচ্ছে Mozilla দ্বারা তৈরি।</string>
+  <string name="about_content" tools:ignore="BrandUsage">%1$s হচ্ছে Mozilla দ্বারা তৈরি।</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">ব্যাক্তিগত ব্রাউজিং সম্পর্কে কিছু ভুল ধারণা</string>
   <!-- Text for the positive action button -->
@@ -95,12 +95,6 @@
   <string name="browser_menu_read">পাঠক দর্শন</string>
   <!-- Browser menu button to open the current page in an external app -->
   <string name="browser_menu_open_app_link">অ্যাপে খুলুন</string>
-  <!--
-    Browser Toolbar
-
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">হোম স্ক্রিন</string>
   <!--
     Locale Settings Fragment
 
@@ -378,8 +372,6 @@
   <string name="pwa_site_controls_title_private">%1$s (ব্যক্তিগত মোড)</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">ইতিহাস মুছুন</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">ইতিহাস মুছে ফেলা হয়েছে</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">%1$s মুছে ফেলা হয়েছে</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -408,7 +400,7 @@
   -->
   <string name="tab_crash_title_2">দুঃখিত। %1$s পৃষ্ঠাটি লোড করতে পারেছে না।</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">Mozilla তে ক্র্যাশ রিপোর্ট পাঠান</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">Mozilla তে ক্র্যাশ রিপোর্ট পাঠান</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">ট্যাব বন্ধ করুন</string>
   <!-- Restore tab button text on the tab crash page -->
@@ -438,10 +430,6 @@
   <string name="edit_bookmark_folder_fragment_title">ফোল্ডার সম্পাদনা করুন</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">URL</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">FOLDER</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">NAME</string>
   <!-- Bookmark select folder screen title -->
   <string name="bookmark_select_folder_fragment_label">ফোল্ডার নির্বাচন করুন</string>
   <!-- Bookmark editing error missing or improper URL -->
@@ -457,12 +445,6 @@
     Button label that take the user to the Android App setting
   -->
   <string name="phone_feature_go_to_settings">সেটিংস এ যান</string>
-  <!--
-    Content description (not visible, for screen readers etc.): Quick settings sheet
-    to give users access to site specific information / settings. For example:
-    Secure settings status and a button to modify site permissions
-  -->
-  <string name="quick_settings_sheet">দ্রুত সেটিংস শীট</string>
   <!-- Label that indicates that this option it the recommended one -->
   <string name="phone_feature_recommended">সুপারিশকৃত</string>
   <!-- Button label for clearing all the information of site permissions -->
@@ -681,10 +663,8 @@
   <!--
     Enhanced Tracking Protection
 
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
+    Preference title for enhanced tracking protection settings
   -->
-  <string name="etp_settings">সুরক্ষা সেটিংস</string>
-  <!-- Preference title for enhanced tracking protection settings -->
   <string name="preference_enhanced_tracking_protection">ট্র্যাকিং সুরক্ষা বর্ধিত করা হয়েছে</string>
   <!-- Text displayed that links to website about enhanced tracking protection -->
   <string name="preference_enhanced_tracking_protection_explanation_learn_more">আরো জানুন</string>
@@ -712,8 +692,6 @@
   <string name="preference_enhanced_tracking_protection_custom_cryptominers">ক্রিপ্টোমাইনারস</string>
   <!-- Header for categories that are being being blocked by current Enhanced Tracking Protection settings -->
   <string name="enhanced_tracking_protection_blocked">ব্লক করা হয়েছে</string>
-  <!-- Header for categories that are being not being blocked by current Enhanced Tracking Protection settings -->
-  <string name="enhanced_tracking_protection_allowed">অনুমতি দেওয়া হয়েছে</string>
   <!-- Category of trackers (social media trackers) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_social_media_trackers_title">সোশ্যাল মিডিয়া ট্র্যাকার</string>
   <!-- Category of trackers (cross-site tracking cookies) that can be blocked by Enhanced Tracking Protection -->
@@ -722,10 +700,6 @@
   <string name="etp_cryptominers_title">ক্রিপ্টোমাইনারস</string>
   <!-- Category of trackers (tracking content) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_tracking_content_title">ট্র্যাকিং কন্টেন্ট</string>
-  <!-- Enhanced Tracking Protection message that protection is currently on for this site -->
-  <string name="etp_panel_on">এই সাইটের জন্য সুরক্ষা ON আছে</string>
-  <!-- Enhanced Tracking Protection message that protection is currently off for this site -->
-  <string name="etp_panel_off">এই সাইটের জন্য সুরক্ষা OFF আছে</string>
   <!-- About page link text to open what's new link. %s is the name of the app (for example "Firefox"). -->
   <string name="about_whats_new">%s এ নতুন যা আছে</string>
   <!--
@@ -817,11 +791,6 @@
   <string name="confirm_clear_permissions_on_all_sites">আপনি কি নিশ্চিত যে আপনি সব সাইটের সব অনুমতি সাফ করতে চান?</string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for a site -->
   <string name="confirm_clear_permissions_site">আপনি কি নিশ্চিত যে আপনি এই সাইটের জন্য সব অনুমতি সাফ করতে চান?</string>
-  <!--
-    text shown before the issuer name to indicate who its verified by, %1$s is the name of
-    the certificate authority that verified the ticket
-  -->
-  <string name="certificate_info_verified_by">যাচাই করা হয়েছে : %1$s দিয়ে</string>
   <!-- Positive action of a dialog asking to delete -->
   <string name="dialog_delete_positive">মুছে ফেলুন</string>
   <!-- Translations feature -->

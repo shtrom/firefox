@@ -547,8 +547,7 @@ enum class AssembleResult {
   }
 
   bool isLargePattern =
-      pattern->length() > v8::internal::RegExp::kRegExpTooLargeToOptimize;
-  masm->set_slow_safe(isLargePattern);
+      pattern->length() > v8::internal::RegExp::kMaxOptimizedPatternLength;
   if (compiler->optimize()) {
     compiler->set_optimize(!isLargePattern);
   }
@@ -699,7 +698,7 @@ bool InitializeNamedCaptures(JSContext* cx, HandleRegExpShared re,
 
   // Create a plain template object.
   Rooted<js::PlainObject*> templateObject(
-      cx, js::NewPlainObjectWithProto(cx, nullptr, TenuredObject));
+      cx, js::NewPlainObjectWithProto(cx, nullptr, {.newKind = TenuredObject}));
   if (!templateObject) {
     return false;
   }

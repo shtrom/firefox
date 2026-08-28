@@ -19,8 +19,12 @@
   <string name="content_description_menu">Дадаткова</string>
   <!-- Content description (not visible, for screen readers etc.): "Private Browsing" menu button. -->
   <string name="content_description_private_browsing">Прыватнае агляданне</string>
+  <!-- Content description (not visible, for screen readers etc.): "Normal Browsing" menu button. -->
+  <string name="content_description_normal_browsing">Звычайны прагляд</string>
   <!-- Placeholder text shown in the search bar before a user enters text for the default engine -->
   <string name="search_hint">Увядзіце запыт або адрас</string>
+  <!-- Shorter placeholder text shown in the search bar when an additional action (voice search) is rendered alongside the hint. -->
+  <string name="search_hint_short">Пошук</string>
   <!-- Placeholder text shown in the search bar before a user enters text for a general engine -->
   <string name="search_hint_general_engine">Пошук у інтэрнэце</string>
   <!-- Placeholder text shown in search bar when using history search -->
@@ -68,7 +72,7 @@
   <!-- Text for the menu button to remove a recently saved bookmark from the user's home screen -->
   <string name="home_bookmarks_menu_item_remove">Выдаліць</string>
   <!-- About content. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="about_content">%1$s распрацаваны Mozilla.</string>
+  <string name="about_content" tools:ignore="BrandUsage">%1$s распрацаваны Mozilla.</string>
   <!-- Private Browsing -->
   <string name="private_browsing_common_myths">Шырокавядомыя забабоны пра прыватнае агляданне</string>
   <!-- Text to be announced by the accessibility service to inform the user that the private browsing mode is currently active. -->
@@ -102,12 +106,6 @@
   <string name="open_in_app_cfr_negative_button_text">Адхіліць</string>
   <!-- Private browsing erase action "contextual feature recommendation" (CFR) -->
 
-  <!--
-    Address bar swipe "contextual feature recommendation" (CFR)
-
-    Text for the message displayed in the contextual feature recommendation popup promoting swipe of address bar.
-  -->
-  <string name="address_bar_swipe_cfr_message_2">Каб пераключыцца паміж карткамі, чыркніце па паліцы інструментаў улева або ўправа.</string>
   <!-- Text for the info dialog when camera permissions have been denied but user tries to access a camera feature. -->
   <string name="camera_permissions_needed_message">Патрабуецца доступ да камеры. Перайдзіце ў налады Android, націсніце \"Дазволы\", і затым \"Дазволіць\".</string>
   <!-- Text for the positive action button to go to Android Settings to grant permissions. -->
@@ -318,21 +316,9 @@
   <!--
     Browser Toolbar
 
-    Content description for the Home screen button on the browser toolbar
-  -->
-  <string name="browser_toolbar_home">Хатні экран</string>
-  <!--
-    Browser Toolbar
-
     Content description for the translate page toolbar button that opens the translations dialog when no translation has occurred.
   -->
   <string name="browser_toolbar_translate">Перакласці старонку</string>
-  <!--
-    Content description (not visible, for screen readers etc.) for the translate page toolbar button that opens the translations dialog when the page is translated successfully.
-    %1$s is the name of the language that is displayed in the original page. (For example: English)
-    %2$s is the name of the language which the page was translated to. (For example: French)
-  -->
-  <string name="browser_toolbar_translated_successfully">Старонка перакладзена з %1$s на %2$s.</string>
   <!--
     Translation Toolbar
 
@@ -351,6 +337,8 @@
     Title for the AI controls settings screen
   -->
   <string name="preferences_ai_controls">Кіраванне штучным інтэлектам</string>
+  <!-- Link text for learning more about AI controls -->
+  <string name="ai_controls_learn_more">Падрабязней</string>
   <!-- Title for the translations AI feature toggle -->
   <string name="ai_controls_translations_title">Пераклады</string>
   <!-- Title for the voice search AI feature toggle -->
@@ -369,12 +357,6 @@
   <string name="default_locale_text">Мова прылады</string>
   <!-- Placeholder text shown in the search bar before a user enters text -->
   <string name="locale_search_hint">Пошук мовы</string>
-  <!--
-    Search Fragment
-
-    Button in the search view that lets a user search by scanning a QR code
-  -->
-  <string name="search_scan_button_2">Сканаваць QR-код</string>
   <!--
     Search Fragment
 
@@ -416,62 +398,6 @@
     Content description (not visible, for screen readers etc.): Close button for the home onboarding dialog
   -->
   <string name="onboarding_home_content_description_close_button">Закрыць</string>
-  <!--
-    Juno first user onboarding flow experiment, strings are marked unused as they are only referenced by Nimbus experiments.
-
-    Description for learning more about our privacy notice.
-  -->
-  <string name="juno_onboarding_privacy_notice_text" tools:ignore="BrandUsage">Паведамленне аб прыватнасці Firefox</string>
-  <!-- Title for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_title_nimbus_2">Нам падабаецца забяспечваць вашу бяспеку</string>
-  <!-- Description for set firefox as default browser screen used by Nimbus experiments. -->
-  <string name="juno_onboarding_default_browser_description_nimbus_3">Наш браўзер, падтрыманы некамерцыйнай арганізацыяй, дапамагае не даваць кампаніям таемна сачыць за вамі ў сеціве.</string>
-  <!-- Text for the button to set firefox as default browser on the device -->
-  <string name="juno_onboarding_default_browser_positive_button" tools:ignore="UnusedResources">Зрабіць прадвызначаным браўзерам</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_default_browser_negative_button" tools:ignore="UnusedResources">Не зараз</string>
-  <!-- Title for sign in to sync screen. -->
-  <string name="juno_onboarding_sign_in_title_2">Заставайцеся зашыфраванымі падчас пераходу паміж прыладамі</string>
-  <!--
-    Description for sign in to sync screen. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_sign_in_description_3" tools:ignore="BrandUsage">Пры сінхранізацыі Firefox шыфруе вашыя паролі, закладкі і іншыя дадзеныя.</string>
-  <!-- Text for the button to sign in to sync on the device -->
-  <string name="juno_onboarding_sign_in_positive_button" tools:ignore="UnusedResources">Увайсці</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_sign_in_negative_button" tools:ignore="UnusedResources">Не зараз</string>
-  <!--
-    Title for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_title_nimbus_2" tools:ignore="BrandUsage">Апавяшчэнні дапамагаюць вам заставацца ў бяспецы з Firefox</string>
-  <!--
-    Description for enable notification permission screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_enable_notifications_description_nimbus_2" tools:ignore="BrandUsage">Бяспечна перасылайце карткі паміж сваімі прыладамі і адкрыйце для сябе іншыя функцыі прыватнасці ў Firefox.</string>
-  <!-- Text for the button to request notification permission on the device -->
-  <string name="juno_onboarding_enable_notifications_positive_button" tools:ignore="UnusedResources">Уключыць апавяшчэнні</string>
-  <!-- Text for the button dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_enable_notifications_negative_button" tools:ignore="UnusedResources">Не зараз</string>
-  <!--
-    Title for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_title" tools:ignore="BrandUsage,UnusedResources">Паспрабуйце віджэт пошуку Firefox</string>
-  <!--
-    Description for add search widget screen used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_description" tools:ignore="BrandUsage,UnusedResources">З Firefox на вашым галоўным экране, вы атрымаеце лёгкі доступ да браўзера, які дбае аб прыватнасці і блакуе міжсайтавыя трэкеры.</string>
-  <!--
-    Text for the button to add search widget on the device used by Nimbus experiments. Nimbus experiments do not support string placeholders.
-    Note: The word "Firefox" should NOT be translated
-  -->
-  <string name="juno_onboarding_add_search_widget_positive_button" tools:ignore="BrandUsage,UnusedResources">Дадаць віджэт Firefox</string>
-  <!-- Text for the button to dismiss the screen and move on with the flow -->
-  <string name="juno_onboarding_add_search_widget_negative_button" tools:ignore="UnusedResources">Не зараз</string>
   <!-- Title for the privacy preferences dialog shown during onboarding. Note: The word "Firefox" should NOT be translated. -->
   <string name="onboarding_preferences_dialog_title" tools:ignore="BrandUsage">Дапамажыце нам палепшыць Firefox</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
@@ -491,17 +417,13 @@
   <!-- Button text to reopen firefox after the crash is processed %s is the name of the app (for example "Firefox") -->
   <string name="startup_crash_restart">Зноў адкрыць %s</string>
   <!-- Title for the usage data option in the privacy preferences dialog shown during onboarding. Note: The word "Mozilla" should NOT be translated. -->
-  <string name="onboarding_preferences_dialog_usage_data_title">Адпраўляць тэхнічныя звесткі і звесткі узаемадзеяння ў Mozilla</string>
+  <string name="onboarding_preferences_dialog_usage_data_title" tools:ignore="BrandUsage">Адпраўляць тэхнічныя звесткі і звесткі узаемадзеяння ў Mozilla</string>
   <string name="onboarding_preferences_dialog_usage_data_description_2" tools:ignore="BrandUsage">Звесткі аб вашай прыладзе, канфігурацыі абсталявання і\u00a0тым, як вы карыстаецеся Firefox, дапамагаюць палепшыць функцыі, прадукцыйнасць і\u00a0стабільнасць для карыстальнікаў паўсюль.</string>
   <string name="onboarding_preferences_dialog_usage_data_learn_more_2">Падрабязней</string>
   <!-- Positive button label for the privacy preferences dialog shown during onboarding. -->
   <string name="onboarding_preferences_dialog_positive_button">Гатова</string>
   <!-- Terms of service onboarding title card label. 'Firefox' intentionally hardcoded here -->
   <string name="onboarding_welcome_to_firefox" tools:ignore="BrandUsage">Калі ласка да Firefox</string>
-  <!-- Terms of service sub header label. -->
-  <string name="onboarding_terms_of_service_sub_header_2">Хуткае і\u00a0бяспечнае агляданне сеціва</string>
-  <!-- Terms of service onboarding page continue button label. -->
-  <string name="onboarding_term_of_service_agree_and_continue_button_label_2">Працягнуць</string>
   <!-- Line one of the terms of service onboarding page. %1$s is replaced by an active link, using onboarding_term_of_service_line_one_link_text_2 as text (“Firefox Terms of Use”). -->
   <string name="onboarding_term_of_service_line_one_2">Працягваючы, вы згаджаецеся з %1$s.</string>
   <!-- Used as text for the link in onboarding_term_of_service_line_one_2. -->
@@ -562,14 +484,6 @@
   <string name="onboarding_redesign_sync_positive_button" tools:ignore="UnusedResources">Пачаць сінхранізацыю</string>
   <!-- Sync onboarding redesign negative button text. -->
   <string name="onboarding_redesign_sync_negative_button" tools:ignore="UnusedResources">Не зараз</string>
-  <!-- Marketing onboarding page title. 'Firefox' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_title" tools:ignore="BrandUsage,UnusedResources">Дапамажыце нам развіваць Firefox</string>
-  <!-- Marketing onboarding page opt-out checkbox. Unchecking the box does not increase data collection. Our data practices remain the same. 'Mozilla' is intentionally hardcoded. -->
-  <string name="onboarding_marketing_opt_out_checkbox">Дасылаць дадзеныя партнёрам Mozilla па маркетынгу. Яны не прадаюцца і не выкарыстоўваюцца для рэкламы.</string>
-  <!-- Marketing onboarding page clickable link text to "learn more" on how data is used. -->
-  <string name="onboarding_marketing_learn_more" tools:ignore="UnusedResources">Як мы выкарыстоўваем дадзеныя</string>
-  <!-- Marketing onboarding page button label. Button to confirm choice and start browsing. -->
-  <string name="onboarding_marketing_positive_button" tools:ignore="UnusedResources">Пацвердзіць і пачаць прагляд</string>
   <!-- Marketing onboarding page title variant. “One last thing” refers to the final step or action in the onboarding process that we’re asking users to take before they can start using the browser. -->
   <string name="onboarding_marketing_title_1" tools:ignore="UnusedResources">Яшчэ адна рэч</string>
   <!-- Marketing onboarding page button label variant. Button to confirm choice and start browsing. -->
@@ -637,38 +551,18 @@
   <string name="nova_onboarding_marketing_title">Дапамажыце нам будаваць лепшы інтэрнэт</string>
   <!-- Marketing onboarding body link text. -->
   <string name="nova_onboarding_marketing_body_link_text">Як мы ўжываем звесткі</string>
+  <!-- Marketing onboarding body link text. -->
+  <string name="nova_onboarding_marketing_body_link_text_1">Падрабязней</string>
+  <!-- Marketing onboarding primary button text. -->
+  <string name="nova_onboarding_marketing_primary_button_text_3">Так</string>
+  <!-- Marketing onboarding secondary button text. -->
+  <string name="nova_onboarding_marketing_secondary_button_text_2">Не</string>
   <!-- Notifications onboarding button. -->
   <string name="nova_onboarding_notifications_button">Уключыць апавяшчэнні</string>
   <!-- "Add search widget" onboarding button. 'Firefox' is intentionally hardcoded. -->
   <string name="nova_onboarding_add_search_widget_button" tools:ignore="BrandUsage">Дадаць віджэт Firefox</string>
   <!-- ==== End of Project "Nova" onboarding strings ==== -->
 
-  <!-- Onboarding header for the toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_title" tools:ignore="UnusedResources">Выберыце размяшчэнне панэлі інструментаў</string>
-  <!-- Onboarding sub header for toolbar selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_description" tools:ignore="UnusedResources">Трымайце пошук пад рукой.</string>
-  <!-- Onboarding label for 'Save and continue' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_continue_button">Захаваць і працягваць</string>
-  <!-- Onboarding toolbar selection card label for 'top' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_top_option">Уверсе</string>
-  <!-- Onboarding toolbar selection card label for 'bottom' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_toolbar_bottom_option">Унізе</string>
-  <!-- Action label for toolbar options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_toolbar_a11y_action_label_select">выбраць</string>
-  <!-- Onboarding header for the theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_title" tools:ignore="UnusedResources">Выберыце тэму</string>
-  <!-- Onboarding sub header for theme selection card, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_description" tools:ignore="UnusedResources">Глядзіце на Інтэрнэт у лепшым святле.</string>
-  <!-- Onboarding label for 'Save and start browsing' button, used by Nimbus experiments. -->
-  <string name="onboarding_save_and_start_button">Захаваць і пачаць прагляд</string>
-  <!-- Onboarding theme selection card label for 'dark' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_dark_option">Цёмная</string>
-  <!-- Onboarding theme selection card label for 'light' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_light_option">Светлая</string>
-  <!-- Onboarding theme selection card label for 'System auto' option, used by Nimbus experiments. -->
-  <string name="onboarding_customize_theme_system_option">Сістэмная аўтаматычная</string>
-  <!-- Action label for options that can be selected. Talkback will append this to say "Double tap to select". -->
-  <string name="onboarding_customize_theme_a11y_action_label_select">выбраць</string>
   <!--
     Search Widget
 
@@ -738,40 +632,8 @@
   <string name="preferences_add_private_browsing_shortcut">Дадаць ярлык прыватнага аглядання</string>
   <!-- Preference for enabling "HTTPS-Only" mode -->
   <string name="preferences_https_only_title">Рэжым «Толькі HTTPS»</string>
-  <!-- Label for cookie banner section in quick settings panel. -->
-  <string name="cookie_banner_blocker">Блакіроўшчык банераў кукі</string>
   <!-- Preference for removing cookie/consent banners from sites automatically in private mode. See reduce_cookie_banner_summary for additional context. -->
   <string name="preferences_cookie_banner_reduction_private_mode">Блакіроўшчык банераў кукі ў прыватным праглядзе</string>
-  <!-- Text for indicating cookie banner handling is off this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_off_for_site">Выключана для гэтага сайта</string>
-  <!-- Text for cancel button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_cancel_button">Скасаваць</string>
-  <!-- Text for request support button indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_request_support_button_2">Адправіць запыт</string>
-  <!-- Text for title indicating that cookie banner reduction is not supported for the current site, this is shown as part of the cookie banner details view. -->
-  <string name="cookie_banner_handling_details_site_is_not_supported_title_2">Запытаць падтрымку для гэтага сайта?</string>
-  <!-- Label for the snackBar, after the user reports with success a website where cookie banner reducer did not work -->
-  <string name="cookie_banner_handling_report_site_snack_bar_text_2">Запыт адпраўлены</string>
-  <!-- Text for indicating cookie banner handling is on this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_on_for_site">Уключана для гэтага сайта</string>
-  <!-- Text for indicating that a request for unsupported site was sent to Nimbus (it's a Mozilla library for experiments), this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site_request_submitted_2">Запыт на падтрымку адпраўлены</string>
-  <!-- Text for indicating cookie banner handling is currently not supported for this site, this is shown as part of the protections panel with the tracking protection toggle -->
-  <string name="reduce_cookie_banner_unsupported_site">Сайт зараз не падтрымліваецца</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is on this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_on_for_site_1">Уключыць блакіроўшчык банераў кукі для %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner handling is off this site, this is shown as part of the cookie banner panel in the toolbar. %1$s is a shortened URL of the current site. -->
-  <string name="reduce_cookie_banner_details_panel_title_off_for_site_1">Выключыць блакіроўшчык банераў кукі для %1$s?</string>
-  <!-- Title text for a detail explanation indicating cookie banner reducer didn't work for the current site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_title_unsupported_site_request_2">%1$s не можа аўтаматычна адхіляць запыты кукаў на гэтым сайце. Вы можаце адправіць запыт на падтрымку гэтага сайта ў будучыні.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is off for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_off_for_site_1">Выключыць, і %1$s выдаліць файлы кукі і перазагрузіць гэты сайт. Гэта можа прывесці да выхаду з уліковага запісу або ачышчэння кошыка.</string>
-  <!-- Long text for a detail explanation indicating what will happen if cookie banner handling is on for a site, this is shown as part of the cookie banner panel in the toolbar. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="reduce_cookie_banner_details_panel_description_on_for_site_3">Уключыце, і %1$s паспрабуе аўтаматычна адхіляць банеры кукі на гэтым сайце.</string>
-  <!-- Title for the cookie banner re-engagement CFR, the placeholder is replaced with app name. %1$s is the name of the app (for example "Firefox"). -->
-  <string name="cookie_banner_cfr_title">%1$s толькі што адмовіўся ад кукі для вас</string>
-  <!-- Message for the cookie banner re-engagement CFR -->
-  <string name="cookie_banner_cfr_message">Менш адцягнення ўвагі, менш кукі, якія асочваюць вас на гэтым сайце.</string>
   <!-- Description of the preference to enable "HTTPS-Only" mode. -->
   <string name="preferences_https_only_summary">Аўтаматычна спрабуе падключацца да сайтаў з выкарыстаннем пратаколу шыфравання HTTPS для павышэння бяспекі.</string>
   <!-- Summary of https only preference if https only is set to off -->
@@ -795,7 +657,7 @@
   <!-- Preference for accessibility -->
   <string name="preferences_accessibility">Даступнасць</string>
   <!-- Preference to override the Mozilla account server -->
-  <string name="preferences_override_account_server">Уласны сервер уліковых запісаў Mozilla</string>
+  <string name="preferences_override_account_server" tools:ignore="BrandUsage">Уласны сервер уліковых запісаў Mozilla</string>
   <!-- Preference to override the Sync token server -->
   <string name="preferences_override_sync_tokenserver">Уласны сервер сінхранізацыі</string>
   <!-- Preference category for account information -->
@@ -813,7 +675,7 @@
   <!-- Preference for settings related to visual options -->
   <string name="preferences_customize">Уладкаванне</string>
   <!-- Preference shown instead of account display name while account profile information isn't available yet. -->
-  <string name="preferences_account_default_name_2">Уліковы запіс Mozilla</string>
+  <string name="preferences_account_default_name_2" tools:ignore="BrandUsage">Уліковы запіс Mozilla</string>
   <!-- Preference text for account title when there was an error syncing FxA -->
   <string name="preferences_account_sync_error">Падключыцеся, каб аднавіць сінхранізацыю</string>
   <!-- Preference for language -->
@@ -932,6 +794,12 @@
   <string name="customize_addon_collection_hint">Назва калекцыі</string>
   <!-- Hint displayed on input field for custom collection user ID -->
   <string name="customize_addon_collection_user_hint">Уладальнік калекцыі (ID карыстальніка)</string>
+  <!--
+    Customize Home
+
+    Title for the customize home screen section with privacy report.
+  -->
+  <string name="customize_toggle_privacy_report">Справаздача аб прыватнасці</string>
   <!-- Header text for jumping back into the recent tab in customize the home screen -->
   <string name="customize_toggle_jump_back_in">Пераход назад да</string>
   <!-- Title for the customize home screen section with bookmarks. -->
@@ -947,8 +815,14 @@
   <string name="customize_toggle_pocket_sponsored">Артыкулы ад спонсараў</string>
   <!-- Title for the opening wallpaper settings screen -->
   <string name="customize_wallpapers">Шпалеры</string>
+  <!-- Label for the menu item that opens the customize homepage settings screen. -->
+  <string name="browser_menu_customize_homepage">Уладкаваць хатнюю старонку</string>
+  <!-- Label for the menu item that opens the wallpaper settings screen. -->
+  <string name="browser_menu_change_wallpaper">Змяніць шпалеры</string>
   <!-- Title for the customize home screen section with sponsored shortcuts. -->
   <string name="customize_toggle_contile">Спонсарскія цэтлікі</string>
+  <!-- Title for the customize home screen section that toggles the Homepage sports widget. -->
+  <string name="customize_toggle_world_cup">Кубак свету</string>
   <!--
     Wallpapers
 
@@ -1145,7 +1019,7 @@
   <string name="preference_usage_data_learn_more_2">Даведацца больш пра тэхнічныя дадзеныя</string>
   <!-- Preference switch for daily usage ping data collection -->
   <string name="preferences_daily_usage_ping_title">Пінг штодзённага выкарыстання</string>
-  <string name="preferences_daily_usage_ping_description">Гэта дапамагае Mozilla ацэньваць актыўных карыстальнікаў.</string>
+  <string name="preferences_daily_usage_ping_description" tools:ignore="BrandUsage">Гэта дапамагае Mozilla ацэньваць актыўных карыстальнікаў.</string>
   <string name="preferences_daily_usage_ping_learn_more">Падрабязней пра пінг штодзённага выкарыстання</string>
   <!-- Title for the crash reporting option in the privacy preferences dialog shown during onboarding. -->
   <string name="crash_reporting_snack_bar_message">Справаздача адпраўлена</string>
@@ -1166,7 +1040,7 @@
   <!-- Title for studies preferences -->
   <string name="preference_experiments_2">Даследаванні</string>
   <!-- Summary for studies preferences -->
-  <string name="preference_experiments_summary_2">Дазволіць Mozilla ўсталёўваць і запускаць даследаванні</string>
+  <string name="preference_experiments_summary_2" tools:ignore="BrandUsage">Дазволіць Mozilla ўсталёўваць і запускаць даследаванні</string>
   <!--
     Turn On Sync Preferences
 
@@ -1253,8 +1127,6 @@
   <string name="library_desktop_bookmarks_unfiled">Іншыя закладкі</string>
   <!-- Option in Library to open History page -->
   <string name="library_history">Гісторыя</string>
-  <!-- Option in Library to open a new tab -->
-  <string name="library_new_tab">Новая картка</string>
   <!-- Settings Page Title -->
   <string name="settings_title">Налады</string>
   <!-- Content description (not visible, for screen readers etc.): "Close button for library settings" -->
@@ -1388,6 +1260,8 @@
   <string name="tab_tray_menu_tab_settings">Налады картак</string>
   <!-- Text shown in the menu for closing all tabs -->
   <string name="tab_tray_menu_item_close">Закрыць усе карткі</string>
+  <!-- Text shown as the title of the Close all tabs confirmation dialog in Tab Manager -->
+  <string name="tab_manager_close_all_tabs_dialog_title">Закрыць усе карткі?</string>
   <!-- Text shown on the confirm button in the Close all tabs confirmation dialog -->
   <string name="tab_manager_close_all_tabs_dialog_confirm">Закрыць карткі</string>
   <!-- Text shown on the cancel button in the Close all tabs confirmation dialog -->
@@ -1433,8 +1307,36 @@
   <string name="create_tab_group_save_button">Захаваць</string>
   <!-- Label for the tab group name field in the bottom sheet to create or edit a tab group. -->
   <string name="create_tab_group_name_label">Назва</string>
+  <!-- Label for adding to a new tab group. -->
+  <string name="add_to_new_tab_group_title">Новая група картак</string>
+  <!-- Text shown on the confirm button in the Delete tab group confirmation dialog. -->
+  <string name="delete_tab_group_confirmation_dialog_confirm">Выдаліць групу</string>
   <!-- Text shown on the cancel button in the Delete tab group confirmation dialog. -->
   <string name="delete_tab_group_confirmation_dialog_cancel">Скасаваць</string>
+  <!-- Text shown on the confirm button in the Close last tab and delete tab group confirmation dialog. -->
+  <string name="close_tab_and_delete_group_confirmation_dialog_confirm">Выдаліць групу</string>
+  <!-- Text shown on the cancel button in the Close last tab and delete tab group confirmation dialog. -->
+  <string name="close_tab_and_delete_group_confirmation_dialog_cancel">Скасаваць</string>
+  <!--
+    Color labels for tab groups, used for accessibility and selection UI.
+
+    Tab group color: Yellow
+  -->
+  <string name="tab_group_color_yellow">Жоўты</string>
+  <!-- Tab group color: Orange -->
+  <string name="tab_group_color_orange">Аранжавы</string>
+  <!-- Tab group color: Red -->
+  <string name="tab_group_color_red">Чырвоны</string>
+  <!-- Tab group color: Pink -->
+  <string name="tab_group_color_pink">Ружовы</string>
+  <!-- Tab group color: Purple -->
+  <string name="tab_group_color_purple">Фіялетавы</string>
+  <!-- Tab group color: Blue -->
+  <string name="tab_group_color_blue">Блакітны</string>
+  <!-- Tab group color: Green -->
+  <string name="tab_group_color_green">Зялёны</string>
+  <!-- Tab group color: Grey -->
+  <string name="tab_group_color_grey">Шэры</string>
   <!--
     History
 
@@ -1443,8 +1345,6 @@
   <string name="history_search_1">Увядзіце пошукавыя запыты</string>
   <!-- Text for the button to clear all history -->
   <string name="history_delete_all">Выдаліць гісторыю</string>
-  <!-- Text for the snackbar to confirm that multiple browsing history items has been deleted -->
-  <string name="history_delete_multiple_items_snackbar">Гісторыя выдалена</string>
   <!-- Text for the snackbar to confirm that a single browsing history item has been deleted. %1$s is the shortened URL of the deleted history item. -->
   <string name="history_delete_single_item_snackbar">%1$s выдалены</string>
   <!-- Context description text for the button to delete a single history item -->
@@ -1543,6 +1443,7 @@
   <string name="download_rename_dialog_cancel_button">Скасаваць</string>
   <string name="download_rename_error_dismiss_button">OK</string>
   <string name="change_file_extension_cancel_button">Скасаваць</string>
+  <string name="change_file_extension_confirm_button">Так, змяніць</string>
   <!-- Text for the header of in progress downloads -->
   <string name="download_header_in_progress">У працэсе</string>
   <!--
@@ -1607,30 +1508,20 @@
   <string name="webcompat_reporter_label_url">URL</string>
   <!-- The error message of the URL text field when an invalid URL has been entered. -->
   <string name="webcompat_reporter_url_error_invalid">Калі ласка, увядзіце сапраўдны URL</string>
-  <!-- The label/title of a field in the Web Compat Reporter feature for explaining a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_label_whats_broken_2">Што пашкоджана?</string>
-  <!-- The placeholder text for the dropdown where a user selects a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_2">Выберыце прычыну</string>
-  <!-- The error message of the dropdown, prompting the user to select a high-level reason why the site is broken. -->
-  <string name="webcompat_reporter_choose_reason_error">Калі ласка, выберыце прычыну</string>
-  <!-- The label/title of an optional field in the Web Compat Reporter feature for adding additional information. -->
-  <string name="webcompat_reporter_label_description">Апішыце праблему (неабавязкова)</string>
   <!-- The button text for the cancel button to leave the Web Compat Reporter feature. -->
   <string name="webcompat_reporter_cancel">Скасаваць</string>
-  <!-- The button text for the send button to submit the provided form data. -->
-  <string name="webcompat_reporter_send">Даслаць</string>
   <!-- Text for a snackbar to confirm the successful submission of a WebCompat report. -->
   <string name="webcompat_reporter_success_snackbar_text_2">Справаздача адпраўлена</string>
-  <!-- Label of the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. -->
-  <string name="webcompat_reporter_etp_checkbox_text">Адпраўляць URL-адрасы, заблакаваныя аховай ад сачэння</string>
-  <!-- Description text for the checkbox on the “Report broken site” screen for sending URLS blocked by Enhanced Tracking Protection. It informs the user when checked, the report will include the list of URLs that were blocked by Enhanced Tracking Protection on the current page. -->
-  <string name="webcompat_reporter_etp_checkbox_description">Узмоцненая ахова ад сачэння можа блакаваць трэкеры і\u00a0скрыпты, неабходныя для правільнай працы некаторых сайтаў.</string>
   <!-- The button text for the preview report button to view a preview of the report. -->
   <string name="webcompat_reporter_preview_report">Перадпаказ справаздачы</string>
   <!-- The title shown at the top of the WebCompat Report preview panel. This appears after the user taps the “Preview” button before sending a report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_header">Папярэдні прагляд справаздачы</string>
   <!-- Label for the “Send” button shown in the WebCompat Report preview panel, which the user taps to submit the report. -->
   <string name="webcompat_reporter_preview_bottom_sheet_send">Даслаць</string>
+  <!-- Text shown on the save button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_save">Захаваць</string>
+  <!-- Text shown on the dismiss button for the Edit URL confirmation dialog in the WebCompatReporter. -->
+  <string name="webcompat_reporter_edit_url_dialog_dismiss">Адхіліць</string>
   <!--
     These reason strings are dropdown options on a WebCompat reporter form, indicating what is broken on the site.
 
@@ -1647,8 +1538,6 @@
   <string name="webcompat_reporter_reason_account2">Не магу ўвайсці або зарэгістравацца</string>
   <!-- Broken site reason text for site asked to turn off ad blocker -->
   <string name="webcompat_reporter_reason_turn_off_adblocker">Сайт запытаў адключыць блакаванне рэкламы</string>
-  <!-- Broken site reason text for browser isn’t supported or blocked -->
-  <string name="webcompat_reporter_reason_notsupported">Браўзер не падтрымліваецца або заблакаваны</string>
   <!-- Broken site reason text for something else -->
   <string name="webcompat_reporter_reason_other">Нешта іншае</string>
   <!--
@@ -1658,7 +1547,7 @@
   -->
   <string name="tab_crash_title_2">Выбачайце. %1$s не можа загрузіць гэтую старонку.</string>
   <!-- Send crash report checkbox text on the tab crash page -->
-  <string name="tab_crash_send_report">Адправіць справаздачу аб краху ў Mozilla</string>
+  <string name="tab_crash_send_report" tools:ignore="BrandUsage">Адправіць справаздачу аб краху ў Mozilla</string>
   <!-- Close tab button text on the tab crash page -->
   <string name="tab_crash_close">Закрыць картку</string>
   <!-- Restore tab button text on the tab crash page -->
@@ -1722,6 +1611,8 @@
   <string name="bookmark_sort_menu_a_to_z">Сартаваць ад А да Я</string>
   <!-- Label for button to sort bookmarks in reverse alphabetical order in the bookmark sorting overflow menu. -->
   <string name="bookmark_sort_menu_z_to_a">Сартаваць ад Я да А</string>
+  <!-- Default name for the folder created when importing bookmarks from a file. -->
+  <string name="bookmark_import_destination_default_name">Імпартаваныя закладкі</string>
   <!--
     Bookmark multi select title in app bar
     %1$d is the number of bookmarks selected
@@ -1733,10 +1624,8 @@
   <string name="edit_bookmark_folder_fragment_title">Рэдагаваць папку</string>
   <!-- Bookmark URL editing field label -->
   <string name="bookmark_url_label">URL</string>
-  <!-- Bookmark FOLDER editing field label -->
-  <string name="bookmark_folder_label">ПАПКА</string>
-  <!-- Bookmark NAME editing field label -->
-  <string name="bookmark_name_label">НАЗВА</string>
+  <!-- Text indicating which folder a bookmark or folder will be saved in -->
+  <string name="bookmark_save_in_label">Захаваць у</string>
   <!-- Label for a text input field for a bookmark or folder name -->
   <string name="bookmark_name_label_normal_case">Назва</string>
   <!-- Bookmark select folder screen title -->
@@ -1760,26 +1649,28 @@
   <string name="bookmark_delete_folder_content_description">Выдаліць папку</string>
   <!-- Content description for bookmark search floating action button -->
   <string name="bookmark_search_button_content_description">Шукаць у закладках</string>
+  <!-- Content description for select folder screen search action button ("search" is a verb) -->
+  <string name="select_bookmark_search_button_content_description">Шукаць папкі</string>
   <!-- Content description for the "close" button in bookmarks screen. -->
   <string name="bookmark_close_button_content_description">Закрыць закладкі</string>
+  <!-- Content description for the Import bookmarks button in bookmarks screen. -->
+  <string name="bookmark_import_bookmarks_button_content_description">Імпартаваць з файла</string>
   <!-- Title for the bookmark list empty state -->
   <string name="bookmark_empty_list_title">Пакуль няма закладак</string>
   <!-- Text for the button to navigate to sync authentication -->
   <string name="bookmark_empty_list_guest_cta">Увайсці ў сінхранізацыю</string>
+  <!-- Description for the bookmark list empty state when you're in an empty folder. -->
+  <string name="bookmark_empty_list_folder_description">Дадайце закладкі падчас прагляду, каб потым хутка знаходзіць улюбёныя сайты.</string>
   <!-- Description for the add new folder button when selecting a folder. -->
   <string name="bookmark_select_folder_new_folder_button_title">Новая папка</string>
+  <!-- Text for bookmark search page when there are no results. -->
+  <string name="bookmark_no_search_results">Супадзенні не знойдзены.</string>
   <!--
     Site Permissions
 
     Button label that take the user to the Android App setting
   -->
   <string name="phone_feature_go_to_settings">Перайсці ў налады</string>
-  <!--
-    Content description (not visible, for screen readers etc.): Quick settings sheet
-    to give users access to site specific information / settings. For example:
-    Secure settings status and a button to modify site permissions
-  -->
-  <string name="quick_settings_sheet">Панэль хуткіх налад</string>
   <!-- Label that indicates that this option it the recommended one -->
   <string name="phone_feature_recommended">Рэкамендуецца</string>
   <!-- Button label for clearing all the information of site permissions -->
@@ -1864,6 +1755,8 @@
   <string name="preferences_category_permissions">Дазволы</string>
   <!-- Category header of a preference that allows a user to alter settings related to web content. -->
   <string name="preferences_category_content">Змесціва</string>
+  <!-- Preference for altering the default browsing mode. When enabled, the desktop site will always be requested. -->
+  <string name="preference_feature_desktop_mode_default">Заўсёды запытваць поўную версію сайта</string>
   <!--
     Collections
 
@@ -1872,8 +1765,6 @@
   <string name="collections_header">Калекцыі</string>
   <!-- Content description (not visible, for screen readers etc.): Opens the collection menu when pressed -->
   <string name="collection_menu_button_content_description">Меню калекцыі</string>
-  <!-- Label to describe what collections are to a new user without any collections -->
-  <string name="no_collections_description2">Збірайце усё важнае для вас.\nГрупуйце падобныя пошукавыя запыты, сайты і карткі, каб потым хутчэй імі карыстацца.</string>
   <!-- Title for the "select tabs" step of the collection creator -->
   <string name="create_collection_select_tabs">Выберыце карткі</string>
   <!-- Title for the "select collection" step of the collection creator -->
@@ -1937,6 +1828,10 @@
   <string name="menu_print">Друкаваць</string>
   <!-- Sub-header in the dialog to share a link to another sync device -->
   <string name="share_device_subheader">Даслаць на прыладу</string>
+  <!-- Text for the QR code action in the native share sheet -->
+  <string name="share_qr_code">QR-код</string>
+  <!-- Title shown in the QR code display screen -->
+  <string name="qr_code_display_title">QR-код</string>
   <!-- Content description for the close button in the QR code display screen -->
   <string name="qr_code_display_close">Закрыць</string>
   <!-- Label for the download button on the QR code display screen -->
@@ -1973,6 +1868,8 @@
   <string name="sync_add_new_device_learn_button">Даведацца больш пра адпраўку картак…</string>
   <!-- Text for the button to connect another device -->
   <string name="sync_add_new_device_connect_button">Злучыць іншую прыладу…</string>
+  <!-- A short message template for the shared link with a footer. %1$s is the shared link, %2$s is the app name (e.g. Firefox) and %3$s is a download link for the app. -->
+  <string name="sent_from_firefox_template_short" tools:ignore="UnusedResources">%1$s Адпраўлена з %2$s 🦊 %3$s</string>
   <!--
     Notifications
 
@@ -2112,6 +2009,8 @@
     text to display in the snackbar once account is signed-in
   -->
   <string name="onboarding_firefox_account_sync_is_on">Сінхранізацыя ўключана</string>
+  <!-- Text shown in snackbar when one tab has been sent to device -->
+  <string name="sync_sent_tab_snackbar_2">Картка адпраўлена</string>
   <!-- Text shown in snackbar when sharing tabs failed -->
   <string name="sync_sent_tab_error_snackbar">Немагчыма адправіць</string>
   <!-- Text shown in snackbar for the "retry" action that the user has after sharing tabs failed -->
@@ -2139,10 +2038,8 @@
   <!--
     Enhanced Tracking Protection
 
-    Link displayed in enhanced tracking protection panel to access tracking protection settings
+    Preference title for enhanced tracking protection settings
   -->
-  <string name="etp_settings">Налады аховы</string>
-  <!-- Preference title for enhanced tracking protection settings -->
   <string name="preference_enhanced_tracking_protection">Узмоцненая ахова ад сачэння</string>
   <!-- Preference summary for enhanced tracking protection settings on/off switch -->
   <string name="preference_enhanced_tracking_protection_summary">Цяпер у нас ёсць поўная ахова кукаў, наш самы магутны бар\'ер супраць міжсайтавых трэкераў.</string>
@@ -2150,6 +2047,18 @@
   <string name="preference_enhanced_tracking_protection_explanation_2">%s абараняе вас ад многіх найбольш распаўсюджаных трэкераў, якія сочаць за тым, што вы робіце ў інтэрнэце.</string>
   <!-- Text displayed that links to website about enhanced tracking protection -->
   <string name="preference_enhanced_tracking_protection_explanation_learn_more">Даведацца больш</string>
+  <plurals name="trackers_blocked_count_2">
+    <!--
+      Trackers blocked card on homepage
+
+      Text shown on the trackers blocked card. %d is the number of trackers blocked.
+    -->
+    <item quantity="one">%d трэкер заблакаваны</item>
+    <item quantity="few">%d трэкеры заблакавана</item>
+    <item quantity="other">%d трэкераў заблакавана</item>
+  </plurals>
+  <!-- Text shown on the trackers blocked card when no trackers have been blocked yet -->
+  <string name="trackers_blocked_empty">Вы абаронены</string>
   <!-- Preference for enhanced tracking protection for the standard protection settings -->
   <string name="preference_enhanced_tracking_protection_standard_default_1">Стандартная (прадвызначана)</string>
   <!-- Preference description for enhanced tracking protection for the standard protection settings -->
@@ -2160,6 +2069,10 @@
   <string name="preference_enhanced_tracking_protection_strict">Строгая</string>
   <!-- Preference description for enhanced tracking protection for the strict protection settings -->
   <string name="preference_enhanced_tracking_protection_strict_description_4">Мацнейшая ахова ад сачэння і лепшая хуткадзейнасць, але некаторыя сайты могуць не працаваць належным чынам.</string>
+  <!-- Preference label for the enhanced tracking protection option to fix major site issues caused by tracker blocking -->
+  <string name="preference_enhanced_tracking_protection_allow_list_baseline_2">Выпраўляць сур\'ёзныя праблемы з сайтамі (рэкамендуецца)</string>
+  <!-- Preference label for the enhanced tracking protection option to fix minor site issues caused by tracker blocking -->
+  <string name="preference_enhanced_tracking_protection_allow_list_convenience_label">Выпраўленне нязначных праблем з сайтамі</string>
   <!-- Learn more text for the enhanced tracking protection options to fix issues caused by tracker blocking -->
   <string name="preference_enhanced_tracking_protection_allow_list_learn_more">Падрабязней</string>
   <!--
@@ -2202,12 +2115,8 @@
   <string name="preference_enhanced_tracking_protection_custom_cryptominers">Майнеры крыптавалют</string>
   <!-- Preference for enhanced tracking protection for the custom protection settings -->
   <string name="preference_enhanced_tracking_protection_custom_known_fingerprinters">Вядомыя збіральнікі лічбавых адбіткаў</string>
-  <!-- Button label for navigating to the Enhanced Tracking Protection details -->
-  <string name="enhanced_tracking_protection_details">Падрабязнасці</string>
   <!-- Header for categories that are being being blocked by current Enhanced Tracking Protection settings -->
   <string name="enhanced_tracking_protection_blocked">Заблакаваны</string>
-  <!-- Header for categories that are being not being blocked by current Enhanced Tracking Protection settings -->
-  <string name="enhanced_tracking_protection_allowed">Дазволены</string>
   <!-- Category of trackers (social media trackers) that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_social_media_trackers_title">Трэкеры сацыяльных сетак</string>
   <!-- Description of social media trackers that can be blocked by Enhanced Tracking Protection -->
@@ -2230,10 +2139,6 @@
   <string name="etp_tracking_content_title">Змест з элементамі сачэння</string>
   <!-- Description of tracking content that can be blocked by Enhanced Tracking Protection -->
   <string name="etp_tracking_content_description">Спыняе загрузку вонкавай рэкламы, відэа і іншага змесціва, якое змяшчае код асочвання. Можа адбіцца на некаторых функцыях вэб-сайта.</string>
-  <!-- Enhanced Tracking Protection message that protection is currently on for this site -->
-  <string name="etp_panel_on">Ахова ўключана на гэтым сайце</string>
-  <!-- Enhanced Tracking Protection message that protection is currently off for this site -->
-  <string name="etp_panel_off">Ахова для гэтага сайта ВЫКЛЮЧАНА</string>
   <!-- Header for exceptions list for which sites enhanced tracking protection is always off -->
   <string name="enhanced_tracking_protection_exceptions">Узмоцненая ахова ад сачэння выключана на гэтых сайтах</string>
   <!--
@@ -2254,13 +2159,10 @@
   <string name="etp_redirect_trackers_description">Ачышчае кукі, усталяваныя шляхам перанакіравання на вядомыя асочвальныя вэб-сайты.</string>
   <!-- Preference for fingerprinting protection for the custom protection settings -->
   <string name="etp_suspected_fingerprinters_title">Падазраваныя збіральнікі лічбавых адбіткаў</string>
-  <!--
-    Description of the SmartBlock Enhanced Tracking Protection feature. The * symbol is intentionally hardcoded here,
-    as we use it on the UI to indicate which trackers have been partially unblocked.
-  -->
-  <string name="preference_etp_smartblock_description">Некаторыя пазначаныя ніжэй трэкеры былі часткова разблакаваны на гэтай старонцы, таму што вы ўзаемадзейнічалі з імі *.</string>
-  <!-- Text displayed that links to website about enhanced tracking protection SmartBlock -->
-  <string name="preference_etp_smartblock_learn_more">Даведацца больш</string>
+  <!-- Description of fingerprinters that can be blocked by fingerprinting protection -->
+  <string name="etp_suspected_fingerprinters_description">Уключае абарону ад збору лічбавых адбіткаў, каб спыніць падазроных збіральнікаў лічбавых адбіткаў.</string>
+  <!-- Category of trackers (fingerprinters) that can be blocked by Enhanced Tracking Protection -->
+  <string name="etp_known_fingerprinters_title">Вядомыя збіральнікі лічбавых адбіткаў</string>
   <!--
     Content description (not visible, for screen readers etc.):
     Enhanced tracking protection exception preference icon for ETP settings.
@@ -2284,6 +2186,8 @@
   <string name="preference_doh_default_protection">Прадвызначаная ахова</string>
   <!-- Bullet point 2 for "Default Protection" information page under "DNS over HTTPS" -->
   <string name="preference_doh_default_protection_info_2">Калі ёсць праблема з бяспечным пастаўшчыком DNS, выкарыстоўваць стандартны правайдар DNS</string>
+  <!-- Bullet point 4 for "Default Protection" information page under "DNS over HTTPS" -->
+  <string name="preference_doh_default_protection_info_4">Адключаць, калі актыўныя палітыкі VPN, бацькоўскі кантроль або карпаратыўныя палітыкі</string>
   <!-- Bullet point 2 for "Increased Protection" information page under "DNS over HTTPS" -->
   <string name="preference_doh_increased_protection_info_2">Выкарыстоўваць стандартны правайдар DNS толькі калі ёсць праблемы з\u00a0бяспечным DNS</string>
   <!-- Bullet point 3 for "Max Protection" information page under "DNS over HTTPS" -->
@@ -2456,6 +2360,45 @@
   <string name="saved_logins_sort_strategy_last_used">Апошняе выкарыстанне</string>
   <!-- Content description (not visible, for screen readers etc.) -->
   <string name="saved_logins_menu_dropdown_chevron_icon_content_description_2">Меню сартавання пароляў</string>
+  <!-- Text that links to additional information about the Email Masks -->
+  <string name="preferences_email_masks_suggest_learn_more">Падрабязней</string>
+  <!-- Label for the BETA badge for the browser VPN entry in the settings list -->
+  <string name="preferences_ip_protection_beta_badge_label">БЭТА</string>
+  <!-- Label for the browser VPN toggle on the settings screen -->
+  <string name="ip_protection_toggle_label">VPN</string>
+  <!-- Headline for the browser VPN promo card. %s is the name of the app (for example "Firefox"). -->
+  <string name="ip_protection_promo_headline">Убудаваны VPN %s</string>
+  <!-- Link text that opens additional information about the browser VPN -->
+  <string name="ip_protection_learn_more">Падрабязней</string>
+  <!-- Label for the monthly data allowance section on the browser VPN settings screen -->
+  <string name="ip_protection_data_limit_label">Штомесячны ліміт дадзеных</string>
+  <!--
+    Data usage shown on the browser VPN settings screen.
+    %1$.1f is the data remaining in GB (for example "8.3").
+    %2$.1f is the total monthly allowance in GB (for example "50.0").
+  -->
+  <string name="ip_protection_data_limit_value">Засталося %1$.1f ГБ з %2$.1f ГБ</string>
+  <!-- Header for the browser VPN `location` section -->
+  <string name="ip_protection_location_section">Месцазнаходжанне</string>
+  <!-- Badge label shown in the menu item when the browser VPN is active -->
+  <string name="preferences_ip_protection_on">Укл.</string>
+  <!-- Badge label shown in the menu item when the browser VPN is off -->
+  <string name="preferences_ip_protection_off">Выкл.</string>
+  <!-- Badge label shown in the menu item when the browser VPN has an error -->
+  <string name="ip_protection_menu_error">Памылка</string>
+  <!-- Badge label shown in the menu item when the user is eligible to use the browser VPN but should authenticate or authorize it first. -->
+  <string name="ip_protection_menu_auth_required">Паспрабаваць</string>
+  <!--
+    Subtitle shown below the VPN label in menus when the monthly data allowance is exhausted.
+    %1$d is the total monthly allowance in GB (for example "50").
+  -->
+  <string name="ip_protection_menu_limit_reached">Дасягнуты ліміт %1$d ГБ</string>
+  <!-- Label shown next to the browser protection icon in the address bar when the browser VPN is active -->
+  <string name="ip_protection_toolbar_pill_label">VPN уключаны</string>
+  <!-- Label for the dismiss button on the onboarding bottom sheet. -->
+  <string name="ip_protection_onboarding_not_now_button">Не зараз</string>
+  <!-- Snackbar (in-app pop-up notification) action button text that takes the user to the VPN settings screen. -->
+  <string name="ip_protection_data_limit_reached_snackbar_action">Налады</string>
   <!--
     Autofill
 
@@ -2600,8 +2543,6 @@
   <string name="addresses_save_button">Захаваць</string>
   <!-- The text for the "Cancel" button for cancelling adding, updating or deleting an address -->
   <string name="addresses_cancel_button">Скасаваць</string>
-  <!-- The text for the "Delete address" button for deleting an address -->
-  <string name="addressess_delete_address_button">Выдаліць адрас</string>
   <!-- The title for the "Delete address" confirmation dialog -->
   <string name="addressess_confirm_dialog_message_2">Выдаліць гэты адрас?</string>
   <!-- The text for the positive button on "Delete address" dialog -->
@@ -2656,16 +2597,8 @@
   <string name="phone_feature_blocked_step_permissions"><![CDATA[2. Націсніце <b>Дазволы</b>]]></string>
   <!-- Third step for the allowing a permission (%1$s is the permission name, for example "Camera"). -->
   <string name="phone_feature_blocked_step_feature"><![CDATA[3. Пераключыце <b>%1$s</b> на УКЛ]]></string>
-  <!-- Label that indicates a site is using a secure connection -->
-  <string name="quick_settings_sheet_secure_connection_2">Злучэнне абаронена</string>
-  <!-- Label that indicates a site is using a insecure connection -->
-  <string name="quick_settings_sheet_insecure_connection_2">Злучэнне не абаронена</string>
-  <!-- Label that indicates a site is displaying a local document -->
-  <string name="quick_settings_sheet_local_page">Гэтая старонка захоўваецца на вашай прыладзе.</string>
   <!-- Label to clear site data -->
   <string name="clear_site_data">Выдаліць кукі і дадзеныя сайтаў</string>
-  <!-- Confirmation message for a dialog confirming if the user wants to delete all data for current site. %s is the domain of the site. -->
-  <string name="confirm_clear_site_data"><![CDATA[Ці ўпэўнены, што хочаце ачысціць усе кукі і дадзеныя сайта <b>%s</b>?]]></string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for all sites -->
   <string name="confirm_clear_permissions_on_all_sites">Ці ўпэўнены Вы, што хочаце выдаліць усе дазволы на ўсіх сайтах?</string>
   <!-- Confirmation message for a dialog confirming if the user wants to delete all the permissions for a site -->
@@ -2678,11 +2611,6 @@
   <string name="browser_menu_add_to_shortcuts">Дадаць у цэтлікі</string>
   <!-- Browser menu button that removes a shortcut from the home fragment -->
   <string name="browser_menu_remove_from_shortcuts">Выдаліць з цэтлікаў</string>
-  <!--
-    text shown before the issuer name to indicate who its verified by, %1$s is the name of
-    the certificate authority that verified the ticket
-  -->
-  <string name="certificate_info_verified_by">Пацверджана: %1$s</string>
   <!-- Message in delete confirmation dialog for password -->
   <string name="login_deletion_confirmation_2">Вы ўпэўнены, што хочаце выдаліць гэты пароль?</string>
   <!-- Positive action of a dialog asking to delete -->
@@ -2820,12 +2748,12 @@
   <string name="default_browser_experiment_card_title">Змяніць прадвызначаны браўзер</string>
   <!-- Default browser card text -->
   <string name="default_browser_experiment_card_text" tools:ignore="BrandUsage">Наладзьце аўтаматычнае адкрыццё спасылак з сайтаў, пошты і паведамленняў у Firefox.</string>
-  <!-- Content description for close button in collection placeholder. -->
-  <string name="remove_home_collection_placeholder_content_description">Выдаліць</string>
   <!-- Content description radio buttons with a link to more information -->
   <string name="radio_preference_info_content_description">Пстрыкніце, каб атрымаць падрабязнасці</string>
   <!-- Content description for the action bar "up" button -->
   <string name="action_bar_up_description">Перайсці ўверх</string>
+  <!-- Header text for the Stories screen. -->
+  <string name="stories_screen_text_news">Навіны</string>
   <!-- Text indicating that the Pocket story that also displays this text is a sponsored story by other 3rd party entity. -->
   <string name="pocket_stories_sponsor_indication">Спонсарскі</string>
   <!-- Snackbar message for enrolling in a Nimbus experiment from the secret settings when Studies preference is Off. -->
@@ -2838,20 +2766,10 @@
     Action label for elements that can be collapsed if interacting with them. Talkback will append this to say "Double tap to collapse".
   -->
   <string name="a11y_action_label_collapse">згарнуць</string>
-  <!-- Current state for elements that can be collapsed if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_collapsed">згорнуты</string>
   <!-- Action label for elements that can be expanded if interacting with them. Talkback will append this to say "Double tap to expand". -->
   <string name="a11y_action_label_expand">разгарнуць</string>
-  <!-- Current state for elements that can be expanded if interacting with them. Talkback will dictate this after a state change. -->
-  <string name="a11y_state_label_expanded">разгорнуты</string>
   <!-- Action label for links to a website containing documentation about a wallpaper collection. Talkback will append this to say "Double tap to open link to learn more about this collection". -->
   <string name="a11y_action_label_wallpaper_collection_learn_more">адкрыйце спасылку, каб даведацца больш аб гэтай калекцыі</string>
-  <!-- Content description for headings announced by accessibility service. %s is the text of the heading. Talkback will announce the text and then speak the word "Heading" indicating to the user that this text is a heading for a section. -->
-  <string name="a11y_heading">%s, загаловак</string>
-  <!-- Title for dialog displayed when trying to access links present in a text. -->
-  <string name="a11y_links_title">Спасылкі</string>
-  <!-- Additional content description for text bodies that contain urls. -->
-  <string name="a11y_links_available">Даступныя спасылкі</string>
   <!-- Translations feature -->
 
   <!--
@@ -2951,6 +2869,10 @@
   <string name="translation_settings_automatic_never_translate_sites">Ніколі не перакладаць гэтыя сайты</string>
   <!-- Button text for the button that will take the user to the download languages dialog. On the download languages dialog, the user can manage which languages they would like to download for translations. -->
   <string name="translation_settings_download_language">Сцягнуць мовы</string>
+  <!-- Toggle switch title and description for the translation settings control. -->
+  <string name="translation_settings_control_title">Пераклады</string>
+  <!-- Clickable text for the translations settings item that links to a website. -->
+  <string name="translation_settings_control_learn_more">Падрабязней</string>
   <!--
     Automatic translation preference screen
 
@@ -3079,6 +3001,14 @@
   <string name="protection_panel_banner_not_secure_description">Ваша злучэнне не бяспечнае.</string>
   <!-- Title text for the protection panel banner when tracking protection is disabled. -->
   <string name="protection_panel_banner_not_protected_title">Вы адключылі ахову</string>
+  <!-- Label text for the Enhanced Tracking Protection toggle. -->
+  <string name="protection_panel_etp_toggle_label">Узмоцненая ахова ад сачэння</string>
+  <!-- Toggle if Enhanced Tracking Protection is turned on -->
+  <string name="protection_panel_etp_toggle_on">Укл</string>
+  <!-- Toggle if Enhanced Tracking Protection is turned off -->
+  <string name="protection_panel_etp_toggle_off">Выкл</string>
+  <!-- Link text to navigate to privacy and security settings from the protection panel. -->
+  <string name="protection_panel_privacy_and_security_settings_2">Налады прыватнасці</string>
   <!-- Title text for the protection panel permissions section. -->
   <string name="protection_panel_permissions_title">Дазволы</string>
   <!-- Button text on the clear site data dialog to allow users to confirm they wish to clear the site data. -->
@@ -3153,6 +3083,8 @@
   <string name="likert_scale_option_5" tools:ignore="UnusedResources">Вельмі незадаволены</string>
   <!-- Option for likert scale -->
   <string name="likert_scale_option_6" tools:ignore="UnusedResources">Я ёй не карыстаюся</string>
+  <!-- Option for likert scale. Note: The word "Firefox" should NOT be translated. -->
+  <string name="likert_scale_option_7" tools:ignore="BrandUsage,UnusedResources">Я не карыстаюся пошукам у Firefox</string>
   <!-- Option for likert scale -->
   <string name="likert_scale_option_8" tools:ignore="UnusedResources">Я не выкарыстоўваю сінхранізацыю</string>
   <!-- Text shown in the survey title for homepage microsurvey. Note: The word "Firefox" should NOT be translated. -->
@@ -3201,6 +3133,8 @@
     The title of the glean debugging feature
   -->
   <string name="glean_debug_tools_title">Інструменты адладкі Glean</string>
+  <!-- The title of the button used to check for add-on updates. -->
+  <string name="addons_debug_tools_check_for_updates_button">Праверыць наяўнасць абнаўленняў</string>
   <!--
     Messages explaining how to exit fullscreen mode
 
@@ -3233,6 +3167,8 @@
   <string name="certificate_warning_homepage_card_hca1_title" tools:ignore="BrandUsage,UnusedResources">Абнавіце свой браўзер Firefox</string>
   <!-- Push notification title about old Firefox version. "Update" is a noun. -->
   <string name="certificate_warning_push_notification_update_recommended_title" tools:ignore="UnusedResources">Рэкамендуецца абнавіць</string>
+  <!-- Push notification title about old Firefox version. Note: The word "Firefox" should NOT be translated. -->
+  <string name="certificate_warning_push_notification_pnw2_title" tools:ignore="BrandUsage,UnusedResources">Вы карыстаецеся састарэлай версіяй Firefox</string>
   <!-- TextField Design System Component -->
 
   <!-- Title for the setup checklist feature when the state is 'completed' -->
@@ -3249,6 +3185,12 @@
   <string name="setup_checklist_task_toolbar_selection">Выберыце размяшчэнне панэлі інструментаў</string>
   <!-- The title of the explore extensions task for the setup checklist -->
   <string name="setup_checklist_task_explore_extensions">Знайсці пашырэнні</string>
+  <!--
+    Private browsing mode authentication screen
+
+    Label for the secondary action to exit private browsing mode
+  -->
+  <string name="pbm_authentication_leave_private_tabs">Пакінуць прыватныя карткі</string>
   <!-- Label for the primary action button to unlock private tabs -->
   <string name="pbm_authentication_unlock">Разблакаваць</string>
   <!-- Title text instructing the user to unlock private tabs -->
@@ -3291,10 +3233,111 @@
   <string name="terms_of_use_prompt_title_option_a" tools:ignore="UnusedResources">Умовы выкарыстання</string>
   <!-- Link text for terms_of_use_prompt_body_line_two_alternative that links to a site with more information about the Terms of Use -->
   <string name="terms_of_use_prompt_body_line_two_alternative_link" tools:ignore="UnusedResources">тут</string>
+  <!-- Section header for the North America region in the sports widget country selector. -->
+  <string name="sports_widget_confederation_north_america">Паўночная Амерыка</string>
+  <!-- Section header for the Europe confederation group in the sports widget country selector. -->
+  <string name="sports_widget_confederation_europe">Еўропа</string>
+  <!-- Section header for the Oceania confederation group in the sports widget country selector. -->
+  <string name="sports_widget_confederation_oceania">Акіянія</string>
+  <!-- Section header for the South America confederation group in the sports widget country selector. -->
+  <string name="sports_widget_confederation_south_america">Паўднёвая Амерыка</string>
+  <!-- Country name for England in the sports widget. England cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
+  <string name="sports_widget_country_england">Англія</string>
+  <!-- Country name for Scotland in the sports widget. Scotland cannot be resolved with the Android Intl APIs so it needs an explicit string. -->
+  <string name="sports_widget_country_scotland">Шатландыя</string>
+  <!-- Label shown on the sports widget scoreboard when a match is currently being played live. -->
+  <string name="sports_widget_match_live">У ЖЫВЫМ ЭФІРЫ</string>
+  <!-- Title shown on the sports widget champion scoreboard row celebrating the soccer tournament winner. -->
+  <string name="sports_widget_champions_title">Чэмпіёны свету 2026</string>
+  <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament runners-up. Runners-up means second place. -->
+  <string name="sports_widget_runner_up_title" tools:ignore="UnusedResources">Другое месца</string>
+  <!-- Title shown on the sports widget champion scoreboard celebrating the soccer tournament third place winners. -->
+  <string name="sports_widget_third_place_title">Трэцяе месца</string>
+  <!-- Round name shown on the sports widget for the Round of 32 stage in the soccer tournament. -->
+  <string name="sports_widget_round_of_32">1/32 фіналу</string>
+  <!-- Round name shown on the sports widget for the final stage in the soccer tournament. -->
+  <string name="sports_widget_final">Фінал</string>
+  <!-- Round name shown on the sports widget for the bronze final stage in the soccer tournament. -->
+  <string name="sports_widget_bronze_final">Гульня за трэцяе месца</string>
+  <!-- Sports widget action label to refresh match data after an error. -->
+  <string name="sports_widget_error_refresh">Абнавіць</string>
+  <!-- Sports widget group stage label for group A in the soccer tournament. -->
+  <string name="sports_widget_group_a">Група A</string>
+  <!-- Sports widget group stage label for group B in the soccer tournament. -->
+  <string name="sports_widget_group_b">Група B</string>
+  <!-- Sports widget group stage label for group C in the soccer tournament. -->
+  <string name="sports_widget_group_c">Група C</string>
+  <!-- Sports widget group stage label for group D in the soccer tournament. -->
+  <string name="sports_widget_group_d">Група D</string>
+  <!-- Sports widget group stage label for group E in the soccer tournament. -->
+  <string name="sports_widget_group_e">Група E</string>
+  <!-- Sports widget group stage label for group F in the soccer tournament. -->
+  <string name="sports_widget_group_f">Група F</string>
+  <!-- Sports widget group stage label for group G in the soccer tournament. -->
+  <string name="sports_widget_group_g">Група G</string>
+  <!-- Sports widget group stage label for group H in the soccer tournament. -->
+  <string name="sports_widget_group_h">Група H</string>
+  <!-- Sports widget group stage label for group I in the soccer tournament. -->
+  <string name="sports_widget_group_i">Група I</string>
+  <!-- Sports widget group stage label for group J in the soccer tournament. -->
+  <string name="sports_widget_group_j">Група J</string>
+  <!-- Sports widget group stage label for group K in the soccer tournament. -->
+  <string name="sports_widget_group_k">Група K</string>
+  <!-- Sports widget group stage label for group L in the soccer tournament. -->
+  <string name="sports_widget_group_l">Група L</string>
+  <!-- Sports widget button label to see match results. -->
+  <string name="sports_widget_see_results" tools:ignore="UnusedResources">Паглядзець вынікі</string>
+  <!-- Sports widget general group stage label in the soccer tournament. -->
+  <string name="sports_widget_group_stage">Групавы этап</string>
   <!-- ==== End of Terms of use popup prompt. ==== -->
 
   <!-- The first active link used in privacy_notice_updated_homepage_message -->
   <string name="privacy_notice_updated_homepage_message_privacy_notice" tools:ignore="UnusedResources">Паведамленне аб прыватнасці</string>
   <!-- The second active link used in privacy_notice_updated_homepage_message -->
   <string name="privacy_notice_updated_homepage_message_learn_more" tools:ignore="UnusedResources">Падрабязней</string>
+  <!-- Content description for the QR scanner half of the camera mode toggle -->
+  <string name="lens_camera_mode_qr">QR-сканэр</string>
+  <!-- Title of the bottom sheet shown the first time the user opens the Google Lens camera screen -->
+  <string name="lens_opt_out_title">Знайдзіце праз Google Аб\'ектыў</string>
+  <!-- Description of the bottom sheet shown the first time the user opens the Google Lens camera screen -->
+  <string name="lens_opt_out_description">Выберыце выяву або скарыстайце камеру, каб атрымаць вынікі праз Google Аб\'ектыў.</string>
+  <!-- Text of the link in the first-run Google Lens bottom sheet that opens the Search settings page -->
+  <string name="lens_opt_out_settings_link">Налады Google Аб\'ектыва</string>
+  <!-- Button in the first-run Google Lens bottom sheet that dismisses it and starts the camera -->
+  <string name="lens_opt_out_try_it_now_button">Паспрабаваць зараз</string>
+  <!-- Button in the first-run Google Lens bottom sheet that leaves Google Lens without using it -->
+  <string name="lens_opt_out_not_now_button">Не зараз</string>
+  <!--
+    Firefox Labs
+
+    Firefox Labs is the name of a screen in Settings to allow users to learn about
+    experimental and in-development features, and turn those features on and off.
+    The "Labs" portion can be localized, "Firefox" must be treated as a brand and kept
+    in English.
+  -->
+  <string name="firefox_labs_title" tools:ignore="BrandUsage">Firefox Labs</string>
+  <!-- The link text shown when a feedback URL for a Firefox Labs feature is available. The feedback URL page will allow users to provide opinions and suggestions. -->
+  <string name="firefox_labs_share_feedback">Падзяліцца водгукам</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when toggling "on" or "off" an experimental feature that requires a restart. -->
+  <string name="firefox_labs_feature_dialog_title">Патрабуецца перазапуск</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the positive button when toggling "on" and "off" experimental features. This prompts the user to confirm that they want to restart the app. -->
+  <string name="firefox_labs_dialog_restart_button">Перазапусціць</string>
+  <!-- The text on the dialog on the Firefox Labs screen for the negative button when toggling "on" and "off" experimental features. This is used to cancel the action and return to the previous screen. -->
+  <string name="firefox_labs_dialog_cancel_button">Адмена</string>
+  <!-- The title used in a confirmation dialog on the Firefox Labs screen when restoring the application to its defaults by turning "off" any experimental features. -->
+  <string name="firefox_labs_restore_defaults_dialog_title">Патрабуецца перазапуск</string>
+  <!-- Title of the Firefox Labs Sandboxing experiment. -->
+  <string name="firefox_labs_website_isolation_title" tools:ignore="UnusedResources">Ізаляцыя сайтаў</string>
+  <!--
+    PDF viewer toolbar and buttons
+
+    Content description for accessibility (used by screen readers): Description for the button that triggers the start of a signature workflow on the PDF displayed on the screen.
+  -->
+  <string name="pdf_tools_sign_content_description">Падпісаць PDF</string>
+  <!-- Content description for accessibility (used by screen readers): Description of the button that downloads the PDF displayed on the screen to the user's device. -->
+  <string name="pdf_tools_download_content_description">Сцягнуць PDF</string>
+  <!-- Content description for accessibility (used by screen readers): Description for the button that opens the printing dialogue window for the PDF displayed on the screen. -->
+  <string name="pdf_tools_print_content_description">Друкаваць PDF</string>
+  <!-- Content description for accessibility (used by screen readers): Description for the button that opens the sharing options for the PDF being displayed on the screen. -->
+  <string name="pdf_tools_share_content_description">Падзяліцца PDF-файлам</string>
 </resources>

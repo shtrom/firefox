@@ -1,5 +1,4 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
+/* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
@@ -8,7 +7,7 @@
 [scriptable, builtinclass, uuid(51191434-1dd2-11b2-a17c-e49c4e99a4e3)]
 interface nsIPKCS11Token : nsISupports
 {
-  /*
+  /**
    * The name of the token
    */
   [must_use]
@@ -33,46 +32,52 @@ interface nsIPKCS11Token : nsISupports
   [must_use]
   readonly attribute AUTF8String tokenSerialNumber;
 
-  /*
-   * Login information
+  /**
+   * Whether or not the token has been logged in to.
    */
   [must_use]
-  boolean isLoggedIn();
-  [must_use]
-  void login(in boolean force);
-  [must_use]
-  void logoutSimple();
-  [must_use]
-  void logoutAndDropAuthenticatedResources();
-  [must_use]
-  boolean needsLogin();
-  [must_use]
-  readonly attribute boolean needsUserInit;
-
-  /*
-   * Reset password
-   */
-  [must_use]
-  void reset();
+  readonly attribute boolean isLoggedIn;
 
   /**
-   * Checks whether the given password is correct. Logs the token out if an
-   * incorrect password is given.
-   *
-   * @param password The password to check.
-   * @return true if the password was correct, false otherwise.
+   * Returns a promise that resolves when the login() operation has completed.
+   */
+  [implicit_jscontext, must_use]
+  Promise login();
+
+  /**
+   * Returns a promise that resolves when the logout() operation has completed.
+   */
+  [implicit_jscontext, must_use]
+  Promise logout();
+
+  /**
+   * Returns a promise that resolves when the token has been reset. If there
+   * was a pin (password), it will have been removed. All secrets stored on the
+   * token will have been deleted or rendered inaccessible.
+   */
+  [implicit_jscontext, must_use]
+  Promise reset();
+
+  /**
+   * Returns a promise that resolves when the user pin (password) has been
+   * changed on the token. If no password has been set and `oldPassword` is
+   * empty, initializes the password to `newPassword`. Otherwise, if
+   * `oldPassword` is the current password, changes it to `newPassword`.
+   * Tokens with protected authentication paths are not supported.
+   */
+  [implicit_jscontext, must_use]
+  Promise changePassword(in AUTF8String oldPassword, in AUTF8String newPassword);
+
+  /**
+   * True if a password can be set on this token, and false otherwise.
    */
   [must_use]
-  boolean checkPassword(in AUTF8String password);
-  [must_use]
-  void initPassword(in AUTF8String initialPassword);
-  [must_use]
-  void changePassword(in AUTF8String oldPassword, in AUTF8String newPassword);
+  readonly attribute boolean canHavePassword;
 
-  /*
+  /**
    * True if a password has been configured for this token, and false otherwise.
    * (Whether or not the user is currently logged in makes no difference.)
-   * In particular, this can be used to determine if a user has set a master
+   * In particular, this can be used to determine if a user has set a primary
    * password (if this is the internal key token).
    */
   [must_use]

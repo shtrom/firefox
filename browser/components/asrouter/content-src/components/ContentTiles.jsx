@@ -10,6 +10,7 @@ import { MobileDownloads } from "./MobileDownloads";
 import { MultiSelect } from "./MultiSelect";
 import { TextAreaTile } from "./TextAreaTile";
 import { EmbeddedMigrationWizard } from "./EmbeddedMigrationWizard";
+import { EmbeddedThemePicker } from "./EmbeddedThemePicker";
 import { EmbeddedFxBackupOptIn } from "./EmbeddedFxBackupOptIn";
 import { ActionChecklist } from "./ActionChecklist";
 import { EmbeddedBrowser } from "./EmbeddedBrowser";
@@ -17,6 +18,8 @@ import { ConfirmationChecklist } from "./ConfirmationChecklist";
 import { MultiStageUtils } from "../lib/multistage-utils.mjs";
 import { EmbeddedBackupRestore } from "./EmbeddedBackupRestore";
 import { PinnableSitesList } from "./PinnableSitesList";
+import { ContentToggle } from "./ContentToggle";
+import { TextBoxTile } from "./TextBoxTile";
 
 const HEADER_STYLES = [
   "backgroundColor",
@@ -28,6 +31,8 @@ const HEADER_STYLES = [
 ];
 
 const TILE_STYLES = [
+  "border",
+  "borderRadius",
   "marginBlock",
   "marginInline",
   "paddingBlock",
@@ -190,8 +195,7 @@ export const ContentTiles = props => {
     MultiStageUtils.sendActionTelemetry(
       props.messageId,
       tileId,
-      "CLICK_BUTTON",
-      { writeInMicrosurvey: props.writeInMicrosurvey }
+      "CLICK_BUTTON"
     );
     if (tile.type === "link" && tile.action) {
       props.handleAction(
@@ -212,8 +216,7 @@ export const ContentTiles = props => {
     MultiStageUtils.sendActionTelemetry(
       props.messageId,
       "content_tiles_header",
-      "CLICK_BUTTON",
-      { writeInMicrosurvey: props.writeInMicrosurvey }
+      "CLICK_BUTTON"
     );
   };
 
@@ -237,6 +240,11 @@ export const ContentTiles = props => {
             "aria-controls": `tile-content-${index}`,
           };
 
+    const headerTitle =
+      tile.type === "textbox" && props.contentToggleChecked === false
+        ? (header?.alternateTitle ?? header?.title)
+        : header?.title;
+
     return (
       <div
         key={index}
@@ -251,7 +259,7 @@ export const ContentTiles = props => {
             style={MultiStageUtils.getValidStyle(header.style, HEADER_STYLES)}
           >
             <div className="header-text-container">
-              <Localized text={header.title}>
+              <Localized text={headerTitle}>
                 <span className="header-title" />
               </Localized>
               {header.subtitle && (
@@ -296,7 +304,6 @@ export const ContentTiles = props => {
                 message_id={props.messageId}
                 handleAction={props.handleAction}
                 layout={content.position}
-                writeInMicrosurvey={props.writeInMicrosurvey}
               />
             )}
             {["theme", "single-select"].includes(tile.type) && tile.data && (
@@ -349,11 +356,14 @@ export const ContentTiles = props => {
                 content={{ tiles: tile }}
               />
             )}
+            {tile.type === "theme-picker" && (
+              <EmbeddedThemePicker handleAction={props.handleAction} />
+            )}
             {tile.type === "action_checklist" && tile.data && (
               <ActionChecklist
                 content={content}
                 message_id={props.messageId}
-                writeInMicrosurvey={props.writeInMicrosurvey}
+                handleAction={props.handleAction}
               />
             )}
             {tile.type === "embedded_browser" && tile.data?.url && (
@@ -393,6 +403,20 @@ export const ContentTiles = props => {
                 tile={tile}
                 messageId={props.messageId}
                 handleAction={props.handleAction}
+                setPinnedSite={props.setPinnedSite}
+              />
+            )}
+            {tile.type === "content-toggle" && tile.data && (
+              <ContentToggle
+                content={{ tiles: tile }}
+                toggled={props.contentToggleChecked}
+                onToggle={props.setContentToggleChecked}
+              />
+            )}
+            {tile.type === "textbox" && tile.data && (
+              <TextBoxTile
+                content={{ tiles: tile }}
+                contentToggled={props.contentToggleChecked}
               />
             )}
           </div>

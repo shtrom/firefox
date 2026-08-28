@@ -66,18 +66,15 @@ static bool IsFullyClipped(nsTextFrame* aFrame, nscoord aLeft, nscoord aRight,
                                          aSnappedRight);
 }
 
-static bool IsInlineAxisOverflowVisible(nsIFrame* aFrame) {
-  MOZ_ASSERT(aFrame && aFrame->IsBlockFrameOrSubclass(),
-             "expected a block frame");
-
-  nsIFrame* f = aFrame;
+static bool IsInlineAxisOverflowVisible(nsBlockFrame& aFrame) {
+  nsIFrame* f = &aFrame;
   while (f && f->Style()->IsAnonBox() && !f->IsScrollContainerFrame()) {
     f = f->GetParent();
   }
   if (!f) {
     return true;
   }
-  auto overflow = aFrame->GetWritingMode().IsVertical()
+  auto overflow = aFrame.GetWritingMode().IsVertical()
                       ? f->StyleDisplay()->mOverflowY
                       : f->StyleDisplay()->mOverflowX;
   return overflow == StyleOverflow::Visible;
@@ -125,14 +122,16 @@ static bool IsFrameDescendantOfAny(
 }
 
 class nsDisplayTextOverflowMarker final : public nsPaintedDisplayItem {
+  using imgDrawingParams = mozilla::image::imgDrawingParams;
+
  public:
   nsDisplayTextOverflowMarker(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame,
                               const nsRect& aRect, nscoord aAscent,
-                              const StyleTextOverflowSide& aStyle,
+                              const StyleAtomString* aString,
                               gfxTextRun* aTextRun)
       : nsPaintedDisplayItem(aBuilder, aFrame),
         mRect(aRect),
-        mStyle(aStyle),
+        mString(aString ? aString->AsAtom() : nullptr),
         mAscent(aAscent),
         mTextRun(aTextRun) {
     MOZ_COUNT_CTOR(nsDisplayTextOverflowMarker);
@@ -146,7 +145,7 @@ class nsDisplayTextOverflowMarker final : public nsPaintedDisplayItem {
     return nsLayoutUtils::GetTextShadowRectsUnion(mRect, mFrame);
   }
 
-  virtual nsRect GetComponentAlphaBounds(
+  nsRect GetComponentAlphaBounds(
       nsDisplayListBuilder* aBuilder) const override {
     if (gfxPlatform::GetPlatform()->RespectsFontStyleSmoothing()) {
       // On OS X, web authors can turn off subpixel text rendering using the
@@ -160,11 +159,12 @@ class nsDisplayTextOverflowMarker final : public nsPaintedDisplayItem {
     return GetBounds(aBuilder, &snap);
   }
 
-  virtual void Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) override;
+  void Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) override;
 
-  void PaintTextToContext(gfxContext* aCtx, nsPoint aOffsetFromRect);
+  void PaintTextToContext(gfxContext* aCtx, imgDrawingParams& aImgParams,
+                          const nsPoint& aOffsetFromRect);
 
-  virtual bool CreateWebRenderCommands(
+  bool CreateWebRenderCommands(
       mozilla::wr::DisplayListBuilder& aBuilder,
       mozilla::wr::IpcResourceUpdateQueue& aResources,
       const StackingContextHelper& aSc,
@@ -174,32 +174,35 @@ class nsDisplayTextOverflowMarker final : public nsPaintedDisplayItem {
   NS_DISPLAY_DECL_NAME("TextOverflow", TYPE_TEXT_OVERFLOW)
  private:
   nsRect mRect;  // in reference frame coordinates
-  const StyleTextOverflowSide mStyle;
+  RefPtr<const nsAtom> mString;
   nscoord mAscent;              // baseline for the marker text in mRect
   RefPtr<gfxTextRun> mTextRun;  // precached textrun, if available
 };
 
-static void PaintTextShadowCallback(gfxContext* aCtx, nsPoint aShadowOffset,
-                                    const nscolor& aShadowColor, void* aData) {
+static void PaintTextShadowCallback(
+    gfxContext* aCtx, mozilla::image::imgDrawingParams& aImgParams,
+    const nsPoint& aShadowOffset, const nscolor& aShadowColor, void* aData) {
   reinterpret_cast<nsDisplayTextOverflowMarker*>(aData)->PaintTextToContext(
-      aCtx, aShadowOffset);
+      aCtx, aImgParams, aShadowOffset);
 }
 
 void nsDisplayTextOverflowMarker::Paint(nsDisplayListBuilder* aBuilder,
                                         gfxContext* aCtx) {
   nscolor foregroundColor =
       nsLayoutUtils::GetTextColor(mFrame, &nsStyleText::mWebkitTextFillColor);
+  imgDrawingParams imgParams(aBuilder->GetImageDecodeFlags());
 
   // Paint the text-shadows for the overflow marker
-  nsLayoutUtils::PaintTextShadow(mFrame, aCtx, mRect,
+  nsLayoutUtils::PaintTextShadow(mFrame, aCtx, imgParams, mRect,
                                  GetPaintRect(aBuilder, aCtx), foregroundColor,
                                  PaintTextShadowCallback, (void*)this);
   aCtx->SetColor(gfx::sRGBColor::FromABGR(foregroundColor));
-  PaintTextToContext(aCtx, nsPoint(0, 0));
+  PaintTextToContext(aCtx, imgParams, nsPoint(0, 0));
 }
 
-void nsDisplayTextOverflowMarker::PaintTextToContext(gfxContext* aCtx,
-                                                     nsPoint aOffsetFromRect) {
+void nsDisplayTextOverflowMarker::PaintTextToContext(
+    gfxContext* aCtx, imgDrawingParams& aImgParams,
+    const nsPoint& aOffsetFromRect) {
   WritingMode wm = mFrame->GetWritingMode();
   nsPoint pt(mRect.x, mRect.y);
   if (wm.IsVertical()) {
@@ -220,14 +223,18 @@ void nsDisplayTextOverflowMarker::PaintTextToContext(gfxContext* aCtx,
     gfx::Point gfxPt(pt.x, pt.y);
     auto& paletteCache = mFrame->PresContext()->FontPaletteCache();
     mTextRun->Draw(gfxTextRun::Range(mTextRun), gfxPt,
-                   gfxTextRun::DrawParams(aCtx, paletteCache));
+                   gfxTextRun::DrawParams(aCtx, paletteCache), aImgParams);
     return;
   }
 
-  MOZ_ASSERT(!mStyle.IsEllipsis());
+  if (!mString) [[unlikely]] {
+    // Text-run allocation might've failed, in which case well...
+    return;
+  }
+
   RefPtr<nsFontMetrics> fm =
       nsLayoutUtils::GetInflatedFontMetricsForFrame(mFrame);
-  nsDependentAtomString str16(mStyle.AsString().AsAtom());
+  nsDependentAtomString str16(mString.get());
   nsLayoutUtils::DrawString(mFrame, *fm, aCtx, str16.get(), str16.Length(), pt);
 }
 
@@ -309,6 +316,13 @@ TextOverflow::TextOverflow(nsDisplayListBuilder* aBuilder,
   }
   // The left/right marker string is setup in ExamineLineFrames when a line
   // has overflow on that side.
+}
+
+LogicalRect TextOverflow::GetLogicalScrollableOverflowRectRelativeToBlock(
+    nsIFrame* aFrame) const {
+  return LogicalRect(
+      mBlockWM, aFrame->ScrollableOverflowRect() + aFrame->GetOffsetTo(mBlock),
+      mBlockSize);
 }
 
 /* static */
@@ -479,7 +493,7 @@ LogicalRect TextOverflow::ExamineLineFrames(nsLineBox* aLine,
     }
     if (pos.I(mBlockWM) >= scrollRange.IEnd(mBlockWM)) {
       // Except that we always want to display a -webkit-line-clamp ellipsis.
-      if (!mIEnd.mHasBlockEllipsis) {
+      if (!mIEnd.HasBlockEllipsis()) {
         suppressIEnd = true;
       }
     }
@@ -525,7 +539,7 @@ LogicalRect TextOverflow::ExamineLineFrames(nsLineBox* aLine,
   const bool iendWantsTextOverflowMarker =
       !suppressIEnd && lineRect.IEnd(mBlockWM) > contentArea.IEnd(mBlockWM);
   const bool iendWantsBlockEllipsisMarker =
-      !suppressIEnd && mIEnd.mHasBlockEllipsis;
+      !suppressIEnd && mIEnd.HasBlockEllipsis();
   const bool iendWantsMarker =
       iendWantsTextOverflowMarker || iendWantsBlockEllipsisMarker;
   if (!istartWantsMarker && !iendWantsMarker) {
@@ -624,7 +638,7 @@ LogicalRect TextOverflow::ExamineLineFrames(nsLineBox* aLine,
       // any visible content to align to or the line's content being scrolled
       // out of view, then clip the ellipsis so that it looks like it is aligned
       // with the out of view content.
-      if (mIEnd.IsNeeded() && mIEnd.mActive && mIEnd.mHasBlockEllipsis) {
+      if (mIEnd.IsNeeded() && mIEnd.mActive && mIEnd.HasBlockEllipsis()) {
         NS_ASSERTION(nonSnappedContentArea.IStart(mBlockWM) >
                          aAlignmentEdges->mIEndOuter,
                      "Expected the alignment edge for the out of view content "
@@ -642,8 +656,10 @@ LogicalRect TextOverflow::ExamineLineFrames(nsLineBox* aLine,
     } else {
       guessIStart = mIStart.mActive && mIStart.IsNeeded();
       guessIEnd = mIEnd.mActive && mIEnd.IsNeeded();
+      const auto* blockEllipsis = mIEnd.mBlockEllipsis;
       mIStart.Reset();
       mIEnd.Reset();
+      mIEnd.mBlockEllipsis = blockEllipsis;
       aFramesToHide->Clear();
     }
     NS_ASSERTION(pass == 0, "2nd pass should never guess wrong");
@@ -659,15 +675,17 @@ LogicalRect TextOverflow::ExamineLineFrames(nsLineBox* aLine,
 
 void TextOverflow::ProcessLine(const nsDisplayListSet& aLists, nsLineBox* aLine,
                                uint32_t aLineNumber) {
-  if (mIStart.mStyle->IsClip() && mIEnd.mStyle->IsClip() &&
-      !aLine->HasLineClampEllipsis()) {
+  if (mIStart.mTextOverflowStyle->IsClip() &&
+      mIEnd.mTextOverflowStyle->IsClip() && !aLine->HasLineClampEllipsis()) {
     return;
   }
 
   mIStart.Reset();
-  mIStart.mActive = !mIStart.mStyle->IsClip();
+  mIStart.mActive = !mIStart.mTextOverflowStyle->IsClip();
   mIEnd.Reset();
-  mIEnd.mHasBlockEllipsis = aLine->HasLineClampEllipsis();
+  if (aLine->HasLineClampEllipsis()) {
+    mIEnd.mBlockEllipsis = mBlock->GetLineClampBlockEllipsis();
+  }
   mIEnd.mActive = !mIEnd.IsSuppressed(mInLineClampContext);
 
   FrameHashtable framesToHide(64);
@@ -717,7 +735,7 @@ void TextOverflow::ProcessLine(const nsDisplayListSet& aLists, nsLineBox* aLine,
     // IEnd marker, since that is the side of the line that the content has
     // been scrolled past.  We set the insideMarkersArea to a zero-sized
     // rectangle placed next to the scrolled-out-of-view content.
-    if (mIEnd.mHasBlockEllipsis) {
+    if (mIEnd.HasBlockEllipsis()) {
       insideMarkersArea = LogicalRect(mBlockWM, alignmentEdges.mIEndOuter,
                                       insideMarkersArea.BStart(mBlockWM), 0, 1);
     }
@@ -796,6 +814,13 @@ static bool BlockCanHaveLineClampEllipsis(nsBlockFrame* aBlockFrame,
   return aBlockFrame->HasLineClampEllipsis();
 }
 
+static bool IsTextInputScrolledContent(nsIFrame* aFrame) {
+  return aFrame &&
+         aFrame->Style()->GetPseudoType() ==
+             PseudoStyleType::MozScrolledContent &&
+         aFrame->GetParent()->IsTextInputFrame();
+}
+
 /* static */
 bool TextOverflow::CanHaveOverflowMarkers(nsBlockFrame* aBlockFrame,
                                           BeforeReflow aBeforeReflow) {
@@ -804,31 +829,58 @@ bool TextOverflow::CanHaveOverflowMarkers(nsBlockFrame* aBlockFrame,
     return true;
   }
 
-  // Nothing to do for text-overflow:clip or if 'overflow-x/y:visible'.
-  if (HasClippedTextOverflow(aBlockFrame) ||
-      IsInlineAxisOverflowVisible(aBlockFrame)) {
+  // Nothing to do for text-overflow:clip.
+  if (HasClippedTextOverflow(aBlockFrame)) {
     return false;
   }
 
-  // Skip the combobox anonymous block because it would clip the drop-down
-  // arrow. The inner label inherits 'text-overflow' and does the right thing.
-  if (aBlockFrame->IsComboboxControlFrame()) {
+  // Some special-cases for form controls:
+  //  * Skip the combobox button, because it would clip the drop-down arrow. The
+  //    inner label inherits 'text-overflow' and does the right thing.
+  //  * Similar story for <input>, ::placeholder and the control preview inherit
+  //    text-overflow as needed.
+  if (aBlockFrame->IsComboboxControlFrame() ||
+      IsTextInputScrolledContent(aBlockFrame)) {
     return false;
   }
 
-  // Inhibit the markers if a descendant content owns the caret.
+  // Make text-overflow: ellipsis work on the <input> editor.
+  if (aBlockFrame->Style()->GetPseudoType() ==
+      PseudoStyleType::MozTextControlEditingRoot) {
+    MOZ_ASSERT(IsInlineAxisOverflowVisible(*aBlockFrame),
+               "The control editing root must create overflow");
+    MOZ_DIAGNOSTIC_ASSERT(IsTextInputScrolledContent(aBlockFrame->GetParent()));
+    auto* scc = static_cast<ScrollContainerFrame*>(
+        aBlockFrame->GetParent()->GetParent());
+    if (scc->GetScrollPosition() != nsPoint()) {
+      return false;
+    }
+    if (scc->GetContent()->AsElement()->State().HasState(
+            dom::ElementState::FOCUS)) {
+      // If our input is focused, don't show the ellipsis either, usually this
+      // is covered by the caret check below but when the caret is not visible
+      // (the selection is not collapsed for example) this gives slightly more
+      // predictable behavior.
+      // TODO(emilio): Maybe do the same for contenteditable too?
+      return false;
+    }
+  } else if (IsInlineAxisOverflowVisible(*aBlockFrame)) {
+    // If overflow is visible in the inline axis, then nothing to do either.
+    return false;
+  }
+
+  // Disable text-overflow if the caret is in a descendant.
   RefPtr<nsCaret> caret = aBlockFrame->PresShell()->GetActiveCaret();
   if (caret && caret->IsVisible()) {
-    RefPtr<dom::Selection> domSelection = caret->GetSelection();
-    if (domSelection) {
-      nsCOMPtr<nsIContent> content =
-          nsIContent::FromNodeOrNull(domSelection->GetFocusNode());
-      if (content &&
-          content->IsInclusiveDescendantOf(aBlockFrame->GetContent())) {
+    if (dom::Selection* sel = caret->GetSelection()) {
+      auto* content = nsIContent::FromNodeOrNull(sel->GetFocusNode());
+      if (content && content->IsShadowIncludingInclusiveDescendantOf(
+                         aBlockFrame->GetContent())) {
         return false;
       }
     }
   }
+
   return true;
 }
 
@@ -855,8 +907,8 @@ void TextOverflow::CreateMarkers(const nsLineBox* aLine, bool aCreateIStart,
 
     mMarkerList.AppendNewToTopWithIndex<nsDisplayTextOverflowMarker>(
         mBuilder, mBlock, /* aIndex = */ (aLineNumber << 1) + 0, markerRect,
-        aLine->GetLogicalAscent(), *mIStart.mStyle,
-        mIStart.mStyle->IsEllipsis() ? GetEllipsisTextRun() : nullptr);
+        aLine->GetLogicalAscent(), mIStart.String(),
+        mIStart.IsEllipsis() ? GetEllipsisTextRun() : nullptr);
   }
 
   if (aCreateIEnd) {
@@ -873,12 +925,8 @@ void TextOverflow::CreateMarkers(const nsLineBox* aLine, bool aCreateIStart,
 
     mMarkerList.AppendNewToTopWithIndex<nsDisplayTextOverflowMarker>(
         mBuilder, mBlock, /* aIndex = */ (aLineNumber << 1) + 1, markerRect,
-        aLine->GetLogicalAscent(),
-        mIEnd.mHasBlockEllipsis ? StyleTextOverflowSide::Ellipsis()
-                                : *mIEnd.mStyle,
-        mIEnd.mHasBlockEllipsis || mIEnd.mStyle->IsEllipsis()
-            ? GetEllipsisTextRun()
-            : nullptr);
+        aLine->GetLogicalAscent(), mIEnd.String(),
+        mIEnd.IsEllipsis() ? GetEllipsisTextRun() : nullptr);
   }
 }
 
@@ -894,12 +942,9 @@ void TextOverflow::Marker::SetupString(nsIFrame* aFrame) {
     return;
   }
 
-  // A limitation here is that at the IEnd of a line, we only ever render one of
-  // a text-overflow marker and a -webkit-line-clamp block ellipsis.  Since we
-  // don't track the block ellipsis string and the text-overflow marker string
-  // separately, if both apply to the element, we will always use "…" as the
-  // string for text-overflow.
-  if (HasBlockEllipsis(aFrame) || mStyle->IsEllipsis()) {
+  // The block ellipsis takes priority over text-overflow on the line-clamp
+  // boundary.
+  if (IsEllipsis()) {
     RefPtr<gfxTextRun> textRun = MakeEllipsisTextRun(aFrame);
     if (textRun) {
       mISize = textRun->GetAdvanceWidth();
@@ -907,12 +952,14 @@ void TextOverflow::Marker::SetupString(nsIFrame* aFrame) {
       mISize = 0;
     }
   } else {
+    const StyleAtomString* string = String();
+    MOZ_ASSERT(string);
     UniquePtr<gfxContext> rc =
         aFrame->PresShell()->CreateReferenceRenderingContext();
     RefPtr<nsFontMetrics> fm =
         nsLayoutUtils::GetInflatedFontMetricsForFrame(aFrame);
     mISize = nsLayoutUtils::AppUnitWidthOfStringBidi(
-        nsDependentAtomString(mStyle->AsString().AsAtom()), aFrame, *fm, *rc);
+        nsDependentAtomString(string->AsAtom()), aFrame, *fm, *rc);
   }
   mIntrinsicISize = mISize;
   mInitialized = true;

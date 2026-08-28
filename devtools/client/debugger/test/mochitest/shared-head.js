@@ -286,7 +286,10 @@ function waitForSelectedSource(dbg, sourceOrUrl) {
         return allSourceActorsProcessed;
       }
 
-      if (!getBreakableLines(location.source.id)) {
+      if (
+        !location.source.isStyleSheet &&
+        !getBreakableLines(location.source.id)
+      ) {
         return false;
       }
 
@@ -1492,6 +1495,10 @@ const keyMappings = {
   toggleCondPanel: { code: "b", modifiers: cmdShift },
   toggleLogPanel: { code: "y", modifiers: cmdShift },
   toggleBreakpoint: { code: "b", modifiers: cmdOrCtrl },
+  toggleAllBreakpoints: {
+    code: "b",
+    modifiers: { ...cmdOrCtrl, altKey: true },
+  },
   inspector: { code: "c", modifiers: shiftOrAlt },
   quickOpen: { code: "p", modifiers: cmdOrCtrl },
   quickOpenFunc: { code: "o", modifiers: cmdShift },
@@ -1919,6 +1926,8 @@ const selectors = {
   stepOut: ".stepOut.active",
   stepIn: ".stepIn.active",
   prettyPrintButton: ".source-footer .prettyPrint",
+  toggleStyleSheetVisibilityButton:
+    ".source-footer .toggleStyleSheetVisibility",
   mappedSourceLink: ".source-footer .mapped-source",
   sourceMapFooterButton: ".debugger-source-map-button",
   sourceNode: i => `.sources-list .tree-node:nth-child(${i}) .node`,

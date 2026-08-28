@@ -12,18 +12,21 @@ const { XPCOMUtils } = ChromeUtils.importESModule(
 const lazy = XPCOMUtils.declareLazy({
   AddonSearchEngine:
     "moz-src:///toolkit/components/search/AddonSearchEngine.sys.mjs",
+  ConfigSearchEngine:
+    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   CustomizableUI:
     "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   QuickSuggest: "moz-src:///browser/components/urlbar/QuickSuggest.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SearchUtils: "moz-src:///toolkit/components/search/SearchUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
 });
 
 /**
  * @import { SearchEngine } from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import { SettingControlConfig } from "chrome://browser/content/preferences/widgets/setting-control.mjs"
+ * @import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  */
 
 Preferences.addAll([
@@ -715,6 +718,9 @@ function EngineListItemSetting(settingId, engine) {
 
 Preferences.addSetting({
   id: "addEngineButton",
+  visible() {
+    return Services.policies.isAllowed("installSearchEngine");
+  },
   onUserClick() {
     window.gSubDialog.open(
       "chrome://browser/content/search/addEngine.xhtml",
@@ -780,18 +786,34 @@ Preferences.addSetting(
     static id = "engineList";
 
     /**
-     * @type {?Map<Values<typeof lazy.UrlbarUtils.RESULT_SOURCE>, string[]>}
+     * @type {?Map<Values<typeof UrlbarShared.RESULT_SOURCE>, string[]>}
      *   This maps local shortcut sources to their l10n names. The first item
      *   in the string array is the display name for the local source.
      *   All items in the string should be used for displaying as aliases.
      */
     #localShortcutL10nNames = null;
 
+    /**
+     * @type {Set<string>}
+     *   List of names of search engines that are disabled by enterprise policies.
+     */
+    #enterpriseDisabledEngineNames = null;
+
     setup() {
       Services.obs.addObserver(
         this.emitChange,
         "browser-search-engine-modified"
       );
+
+      if (Services.policies?.status == Ci.nsIEnterprisePolicies.ACTIVE) {
+        let activePolicies = Services.policies.getActivePolicies();
+        if (activePolicies.SearchEngines?.Remove) {
+          this.#enterpriseDisabledEngineNames = new Set(
+            activePolicies.SearchEngines?.Remove
+          );
+        }
+      }
+
       return () =>
         Services.obs.removeObserver(
           this.emitChange,
@@ -809,8 +831,8 @@ Preferences.addSetting(
       this.#localShortcutL10nNames = new Map();
 
       let getIDs = (suffix = "") =>
-        lazy.UrlbarUtils.LOCAL_SEARCH_MODES.map(mode => {
-          let sourceName = lazy.UrlbarUtils.getResultSourceName(mode.source);
+        lazy.UrlbarShared.LOCAL_SEARCH_MODES.map(mode => {
+          let sourceName = lazy.UrlbarShared.getResultSourceName(mode.source);
           return { id: `urlbar-search-mode-${sourceName}${suffix}` };
         });
 
@@ -824,7 +846,7 @@ Preferences.addSetting(
         let localizedNames = await document.l10n.formatValues(localizedIDs);
         let englishNames = await englishSearchStrings.formatValues(englishIDs);
 
-        lazy.UrlbarUtils.LOCAL_SEARCH_MODES.forEach(({ source }, index) => {
+        lazy.UrlbarShared.LOCAL_SEARCH_MODES.forEach(({ source }, index) => {
           let localizedName = localizedNames[index];
           let englishName = englishNames[index];
 
@@ -854,7 +876,7 @@ Preferences.addSetting(
     handleDeletionOptions(engine) {
       /** @type {SettingControlConfig} */
       let deletionOptions;
-      if (engine.isConfigEngine) {
+      if (engine instanceof lazy.ConfigSearchEngine) {
         let toggleId = `toggleEngine-${engine.id}`;
         maybeMakeSetting(ToggleSetting(toggleId, engine));
 
@@ -919,6 +941,12 @@ Preferences.addSetting(
       /** @type {SettingControlConfig[]} */
       let configs = [];
       for (let engine of await lazy.SearchService.getEngines()) {
+        // If this engine has been excluded by enterprise policies, then don't
+        // display it.
+        if (this.#enterpriseDisabledEngineNames?.has(engine.name)) {
+          continue;
+        }
+
         let settingId = `engineList-${engine.id}`;
         let editId = `editEngine-${engine.id}`;
         let outlinkId = `outlink-${engine.id}`;
@@ -926,6 +954,7 @@ Preferences.addSetting(
         maybeMakeSetting(EngineListItemSetting(settingId, engine));
         maybeMakeSetting({
           id: editId,
+          deps: [settingId],
           disabled: () => engine.hidden,
           onUserClick() {
             window.gSubDialog.open(
@@ -1000,7 +1029,7 @@ Preferences.addSetting(
 
       /** @type {SettingControlConfig[]} */
       let configs = [];
-      for (let searchMode of lazy.UrlbarUtils.LOCAL_SEARCH_MODES) {
+      for (let searchMode of lazy.UrlbarShared.LOCAL_SEARCH_MODES) {
         let id = `searchmode-${searchMode.telemetryLabel}`;
         maybeMakeSetting({ id });
 
@@ -1035,13 +1064,17 @@ Preferences.addSetting(
 
     /** @param {CustomEvent} event */
     async onUserReorder(event) {
-      const { draggedElement, targetIndex } = event.detail;
+      const { draggedElement, insertAt } = event.detail;
       let draggedEngineName = draggedElement.label;
       let draggedEngine = lazy.SearchService.getEngineByName(draggedEngineName);
       if (!draggedEngine) {
         return;
       }
-      await lazy.SearchService.moveEngine(draggedEngine, targetIndex);
+      await lazy.SearchService.moveEngine(
+        draggedEngine,
+        insertAt,
+        this.#enterpriseDisabledEngineNames
+      );
     }
     async getControlConfig() {
       /** @type {Partial<SettingControlConfig>} */
@@ -1143,6 +1176,9 @@ SettingGroupManager.registerGroups({
             id: "urlBarSuggestionPermanentPBMessage",
             l10nId: "search-suggestions-cant-show-2",
             control: "moz-message-bar",
+            controlAttrs: {
+              role: "status",
+            },
           },
         ],
       },
@@ -1150,7 +1186,7 @@ SettingGroupManager.registerGroups({
   },
   firefoxSuggest: {
     id: "locationBarGroup",
-    subcategory: "firefoxSuggest",
+    subcategory: "locationBar",
     items: [
       {
         id: "locationBarGroupHeader",

@@ -2,7 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { html, when } from "chrome://global/content/vendor/lit.all.mjs";
+import {
+  html,
+  when,
+  ifDefined,
+} from "chrome://global/content/vendor/lit.all.mjs";
 import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://global/content/elements/moz-support-link.mjs";
@@ -28,7 +32,6 @@ import "chrome://global/content/elements/moz-support-link.mjs";
  *   sub-pages and search-results states where no category should be highlighted.
  * @property {Array} pageNavButtons - The array of all page nav buttons
  * @property {Array} secondaryNavButtons - The array of all secondary nav buttons
- * @property {Array} visiblePageNavButtons - The array of visible page nav buttons
  * @slot [default] - Used to append moz-page-nav-button elements to the navigation.
  * @slot [subheading] - Used to append page specific search input or notification to the nav.
  */
@@ -40,7 +43,6 @@ export default class MozPageNav extends MozLitElement {
     allowNoSelection: { type: Boolean },
     pageNavButtons: { type: Array, state: true },
     secondaryNavButtons: { type: Array, state: true },
-    visiblePageNavButtons: { type: Array, state: true },
   };
 
   static queries = {
@@ -56,24 +58,36 @@ export default class MozPageNav extends MozLitElement {
      */
     this.type = "default";
     this.allowNoSelection = false;
+    /** @type {MozPageNavButton[]} */
     this.pageNavButtons = [];
+    /** @type {MozPageNavButton[]} */
     this.secondaryNavButtons = [];
-    this.visiblePageNavButtons = [];
   }
 
+  get visiblePageNavButtons() {
+    return this.pageNavButtons.filter(this.checkElementVisibility);
+  }
+
+  /**
+   * @param {HTMLSlotElement} el
+   */
   getSlottedChildren(el) {
     return el
       ?.assignedElements()
-      .filter(element => element?.localName === "moz-page-nav-button");
+      .filter(element => element instanceof MozPageNavButton);
   }
 
+  /**
+   * @param {MozPageNavButton} element
+   */
   checkElementVisibility(element) {
     let computedStyles = window.getComputedStyle(element);
     return (
+      computedStyles &&
       !element.hidden &&
       computedStyles.getPropertyValue("display") !== "none" &&
       computedStyles.getPropertyValue("visibility") !== "hidden" &&
-      computedStyles.getPropertyValue("opacity") > 0
+      computedStyles.getPropertyValue("opacity") != "0"
     );
   }
 
@@ -109,14 +123,17 @@ export default class MozPageNav extends MozLitElement {
     }
   }
 
+  /**
+   * @param {Event & { target: HTMLSlotElement}} event
+   */
   onPrimaryNavChange(event) {
     this.pageNavButtons = this.getSlottedChildren(event.target);
-    this.visiblePageNavButtons = this.pageNavButtons.filter(
-      this.checkElementVisibility
-    );
     this.updateNavButtonsState();
   }
 
+  /**
+   * @param {Event & { target: HTMLSlotElement}} event
+   */
   onSecondaryNavChange(event) {
     this.secondaryNavButtons = this.getSlottedChildren(event.target);
     let secondaryNavElements = event.target.assignedElements();
@@ -132,9 +149,7 @@ export default class MozPageNav extends MozLitElement {
     for (let button of this.pageNavButtons) {
       button.selected = button.view == this.currentView;
     }
-    let visibleButtons = this.pageNavButtons.filter(
-      this.checkElementVisibility
-    );
+    let visibleButtons = this.visiblePageNavButtons;
     for (let button of visibleButtons) {
       isViewSelected = isViewSelected || button.selected;
     }
@@ -201,6 +216,9 @@ customElements.define("moz-page-nav", MozPageNav);
  * @property {string} iconSrc - The chrome:// url for the icon used for the button.
  * @property {boolean} selected - Whether or not the button is currently selected.
  * @property {string} supportPage - (optional) The short name for the support page a secondary link should launch to
+ * @property {string} title - The title used for the button or link, it should always be set to make sure the components
+ *   will be detected as labeled also when the moz-page-nav is in collapsed mode and the moz-page-nav-button child elements
+ *   and text nodes are hidden. Used in shadow DOM and therefore not as an attribute on moz-page-nav-button.
  * @slot [default] - Used to append the l10n string to the button.
  */
 export class MozPageNavButton extends MozLitElement {
@@ -209,7 +227,13 @@ export class MozPageNavButton extends MozLitElement {
     href: { type: String },
     selected: { type: Boolean },
     supportPage: { type: String, attribute: "support-page" },
+    title: { type: String, mapped: true },
   };
+
+  constructor() {
+    super();
+    this.selected = false;
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -251,6 +275,7 @@ export class MozPageNavButton extends MozLitElement {
         tabindex=${this.selected ? 0 : -1}
         role="tab"
         ?selected=${this.selected}
+        title=${ifDefined(this.title)}
         @click=${this.activate}
       >
         ${this.innerContentTemplate()}
@@ -265,13 +290,19 @@ export class MozPageNavButton extends MozLitElement {
           is="moz-support-link"
           class="moz-page-nav-link"
           support-page=${this.supportPage}
+          title=${ifDefined(this.title)}
         >
           ${this.innerContentTemplate()}
         </a>
       `;
     }
     return html`
-      <a href=${this.href} class="moz-page-nav-link" target="_blank">
+      <a
+        href=${this.href}
+        class="moz-page-nav-link"
+        target="_blank"
+        title=${ifDefined(this.title)}
+      >
         ${this.innerContentTemplate()}
       </a>
     `;

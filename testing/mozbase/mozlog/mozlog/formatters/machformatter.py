@@ -403,6 +403,10 @@ class MachFormatter(base.BaseFormatter):
 
         return "%s LeakSanitizer: leak at %s" % (prefix, ", ".join(data["frames"]))
 
+    def tsan_error(self, data):
+        prefix = self.color_formatter.warning("WARNING")
+        return f"{prefix} ThreadSanitizer: {data['kind']} | {data['signature']}"
+
     def lsan_summary(self, data):
         allowed = data.get("allowed", False)
         if allowed:
@@ -551,11 +555,11 @@ class MachFormatter(base.BaseFormatter):
                     % data["stackwalk_returncode"]
                 )
 
+            if data.get("stackwalk_stdout"):
+                rv.append(data["stackwalk_stdout"])
             if data.get("stackwalk_stderr"):
                 rv.append("stderr from minidump-stackwalk:")
                 rv.append(data["stackwalk_stderr"])
-            elif data.get("stackwalk_stdout"):
-                rv.append(data["stackwalk_stdout"])
 
             if data.get("stackwalk_errors"):
                 rv.extend(data.get("stackwalk_errors"))

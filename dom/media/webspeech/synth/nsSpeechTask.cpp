@@ -8,118 +8,19 @@
 #include "AudioSegment.h"
 #include "SharedBuffer.h"
 #include "SpeechSynthesis.h"
-#include "mozilla/dom/BrowsingContext.h"
-#include "mozilla/dom/ContentMediaController.h"
-#include "mozilla/dom/MediaControlUtils.h"
 #include "nsGlobalWindowInner.h"
+#include "nsPIDOMWindowInlines.h"
 #include "nsSynthVoiceRegistry.h"
 #include "nsXULAppAPI.h"
 
 #undef LOG
 extern mozilla::LogModule* GetSpeechSynthLog();
-#define LOG(type, msg) MOZ_LOG(GetSpeechSynthLog(), type, msg)
-
-#define MEDIA_CONTROL_LOG(msg, ...) \
-  MOZ_LOG(gMediaControlLog, LogLevel::Debug, (msg, ##__VA_ARGS__))
+#define LOG(type, msg) \
+  MOZ_LOG_FMT(GetSpeechSynthLog(), type, MOZ_LOG_EXPAND_ARGS msg)
 
 #define AUDIO_TRACK 1
 
 namespace mozilla::dom {
-
-// Registers the speech task as an uncontrollable receiver while it is
-// speaking, reports audibility, and reacts to media control keys. The owning
-// nsSpeechTask outlives this listener (Shutdown() runs from
-// DispatchEndImpl/DispatchErrorImpl before the task is released), so the
-// back-reference is always valid until Shutdown.
-//
-// Note that on Linux/speechd and Android, nsISpeechService::OnPause is a
-// no-op, so MediaControlKey::Stop will not actually silence speech on those
-// platforms (tracked by Bug 2038329 / Bug 1238538). Audibility is still
-// reported so the tab sound indicator and the audiblechange event remain
-// accurate.
-class MediaSharedKeysListener final : public ContentMediaControlKeyReceiver {
- public:
-  NS_INLINE_DECL_REFCOUNTING(MediaSharedKeysListener, override)
-
-  explicit MediaSharedKeysListener(nsSpeechTask& aTask) : mTask(aTask) {
-    MOZ_ASSERT(NS_IsMainThread());
-  }
-
-  void Start(nsPIDOMWindowInner* aWindow) {
-    MOZ_ASSERT(NS_IsMainThread());
-    MOZ_ASSERT(!mAgent, "Start() must not be retried");
-    BrowsingContext* bc = aWindow ? aWindow->GetBrowsingContext() : nullptr;
-    if (!bc) {
-      MEDIA_CONTROL_LOG(
-          "MediaSharedKeysListener %p Start: no browsing context, skip", this);
-      return;
-    }
-    mAgent = ContentMediaAgent::Get(bc);
-    if (!mAgent) {
-      MEDIA_CONTROL_LOG(
-          "MediaSharedKeysListener %p Start: no ContentMediaAgent, skip", this);
-      return;
-    }
-    mBrowsingContextId = bc->Id();
-    mAgent->AddReceiver(this, ControlType::eUncontrollable);
-    // Speech is audible from the moment the platform starts speaking until
-    // DispatchEnd; there is no separate audibility detection.
-    mAgent->NotifyMediaAudibleChanged(mBrowsingContextId,
-                                      MediaAudibleState::eAudible,
-                                      ControlType::eUncontrollable);
-    mIsAudible = true;
-    MEDIA_CONTROL_LOG(
-        "MediaSharedKeysListener %p Start: registered as uncontrollable "
-        "receiver and reported audible in BC %" PRIu64,
-        this, mBrowsingContextId);
-  }
-
-  void Shutdown() {
-    MOZ_ASSERT(NS_IsMainThread());
-    MOZ_ASSERT(!mShutdown, "Shutdown() must not be retried");
-    mShutdown = true;
-    if (!mAgent) {
-      // Start() bailed out (no BC or no agent at the time); nothing to undo.
-      MEDIA_CONTROL_LOG(
-          "MediaSharedKeysListener %p Shutdown: never registered, skip", this);
-      return;
-    }
-    if (mIsAudible) {
-      mAgent->NotifyMediaAudibleChanged(mBrowsingContextId,
-                                        MediaAudibleState::eInaudible,
-                                        ControlType::eUncontrollable);
-      mIsAudible = false;
-    }
-    mAgent->RemoveReceiver(this, ControlType::eUncontrollable);
-    mAgent = nullptr;
-    MEDIA_CONTROL_LOG(
-        "MediaSharedKeysListener %p Shutdown: unregistered from BC %" PRIu64,
-        this, mBrowsingContextId);
-  }
-
-  bool IsPlaying() const override { return mTask.IsSpeaking(); }
-
-  void HandleMediaKey(MediaControlKey aKey,
-                      const MediaControlActionParams& aParams) override {
-    MOZ_ASSERT(NS_IsMainThread());
-    MOZ_ASSERT(!mShutdown, "HandleMediaKey must not be called after Shutdown");
-    MEDIA_CONTROL_LOG("MediaSharedKeysListener %p HandleMediaKey '%s'", this,
-                      GetEnumString(aKey).get());
-    if (aKey == MediaControlKey::Stop) {
-      mTask.Pause();
-    }
-    // TODO: implement Setvolume/Mute/Unmute for Web Speech.
-  }
-
- private:
-  ~MediaSharedKeysListener() = default;
-
-  nsSpeechTask& mTask;
-  RefPtr<ContentMediaAgent> mAgent;
-  uint64_t mBrowsingContextId = 0;
-  bool mIsAudible = false;
-  bool mShutdown = false;
-};
 
 // nsSpeechTask
 
@@ -200,8 +101,7 @@ nsresult nsSpeechTask::DispatchStartImpl(const nsAString& aUri) {
 
   CreateAudioChannelAgent();
 
-  mSharedKeysListener = new MediaSharedKeysListener(*this);
-  mSharedKeysListener->Start(mUtterance->GetOwnerWindow());
+  StartMediaControl();
 
   mState = STATE_SPEAKING;
   mUtterance->mChosenVoiceURI = aUri;
@@ -228,10 +128,7 @@ nsresult nsSpeechTask::DispatchEndImpl(float aElapsedTime,
 
   DestroyAudioChannelAgent();
 
-  if (mSharedKeysListener) {
-    mSharedKeysListener->Shutdown();
-    mSharedKeysListener = nullptr;
-  }
+  StopMediaControl();
 
   MOZ_ASSERT(mUtterance);
   if (NS_WARN_IF(mState == STATE_ENDED)) {
@@ -320,10 +217,7 @@ nsresult nsSpeechTask::DispatchErrorImpl(float aElapsedTime,
 
   DestroyAudioChannelAgent();
 
-  if (mSharedKeysListener) {
-    mSharedKeysListener->Shutdown();
-    mSharedKeysListener = nullptr;
-  }
+  StopMediaControl();
 
   MOZ_ASSERT(mUtterance);
   if (NS_WARN_IF(mState == STATE_ENDED)) {
@@ -381,6 +275,10 @@ nsresult nsSpeechTask::DispatchMarkImpl(const nsAString& aName,
   mUtterance->DispatchSpeechSynthesisEvent(u"mark"_ns, aCharIndex, nullptr,
                                            aElapsedTime, aName);
   return NS_OK;
+}
+
+bool nsSpeechTask::IsPaused() const {
+  return mUtterance && mUtterance->IsPaused();
 }
 
 void nsSpeechTask::Pause() {
@@ -503,5 +401,3 @@ void nsSpeechTask::SetAudioOutputVolume(float aVolume) {
 }
 
 }  // namespace mozilla::dom
-
-#undef MEDIA_CONTROL_LOG

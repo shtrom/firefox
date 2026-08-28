@@ -449,6 +449,18 @@ export const SearchService = new (class SearchService {
   }
 
   /**
+   * An array of all installed search engines whose hidden attribute is false.
+   * The array is sorted either to the user requirements or the default order.
+   *
+   * @type {SearchEngine[]}
+   */
+  get visibleEngines() {
+    this.#ensureInitialized();
+    lazy.logConsole.debug("get visibleEngines: getting all visible engines");
+    return this.#sortedVisibleEngines;
+  }
+
+  /**
    * Returns the current list of application provided engines.
    */
   async getAppProvidedEngines() {
@@ -544,6 +556,7 @@ export const SearchService = new (class SearchService {
     await this.#migrateLegacyEngines();
     await this.#checkWebExtensionEngines();
     await this.#addOpenSearchTelemetry();
+    this.#updateEngineTotalsTelemetry();
   }
 
   /**
@@ -638,7 +651,11 @@ export const SearchService = new (class SearchService {
     let searchProvider =
       extension.manifest.chrome_settings_overrides.search_provider;
     let engine = this.getEngineByName(searchProvider.name);
-    if (!engine || !engine.isConfigEngine || engine.hidden) {
+    if (
+      !engine ||
+      !(engine instanceof lazy.ConfigSearchEngine) ||
+      engine.hidden
+    ) {
       // We should only default to config engines.
       // If the engine is a hidden config engine, then we don't
       // switch to it, nor do we try to install it.
@@ -954,6 +971,10 @@ export const SearchService = new (class SearchService {
    *   The engine to move.
    * @param {number} newIndex
    *   The engine's new index in the set of visible engines.
+   * @param {?Set<string>} [skipEngines]
+   *   A set of engine names to exclude when calculating the move. This is used
+   *   for engines removed by enterprise policy, which are hidden from the UI
+   *   but still present in the full engine list.
    * @param {boolean} [skipHidden]
    *   If set, this skips moving hidden engines. This is for the case of the old
    *   preferences UI which hides engines from the user's view, and so we need
@@ -966,13 +987,16 @@ export const SearchService = new (class SearchService {
    * @throws {Error}
    *   If the engine is hidden or can't be found.
    */
-  async moveEngine(engine, newIndex, skipHidden = false) {
+  async moveEngine(engine, newIndex, skipEngines = null, skipHidden = false) {
     await this.init();
     if (newIndex >= this.#sortedEngines.length || newIndex < 0) {
       throw new RangeError("newIndex out of bounds");
     }
     if (!(engine instanceof lazy.SearchEngine)) {
       throw new TypeError("engine is not a SearchEngine instance");
+    }
+    if (skipEngines && skipEngines.has(engine.name)) {
+      throw new Error("Unable to move a skipped engine");
     }
     if (skipHidden && engine.hidden) {
       throw new Error("Unable to move a hidden engine");
@@ -983,19 +1007,30 @@ export const SearchService = new (class SearchService {
       throw new Error("Unable to find engine to move");
     }
 
-    if (skipHidden) {
-      // These callers only take into account non-hidden engines when calculating
-      // newIndex, but we need to move it in the array of all engines, so we
-      // need to adjust newIndex accordingly. To do this, we count the number
-      // of hidden engines in the list before the engine that we're taking the
-      // place of. We do this by first finding newIndexEngine (the engine that
-      // we were supposed to replace) and then iterating through the complete
-      // engine list until we reach it, increasing newIndex for each hidden
-      // engine we find on our way there.
+    if (skipHidden || skipEngines?.size) {
+      // These callers only take into account non-excluded engines when
+      // calculating newIndex, but we need to move it in the array of all
+      // engines, so we need to adjust newIndex accordingly. To do this, we
+      // count the number of excluded engines in the list before the engine
+      // that we're taking the place of. We do this by first finding
+      // newIndexEngine (the engine that we were supposed to replace) and then
+      // iterating through the complete engine list until we reach it,
+      // increasing newIndex for each excluded engine we find on our way there.
       //
       // This could be further simplified by having our caller pass in
       // newIndexEngine directly instead of newIndex.
-      var newIndexEngine = this.#sortedVisibleEngines[newIndex];
+      //
+      // The exclusion predicate must match exactly what the caller uses to
+      // build its displayed list. skipHidden excludes all hidden engines;
+      // skipEngines excludes only the named engines (which may be a subset of
+      // hidden engines). The two flags are independent so that a
+      // user-hidden engine is never incorrectly counted as excluded when only
+      // skipEngines is in use.
+      let isExcluded = e =>
+        (skipHidden && e.hidden) || (skipEngines?.has(e.name) ?? false);
+
+      let filteredEngines = this.#sortedEngines.filter(e => !isExcluded(e));
+      var newIndexEngine = filteredEngines[newIndex];
       if (!newIndexEngine) {
         throw new Error("Unable to find engine to replace");
       }
@@ -1004,7 +1039,7 @@ export const SearchService = new (class SearchService {
         if (newIndexEngine == this.#sortedEngines[i]) {
           break;
         }
-        if (this.#sortedEngines[i].hidden) {
+        if (isExcluded(this.#sortedEngines[i])) {
           newIndex++;
         }
       }
@@ -1034,7 +1069,7 @@ export const SearchService = new (class SearchService {
     this.#ensureInitialized();
     for (let e of this._engines.values()) {
       // Unhide all default engines
-      if (e.hidden && e.isAppProvided) {
+      if (e.hidden && e instanceof lazy.AppProvidedConfigEngine) {
         e.hidden = false;
       }
     }
@@ -1451,7 +1486,7 @@ export const SearchService = new (class SearchService {
       engine &&
       this._settings.getVerifiedMetaDataAttribute(
         attributeName,
-        engine.isConfigEngine
+        engine instanceof lazy.ConfigSearchEngine
       )
     ) {
       if (privateMode) {
@@ -1631,6 +1666,7 @@ export const SearchService = new (class SearchService {
     Glean.searchService.startupTime.stopAndAccumulate(timerId);
 
     this.#recordDefaultEngineTelemetryData();
+    this.#setPreviousUpdateTelemetry();
 
     Services.obs.notifyObservers(
       null,
@@ -1758,7 +1794,13 @@ export const SearchService = new (class SearchService {
       Services.prefs.setCharPref(
         lazy.SearchUtils.BROWSER_SEARCH_PREF + "lastEngineIgnored",
         // Limit length of url to avoid storing too much in prefs.
-        `${Math.trunc(Date.now() / 1000)} Search engine '${name}' matches ${type} ignore list ${url.substring(0, 200)}`
+        `${Math.trunc(Date.now() / 1000)} Search engine matches ${type} ignore list ${url.substring(0, 200)}`
+      );
+      // Kept separate from lastEngineIgnored so the engine name isn't
+      // included if that preference is displayed, e.g. on about:support.
+      Services.prefs.setStringPref(
+        lazy.SearchUtils.BROWSER_SEARCH_PREF + "lastEngineIgnored.name",
+        name
       );
     };
 
@@ -2116,7 +2158,7 @@ export const SearchService = new (class SearchService {
     // overridden by an OpenSearch engine, and we need to re-apply the override.
     for (let engine of this._engines.values()) {
       if (
-        engine.isConfigEngine &&
+        engine instanceof lazy.ConfigSearchEngine &&
         engine.getAttr("overriddenByOpenSearch") &&
         engine.id == savedDefaultEngineId
       ) {
@@ -2754,7 +2796,7 @@ export const SearchService = new (class SearchService {
     // override the application provided engine.
     let existingEngine = this.#getEngineByName(engine.name);
     if (
-      existingEngine?.isConfigEngine &&
+      existingEngine instanceof lazy.ConfigSearchEngine &&
       (await lazy.defaultOverrideAllowlist.canEngineOverride(
         engine,
         existingEngine?.id
@@ -3001,6 +3043,82 @@ export const SearchService = new (class SearchService {
   }
 
   /**
+   * Counts and reports the number of installed search engines with different
+   * metrics for visible and hidden search engines.
+   *
+   * Run during the background checks, or when the list of engines changes.
+   */
+  #updateEngineTotalsTelemetry() {
+    /** @type {(keyof typeof Glean.searchCounts.totals)[]} */
+    const SEARCH_COUNTS_TOTALS_LABELS = [
+      "addon",
+      "appProvidedConfig",
+      "userInstalledConfig",
+      "openSearch",
+      "policy",
+      "user",
+    ];
+
+    /** @type {Map<keyof typeof Glean.searchCounts.totals, number>} */
+    let totals = new Map(SEARCH_COUNTS_TOTALS_LABELS.map(l => [l, 0]));
+    let disabledEngines = 0;
+    let hiddenFromOneOffs = 0;
+    for (let engine of this._engines.values()) {
+      // For engines that are hidden, aka disabled, we only need to record that
+      // fact.
+      // This does mean that for users that previously have hidden the engine
+      // and turned off the one-off button option, we won't record the fact
+      // that the one-off was turned off as well. However, in the case the fact
+      // it is hidden is more important than the fact it was also hidden from
+      // the one-offs.
+      if (engine.hidden) {
+        disabledEngines++;
+        continue;
+      }
+
+      if (engine.hideOneOffButton) {
+        hiddenFromOneOffs++;
+      }
+
+      /** @type {?keyof typeof Glean.searchCounts.totals} */
+      let key;
+      switch (true) {
+        case engine instanceof lazy.AppProvidedConfigEngine:
+          key = "appProvidedConfig";
+          break;
+        case engine instanceof lazy.UserInstalledConfigEngine:
+          key = "userInstalledConfig";
+          break;
+        case engine instanceof lazy.AddonSearchEngine:
+          key = "addon";
+          break;
+        case engine instanceof lazy.OpenSearchEngine:
+          key = "openSearch";
+          break;
+        case engine instanceof lazy.PolicySearchEngine:
+          key = "policy";
+          break;
+        case engine instanceof lazy.UserSearchEngine:
+          key = "user";
+          break;
+      }
+      if (key) {
+        totals.set(key, totals.getOrInsert(key, 0) + 1);
+      } else {
+        lazy.logConsole.error(
+          "Failed to report type of search engine for",
+          engine.id
+        );
+      }
+    }
+    Glean.searchCounts.hiddenEngines.disabled.set(disabledEngines);
+    Glean.searchCounts.hiddenEngines.oneOff.set(hiddenFromOneOffs);
+    for (let [label, value] of totals.entries()) {
+      Glean.searchCounts.totals[label].set(value);
+    }
+  }
+
+  /**
    * Creates and adds a WebExtension based engine. It is expected that this
    * function is only called after initialisation has completed, or at a stage
    * where we are ready to load the engines we've been told about during startup.
@@ -3113,28 +3231,19 @@ export const SearchService = new (class SearchService {
     let extensionEngines = this.#getEnginesByExtensionID(extension.id);
 
     for (let engine of extensionEngines) {
-      let isDefault = engine == this.defaultEngine;
-      let isDefaultPrivate = engine == this.defaultPrivateEngine;
-
       let originalName = engine.name;
 
       await engine.update({
         extension,
       });
 
-      if (engine.name != originalName) {
-        if (isDefault) {
-          this._settings.setVerifiedMetaDataAttribute(
-            "defaultEngineId",
-            engine.id
-          );
-        }
-        if (isDefaultPrivate) {
-          this._settings.setVerifiedMetaDataAttribute(
-            "privateDefaultEngineId",
-            engine.id
-          );
-        }
+      // If the name has changed, and we aren't using the pre-saved orders,
+      // clear the sorted engines cache so that we'll update the orders next
+      // time it is accessed.
+      if (
+        engine.name != originalName &&
+        !this._settings.getMetaDataAttribute("useSavedOrder")
+      ) {
         this._cachedSortedEngines = null;
       }
     }
@@ -3271,7 +3380,7 @@ export const SearchService = new (class SearchService {
       throw new Error("Unable to find the new engine in the engine store");
     }
 
-    if (!newCurrentEngine.isConfigEngine) {
+    if (!(newCurrentEngine instanceof lazy.ConfigSearchEngine)) {
       // If a non config engine is being set as the current engine,
       // ensure its loadPath has a verification hash.
       if (!newCurrentEngine._loadPath) {
@@ -3362,6 +3471,31 @@ export const SearchService = new (class SearchService {
   #onSeparateDefaultPrefChanged(prefName, previousValue, currentValue) {
     // Clear out the sorted engines settings, so that we re-sort it if necessary.
     this._cachedSortedEngines = null;
+
+    if (
+      prefName === "browser.search.separatePrivateDefault" &&
+      !previousValue &&
+      currentValue
+    ) {
+      if (this.#appDefaultEngine(true) != this.#appDefaultEngine(false)) {
+        // The app has a distinct private default, which allows it to specify a
+        // different engine (e.g., for active experiments, user choice, or partner
+        // routing). Prioritize that app default when enabling this option.
+        this._settings.setMetaDataAttribute(
+          "privateDefaultEngineId",
+          this.#appDefaultEngine(true).id
+        );
+      } else {
+        // If the app defaults don't differ but the user has customized their
+        // normal engine, we shouldn't force them back to a generic default.
+        // Start them off with the engine they are already comfortable using.
+        this._settings.setMetaDataAttribute(
+          "privateDefaultEngineId",
+          this.defaultEngine.id
+        );
+      }
+    }
+
     // We should notify if the normal default, and the currently saved private
     // default are different. Otherwise, save the energy.
     if (this.defaultEngine != this._getEngineDefault(true)) {
@@ -3390,6 +3524,8 @@ export const SearchService = new (class SearchService {
         null,
         eventReason
       );
+      this._settings.setMetaDataAttribute("privateDefaultEngineId", "");
+      this.#currentPrivateEngine = null;
     }
   }
 
@@ -3421,7 +3557,8 @@ export const SearchService = new (class SearchService {
     let isOverridden = !!engine.overriddenById;
 
     let engineInfo = {
-      providerId: engine.isConfigEngine ? engine.id : "other",
+      providerId:
+        engine instanceof lazy.ConfigSearchEngine ? engine.id : "other",
       partnerCode: isOverridden ? "" : engine.partnerCode,
       overriddenByThirdParty: isOverridden,
       telemetryId: engine.telemetryId,
@@ -3432,13 +3569,13 @@ export const SearchService = new (class SearchService {
     };
 
     // For privacy, we only collect the submission URL for config engines...
-    let sendSubmissionURL = engine.isConfigEngine;
+    let sendSubmissionURL = engine instanceof lazy.ConfigSearchEngine;
 
     if (!sendSubmissionURL) {
       // ... or engines that are the same domain as a config engine.
       let engineHost = engine.searchUrlDomain;
       for (let innerEngine of this._engines.values()) {
-        if (!innerEngine.isConfigEngine) {
+        if (!(innerEngine instanceof lazy.ConfigSearchEngine)) {
           continue;
         }
 
@@ -3473,20 +3610,60 @@ export const SearchService = new (class SearchService {
   }
 
   /**
-   * Records the telemetry event when the default engine has changed, and
-   * also updates the related non-event probes.
+   * @type { Record<"private"|"normal", ?Parameters<typeof Glean.searchEngineDefault.changed.record>[0]>}
+   *   Records the previous changed event details that were sent on telemetry.
+   */
+  #previousEngineChangedEvent = { private: null, normal: null };
+
+  /**
+   * Intended to be called after init is complete, to save a copy of the current
+   * default search engine data, for comparison when an ENGINE_UPDATE is next
+   * received.
+   */
+  #setPreviousUpdateTelemetry() {
+    this.#previousEngineChangedEvent.normal = this.#getUpdateTelemetryExtraArgs(
+      null,
+      this.defaultEngine,
+      null
+    );
+    // If the private mode default search engine is not enabled, then this will
+    // get the details of the normal engine. That is not an issue, as when the
+    // private mode is turned on, a CHANGE_REASON.USER reason will be sent out
+    // that will update this ahead of any ENGINE_UPDATE reasons.
+    this.#previousEngineChangedEvent.private =
+      this.#getUpdateTelemetryExtraArgs(null, this.defaultPrivateEngine, null);
+  }
+
+  /**
+   * Determines if the current event record has the same details as the previous
+   * one or not. This only matches against the `new_` fields because the
+   * `previous_engine_id` may indeed have changed from an earlier event.
    *
-   * @param {boolean} isPrivate
-   *   True if this is a event about a private engine.
+   * @param {Parameters<typeof Glean.searchEngineDefault.changed.record>[0]} previous
+   * @param {Parameters<typeof Glean.searchEngineDefault.changed.record>[0]} current
+   */
+  #changedEventIsSame(previous, current) {
+    return (
+      previous.new_engine_id == current.new_engine_id &&
+      previous.new_display_name == current.new_display_name &&
+      previous.new_load_path == current.new_load_path &&
+      previous.new_submission_url == current.new_submission_url
+    );
+  }
+
+  /**
+   * Gets the relevant details for the Glean event probe for when the
+   * default engine is changed.
+   *
    * @param {SearchEngine} [previousEngine]
    *   The previously default search engine.
    * @param {SearchEngine} [newEngine]
    *   The new default search engine.
-   * @param {Values<typeof this.CHANGE_REASON>} changeReason
-   *   The reason for the default search engine change
+   * @param {Values<typeof this.CHANGE_REASON>} [changeReason]
+   *   The reason for the default search engine change.
+   * @returns {Parameters<typeof Glean.searchEngineDefault.changed.record>[0]}
    */
-  #updateTelemetryDueToDefaultEngineChange(
-    isPrivate,
+  #getUpdateTelemetryExtraArgs(
     previousEngine,
     newEngine,
     changeReason = this.CHANGE_REASON.UNKNOWN
@@ -3499,8 +3676,7 @@ export const SearchService = new (class SearchService {
     }
 
     let submissionURL = engineInfo?.submissionURL ?? "";
-    /** @type {Parameters<typeof Glean.searchEngineDefault.changed.record>[0]} */
-    let extraArgs = {
+    return {
       // In docshell tests, the previous engine does not exist, so we allow
       // for the previousEngine to be undefined.
       previous_engine_id: previousEngine?.telemetryId ?? "",
@@ -3511,11 +3687,51 @@ export const SearchService = new (class SearchService {
       new_submission_url: submissionURL.slice(0, 100),
       change_reason: changeReason,
     };
-    if (isPrivate) {
-      Glean.searchEnginePrivate.changed.record(extraArgs);
-    } else {
-      Glean.searchEngineDefault.changed.record(extraArgs);
+  }
+
+  /**
+   * Records the telemetry event when the default engine has changed, and
+   * also updates the related non-event probes.
+   *
+   * @param {boolean} isPrivate
+   *   True if this is an event about a private engine.
+   * @param {SearchEngine} [previousEngine]
+   *   The previously default search engine.
+   * @param {SearchEngine} [newEngine]
+   *   The new default search engine.
+   * @param {Values<typeof this.CHANGE_REASON>} [changeReason]
+   *   The reason for the default search engine change.
+   */
+  #updateTelemetryDueToDefaultEngineChange(
+    isPrivate,
+    previousEngine,
+    newEngine,
+    changeReason = this.CHANGE_REASON.UNKNOWN
+  ) {
+    let extraArgs = this.#getUpdateTelemetryExtraArgs(
+      previousEngine,
+      newEngine,
+      changeReason
+    );
+
+    let previousEventType = isPrivate ? "private" : "normal";
+    let previousEvent = this.#previousEngineChangedEvent[previousEventType];
+
+    if (
+      changeReason != this.CHANGE_REASON.ENGINE_UPDATE ||
+      !previousEvent ||
+      // For engine updates, we don't send the event unless the details are
+      // different.
+      !this.#changedEventIsSame(previousEvent, extraArgs)
+    ) {
+      if (isPrivate) {
+        Glean.searchEnginePrivate.changed.record(extraArgs);
+      } else {
+        Glean.searchEngineDefault.changed.record(extraArgs);
+      }
     }
+    this.#previousEngineChangedEvent[previousEventType] = extraArgs;
+
     this.#recordDefaultEngineTelemetryData();
   }
 
@@ -3717,6 +3933,7 @@ export const SearchService = new (class SearchService {
         switch (verb) {
           case lazy.SearchUtils.MODIFIED_TYPE.ADDED:
             this.#parseSubmissionMap = null;
+            this.#updateEngineTotalsTelemetry();
             break;
           case lazy.SearchUtils.MODIFIED_TYPE.CHANGED: {
             let engine = /** @type {SearchEngine} */ (subject.wrappedJSObject);
@@ -3732,11 +3949,13 @@ export const SearchService = new (class SearchService {
               );
             }
             this.#parseSubmissionMap = null;
+            this.#updateEngineTotalsTelemetry();
             break;
           }
           case lazy.SearchUtils.MODIFIED_TYPE.REMOVED:
             // Invalidate the map used to parse URLs to search engines.
             this.#parseSubmissionMap = null;
+            this.#updateEngineTotalsTelemetry();
             break;
         }
         break;

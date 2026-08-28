@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
+import { serializeClientErrorDetail } from "chrome://browser/content/aiwindow/modules/ClientErrorTelemetry.mjs";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {});
@@ -34,6 +35,12 @@ export class AIChatContentChild extends JSWindowActorChild {
     "AIChatContent:SetGenerating": {
       event: "aiChatContentActor:set-generating",
     },
+    "AIChatContent:AssetsReady": {
+      event: "aiChatContentActor:assets-ready",
+    },
+    "AIChatContent:SetMode": {
+      event: "aiChatContentActor:set-mode",
+    },
   };
 
   static #VALID_EVENTS_FROM_CONTENT = new Set([
@@ -44,6 +51,10 @@ export class AIChatContentChild extends JSWindowActorChild {
     "AIChatContent:DispatchNewChat",
     "AIChatContent:AccountSignIn",
     "AIChatContent:ToolUIUpdate",
+    "AIChatContent:RequestAssets",
+    "AIChatContent:HistoryGridRender",
+    "AIChatContent:HistoryGridItemClick",
+    "AIChatContent:ClientError",
   ]);
 
   /**
@@ -57,63 +68,25 @@ export class AIChatContentChild extends JSWindowActorChild {
       return;
     }
 
+    const { action, text } = event.detail ?? {};
+    const copyActions = ["copy", "copy-table"];
+    const isCopyAction = copyActions.includes(action) && text;
+
     switch (event.type) {
       case "AIChatContent:DispatchAction":
-        this.#handleActionDispatch(event);
+        // Copy is handled in the child actor since it depends on content-side
+        // selection and clipboard context.
+        if (isCopyAction) {
+          lazy.ClipboardHelper.copyString(text, this.windowContext);
+        }
+
+        this.sendAsyncMessage(event.type, event.detail);
         break;
 
-      case "AIChatContent:DispatchFollowUp":
-        this.#handleFollowUpDispatch(event);
-        break;
-
-      case "AIChatContent:DispatchNewChat":
-        /*
-         * This message round-trips:
-         * child
-         * -> parent (to reset conversation state in ai-window)
-         * -> child (to clear the UI via "clear-conversation").
-         * The parent owns the conversation state, so we must go through it to start a new chat.
-         */
-        this.sendAsyncMessage("AIChatContent:DispatchNewChat");
-        break;
-
-      case "AIChatContent:Ready":
-        this.sendAsyncMessage("AIChatContent:Ready");
-        break;
-
-      case "AIChatContent:OpenLink":
-        this.sendAsyncMessage("AIChatContent:OpenLink", event.detail);
-        break;
-
-      case "AIChatContent:AccountSignIn":
-        this.sendAsyncMessage("AIChatContent:AccountSignIn", event.detail);
-        break;
-
-      case "AIChatContent:ToolUIUpdate":
-        this.sendAsyncMessage("AIChatContent:ToolUIUpdate", event.detail);
-        break;
-
+      // Relay known events to AIChatContentParent
       default:
-        console.warn(
-          `AIChatContentChild received unknown event: ${event.type}`
-        );
+        this.sendAsyncMessage(event.type, event.detail);
     }
-  }
-
-  #handleActionDispatch(event) {
-    const { action, text } = event.detail ?? {};
-    // Copy is handled in the child actor since it depends on content-side
-    // selection and clipboard context.
-    if (action === "copy") {
-      if (text) {
-        lazy.ClipboardHelper.copyString(text, this.windowContext);
-      }
-    }
-    this.sendAsyncMessage("aiChatContentActor:footer-action", event.detail);
-  }
-
-  #handleFollowUpDispatch(event) {
-    this.sendAsyncMessage("aiChatContentActor:followUp", event.detail);
   }
 
   async receiveMessage(message) {
@@ -151,7 +124,23 @@ export class AIChatContentChild extends JSWindowActorChild {
       return true;
     } catch (error) {
       console.error(`Error dispatching ${eventName} to chat content:`, error);
+      this.#reportDispatchFailure(error);
       return false;
+    }
+  }
+
+  #reportDispatchFailure(error) {
+    try {
+      this.sendAsyncMessage(
+        "AIChatContent:ClientError",
+        serializeClientErrorDetail(
+          error,
+          "message-data",
+          "message_dispatch_failed"
+        )
+      );
+    } catch (e) {
+      console.warn("Could not report dispatch failure:", e);
     }
   }
 }

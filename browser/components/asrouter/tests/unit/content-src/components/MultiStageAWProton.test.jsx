@@ -1,12 +1,17 @@
 import { AboutWelcomeDefaults } from "modules/AboutWelcomeDefaults.sys.mjs";
 import {
   MultiStageProtonScreen,
+  screenContentShape,
   ProtonScreenActionButtons,
 } from "content-src/components/MultiStageProtonScreen";
 import { ASRouterScreenUtils } from "modules/ASRouterScreenUtils.sys.mjs";
+import { OnboardingMessageProvider } from "modules/OnboardingMessageProvider.sys.mjs";
+import { PanelTestProvider } from "modules/PanelTestProvider.sys.mjs";
 import { MultiStageUtils } from "content-src/lib/multistage-utils.mjs";
+import MultiStageProtonScreenSchema from "../../../../../../../toolkit/components/messaging-system/schemas/MultiStageProtonScreenSchemas/MultiStageProtonScreenSchemas.json";
 import React from "react";
 import { mount } from "enzyme";
+import PropTypes from "prop-types";
 
 describe("MultiStageAboutWelcomeProton module", () => {
   let sandbox;
@@ -21,6 +26,77 @@ describe("MultiStageAboutWelcomeProton module", () => {
   });
 
   describe("MultiStageAWProton component", () => {
+    it("in-tree screen content conforms to the screen propTypes catalog", async () => {
+      const consoleErrorStub = sandbox.stub(console, "error");
+
+      const messages = [
+        ...(await PanelTestProvider.getMessages()),
+        ...(await OnboardingMessageProvider.getUntranslatedMessages()),
+      ];
+
+      const screens = messages
+        .filter(message => message.content?.template === "multistage")
+        .filter(message => Array.isArray(message.content?.screens))
+        .flatMap(message => message.content.screens);
+
+      // eslint-disable-next-line no-shadow
+      for (const screen of screens) {
+        PropTypes.resetWarningCache();
+        PropTypes.checkPropTypes(
+          {
+            content: MultiStageProtonScreen.propTypes.content,
+          },
+          { content: screen.content },
+          "prop",
+          "MultiStageProtonScreen"
+        );
+      }
+
+      const warnings = consoleErrorStub
+        .getCalls()
+        .map(call => call.args[0])
+        .filter(msg => /Failed prop type|Invalid prop/.test(msg));
+
+      assert.deepEqual(
+        warnings,
+        [],
+        `Screen content in PanelTestProvider or OnboardingMessageProvider fails the propTypes catalog (${warnings.length} total warnings): ${warnings.join("\n")}`
+      );
+    });
+
+    it("screen content propTypes stay in sync with the documentation schema", () => {
+      const linkKeys = [
+        "here",
+        "settings",
+        "ios",
+        "android",
+        "terms_of_use",
+        "privacy_notice",
+        "learn-more",
+        "email_link",
+      ];
+      const difference = (a, b) => a.filter(key => !b.includes(key));
+
+      const propTypeKeys = difference(
+        Object.keys(screenContentShape),
+        linkKeys
+      );
+      const schemaKeys = Object.keys(
+        MultiStageProtonScreenSchema.properties.content.properties
+      );
+
+      const inPropTypesOnly = difference(propTypeKeys, schemaKeys);
+      const inSchemaOnly = difference(schemaKeys, propTypeKeys);
+
+      assert.ok(
+        !inPropTypesOnly.length && !inSchemaOnly.length,
+        "The content properties documented in MultiStageProtonScreen.jsx " +
+          "propTypes and MultiStageProtonScreenSchemas.json have drifted.\n" +
+          `In propTypes but missing from schema: [${inPropTypesOnly.join(", ")}]\n` +
+          `In schema but missing from propTypes: [${inSchemaOnly.join(", ")}]`
+      );
+    });
+
     it("should render MultiStageProton Screen", () => {
       const SCREEN_PROPS = {
         content: {
@@ -788,6 +864,43 @@ describe("MultiStageAboutWelcomeProton module", () => {
       );
     });
 
+    it("Primary button should be disabled when pinnedSites is undefined", () => {
+      const SCREEN_PROPS = {
+        content: {
+          title: "test title",
+          primary_button: {
+            label: "test primary button",
+            disabled: "hasPinnedSite",
+          },
+        },
+      };
+      const wrapper = mount(<MultiStageProtonScreen {...SCREEN_PROPS} />);
+      assert.ok(wrapper.exists());
+      assert.isTrue(
+        wrapper.find("button.primary").prop("disabled"),
+        "Button is disabled when no site has been pinned"
+      );
+    });
+
+    it("Primary button should be enabled once a site has been pinned", () => {
+      const SCREEN_PROPS = {
+        content: {
+          title: "test title",
+          primary_button: {
+            label: "test primary button",
+            disabled: "hasPinnedSite",
+          },
+        },
+        pinnedSites: true,
+      };
+      const wrapper = mount(<MultiStageProtonScreen {...SCREEN_PROPS} />);
+      assert.ok(wrapper.exists());
+      assert.isFalse(
+        wrapper.find("button.primary").prop("disabled"),
+        "Button is enabled once a site is pinned"
+      );
+    });
+
     it("Additional button with disabled: hasTextInput property", () => {
       const SCREEN_PROPS = {
         content: {
@@ -1110,6 +1223,7 @@ describe("MultiStageAboutWelcomeProton module", () => {
             display: "block",
             padding: "40px 0 0 0",
             width: "800px",
+            justifyContent: "center",
             // disallowed style
             height: "500px",
           },
@@ -1124,6 +1238,83 @@ describe("MultiStageAboutWelcomeProton module", () => {
       assert.ok(
         (wrapper.find(".section-main").getDOMNode().style.cssText =
           `padding: ${SCREEN_PROPS.content.screen_style.padding}; width: ${SCREEN_PROPS.content.screen_style.width})`)
+      );
+      // justifyContent is also drawn from screen_style, but applied to
+      // .main-content rather than .screen or .section-main.
+      assert.equal(
+        wrapper.find(".main-content").prop("style").justifyContent,
+        "center"
+      );
+    });
+
+    it("should merge logo.imgStyle into the logo image's style", async () => {
+      const SCREEN_PROPS = {
+        content: {
+          logo: {
+            imageURL: "test.svg",
+            height: "500px",
+            width: "500px",
+            imgStyle: {
+              maxWidth: "min(500px, 40vmin)",
+              maxHeight: "min(500px, 40vmin)",
+            },
+          },
+        },
+      };
+      const wrapper = mount(<MultiStageProtonScreen {...SCREEN_PROPS} />);
+      const styleProp = wrapper.find(".brand-logo").prop("style");
+      assert.equal(styleProp.height, "500px");
+      assert.equal(styleProp.width, "500px");
+      assert.equal(styleProp.maxWidth, "min(500px, 40vmin)");
+      assert.equal(styleProp.maxHeight, "min(500px, 40vmin)");
+    });
+
+    it("should render a <video> in place of the image when logo.videoURL is set", async () => {
+      const SCREEN_PROPS = {
+        content: {
+          logo: {
+            videoURL: "splash.webm",
+            height: "500px",
+            width: "500px",
+          },
+        },
+      };
+      const wrapper = mount(<MultiStageProtonScreen {...SCREEN_PROPS} />);
+      const video = wrapper.find("video.brand-logo");
+      assert.ok(video.exists());
+      assert.equal(video.prop("src"), "splash.webm");
+      assert.equal(video.prop("autoPlay"), true);
+      assert.equal(video.prop("muted"), true);
+      assert.notOk(video.prop("loop"));
+      assert.equal(video.prop("style").height, "500px");
+      assert.equal(video.prop("style").width, "500px");
+      assert.equal(wrapper.find("picture").exists(), false);
+    });
+
+    it("should fall back to the static image when the user prefers reduced motion", async () => {
+      const noopMediaQueryList = {
+        matches: false,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      };
+      sandbox
+        .stub(window, "matchMedia")
+        .returns(noopMediaQueryList)
+        .withArgs("(prefers-reduced-motion: reduce)")
+        .returns({ ...noopMediaQueryList, matches: true });
+      const SCREEN_PROPS = {
+        content: {
+          logo: {
+            videoURL: "splash.webm",
+            imageURL: "splash-logo.svg",
+          },
+        },
+      };
+      const wrapper = mount(<MultiStageProtonScreen {...SCREEN_PROPS} />);
+      assert.isFalse(wrapper.find("video").exists());
+      assert.equal(
+        wrapper.find("img.brand-logo").prop("src"),
+        "splash-logo.svg"
       );
     });
 
@@ -1429,43 +1620,6 @@ describe("MultiStageAboutWelcomeProton module", () => {
   });
 
   describe("AboutWelcomeDefaults prepareMobileDownload", () => {
-    const TEST_CONTENT = {
-      screens: [
-        {
-          id: "AW_MOBILE_DOWNLOAD",
-          content: {
-            title: "test",
-            hero_image: {
-              url: "https://example.com/test.svg",
-            },
-            cta_paragraph: {
-              text: {},
-              action: {},
-            },
-          },
-        },
-      ],
-    };
-    it("should not set url for default qrcode svg", async () => {
-      sandbox.stub(global.BrowserUtils, "isChinaRepack").returns(false);
-      const data =
-        await AboutWelcomeDefaults.prepareContentForReact(TEST_CONTENT);
-      assert.propertyVal(
-        data.screens[0].content.hero_image,
-        "url",
-        "https://example.com/test.svg"
-      );
-    });
-    it("should set url for cn qrcode svg", async () => {
-      sandbox.stub(global.BrowserUtils, "isChinaRepack").returns(true);
-      const data =
-        await AboutWelcomeDefaults.prepareContentForReact(TEST_CONTENT);
-      assert.propertyVal(
-        data.screens[0].content.hero_image,
-        "url",
-        "https://example.com/test-cn.svg"
-      );
-    });
     let listeners = {};
     let mediaQueryListMock;
 

@@ -24,8 +24,10 @@ class ContentCompositorBridgeParent final : public CompositorBridgeParentBase {
   friend class CompositorBridgeParent;
 
  public:
-  explicit ContentCompositorBridgeParent(CompositorManagerParent* aManager)
-      : CompositorBridgeParentBase(aManager), mDestroyCalled(false) {}
+  explicit ContentCompositorBridgeParent(CompositorManagerParent* aManager,
+                                         uint32_t aNamespace)
+      : CompositorBridgeParentBase(aManager, aNamespace),
+        mDestroyCalled(false) {}
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
@@ -123,10 +125,11 @@ class ContentCompositorBridgeParent final : public CompositorBridgeParentBase {
       PWebRenderBridgeParent::EndWheelTransactionResolver&& aResolve) override;
 
   // Use DidCompositeLocked if you already hold a lock on
-  // sIndirectLayerTreesLock; Otherwise use DidComposite, which would request
-  // the lock automatically.
+  // sIndirectLayerTreesLock (pass the proof token); otherwise use DidComposite,
+  // which would request the lock automatically.
   void DidCompositeLocked(LayersId aId, const VsyncId& aVsyncId,
-                          TimeStamp& aCompositeStart, TimeStamp& aCompositeEnd);
+                          TimeStamp& aCompositeStart, TimeStamp& aCompositeEnd,
+                          const StaticMonitorAutoLock& aProofOfLock);
 
   already_AddRefed<PTextureParent> AllocPTextureParent(
       const SurfaceDescriptor& aSharedData, ReadLockDescriptor& aReadLock,

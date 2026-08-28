@@ -11,6 +11,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/customizableui/CustomizableUI.sys.mjs",
   IPPExceptionsManager:
     "moz-src:///toolkit/components/ipprotection/IPPExceptionsManager.sys.mjs",
+  IPPPrincipalRules:
+    "moz-src:///toolkit/components/ipprotection/IPPExceptionsManager.sys.mjs",
   IPPOnboardingMessage:
     "moz-src:///browser/components/ipprotection/IPPOnboardingMessageHelper.sys.mjs",
   ERRORS: "moz-src:///toolkit/components/ipprotection/IPPProxyManager.sys.mjs",
@@ -34,6 +36,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/customizableui/PanelMultiView.sys.mjs",
   SpecialMessageActions:
     "resource://messaging-system/lib/SpecialMessageActions.sys.mjs",
+  ShellService: "moz-src:///browser/components/shell/ShellService.sys.mjs",
 });
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
@@ -43,6 +46,7 @@ import {
   LINKS,
   SIGNIN_DATA,
 } from "chrome://browser/content/ipprotection/ipprotection-constants.mjs";
+import { getSitePrincipal } from "chrome://browser/content/ipprotection/ipprotection-utils.mjs";
 
 const BANDWIDTH_THRESHOLD_PREF = "browser.ipProtection.bandwidthThreshold";
 const BANDWIDTH_WARNING_DISMISSED_PREF =
@@ -60,7 +64,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "BANDWIDTH_USAGE_ENABLED",
   "browser.ipProtection.bandwidth.enabled",
-  false
+  true
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -112,7 +116,6 @@ export class IPProtectionPanel {
       IPProtectionPanel.CUSTOM_ELEMENTS_SCRIPT,
       {
         target: window,
-        async: true,
       }
     );
     hasCustomElements.add(window);
@@ -126,7 +129,7 @@ export class IPProtectionPanel {
    *  The location country code
    * @property {Array<{code: string, available: boolean}>} locationsList
    *  Countries available as egress locations, from IPProtectionServerlist.
-   * @property {"generic-error" | "network-error" | ""} error
+   * @property {"generic-error" | "network-error" | "vpn-unavailable" | ""} error
    *  The error type as a string if an error occurred, or empty string if there are no errors.
    * @property {boolean} hasUpgraded
    *  True if a Mozilla VPN subscription is linked to the user's Mozilla account.
@@ -146,6 +149,8 @@ export class IPProtectionPanel {
    *  True if the VPN service is in the process of connecting, else false.
    * @property {boolean} showLocationButtonBadge
    *  True if the "new" badge on the location selection button should be visible.
+   * @property {boolean} isPremium
+   * True if the current device has Firefox set as the default browser or the user has a Mozilla VPN subscription and/or unlimited bandwidth
    */
 
   /**
@@ -181,9 +186,7 @@ export class IPProtectionPanel {
     const backButton = view.querySelector(".subviewbutton-back");
     const locationsList = view.querySelector("locations-list");
     const listItems = locationsList
-      ? Array.from(
-          locationsList.querySelectorAll(".location-item:not([disabled])")
-        )
+      ? Array.from(locationsList.querySelectorAll(".location-item"))
       : [];
     const promoButton = view.querySelector("moz-promo moz-button");
     const focused = view.ownerDocument.activeElement;
@@ -234,6 +237,12 @@ export class IPProtectionPanel {
         this.#locationsClosedByKeyboard = true;
         this.panelMultiView?.goBack();
       }
+
+      if (focused?.hasAttribute("aria-disabled")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
       return;
     }
 
@@ -243,8 +252,13 @@ export class IPProtectionPanel {
 
     const isOnListItemForFocus = listItems.includes(focused);
 
-    // Tab key handling
-    const tabOnlyElements = [backButton, listItems[0], promoButton].filter(
+    // Tab key handling. The list is a single tab stop: enter it on whichever
+    // item currently carries the roving tabindex (the selected option when the
+    // subview was shown, or the option focused since), falling back to the
+    // first item.
+    const listTabStop =
+      listItems.find(item => item.tabIndex === 0) ?? listItems[0];
+    const tabOnlyElements = [backButton, listTabStop, promoButton].filter(
       el => el != null
     );
 
@@ -351,6 +365,19 @@ export class IPProtectionPanel {
     );
   }
 
+  get isDefaultBrowser() {
+    let isDefaultBrowser = lazy.ShellService.isDefaultBrowser();
+    return isDefaultBrowser;
+  }
+
+  get isPremium() {
+    let isPremium =
+      !this.#getBandwidthUsage() ||
+      lazy.IPProtectionService.authProvider.hasUpgraded ||
+      this.isDefaultBrowser;
+    return isPremium;
+  }
+
   /**
    * Creates an instance of IPProtectionPanel for a specific browser window.
    *
@@ -389,6 +416,7 @@ export class IPProtectionPanel {
         LOCATION_BADGE_DISMISSED_PREF,
         false
       ),
+      isPremium: this.isPremium,
     };
 
     // The progress listener to listen for page navigations.
@@ -487,21 +515,41 @@ export class IPProtectionPanel {
     const win = this.#window.get();
     const inPrivateBrowsing =
       !!win && lazy.PrivateBrowsingUtils.isWindowPrivate(win);
+
+    let country = this.state.location;
+    if (!this.isPremium && country) {
+      const location = lazy.IPProtectionServerlist.getLocation(country);
+      if (location?.country.locked) {
+        country = undefined;
+      }
+    }
+
     const { error } = await lazy.IPPProxyManager.start(
       true,
       inPrivateBrowsing,
-      this.state.location
+      country
     );
-    if (error && error !== lazy.ERRORS.CANCELED) {
-      const errorMessage =
-        error == lazy.ERRORS.NETWORK
-          ? lazy.ERRORS.NETWORK
-          : lazy.ERRORS.GENERIC;
+    // Cancellation, an exhausted quota and a not-ready proxy are already
+    // represented elsewhere in the UI, so they must not raise an error message.
+    const handledElsewhere = [
+      lazy.ERRORS.CANCELED,
+      lazy.ERRORS.QUOTA_EXHAUSTED,
+      lazy.ERRORS.NOT_READY,
+    ];
+    if (error && !handledElsewhere.includes(error)) {
+      const errorMessage = this.#errorMessage(error);
       this.setState({
         error: errorMessage,
       });
       this.toolbarButton?.updateState(null, { error: errorMessage });
     }
+  }
+
+  #errorMessage(error) {
+    if ([lazy.ERRORS.NETWORK, lazy.ERRORS.VPN_UNAVAILABLE].includes(error)) {
+      return error;
+    }
+    return lazy.ERRORS.GENERIC;
   }
 
   async #stopProxy() {
@@ -553,7 +601,15 @@ export class IPProtectionPanel {
 
     this.#updateSiteData();
 
+    if (this.state.paused) {
+      lazy.IPPProxyManager.refreshUsage();
+    }
+
+    // Only check default browser on panel open if not premium to limit calls to the Shell Service
+    const isPremium = this.state.isPremium ? true : this.isPremium;
+
     this.setState({
+      isPremium,
       isSiteExceptionsEnabled: this.isExceptionsFeatureEnabled,
       bandwidthWarning: this.#shouldShowBandwidthWarning(),
     });
@@ -785,9 +841,14 @@ export class IPProtectionPanel {
       el.dataset.capturesFocus = "true";
     }
 
-    // On keyboard activation, focus the first list item
+    // On keyboard activation, focus the list's tab stop. The roving tabindex is
+    // reset to the selected option when the subview is shown, so entry lands on
+    // the current selection.
     if (keyboardActivated) {
-      view.querySelector(".location-item:not([disabled])")?.focus();
+      const listTabStop =
+        view.querySelector('.location-item[tabindex="0"]') ??
+        view.querySelector(".location-item");
+      listTabStop?.focus();
     }
 
     view.addEventListener("keydown", this.#locationsKeyListener, {
@@ -974,6 +1035,10 @@ export class IPProtectionPanel {
   }
 
   #addPrefObserver() {
+    Services.prefs.addObserver(
+      UPGRADE_NOT_AVAILABLE_PREF,
+      this.handlePrefChange
+    );
     Services.prefs.addObserver(EGRESS_LOCATION_PREF, this.handlePrefChange);
     Services.prefs.addObserver(
       BANDWIDTH_WARNING_DISMISSED_PREF,
@@ -982,6 +1047,10 @@ export class IPProtectionPanel {
   }
 
   #removePrefObserver() {
+    Services.prefs.removeObserver(
+      UPGRADE_NOT_AVAILABLE_PREF,
+      this.handlePrefChange
+    );
     Services.prefs.removeObserver(EGRESS_LOCATION_PREF, this.handlePrefChange);
     Services.prefs.removeObserver(
       BANDWIDTH_WARNING_DISMISSED_PREF,
@@ -990,20 +1059,30 @@ export class IPProtectionPanel {
   }
 
   #handlePrefChange(_subject, _topic, data) {
-    if (data === EGRESS_LOCATION_PREF) {
-      const value = Services.prefs.getStringPref(EGRESS_LOCATION_PREF, "");
-      this.setState({
-        location: value || null,
-      });
-    } else if (data === BANDWIDTH_WARNING_DISMISSED_PREF) {
-      if (!this.#shouldShowBandwidthWarning()) {
-        this.setState({ bandwidthWarning: false });
-      }
+    switch (data) {
+      case EGRESS_LOCATION_PREF:
+        this.setState({
+          location:
+            Services.prefs.getStringPref(EGRESS_LOCATION_PREF, "") || null,
+        });
+        return;
+      case BANDWIDTH_WARNING_DISMISSED_PREF:
+        if (!this.#shouldShowBandwidthWarning()) {
+          this.setState({ bandwidthWarning: false });
+        }
+        return;
+      case UPGRADE_NOT_AVAILABLE_PREF:
+        this.setState({
+          upgradeNotAvailable: Services.prefs.getBoolPref(
+            UPGRADE_NOT_AVAILABLE_PREF,
+            false
+          ),
+        });
     }
   }
 
   /**
-   * Gets siteData by reading the current content principal.
+   * Gets siteData by reading the current URL bar's URI.
    *
    * @returns {object|null}
    *  An object with data relevant to a site (eg. isExclusion),
@@ -1013,17 +1092,14 @@ export class IPProtectionPanel {
    */
 
   #getSiteData() {
-    const principal = this.gBrowser?.contentPrincipal;
-
-    if (!principal) {
+    const principal = getSitePrincipal(this.gBrowser);
+    if (!principal || !lazy.IPPExceptionsManager.canManage(principal)) {
       return null;
     }
-
-    const isExclusion = lazy.IPPExceptionsManager.hasExclusion(principal);
-    const isPrivileged = this._isPrivilegedPage(principal);
-
-    let siteData = !isPrivileged ? { isExclusion } : null;
-    return siteData;
+    const isExclusion =
+      lazy.IPPExceptionsManager.getPrincipalRule(principal) ===
+      lazy.IPPPrincipalRules.EXCLUDED;
+    return { isExclusion };
   }
 
   /**
@@ -1057,23 +1133,6 @@ export class IPProtectionPanel {
     }
 
     return null;
-  }
-
-  /**
-   * Checks if the given principal represents a privileged page.
-   *
-   * @param {nsIPrincipal} principal
-   *  The principal to evaluate.
-   * @returns {boolean}
-   *  True if the page is privileged (about: pages or system principal).
-   */
-  _isPrivilegedPage(principal) {
-    // Ignore about: pages for automated tests, which load in about:blank pages by default.
-    // Do not register this method as private though so that we can stub it.
-    return (
-      (principal.schemeIs("about") || principal.isSystemPrincipal) &&
-      !Cu.isInAutomation
-    );
   }
 
   /**
@@ -1147,13 +1206,13 @@ export class IPProtectionPanel {
       });
     } else if (event.type == "IPProtection:UserEnableVPNForSite") {
       const win = event.target.documentGlobal;
-      const principal = win?.gBrowser.contentPrincipal;
+      const principal = getSitePrincipal(win?.gBrowser);
 
       lazy.IPPExceptionsManager.setExclusion(principal, false);
       Glean.ipprotection.exclusionToggled.record({ excluded: false });
     } else if (event.type == "IPProtection:UserDisableVPNForSite") {
       const win = event.target.documentGlobal;
-      const principal = win?.gBrowser.contentPrincipal;
+      const principal = getSitePrincipal(win?.gBrowser);
 
       lazy.IPPExceptionsManager.setExclusion(principal, true);
       Glean.ipprotection.exclusionToggled.record({ excluded: true });
@@ -1177,12 +1236,18 @@ export class IPProtectionPanel {
       this.setState({ bandwidthWarning: false });
     } else if (event.type == "IPPProxyManager:UsageChanged") {
       const usage = event.detail.usage;
-      if (
-        !usage ||
-        usage.max == null ||
-        usage.remaining == null ||
-        !usage.reset
-      ) {
+      if (!usage) {
+        return;
+      }
+
+      if (usage.unlimited) {
+        Services.prefs.clearUserPref(BANDWIDTH_THRESHOLD_PREF);
+        Services.prefs.clearUserPref(BANDWIDTH_RESET_DATE_PREF);
+        this.setState({ bandwidthUsage: null, bandwidthWarning: false });
+        return;
+      }
+
+      if (usage.max == null || usage.remaining == null || !usage.reset) {
         return;
       }
 
@@ -1232,15 +1297,13 @@ export class IPProtectionPanel {
         this.#sendBandwidthResetTrigger();
       }
 
-      if (lazy.BANDWIDTH_USAGE_ENABLED) {
-        this.setState({
-          bandwidthUsage: {
-            remaining: Number(usage.remaining),
-            max: Number(usage.max),
-            reset: usage.reset,
-          },
-        });
-      }
+      this.setState({
+        bandwidthUsage: {
+          remaining: Number(usage.remaining),
+          max: Number(usage.max),
+          reset: usage.reset,
+        },
+      });
     } else if (event.type == "IPPUsageHelper:StateChanged") {
       this.setState({ bandwidthWarning: this.#shouldShowBandwidthWarning() });
     } else if (event.type == "IPProtection:UserShowLocations") {

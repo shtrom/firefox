@@ -23,11 +23,8 @@ import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.openToBrowser
 import org.mozilla.fenix.ext.requireComponents
-import org.mozilla.fenix.ext.settings
 
-/**
- * Lets the user customize HTTPS-only mode.
- */
+/** Lets the user customize HTTPS-only mode. */
 class HttpsOnlyFragment : Fragment(), SystemInsetsPaddedFragment {
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,18 +37,19 @@ class HttpsOnlyFragment : Fragment(), SystemInsetsPaddedFragment {
         val learnMore = requireContext().getString(R.string.preferences_http_only_learn_more)
 
         binding.httpsOnlySummary.run {
-            text = combineTextWithLink(summary, learnMore).apply {
-                setActionToUrlClick(this)
-            }
+            text =
+                combineTextWithLink(summary, learnMore).apply {
+                    setActionToUrlClick(this)
+                }
             movementMethod = LinkMovementMethod.getInstance()
         }
 
         binding.httpsOnlySwitch.run {
-            isChecked = context.settings().shouldUseHttpsOnly
+            isChecked = context.components.settings.shouldUseHttpsOnly
             setHttpsModes(binding, isChecked)
 
             setOnCheckedChangeListener { _, isHttpsOnlyEnabled ->
-                context.settings().shouldUseHttpsOnly = isHttpsOnlyEnabled
+                context.components.settings.shouldUseHttpsOnly = isHttpsOnlyEnabled
                 setHttpsModes(binding, isHttpsOnlyEnabled)
                 updateEngineHttpsOnlyMode()
             }
@@ -77,42 +75,40 @@ class HttpsOnlyFragment : Fragment(), SystemInsetsPaddedFragment {
     }
 
     private fun updateEngineHttpsOnlyMode() {
-        requireContext().components.core.engine.settings.httpsOnlyMode =
-            requireContext().settings().getHttpsOnlyMode()
+        requireContext().components.core.engine.settings.httpsOnlyMode = requireComponents.settings.getHttpsOnlyMode()
     }
 
     private fun combineTextWithLink(
         text: String,
         linkTitle: String,
     ): SpannableStringBuilder {
-        val rawTextWithLink = HtmlCompat.fromHtml(
-            "$text <a href=\"\">$linkTitle</a>",
-            HtmlCompat.FROM_HTML_MODE_COMPACT,
-        )
+        val rawTextWithLink =
+            HtmlCompat.fromHtml(
+                "$text <a href=\"\">$linkTitle</a>",
+                HtmlCompat.FROM_HTML_MODE_COMPACT,
+            )
 
         return SpannableStringBuilder(rawTextWithLink)
     }
 
-    private fun setActionToUrlClick(
-        spannableStringBuilder: SpannableStringBuilder,
-    ) {
+    private fun setActionToUrlClick(spannableStringBuilder: SpannableStringBuilder) {
         val link = spannableStringBuilder.getSpans<URLSpan>()[0]
         val linkStart = spannableStringBuilder.getSpanStart(link)
         val linkEnd = spannableStringBuilder.getSpanEnd(link)
         val linkFlags = spannableStringBuilder.getSpanFlags(link)
-        val linkClickListener: ClickableSpan = object : ClickableSpan() {
-            override fun onClick(view: View) {
-                view.setOnClickListener {
-                    findNavController().openToBrowser()
-                    requireComponents.useCases.fenixBrowserUseCases.loadUrlOrSearch(
-                        searchTermOrURL = SupportUtils.getGenericSumoURLForTopic(
-                            SupportUtils.SumoTopic.HTTPS_ONLY_MODE,
-                        ),
-                        newTab = true,
-                    )
+        val linkClickListener: ClickableSpan =
+            object : ClickableSpan() {
+                override fun onClick(view: View) {
+                    view.setOnClickListener {
+                        findNavController().openToBrowser()
+                        requireComponents.useCases.fenixBrowserUseCases.loadUrlOrSearch(
+                            searchTermOrURL =
+                                SupportUtils.getGenericSumoURLForTopic(SupportUtils.SumoTopic.HTTPS_ONLY_MODE),
+                            newTab = true,
+                        )
+                    }
                 }
             }
-        }
         spannableStringBuilder.setSpan(linkClickListener, linkStart, linkEnd, linkFlags)
         spannableStringBuilder.removeSpan(link)
     }

@@ -22,6 +22,7 @@
 #include <ostream>
 
 #include "irregexp/RegExpTypes.h"
+#include "irregexp/util/BitFieldShim.h"
 #include "irregexp/util/BitVectorShim.h"
 #include "irregexp/util/FlagsShim.h"
 #include "irregexp/util/VectorShim.h"
@@ -70,6 +71,8 @@ class Handle;
 #define V8_FALLTHROUGH [[fallthrough]]
 #define V8_NODISCARD [[nodiscard]]
 #define V8_NOEXCEPT noexcept
+#define V8_LIFETIME_BOUND /* unsupported */
+#define V8_GSL_POINTER    /* [[gsl::Pointer]] unsupported */
 
 #define V8_LIKELY(x) MOZ_LIKELY(x)
 #define V8_UNLIKELY(x) MOZ_UNLIKELY(x)
@@ -145,6 +148,11 @@ class Handle;
 #define MemCopy memcpy
 
 #define PROFILE(isolate, event)
+
+#if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && \
+    __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#  define V8_TARGET_LITTLE_ENDIAN 1
+#endif
 
 // Origin:
 // https://github.com/v8/v8/blob/855591a54d160303349a5f0a32fab15825c708d1/src/base/macros.h#L310-L319
@@ -249,6 +257,11 @@ constexpr T RoundUp(T x) {
   return RoundDown<m, T>(static_cast<T>(x + (m - 1)));
 }
 
+// The USE(x, ...) template is used to silence C++ compiler warnings
+// issued for (yet) unused variables (typically parameters).
+template <typename... Args>
+void USE([[maybe_unused]] Args&&...) {};
+
 namespace base {
 
 // Latin1/UTF-16 constants
@@ -258,21 +271,6 @@ using uc16 = char16_t;
 using uc32 = uint32_t;
 
 constexpr int kUC16Size = sizeof(base::uc16);
-
-// Origin:
-// https://github.com/v8/v8/blob/855591a54d160303349a5f0a32fab15825c708d1/src/base/macros.h#L247-L258
-// The USE(x, ...) template is used to silence C++ compiler warnings
-// issued for (yet) unused variables (typically parameters).
-// The arguments are guaranteed to be evaluated from left to right.
-struct Use {
-  template <typename T>
-  Use(T&&) {}  // NOLINT(runtime/explicit)
-};
-#define USE(...)                                                   \
-  do {                                                             \
-    ::v8::base::Use unused_tmp_array_for_use_macro[]{__VA_ARGS__}; \
-    (void)unused_tmp_array_for_use_macro;                          \
-  } while (false)
 
 // Origin:
 // https://github.com/v8/v8/blob/855591a54d160303349a5f0a32fab15825c708d1/src/base/safe_conversions.h#L35-L39
@@ -301,7 +299,7 @@ inline uint8_t saturated_cast<uint8_t, uint32_t>(uint32_t x) {
 // branch.
 template <typename T, typename U>
 inline constexpr bool IsInRange(T value, U lower_limit, U higher_limit) {
-  using unsigned_T = typename std::make_unsigned<T>::type;
+  using unsigned_T = std::make_unsigned_t<T>;
   // Use static_cast to support enum classes.
   return static_cast<unsigned_T>(static_cast<unsigned_T>(value) -
                                  static_cast<unsigned_T>(lower_limit)) <=
@@ -390,6 +388,12 @@ inline uint64_t CountTrailingZeros(uint64_t value) {
   return std::countr_zero(value);
 }
 
+template <typename T>
+inline constexpr unsigned CountLeadingZeros(T value) {
+  static_assert(std::is_unsigned_v<T>);
+  return std::countl_zero(value);
+}
+
 inline constexpr size_t RoundUpToPowerOfTwo32(size_t value) {
   return mozilla::RoundUpPow2(value);
 }
@@ -408,6 +412,30 @@ constexpr uint32_t CountPopulation(uint32_t value) {
 }
 
 }  // namespace bits
+
+namespace internal {
+
+template <typename T>
+class CheckedNumeric : public mozilla::CheckedInt<T> {
+ public:
+  template <typename U>
+  MOZ_IMPLICIT constexpr CheckedNumeric(U val) : mozilla::CheckedInt<T>(val) {}
+
+  // AssignIfValid(Dst) - Assigns the underlying value if it is currently valid
+  // and is within the range supported by the destination type. Returns true if
+  // successful and false otherwise.
+  template <typename Dst>
+  bool AssignIfValid(Dst* result) const {
+    if (MOZ_LIKELY(this->isValid() && std::in_range<Dst>(this->value()))) {
+      *result = this->value();
+      return true;
+    }
+    return false;
+  }
+};
+
+}  // namespace internal
+
 }  // namespace base
 
 namespace unibrow {
@@ -713,8 +741,8 @@ inline int CompareChars(const lchar* lhs, const rchar* rhs, size_t chars) {
 template <typename lchar, typename rchar>
 inline bool CompareCharsEqualUnsigned(const lchar* lhs, const rchar* rhs,
                                       size_t chars) {
-  STATIC_ASSERT(std::is_unsigned<lchar>::value);
-  STATIC_ASSERT(std::is_unsigned<rchar>::value);
+  STATIC_ASSERT(std::is_unsigned_v<lchar>);
+  STATIC_ASSERT(std::is_unsigned_v<rchar>);
   if (sizeof(*lhs) == sizeof(*rhs)) {
     // memcmp compares byte-by-byte, but for equality it doesn't matter whether
     // two-byte char comparison is little- or big-endian.
@@ -729,8 +757,8 @@ inline bool CompareCharsEqualUnsigned(const lchar* lhs, const rchar* rhs,
 template <typename lchar, typename rchar>
 inline bool CompareCharsEqual(const lchar* lhs, const rchar* rhs,
                               size_t chars) {
-  using ulchar = typename std::make_unsigned<lchar>::type;
-  using urchar = typename std::make_unsigned<rchar>::type;
+  using ulchar = std::make_unsigned_t<lchar>;
+  using urchar = std::make_unsigned_t<rchar>;
   return CompareCharsEqualUnsigned(reinterpret_cast<const ulchar*>(lhs),
                                    reinterpret_cast<const urchar*>(rhs), chars);
 }
@@ -761,7 +789,7 @@ class Object {
 // isolate->stack_guard()->HandleInterrupts(). We want to handle
 // interrupts in the caller, so we return a magic value from
 // HandleInterrupts and check for it here.
-inline bool IsExceptionHole(Object obj, Isolate*) {
+inline bool IsExceptionHole(Object obj) {
   return obj.value().isMagic(JS_INTERRUPT_REGEXP);
 }
 
@@ -939,7 +967,7 @@ inline bool IsByteArray(Object obj) {
 template <typename T>
 class FixedIntegerArray : public ByteArray {
   static_assert(alignof(T) <= alignof(ByteArrayData));
-  static_assert(std::is_integral<T>::value);
+  static_assert(std::is_integral_v<T>);
 
  public:
   static Handle<FixedIntegerArray<T>> New(Isolate* isolate, uint32_t length);
@@ -1079,7 +1107,7 @@ inline Handle<To> CheckedCast(Handle<From> value) {
 template <typename T>
 class MOZ_NONHEAP_CLASS MaybeHandle final {
  public:
-  MaybeHandle() : location_(nullptr) {}
+  MaybeHandle() = default;
 
   // Constructor for handling automatic up casting from Handle.
   // Ex. Handle<JSArray> can be passed when MaybeHandle<Object> is expected.
@@ -1105,7 +1133,7 @@ class MOZ_NONHEAP_CLASS MaybeHandle final {
   }
 
  private:
-  JS::Value* location_;
+  JS::Value* location_{nullptr};
 };
 
 // From v8/src/handles/handles-inl.h
@@ -1312,6 +1340,48 @@ class RegExpData : public HeapObject {
   }
 
   Tagged<String> escaped_source() const { return String(inner()->getSource()); }
+
+  // TODO: Support QuickCheck (bug 2060702)
+
+  // The first-character bitset covers the latin-1 range, one bit per character.
+  static constexpr int kQuickCheckBitsetChars = 256;
+  static constexpr int kQuickCheckBitsetBitsPerWord = 32;
+  static constexpr int kQuickCheckBitsetWords =
+      kQuickCheckBitsetChars / kQuickCheckBitsetBitsPerWord;
+
+  // Where |c| lives in the bitset: which word to load, and which bit to test
+  // in it.  For 'a' (97) that is word 3, bit 1.
+  static constexpr std::pair<int, uint32_t> QuickCheckBitsetBit(uint8_t c) {
+    return {c / kQuickCheckBitsetBitsPerWord,
+            uint32_t{1} << (c % kQuickCheckBitsetBitsPerWord)};
+  }
+
+  inline uint32_t quick_check_mask() const { return 0; }
+  inline void set_quick_check_mask(uint32_t value) {}
+
+  inline uint32_t quick_check_value() const { return 0; }
+  inline void set_quick_check_value(uint32_t value) {}
+
+  inline void set_quick_check_reject_bitset_word(int index, uint32_t value) {}
+
+  enum InternalFlag : uint32_t {
+    // Set if either quick-check filter was built.  Most regexps get neither,
+    // so this lets the exec path skip straight past both with one test
+    // instead of loading the subject and running the bitset check to find out.
+    kHasQuickCheck = 1 << 0,
+  };
+
+  inline uint32_t internal_flags() const { return 0; }
+  inline void set_internal_flags(uint32_t value) {}
+
+  inline void clear_quick_check() {}
+
+  // True iff the quick-check filters prove that no match can begin at
+  // |subject[index]|.  |subject| must be one-byte and flat.  Mirrored by
+  // RegExpExecInternal in builtins-regexp-gen.cc; keep the two in sync.
+  bool QuickCheckRejects(base::Vector<const uint8_t> subject, int index) const {
+    return false;
+  }
 
  private:
   js::RegExpShared* inner() const {

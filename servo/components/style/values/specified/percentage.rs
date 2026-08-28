@@ -6,17 +6,18 @@
 
 use crate::derives::*;
 use crate::parser::{Parse, ParserContext};
+use crate::typed_om::{ToTyped, TypedValue};
 use crate::values::computed::percentage::Percentage as ComputedPercentage;
 use crate::values::computed::{Context, ToComputedValue};
-use crate::values::generics::NonNegative;
-use crate::values::specified::calc::{CalcNode, CalcNumeric, Leaf};
+use crate::values::generics::{NonNegative, Optional};
+use crate::values::specified::calc::{CalcNode, CalcNumeric, CalcPercentageLeaf, Leaf};
 use crate::values::specified::{CalcLengthPercentage, LengthPercentage, NoCalcNumber, Number};
 use crate::values::tagged_numeric::{Extracted, NumericUnion, Unpacked, UnpackedMut};
 use crate::values::{normalize, reify_percentage, serialize_percentage, CSSFloat};
 use cssparser::{Parser, Token};
 use std::fmt::{self, Write};
 use style_traits::values::specified::AllowedNumericType;
-use style_traits::{CssWriter, ParseError, SpecifiedValueInfo, ToCss, ToTyped, TypedValue};
+use style_traits::{CssWriter, ParseError, SpecifiedValueInfo, ToCss};
 use thin_vec::ThinVec;
 
 /// A percentage value, where [0 .. 100%] maps to [0.0 .. 1.0]
@@ -37,7 +38,7 @@ impl ToCss for NoCalcPercentage {
 
 impl ToTyped for NoCalcPercentage {
     fn to_typed(&self, dest: &mut ThinVec<TypedValue>) -> Result<(), ()> {
-        reify_percentage(self.0, /* was_calc = */ false, dest)
+        reify_percentage(self.0, dest)
     }
 }
 
@@ -97,6 +98,18 @@ impl ToComputedValue for NoCalcPercentage {
     }
 }
 
+impl From<f32> for NoCalcPercentage {
+    fn from(value: f32) -> Self {
+        Self(value)
+    }
+}
+
+impl From<NoCalcPercentage> for f32 {
+    fn from(percentage: NoCalcPercentage) -> f32 {
+        percentage.0
+    }
+}
+
 /// A specified percentage value, either a plain value or a `calc()` expression.
 #[derive(Clone, Debug, MallocSizeOf, PartialEq, ToShmem)]
 pub struct Percentage(NumericUnion<(), f32, CalcNumeric>);
@@ -144,6 +157,12 @@ impl Percentage {
     #[inline]
     pub fn hundred() -> Self {
         Self::new(1.)
+    }
+
+    /// Returns true if it is a calc percentage.
+    #[inline]
+    pub fn is_calc(&self) -> bool {
+        self.0.is_boxed()
     }
 
     /// Returns the value if this is a plain (non-calc) percentage, or None otherwise.
@@ -199,9 +218,10 @@ impl Percentage {
             },
             UnpackedMut::Boxed(calc) => {
                 let mut sum = smallvec::SmallVec::<[CalcNode; 2]>::new();
-                sum.push(CalcNode::Leaf(
-                    Leaf::Percentage(NoCalcPercentage::hundred()),
-                ));
+                sum.push(CalcNode::Leaf(Leaf::Percentage(CalcPercentageLeaf::new(
+                    1.,
+                    Optional::None,
+                ))));
                 let mut node = calc.node.clone();
                 node.negate();
                 sum.push(node);

@@ -3,23 +3,24 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "DeviceManagerDx.h"
+
 #include "D3D11Checks.h"
-#include "gfxConfig.h"
 #include "GfxDriverInfo.h"
+#include "gfxConfig.h"
 #include "gfxWindowsPlatform.h"
 #include "mozilla/D3DMessageUtils.h"
+#include "mozilla/Preferences.h"
 #include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/StaticPrefs_layers.h"
-#include "mozilla/glean/GfxMetrics.h"
 #include "mozilla/gfx/GPUParent.h"
 #include "mozilla/gfx/GPUProcessManager.h"
 #include "mozilla/gfx/GraphicsMessages.h"
 #include "mozilla/gfx/Logging.h"
 #include "mozilla/gfx/gfxVars.h"
+#include "mozilla/glean/GfxMetrics.h"
 #include "mozilla/layers/CompositorBridgeChild.h"
 #include "mozilla/layers/CompositorThread.h"
 #include "mozilla/layers/DeviceAttachmentsD3D11.h"
-#include "mozilla/Preferences.h"
 #include "nsPrintfCString.h"
 #include "nsString.h"
 
@@ -148,61 +149,71 @@ void DeviceManagerDx::ReleaseD3D11() {
 }
 
 nsTArray<DXGI_OUTPUT_DESC1> DeviceManagerDx::EnumerateOutputs() {
-  RefPtr<IDXGIAdapter> adapter = GetDXGIAdapter();
-
-  if (!adapter) {
-    NS_WARNING("Failed to acquire a DXGI adapter for enumerating outputs.");
-    return nsTArray<DXGI_OUTPUT_DESC1>();
+  MutexAutoLock lock(mDeviceLock);
+  nsTArray<DXGI_OUTPUT_DESC1> outputs;
+  if (!EnsureFactoryLocked()) {
+    return outputs;
   }
 
-  nsTArray<DXGI_OUTPUT_DESC1> outputs;
-  for (UINT i = 0;; ++i) {
-    RefPtr<IDXGIOutput> output = nullptr;
-    if (FAILED(adapter->EnumOutputs(i, getter_AddRefs(output)))) {
+  RefPtr<IDXGIAdapter1> adapter;
+  for (UINT adapterIndex = 0;; adapterIndex++) {
+    if (FAILED(
+            mFactory->EnumAdapters1(adapterIndex, getter_AddRefs(adapter)))) {
       break;
     }
 
-    RefPtr<IDXGIOutput6> output6 = nullptr;
-    if (FAILED(output->QueryInterface(__uuidof(IDXGIOutput6),
-                                      getter_AddRefs(output6)))) {
-      break;
+    for (UINT outputIndex = 0;; outputIndex++) {
+      RefPtr<IDXGIOutput> output;
+      if (FAILED(adapter->EnumOutputs(outputIndex, getter_AddRefs(output)))) {
+        break;
+      }
+      RefPtr<IDXGIOutput6> output6 = nullptr;
+      if (FAILED(output->QueryInterface(__uuidof(IDXGIOutput6),
+                                        getter_AddRefs(output6)))) {
+        break;
+      }
+      DXGI_OUTPUT_DESC1 desc;
+      if (FAILED(output6->GetDesc1(&desc))) {
+        break;
+      }
+      outputs.AppendElement(desc);
     }
-
-    DXGI_OUTPUT_DESC1 desc;
-    if (FAILED(output6->GetDesc1(&desc))) {
-      break;
-    }
-
-    outputs.AppendElement(desc);
   }
   return outputs;
 }
 
-bool DeviceManagerDx::GetOutputFromMonitor(HMONITOR monitor,
+bool DeviceManagerDx::GetOutputFromMonitor(HMONITOR aMonitor,
                                            RefPtr<IDXGIOutput>* aOutOutput) {
-  RefPtr<IDXGIAdapter> adapter = GetDXGIAdapter();
-
-  if (!adapter) {
-    NS_WARNING("Failed to acquire a DXGI adapter for GetOutputFromMonitor.");
+  MutexAutoLock lock(mDeviceLock);
+  if (!EnsureFactoryLocked()) {
     return false;
   }
 
-  for (UINT i = 0;; ++i) {
-    RefPtr<IDXGIOutput> output = nullptr;
-    if (FAILED(adapter->EnumOutputs(i, getter_AddRefs(output)))) {
+  RefPtr<IDXGIAdapter1> adapter;
+  for (UINT adapterIndex = 0;; adapterIndex++) {
+    if (FAILED(
+            mFactory->EnumAdapters1(adapterIndex, getter_AddRefs(adapter)))) {
       break;
     }
 
-    DXGI_OUTPUT_DESC desc;
-    if (FAILED(output->GetDesc(&desc))) {
-      continue;
-    }
+    for (UINT outputIndex = 0;; outputIndex++) {
+      RefPtr<IDXGIOutput> output;
+      if (FAILED(adapter->EnumOutputs(outputIndex, getter_AddRefs(output)))) {
+        break;
+      }
 
-    if (desc.Monitor == monitor) {
-      *aOutOutput = output;
-      return true;
+      DXGI_OUTPUT_DESC desc;
+      if (FAILED(output->GetDesc(&desc))) {
+        continue;
+      }
+
+      if (desc.Monitor == aMonitor) {
+        *aOutOutput = output;
+        return true;
+      }
     }
   }
+
   return false;
 }
 
@@ -281,7 +292,7 @@ DXGI_HDR_METADATA_HDR10 DeviceManagerDx::OutputDESC1ToDXGI(
   metadata.MinMasteringLuminance = aDesc.MinLuminance * kMinLuminanceFixedPoint;
   // It's unclear how to set these properly, so this is a guess.
   // Also note that these are not fixed-point.
-  metadata.MaxContentLightLevel = aDesc.MaxFullFrameLuminance;
+  metadata.MaxContentLightLevel = aDesc.MaxLuminance;
   metadata.MaxFrameAverageLightLevel = aDesc.MaxFullFrameLuminance;
 
   return metadata;
@@ -667,14 +678,14 @@ void DeviceManagerDx::CreateDirectCompositionDeviceLocked() {
 /* static */
 HANDLE DeviceManagerDx::CreateDCompSurfaceHandle() {
   if (!sDcompCreateSurfaceHandleFn) {
-    return 0;
+    return nullptr;
   }
 
-  HANDLE handle = 0;
+  HANDLE handle = nullptr;
   HRESULT hr = sDcompCreateSurfaceHandleFn(COMPOSITIONOBJECT_ALL_ACCESS,
                                            nullptr, &handle);
   if (FAILED(hr)) {
-    return 0;
+    return nullptr;
   }
 
   return handle;
@@ -718,24 +729,23 @@ void DeviceManagerDx::CreateContentDevicesLocked() {
   }
 }
 
-already_AddRefed<IDXGIAdapter1> DeviceManagerDx::GetDXGIAdapter() {
-  MutexAutoLock lock(mDeviceLock);
-  return do_AddRef(GetDXGIAdapterLocked());
-}
-
-IDXGIAdapter1* DeviceManagerDx::GetDXGIAdapterLocked() {
-  if (mAdapter && mFactory && mFactory->IsCurrent()) {
-    return mAdapter;
+bool DeviceManagerDx::EnsureFactoryLocked() {
+  if (mFactory && mFactory->IsCurrent()) {
+    return true;
   }
-  mAdapter = nullptr;
   mFactory = nullptr;
 
   nsModuleHandle dxgiModule(LoadLibrarySystem32(L"dxgi.dll"));
+  auto scopeExit = MakeScopeExit([&] {
+    // We leak this module everywhere, we might as well do so here as well.
+    dxgiModule.disown();
+  });
+
   decltype(CreateDXGIFactory1)* createDXGIFactory1 =
       (decltype(CreateDXGIFactory1)*)GetProcAddress(dxgiModule,
                                                     "CreateDXGIFactory1");
   if (!createDXGIFactory1) {
-    return nullptr;
+    return false;
   }
   static const auto fCreateDXGIFactory2 =
       (decltype(CreateDXGIFactory2)*)GetProcAddress(dxgiModule,
@@ -760,8 +770,28 @@ IDXGIAdapter1* DeviceManagerDx::GetDXGIAdapterLocked() {
     if (FAILED(hr) || !mFactory) {
       // This seems to happen with some people running the iZ3D driver.
       // They won't get acceleration.
-      return nullptr;
+      return false;
     }
+  }
+
+  MOZ_ASSERT(mFactory && mFactory->IsCurrent());
+  return true;
+}
+
+already_AddRefed<IDXGIAdapter1> DeviceManagerDx::GetDXGIAdapter() {
+  MutexAutoLock lock(mDeviceLock);
+  return do_AddRef(GetDXGIAdapterLocked());
+}
+
+IDXGIAdapter1* DeviceManagerDx::GetDXGIAdapterLocked() {
+  if (mAdapter && mFactory && mFactory->IsCurrent()) {
+    return mAdapter;
+  }
+
+  mAdapter = nullptr;
+  if (!EnsureFactoryLocked()) {
+    // No factory? Can't proceed.
+    return nullptr;
   }
 
   if (mDeviceStatus) {
@@ -792,8 +822,6 @@ IDXGIAdapter1* DeviceManagerDx::GetDXGIAdapterLocked() {
     mFactory->EnumAdapters1(0, getter_AddRefs(mAdapter));
   }
 
-  // We leak this module everywhere, we might as well do so here as well.
-  dxgiModule.disown();
   return mAdapter;
 }
 

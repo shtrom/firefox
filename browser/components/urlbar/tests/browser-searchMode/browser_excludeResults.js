@@ -51,7 +51,7 @@ add_setup(async function () {
         type: "tab",
         title: "Test Remote",
         url: "https://example.com",
-        icon: UrlbarUtils.ICON.DEFAULT,
+        icon: UrlbarShared.ICON.DEFAULT,
         client: "7cqCr77ptzX3",
         lastUsed: Math.floor(Date.now() / 1000),
       },
@@ -59,7 +59,7 @@ add_setup(async function () {
         type: "tab",
         title: "Test Remote 2",
         url: "https://example-2.com",
-        icon: UrlbarUtils.ICON.DEFAULT,
+        icon: UrlbarShared.ICON.DEFAULT,
         client: "7cqCr77ptzX3",
         lastUsed: Math.floor(Date.now() / 1000),
       },
@@ -115,19 +115,19 @@ add_task(async function basic() {
   let firstResult = await UrlbarTestUtils.getDetailsOfResultAt(window, 0);
   Assert.equal(
     firstResult.type,
-    UrlbarUtils.RESULT_TYPE.SEARCH,
+    UrlbarShared.RESULT_TYPE.SEARCH,
     "The first result is the heuristic search result."
   );
   let secondResult = await UrlbarTestUtils.getDetailsOfResultAt(window, 1);
   Assert.equal(
     secondResult.type,
-    UrlbarUtils.RESULT_TYPE.REMOTE_TAB,
+    UrlbarShared.RESULT_TYPE.REMOTE_TAB,
     "The second result is a remote tab."
   );
   let thirdResult = await UrlbarTestUtils.getDetailsOfResultAt(window, 1);
   Assert.equal(
     thirdResult.type,
-    UrlbarUtils.RESULT_TYPE.REMOTE_TAB,
+    UrlbarShared.RESULT_TYPE.REMOTE_TAB,
     "The third result is a remote tab."
   );
 
@@ -142,13 +142,13 @@ add_task(async function basic() {
   firstResult = await UrlbarTestUtils.getDetailsOfResultAt(window, 0);
   Assert.equal(
     firstResult.type,
-    UrlbarUtils.RESULT_TYPE.SEARCH,
+    UrlbarShared.RESULT_TYPE.SEARCH,
     "The first result is the heuristic search result."
   );
   secondResult = await UrlbarTestUtils.getDetailsOfResultAt(window, 1);
   Assert.equal(
     secondResult.type,
-    UrlbarUtils.RESULT_TYPE.REMOTE_TAB,
+    UrlbarShared.RESULT_TYPE.REMOTE_TAB,
     "The second result is a remote tab."
   );
 
@@ -176,25 +176,25 @@ add_task(async function malformedEngine() {
   let firstResult = await UrlbarTestUtils.getDetailsOfResultAt(window, 0);
   Assert.equal(
     firstResult.type,
-    UrlbarUtils.RESULT_TYPE.SEARCH,
+    UrlbarShared.RESULT_TYPE.SEARCH,
     "The first result is the heuristic search result."
   );
   let secondResult = await UrlbarTestUtils.getDetailsOfResultAt(window, 1);
   Assert.equal(
     secondResult.type,
-    UrlbarUtils.RESULT_TYPE.DYNAMIC,
+    UrlbarShared.RESULT_TYPE.DYNAMIC,
     "The second result is the tab-to-search onboarding result for our malformed engine."
   );
   let thirdResult = await UrlbarTestUtils.getDetailsOfResultAt(window, 2);
   Assert.equal(
     thirdResult.type,
-    UrlbarUtils.RESULT_TYPE.REMOTE_TAB,
+    UrlbarShared.RESULT_TYPE.REMOTE_TAB,
     "The third result is a remote tab."
   );
   let fourthResult = await UrlbarTestUtils.getDetailsOfResultAt(window, 3);
   Assert.equal(
     fourthResult.type,
-    UrlbarUtils.RESULT_TYPE.REMOTE_TAB,
+    UrlbarShared.RESULT_TYPE.REMOTE_TAB,
     "The fourth result is a remote tab."
   );
 
@@ -209,7 +209,7 @@ add_task(async function malformedEngine() {
   Assert.ok(firstResult.heuristic, "The first result is heuristic.");
   Assert.equal(
     firstResult.type,
-    UrlbarUtils.RESULT_TYPE.SEARCH,
+    UrlbarShared.RESULT_TYPE.SEARCH,
     "The first result is the heuristic search result."
   );
 

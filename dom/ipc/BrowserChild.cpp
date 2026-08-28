@@ -435,6 +435,14 @@ void BrowserChild::SetTargetAPZC(
   }
 }
 
+void BrowserChild::NotifyApzAwareListenerAdded(
+    ScrollableLayerGuid::ViewID aScrollId) const {
+  if (mApzcTreeManager) {
+    mApzcTreeManager->NotifyApzAwareListenerAdded(
+        ScrollableLayerGuid(mLayersId, 0, aScrollId));
+  }
+}
+
 bool BrowserChild::DoUpdateZoomConstraints(
     const uint32_t& aPresShellId, const ViewID& aViewId,
     const Maybe<ZoomConstraints>& aConstraints) {
@@ -509,13 +517,6 @@ nsresult BrowserChild::Init(mozIDOMWindowProxy* aParent,
   nsCOMPtr<EventTarget> chromeHandler = window->GetChromeEventHandler();
   docShell->SetChromeEventHandler(chromeHandler);
 
-  // Window scrollbar flags only affect top level remote frames, not fission
-  // frames.
-  if (mIsTopLevel) {
-    nsContentUtils::SetScrollbarsVisibility(
-        docShell, !!(mChromeFlags & nsIWebBrowserChrome::CHROME_SCROLLBARS));
-  }
-
   nsWeakPtr weakPtrThis = do_GetWeakReference(
       static_cast<nsIBrowserChild*>(this));  // for capture by the lambda
   ContentReceivedInputBlockCallback callback(
@@ -587,13 +588,6 @@ NS_IMETHODIMP
 BrowserChild::GetChromeFlags(uint32_t* aChromeFlags) {
   *aChromeFlags = mChromeFlags;
   return NS_OK;
-}
-
-NS_IMETHODIMP
-BrowserChild::SetChromeFlags(uint32_t aChromeFlags) {
-  NS_WARNING("trying to SetChromeFlags from content process?");
-
-  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -1134,8 +1128,7 @@ mozilla::ipc::IPCResult BrowserChild::RecvInitRendering(
 mozilla::ipc::IPCResult BrowserChild::RecvScrollbarPreferenceChanged(
     ScrollbarPreference aPreference) {
   MOZ_ASSERT(!mIsTopLevel,
-             "Scrollbar visibility should be derived from chrome flags for "
-             "top-level windows");
+             "Top-level windows use the default scrollbar preference");
   if (nsCOMPtr<nsIDocShell> docShell = do_GetInterface(WebNavigation())) {
     nsDocShell::Cast(docShell)->SetScrollbarPreference(aPreference);
   }
@@ -2413,6 +2406,7 @@ void BrowserChild::RequestEditCommands(NativeKeyBindingsType aType,
 
   // Don't send aEvent to the parent process directly because it'll be marked
   // as posted to remote process.
+  // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
   WidgetKeyboardEvent localEvent(aEvent);
   SendRequestNativeKeyBindings(aType, localEvent, &aCommands);
 }
@@ -2746,9 +2740,9 @@ mozilla::ipc::IPCResult BrowserChild::RecvPasteTransferable(
 
 #ifdef ACCESSIBILITY
 a11y::PDocAccessibleChild* BrowserChild::AllocPDocAccessibleChild(
-    PDocAccessibleChild*, const uint64_t&,
-    const MaybeDiscardedBrowsingContext&) {
-  MOZ_ASSERT(false, "should never call this!");
+    PDocAccessibleChild*, const uint64_t&, const MaybeDiscardedBrowsingContext&,
+    const bool&) {
+  MOZ_ASSERT_UNREACHABLE("should never call this!");
   return nullptr;
 }
 
@@ -3162,8 +3156,8 @@ mozilla::ipc::IPCResult BrowserChild::RecvRenderLayers(const bool& aEnabled) {
   } else {
     // NOTE: We want to call in even without a root frame (we might paint the
     // canvas background in that case).
-    presShell->PaintAndRequestComposite(presShell->GetRootFrame(),
-                                        mPuppetWidget->GetWindowRenderer(),
+    RefPtr<WindowRenderer> renderer = mPuppetWidget->GetWindowRenderer();
+    presShell->PaintAndRequestComposite(presShell->GetRootFrame(), renderer,
                                         PaintFlags::None);
   }
   presShell->SuppressDisplayport(false);
@@ -4247,9 +4241,7 @@ void BrowserChild::OnPointerRawUpdateEventListenerRemoved(
 #if defined(ACCESSIBILITY) && defined(MOZ_ENABLE_SKIA_PDF)
 mozilla::ipc::IPCResult BrowserChild::RecvRequestDocAccessibleForPrint() {
   if (RefPtr<Document> doc = GetTopLevelDocument()) {
-    if (nsAccessibilityService* serv = GetAccService()) {
-      serv->NotifyOfPrintDocument(doc);
-    }
+    a11y::DocManager::NotifyOfPrintDocument(doc);
   }
   return IPC_OK();
 }
@@ -4328,6 +4320,6 @@ BrowserChildMessageManager::GetTabEventTarget() {
 }
 
 nsresult BrowserChildMessageManager::Dispatch(
-    already_AddRefed<nsIRunnable>&& aRunnable) const {
+    already_AddRefed<nsIRunnable> aRunnable) const {
   return SchedulerGroup::Dispatch(std::move(aRunnable));
 }

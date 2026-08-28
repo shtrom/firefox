@@ -39,11 +39,6 @@
 #  define MAX_REFLOW_DEPTH 1026
 #endif
 
-/* nsIFrame is in the process of being deCOMtaminated, i.e., this file is
-   eventually going to be eliminated, and all callers will use nsFrame instead.
-   At the moment we're midway through this process, so you will see inlined
-   functions and member variables in this file.  -dwh */
-
 #include <stdio.h>
 
 #include <algorithm>
@@ -425,7 +420,6 @@ struct IntrinsicSize {
   }
 
   bool operator==(const IntrinsicSize&) const = default;
-  bool operator!=(const IntrinsicSize&) const = default;
 };
 
 // Pseudo bidi embedding level indicating nonexistence.
@@ -574,7 +568,7 @@ static void ReleaseValue(T* aPropertyValue) {
 
 //----------------------------------------------------------------------
 
-// Frame allocation boilerplate macros. Every subclass of nsFrame must
+// Frame allocation boilerplate macros. Every subclass of nsIFrame must
 // either use NS_{DECL,IMPL}_FRAMEARENA_HELPERS pair for allocating
 // memory correctly, or use NS_DECL_ABSTRACT_FRAME to declare a frame
 // class abstract and stop it from being instantiated. If a frame class
@@ -591,9 +585,9 @@ static void ReleaseValue(T* aPropertyValue) {
     return nsQueryFrame::class##_id;                                           \
   }
 
-#define NS_IMPL_FRAMEARENA_HELPERS(class)                             \
-  void* class ::operator new(size_t sz, mozilla::PresShell* aShell) { \
-    return aShell->AllocateFrame(nsQueryFrame::class##_id, sz);       \
+#define NS_IMPL_FRAMEARENA_HELPERS(class)                              \
+  void* class ::operator new(size_t sz, mozilla::PresShell * aShell) { \
+    return aShell->AllocateFrame(nsQueryFrame::class##_id, sz);        \
   }
 
 #define NS_DECL_ABSTRACT_FRAME(class)                                         \
@@ -616,7 +610,7 @@ namespace mozilla {
 struct MOZ_RAII FrameDestroyContext {
   explicit FrameDestroyContext(PresShell* aPs) : mPresShell(aPs) {}
 
-  void AddAnonymousContent(already_AddRefed<nsIContent>&& aContent) {
+  void AddAnonymousContent(already_AddRefed<nsIContent> aContent) {
     if (RefPtr<nsIContent> content = aContent) {
       mAnonymousContent.AppendElement(std::move(content));
     }
@@ -867,7 +861,7 @@ class nsIFrame : public nsQueryFrame {
   void operator delete(void* aPtr, size_t sz);
 
  private:
-  // Left undefined; nsFrame objects are never allocated from the heap.
+  // Left undefined; nsIFrame objects are never allocated from the heap.
   void* operator new(size_t sz) noexcept(true);
 
   // Returns true if this frame has any kind of CSS animations.
@@ -1672,6 +1666,7 @@ class nsIFrame : public nsQueryFrame {
    * Return whether any radii are nonzero.
    */
   static bool ComputeBorderRadii(const mozilla::BorderRadius&,
+                                 const mozilla::CornerShapeRect&,
                                  const nsSize& aFrameSize,
                                  const nsSize& aBorderArea, Sides aSkipSides,
                                  nsRectCornerRadii&);
@@ -1822,15 +1817,7 @@ class nsIFrame : public nsQueryFrame {
   }
 
   // Gets a caret baseline suitable for the frame if the frame doesn't have one.
-  //
-  // @param aBSize the content box block size of the line container. Needed to
-  // resolve line-height: -moz-block-height. NS_UNCONSTRAINEDSIZE is fine
-  // otherwise.
-  //
-  // TODO(emilio): Now we support align-content on blocks it seems we could
-  // get rid of line-height: -moz-block-height.
-  nscoord GetFontMetricsDerivedCaretBaseline(
-      nscoord aBSize = NS_UNCONSTRAINEDSIZE) const;
+  nscoord GetFontMetricsDerivedCaretBaseline() const;
 
   /**
    * Subclasses can call this method to enable visibility tracking for this
@@ -2374,12 +2361,71 @@ class nsIFrame : public nsQueryFrame {
                                     int32_t* aContentOffset,
                                     mozilla::TableSelectionMode* aTarget);
 
+  enum class ForSelectionStart : bool {
+    No,
+    Yes,
+  };
   // Whether this frame should move the selection as a response to mouse moves /
-  // presses / drags.
-  bool ShouldHandleSelectionMovementEvents();
+  // presses / drags (Or a subset of them).
+  bool ShouldHandleSelectionMovementEvents(
+      ForSelectionStart aType = ForSelectionStart::No);
+
+  static mozilla::StyleUserSelect UsedUserSelect(const nsIFrame* aFrame,
+                                                 ForSelectionStart aType);
+  static Maybe<mozilla::StyleUserSelect> UsedUserSelectRecurse(
+      const nsIFrame* aFrame, ForSelectionStart aType);
 
  public:
-  virtual nsIContent* GetContentForEvent(const mozilla::WidgetEvent*) const;
+  /**
+   * Return a content node for handling an event on this frame.
+   * - If this is a frame for a generated content, return the parent of the
+   * generated content.
+   * - If this is a image frame for an image map and the event is fired in an
+   * <area>, return the <area>.
+   * Different from GetEventTargetContent, this may return a `Text` node if the
+   * event uses the coordinates and over a `Text`.
+   *
+   * FYI: When you override this method, you should add `using
+   * nsIFrame::GetExplicitEventTargetContent` not to hide the following
+   * overload.
+   */
+  virtual nsIContent* GetExplicitEventTargetContent(
+      const mozilla::WidgetEvent* = nullptr) const;
+
+  /**
+   * Return a content node for handling an event on this frame.
+   * - If this is a frame for a generated content, return the parent of the
+   * generated content.
+   * - If this is a image frame for an image map and the event is fired in an
+   * <area>, return the <area>.
+   * Different from GetEventTargetContent, this may return a `Text` node if the
+   * event uses the coordinates and over a `Text`.
+   */
+  nsIContent* GetExplicitEventTargetContent(
+      const mozilla::WidgetEvent& aEvent) const {
+    return GetExplicitEventTargetContent(&aEvent);
+  }
+
+  /**
+   * Return a content node which may be the target of the event if and only if
+   * the event should be handled by this frame. The result is the same as
+   * the result of GetExplicitEventTargetContent() or its flattened tree parent
+   * element if the result is not an element and the event target should be an
+   * element node.
+   */
+  nsIContent* GetEventTargetContent(
+      const mozilla::WidgetEvent* = nullptr) const;
+
+  /**
+   * Return a content node which may be the target of the event if and only if
+   * the event should be handled by this frame. The result is the same as
+   * the result of GetExplicitEventTargetContent() or its flattened tree parent
+   * element if the result is not an element and the event target should be an
+   * element node.
+   */
+  nsIContent* GetEventTargetContent(const mozilla::WidgetEvent& aEvent) const {
+    return GetEventTargetContent(&aEvent);
+  }
 
   // This structure keeps track of the content node and offsets associated with
   // a point; there is a primary and a secondary offset associated with any
@@ -2462,7 +2508,13 @@ class nsIFrame : public nsQueryFrame {
    */
   void DisassociateImage(const mozilla::StyleImage&);
 
-  mozilla::StyleImageRendering UsedImageRendering() const;
+  const mozilla::ComputedStyle* UsedStyleForImages() const;
+  mozilla::StyleImageRendering UsedImageRendering() const {
+    return UsedStyleForImages()->StyleVisibility()->mImageRendering;
+  }
+  mozilla::StyleImageDecoding UsedImageDecoding() const {
+    return UsedStyleForImages()->StyleVisibility()->mImageDecoding;
+  }
   mozilla::StyleTouchAction UsedTouchAction() const;
 
   enum class AllowCustomCursorImage {
@@ -3210,7 +3262,7 @@ class nsIFrame : public nsQueryFrame {
    */
   bool ComputeOverflowClipRectRelativeToSelf(
       const mozilla::PhysicalAxes aClipAxes, nsRect& aOutRect,
-      nsRectCornerRadii& aOutRadii) const;
+      nsRectCornerRadii& aOutRadii, nsMargin& aOutInset) const;
 
   // Returns the applicable overflow-clip-margin values relative to our
   // border-box. If aAllowNegative is false, prevents us from returning margins
@@ -3581,6 +3633,7 @@ class nsIFrame : public nsQueryFrame {
 #endif
 
   bool IsReplaced() const;
+  bool IsAtomicInline() const;
 
   /**
    * Returns a transformation matrix that converts points in this frame's
@@ -3599,14 +3652,9 @@ class nsIFrame : public nsQueryFrame {
    *   RelativeTo{this, aViewportType} into points in aOutAncestor's
    *   coordinate space.
    */
-  enum {
-    IN_CSS_UNITS = 1 << 0,
-    STOP_AT_STACKING_CONTEXT_AND_DISPLAY_PORT = 1 << 1
-  };
-  Matrix4x4Flagged GetTransformMatrix(mozilla::ViewportType aViewportType,
-                                      mozilla::RelativeTo aStopAtAncestor,
-                                      nsIFrame** aOutAncestor,
-                                      uint32_t aFlags = 0) const;
+  Matrix4x4Flagged GetTransformMatrix(
+      mozilla::ViewportType aViewportType, mozilla::RelativeTo aStopAtAncestor,
+      nsIFrame** aOutAncestor, mozilla::TransformMatrixFlags aFlags = {}) const;
 
   /**
    * Return true if this frame's preferred size property or max size property
@@ -3644,9 +3692,17 @@ class nsIFrame : public nsQueryFrame {
 
   /**
    * Returns true if the frame is an instance of nsBlockFrame or one of its
-   * subclasses.
+   * subclasses. Note: This uses a slow do_QueryFrame call when |this| is not
+   * nsBlockFrame itself, but a subclass of nsBlockFrame.
    */
   bool IsBlockFrameOrSubclass() const;
+
+  /**
+   * Returns true if the frame is an instance of nsInlineFrame or one of its
+   * subclasses. Note: This uses a slow do_QueryFrame call when |this| is not
+   * nsInlineFrame itself, but a subclass of nsInlineFrame.
+   */
+  bool IsInlineFrameOrSubclass() const;
 
   /**
    * Returns true if the frame is an instance of nsImageFrame or one of its
@@ -4645,11 +4701,14 @@ class nsIFrame : public nsQueryFrame {
    * @param  [in] aStart
    *         true  for getting the first possible caret position
    *         false for getting the last possible caret position
+   * @param  [in] aFlags
+   *         Flags supported by SelfIsSelectable(). E.g.,
+   *         IGNORE_NATIVE_ANONYMOUS_SUBTREE and SKIP_HIDDEN.
    * @return The caret position in a CaretPosition.
    *         the returned value is a 'best effort' in case errors
    *         are encountered rummaging through the frame.
    */
-  CaretPosition GetExtremeCaretPosition(bool aStart);
+  CaretPosition GetExtremeCaretPosition(bool aStart, uint32_t aFlags);
 
   /**
    * Query whether this frame supports getting a line iterator.
@@ -5277,7 +5336,6 @@ class nsIFrame : public nsQueryFrame {
     uint8_t mRight;
     uint8_t mBottom;
     bool operator==(const InkOverflowDeltas& aOther) const = default;
-    bool operator!=(const InkOverflowDeltas& aOther) const = default;
   };
   enum class OverflowStorageType : uint32_t {
     // No overflow area; code relies on this being an all-zero value.

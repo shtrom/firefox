@@ -30,8 +30,6 @@
     --panel-box-shadow-margin: 0px;
   }
 
-  --panel-separator-color: color-mix(in srgb, currentColor 25%, transparent);
-
   --popup-notification-body-width: calc(31em - calc(2 * var(--panel-padding)));
 
   &[lwtheme] {
@@ -54,10 +52,6 @@
     --toolbar-color-scheme: dark;
   }
 
-  @media (prefers-contrast) {
-    --panel-separator-color: currentColor;
-  }
-
   background-color: -moz-Dialog;
   color: -moz-DialogText;
   font: message-box;
@@ -68,17 +62,22 @@
   }
 }
 
+/* Reset default heading font-sizes in the chrome. */
+h1,
+h2,
+h3 {
+  font-size: unset;
+}
+
 :is(menupopup, panel):where([type="arrow"]) {
   --menuitem-border-radius: var(--panel-menuitem-border-radius);
   --menuitem-padding: var(--panel-menuitem-padding);
   --menuitem-margin: var(--panel-menuitem-margin);
 }
 
-/* stylelint-disable-next-line media-query-no-invalid */
 @media -moz-pref("widget.macos.native-popovers") and (-moz-platform: macos) {
   panel:not([nonnative]) {
     background-color: transparent;
-    --panel-background: transparent;
     --panel-box-shadow: none;
     --panel-border-color: transparent;
     --panel-box-shadow-margin: 0px;
@@ -109,16 +108,14 @@
   text-shadow: 1px 1px 1.5px black;
 }
 
-/* Rules for 'hiding' portions of the chrome for special
-   kinds of windows with toolbars (not just browser windows) */
-:root[chromehidden~="menubar"] .chromeclass-menubar,
-:root[chromehidden~="directories"] .chromeclass-directories,
-:root[chromehidden~="status"] .chromeclass-status,
-:root[chromehidden~="extrachrome"] .chromeclass-extrachrome,
-:root[chromehidden~="location"] .chromeclass-location,
-:root[chromehidden~="location"][chromehidden~="toolbar"] .chromeclass-toolbar,
-:root[chromehidden~="toolbar"] .chromeclass-toolbar-additional {
-  display: none;
+/* `[hidden]` is implemented as a presentation attribute (see html.css), so any
+ * author rule setting `display` overrides it. This `!important` rule lets the
+ * attribute win regardless, so callers can set a `display` type unconditionally
+ * rather than guarding it with `:not([hidden])`. The `:where()` keeps the
+ * selector at zero specificity, so the rare element that must stay shown can
+ * override it with a plain `!important`. */
+:where([hidden]) {
+  display: none !important;
 }
 
 /* General styles */
@@ -146,8 +143,8 @@ html|textarea {
   border: 1px solid var(--input-border-color);
   border-radius: var(--border-radius-medium);
   margin: 0;
-  background-color: var(--input-bgcolor, Field);
-  color: var(--input-color, FieldText);
+  background-color: var(--input-text-background-color);
+  color: var(--input-text-color);
 
   &:where(:user-invalid) {
     border-color: var(--border-color-error);
@@ -237,11 +234,8 @@ xul|label[disabled] {
 }
 
 .tooltip-label {
+  /* Override the default xul|description margins for tooltip labels. */
   margin: 0;
-  word-wrap: break-word;
-  /* We must specify a min-width, otherwise word-wrap:break-word doesn't work.
-     See Bug 630864. */
-  min-width: 1px;
 }
 
 /* Links */

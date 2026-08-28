@@ -8,14 +8,15 @@
 
 use super::{
     property_counts, AllShorthand, ComputedValues, LogicalGroupSet, LonghandIdSet,
-    LonghandIdSetIterator, NonCustomPropertyIdSet, PropertyDeclaration, PropertyDeclarationId,
-    PropertyId, ShorthandId, SourcePropertyDeclaration, SourcePropertyDeclarationDrain,
-    SubpropertiesVec,
+    LonghandIdSetIterator, NonCustomPropertyId, NonCustomPropertyIdSet, PropertyDeclaration,
+    PropertyDeclarationId, PropertyId, ShorthandId, SourcePropertyDeclaration,
+    SourcePropertyDeclarationDrain, SubpropertiesVec,
 };
-use crate::context::QuirksMode;
+
+use crate::context::{QuirksMode, TreeCountingCaches};
 use crate::custom_properties;
 use crate::derives::*;
-use crate::dom::AttributeTracker;
+use crate::dom::{AttributeTracker, DummyElementContext};
 use crate::error_reporting::{ContextualParseError, ParseErrorReporter};
 use crate::parser::ParserContext;
 use crate::properties::{
@@ -30,6 +31,7 @@ use crate::shared_lock::Locked;
 use crate::stylesheets::container_rule::ContainerSizeQuery;
 use crate::stylesheets::{CssRuleType, Origin, UrlExtraData};
 use crate::stylist::Stylist;
+use crate::typed_om::TypedValueList;
 use crate::values::computed::Context;
 use cssparser::{
     parse_important, AtRuleParser, CowRcStr, DeclarationParser, Delimiter, ParseErrorKind, Parser,
@@ -47,7 +49,6 @@ use std::slice::Iter;
 use std::sync::atomic::AtomicBool;
 use style_traits::{
     CssString, CssStringWriter, CssWriter, ParseError, ParsingMode, StyleParseErrorKind, ToCss,
-    TypedValueList,
 };
 use thin_vec::ThinVec;
 
@@ -1009,6 +1010,7 @@ impl PropertyDeclarationBlock {
         };
 
         let mut rule_cache_conditions = RuleCacheConditions::default();
+        let mut tree_counting_caches = TreeCountingCaches::default();
         let mut context = Context::new(
             StyleBuilder::new(
                 stylist.device(),
@@ -1022,6 +1024,8 @@ impl PropertyDeclarationBlock {
             &mut rule_cache_conditions,
             ContainerSizeQuery::none(),
             RuleCascadeFlags::empty(),
+            &DummyElementContext {},
+            &mut tree_counting_caches,
         );
 
         if let Some(cv) = computed_values {
@@ -1138,7 +1142,11 @@ impl PropertyDeclarationBlock {
                 }
                 already_serialized.insert(shorthand.into());
 
-                if shorthand.is_legacy_shorthand() {
+                if shorthand.is_legacy_shorthand()
+                    && !(shorthand.allows_disabled_subproperties()
+                        && !NonCustomPropertyId::from(longhand_id).enabled_for_all_content())
+                {
+                    // TODO(Bug 1540681): Remove when shipping line-clamp.
                     continue;
                 }
 

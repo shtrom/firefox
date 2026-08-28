@@ -16,7 +16,8 @@
 const PDFJS_EVENT_ID = "pdf.js.message";
 const PDF_VIEWER_ORIGIN = "resource://pdf.js";
 const PDF_VIEWER_WEB_PAGE = "resource://pdf.js/web/viewer.html";
-const MAX_NUMBER_OF_PREFS = 50;
+const PDF_VIEWER_WORKER_URL = "resource://pdf.js/build/pdf.worker.mjs";
+const MAX_NUMBER_OF_PREFS = 60;
 const PDF_CONTENT_TYPE = "application/pdf";
 const SUMO_URL = "https://support.mozilla.org/";
 
@@ -89,7 +90,7 @@ function getDOMWindow(aChannel, aPrincipal) {
 function getActor(window) {
   try {
     const actorName =
-      AppConstants.platform === "android" ? "GeckoViewPdfjs" : "Pdfjs";
+      AppConstants.platform === "android" ? "GeckoViewPdfJs" : "PdfJs";
     return window.windowGlobalChild.getActor(actorName);
   } catch (ex) {
     return null;
@@ -187,6 +188,9 @@ class PrefObserver {
   #domWindow;
 
   #prefs = new Map([
+    // [pref-trie-audit] "accessibility.browsewithcaret" is an ambiguous prefix of
+    // "accessibility.browsewithcaret_shortcut.enabled"; triggers only for the exact pref
+    // (sibling is not in this Map so the observe() handler returns early for it).
     [
       caretBrowsingModePref,
       {
@@ -223,6 +227,9 @@ class PrefObserver {
       });
 
       // Once the experiment for new alt-text stuff is removed, we can remove this.
+      // [pref-trie-audit] "pdfjs.enableAltText" is an ambiguous prefix of
+      // "pdfjs.enableAltTextForEnglish", "pdfjs.enableAltTextModelDownload"; triggers only for
+      // the exact pref ("enableAltTextModelDownload" has its own entry in this Map above).
       this.#prefs.set("pdfjs.enableAltText", {
         name: "enableAltText",
         type: "bool",
@@ -292,12 +299,51 @@ class ChromeActions {
     "outlineloaded",
   ]);
 
+  #viewerDocument = null;
+
+  #worker = null;
+
+  #workerUnloadListener = () => this.closeWorker();
+
   constructor(domWindow, contentDispositionFilename) {
     this.domWindow = domWindow;
+    this.#viewerDocument = domWindow.document;
     this.contentDispositionFilename = contentDispositionFilename;
     this.sandbox = null;
     this.unloadListener = null;
     this.observer = new PrefObserver(domWindow, this.isMobile());
+  }
+
+  // PDF.js does not terminate a Worker supplied through workerPort.
+  closeWorker() {
+    try {
+      const worker = this.#worker;
+      this.#worker = null;
+      worker?.terminate();
+
+      const { domWindow } = this;
+      if (domWindow.document === this.#viewerDocument) {
+        domWindow.wrappedJSObject.pdfjsPreloadedWorker = null;
+      }
+    } catch (e) {
+      console.error("Error while closing the PDF.js worker:", e);
+    }
+  }
+
+  preloadWorker() {
+    const { domWindow } = this;
+    try {
+      this.#worker?.terminate();
+      this.#worker = new domWindow.Worker(PDF_VIEWER_WORKER_URL, {
+        type: "module",
+      });
+      domWindow.wrappedJSObject.pdfjsPreloadedWorker = this.#worker;
+      domWindow.addEventListener("unload", this.#workerUnloadListener, {
+        once: true,
+      });
+    } catch (e) {
+      console.error("Error while preloading the PDF.js worker:", e);
+    }
   }
 
   createSandbox(data, sendResponse) {
@@ -393,7 +439,34 @@ class ChromeActions {
     sendResponse(await actor.sendQuery("PDFJS:Parent:loadAIEngine", data));
   }
 
+  async verifyPdfSignature(data, sendResponse) {
+    const actor = getActor(this.domWindow);
+    if (!actor) {
+      sendResponse({ error: "no-actor" });
+      return;
+    }
+    sendResponse(
+      await actor.sendQuery("PDFJS:Parent:verifyPdfSignature", data)
+    );
+  }
+
+  async viewPdfCertificate(data, sendResponse) {
+    const actor = getActor(this.domWindow);
+    if (!actor) {
+      sendResponse(false);
+      return;
+    }
+    sendResponse(
+      await actor.sendQuery("PDFJS:Parent:viewPdfCertificate", data)
+    );
+  }
+
   download(data) {
+    if (!this.supportsDownloading()) {
+      console.warn("PdfStreamConverter: blocked a download request.");
+      return;
+    }
+
     const { originalUrl } = data;
     const blobUrl = data.blobUrl || originalUrl;
     let { filename } = data;
@@ -424,6 +497,22 @@ class ChromeActions {
     return this.domWindow.windowGlobalChild.browsingContext.parent === null;
   }
 
+  supportsDownloading() {
+    const context = this.domWindow.windowGlobalChild.browsingContext;
+    // A top-level document may always trigger downloads. The sandboxed-downloads
+    // flag is meant to let an embedder gate downloads from embedded content; at
+    // top level there is no embedder, and since the PDF response's CSP sandbox
+    // is already ignored for http(s) URLs, enforcing it only for the blob: edge
+    // case would be inconsistent and needlessly stop users saving a PDF they
+    // view.
+    if (context.parent === null) {
+      return true;
+    }
+    // Copied from nsSandboxFlags.h
+    const SANDBOXED_DOWNLOADS = 0x10000;
+    return (context.sandboxFlags & SANDBOXED_DOWNLOADS) === 0;
+  }
+
   async getBrowserPrefs() {
     const isMobile = this.isMobile();
     const nimbusDataStr = isMobile
@@ -441,6 +530,7 @@ class ChromeActions {
         !!Services.prefs.getIntPref("browser.display.use_document_fonts") &&
         Services.prefs.getBoolPref("gfx.downloadable_fonts.enabled"),
       supportsIntegratedFind: this.supportsIntegratedFind(),
+      supportsDownloading: this.supportsDownloading(),
       supportsMouseWheelZoomCtrlKey:
         Services.prefs.getIntPref("mousewheel.with_control.action") === 3,
       supportsMouseWheelZoomMetaKey:
@@ -754,7 +844,12 @@ class RangedChromeActions extends ChromeActions {
         );
       };
       this.dataListener.oncomplete = () => {
-        if (!done && this.dataListener.isDone) {
+        const { dataListener } = this;
+        if (!dataListener) {
+          return;
+        }
+        this.dataListener = null;
+        if (!done && dataListener.isDone) {
           this.domWindow.postMessage(
             {
               pdfjsLoadAction: "progressiveDone",
@@ -762,10 +857,12 @@ class RangedChromeActions extends ChromeActions {
             PDF_VIEWER_ORIGIN
           );
         }
-        this.dataListener = null;
       };
     }
 
+    if (done && !data) {
+      this.closeWorker();
+    }
     this.domWindow.postMessage(
       {
         pdfjsLoadAction: "supportsRangedLoading",
@@ -861,6 +958,9 @@ class StandardChromeActions extends ChromeActions {
     };
 
     this.dataListener.oncomplete = (data, errorCode) => {
+      if (!data) {
+        this.closeWorker();
+      }
       this.domWindow.postMessage(
         {
           pdfjsLoadAction: "complete",
@@ -1047,6 +1147,13 @@ PdfStreamConverter.prototype = {
   },
 
   getConvertedType(aFromType, aChannel) {
+    // nsIStreamConverter allows a null channel, but PDF.js needs one to decide
+    // how the PDF must be handled.
+    if (!aChannel) {
+      Components.returnCode = Cr.NS_ERROR_INVALID_ARG;
+      return "";
+    }
+
     if (aChannel instanceof Ci.nsIMultiPartChannel) {
       throw new Components.Exception(
         "PDF.js doesn't support multipart responses.",
@@ -1054,8 +1161,20 @@ PdfStreamConverter.prototype = {
       );
     }
 
+    // Without a browsing context there's nowhere to render the result, so
+    // PDF.js must not claim the channel and rewrite its type to text/html -
+    // that breaks the external handler for attachments opened from the compose
+    // window (bug 1698140).
+    let browsingContext = aChannel.loadInfo?.targetBrowsingContext;
+    if (!browsingContext) {
+      throw new Components.Exception(
+        "PDF.js can't be used without a browsing context.",
+        Cr.NS_ERROR_FAILURE
+      );
+    }
+
     const HTML = "text/html";
-    let channelURI = aChannel?.URI;
+    let channelURI = aChannel.URI;
     // We can be invoked for application/octet-stream; check if we want the
     // channel first:
     if (aFromType != "application/pdf") {
@@ -1070,11 +1189,8 @@ PdfStreamConverter.prototype = {
           "pdf";
       }
 
-      let browsingContext = aChannel?.loadInfo.targetBrowsingContext;
       let toplevelOctetStream =
-        aFromType == "application/octet-stream" &&
-        browsingContext &&
-        !browsingContext.parent;
+        aFromType == "application/octet-stream" && !browsingContext.parent;
       if (
         !isPDF ||
         !toplevelOctetStream ||
@@ -1153,6 +1269,13 @@ PdfStreamConverter.prototype = {
 
     var rangeRequest = false;
     var streamRequest = false;
+    const searchParams = new URLSearchParams(aRequest.URI.ref.toLowerCase());
+    const isPDFBugEnabled = Services.prefs.getBoolPref(
+      "pdfjs.pdfBugEnabled",
+      false
+    );
+    const disableWorker =
+      isPDFBugEnabled && searchParams.get("disableworker") === "true";
     if (isHttpRequest) {
       var contentEncoding = "identity";
       try {
@@ -1164,23 +1287,17 @@ PdfStreamConverter.prototype = {
         acceptRanges = aRequest.getResponseHeader("Accept-Ranges");
       } catch (e) {}
 
-      var hash = aRequest.URI.ref;
-      const isPDFBugEnabled = Services.prefs.getBoolPref(
-        "pdfjs.pdfBugEnabled",
-        false
-      );
       rangeRequest =
         contentEncoding === "identity" &&
         acceptRanges === "bytes" &&
         aRequest.contentLength >= 0 &&
         !Services.prefs.getBoolPref("pdfjs.disableRange", false) &&
-        (!isPDFBugEnabled || !hash.toLowerCase().includes("disablerange=true"));
+        (!isPDFBugEnabled || searchParams.get("disablerange") !== "true");
       streamRequest =
         contentEncoding === "identity" &&
         aRequest.contentLength >= 0 &&
         !Services.prefs.getBoolPref("pdfjs.disableStream", false) &&
-        (!isPDFBugEnabled ||
-          !hash.toLowerCase().includes("disablestream=true"));
+        (!isPDFBugEnabled || searchParams.get("disablestream") !== "true");
     }
 
     aRequest.QueryInterface(Ci.nsIChannel);
@@ -1253,7 +1370,7 @@ PdfStreamConverter.prototype = {
         listener.onDataAvailable(aRequest, inputStream, offset, count);
       },
       onStopRequest(request, statusCode) {
-        var domWindow = getDOMWindow(channel, resourcePrincipal);
+        const domWindow = getDOMWindow(channel, resourcePrincipal);
         if (!Components.isSuccessCode(statusCode) || !domWindow) {
           // The request may have been aborted and the document may have been
           // replaced with something that is not PDF.js, abort attaching.
@@ -1277,6 +1394,10 @@ PdfStreamConverter.prototype = {
             aRequest,
             dataListener
           );
+        }
+        // viewer.mjs reads pdfjsPreloadedWorker during module evaluation.
+        if (!disableWorker) {
+          actions.preloadWorker();
         }
 
         var requestListener = new RequestListener(actions);

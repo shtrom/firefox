@@ -247,9 +247,24 @@
                 },
                 "where": {
                   "type": "string",
-                  "enum": ["current", "save", "tab", "tabshifted", "window"],
+                  "enum": [
+                    "chromeless",
+                    "current",
+                    "save",
+                    "tab",
+                    "tabshifted",
+                    "window"
+                  ],
                   "description": "Where the URL is opened",
                   "default": "tab"
+                },
+                "width": {
+                  "type": "integer",
+                  "description": "Width of the window when where is chromeless"
+                },
+                "height": {
+                  "type": "integer",
+                  "description": "Height of the window when where is chromeless"
                 }
               },
               "required": ["args", "where"],
@@ -417,6 +432,10 @@
                 "privatePin": {
                   "type": "boolean",
                   "description": "Whether or not to pin private browsing mode"
+                },
+                "fireAndForget": {
+                  "type": "boolean",
+                  "description": "Whether or not to wait for user confirmation before resolving the action"
                 }
               },
               "additionalProperties": false
@@ -443,12 +462,74 @@
           "properties": {
             "type": {
               "type": "string",
+              "enum": ["PIN_AND_DEFAULT"]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "privatePin": {
+                  "type": "boolean",
+                  "description": "Whether or not to pin private browsing mode"
+                },
+                "fireAndForget": {
+                  "type": "boolean",
+                  "description": "Whether or not to wait for user confirmation before resolving the action"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Pin the app to taskbar and set as default browser"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["CONFIRM_LAUNCH_ON_LOGIN"]
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Configure Firefox to launch on Windows login"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["REMOVE_LAUNCH_ON_LOGIN"]
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Remove Firefox from Windows login items"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
               "enum": ["SET_DEFAULT_BROWSER"]
             }
           },
           "required": ["type"],
           "additionalProperties": false,
           "description": "Message action to set Firefox as default browser"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["SET_DEFAULT_BROWSER_OPEN_WITH"]
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Message action to set Firefox as the default browser via the OS \"Open with\" picker (IOpenWithLauncher), guaranteeing an OS-level prompt. Windows only."
         },
         {
           "type": "object",
@@ -463,6 +544,10 @@
                 "onlyIfKnownBrowser": {
                   "type": "boolean",
                   "description": "Only set Firefox as the default PDF handler if the current PDF handler is a known browser."
+                },
+                "openInFirefox": {
+                  "type": "boolean",
+                  "description": "If the OS hands the stub PDF back to Firefox after the user picks Firefox in the open-with dialog, open a follow-up PDF in a new tab instead of suppressing the launch."
                 }
               },
               "additionalProperties": false
@@ -483,6 +568,37 @@
           "required": ["type"],
           "additionalProperties": false,
           "description": "Message action to decline setting Firefox as the default PDF handler"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["SET_DEFAULT_PROTOCOL_HANDLER"]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "protocol": {
+                  "type": "string",
+                  "description": "The protocol to claim, e.g. \"mailto\"."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "URL passed to the OS default-app picker."
+                },
+                "openInFirefox": {
+                  "type": "boolean",
+                  "description": "If the OS hands the URL back to Firefox after the user picks Firefox in the open-with dialog, open the protocol's default URL in a new tab instead of suppressing the launch."
+                }
+              },
+              "required": ["protocol"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["type", "data"],
+          "additionalProperties": false,
+          "description": "Message action to set Firefox as the default protocol handler"
         },
         {
           "type": "object",
@@ -617,6 +733,29 @@
           "required": ["data", "type"],
           "additionalProperties": false,
           "description": "Sets prefs from special message actions"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "widget_id": {
+                  "type": "string",
+                  "description": "The id of the widget to destroy"
+                }
+              },
+              "required": ["widget_id"],
+              "additionalProperties": false
+            },
+            "type": {
+              "type": "string",
+              "enum": ["DESTROY_UIWIDGET"]
+            }
+          },
+          "required": ["data", "type"],
+          "additionalProperties": false,
+          "description": "Destroys a customizable UI widget"
         },
         {
           "type": "object",
@@ -764,7 +903,7 @@
                 },
                 "source": {
                   "type": "integer",
-                  "description": "A result source to restrict to. One of the values in UrlbarUtils.RESULT_SOURCE.",
+                  "description": "A result source to restrict to. One of the values in UrlbarShared.RESULT_SOURCE.",
                   "default": 3
                 },
                 "entry": {
@@ -804,6 +943,28 @@
           "required": ["type"],
           "additionalProperties": false,
           "description": "Summarize current page content."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["OPEN_ORGANIZE_TABS_PANEL"]
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "Identifies the surface that opened the panel, recorded as the `source` extra key on the panel's telemetry. Defaults to \"message\"."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Opens the Smart Window \"Organize Tabs\" panel."
         },
         {
           "type": "object",
@@ -890,6 +1051,51 @@
           "required": ["type"],
           "additionalProperties": false,
           "description": "Enrolls the user in IP Protection by initiating sign-in and entitlement."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the icon to switch to, as listed in the CustomIconManager ICON_CATALOG. Unknown ids are ignored."
+                }
+              },
+              "required": ["id"],
+              "additionalProperties": false
+            },
+            "type": {
+              "type": "string",
+              "enum": ["SET_BROWSER_ICON"]
+            }
+          },
+          "required": ["data", "type"],
+          "additionalProperties": false,
+          "description": "Changes the browser icon using CustomIconManager. Windows only, and not supported on MSIX (packaged) builds."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["GET_REFERRAL_CODE"]
+            },
+            "data": {
+              "entrypoint": {
+                "type": "string",
+                "description": "An entrypoint name to add to the params of the created URL"
+              },
+              "where": {
+                "type": "string",
+                "description": "where to open the created URL, defaults to tab"
+              }
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Gets the user's referral code or generates one if it doesn't exist, and opens about:referrals with the code as a param"
         }
       ]
     }

@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 [DEFAULT]
+tags = "urlbar"
 support-files = [
   "head.js",
   "searchSuggestionEngine.xml",
@@ -13,6 +14,8 @@ prefs = [
   "browser.bookmarks.testing.skipDefaultBookmarksImport=true",
   "layout.css.attr.enabled=true",
 ]
+
+["browser_pickedSearchSuggestion.js"]
 
 ["browser_quicksuggest.js"]
 
@@ -32,13 +35,19 @@ prefs = [
 
 ["browser_quicksuggest_merinoSessions.js"]
 
-["browser_quicksuggest_ping_amp.js"]
-tags = "search-telemetry"
-
 ["browser_quicksuggest_ping_deletionRequest.js"]
 tags = "search-telemetry"
+skip-if = [
+  "true", # Bug 2056936 - The `quick-suggest-deletion-request` ping is disabled
+]
 
-["browser_quicksuggest_ping_merinoAndNullValues.js"]
+["browser_quicksuggest_ping_nullValues.js"]
+tags = "search-telemetry"
+
+["browser_quicksuggest_ping_offline.js"]
+tags = "search-telemetry"
+
+["browser_quicksuggest_ping_online.js"]
 tags = "search-telemetry"
 
 ["browser_quicksuggest_realtime_flight_status.js"]

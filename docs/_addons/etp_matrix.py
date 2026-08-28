@@ -84,12 +84,6 @@ OTHER_PRIVACY_PREFS = {
             "Changes cookieBehavior=5 from dynamic partitioning to block-by-default with opt-in.",
         ),
         (
-            "Tracker Cookie Blocking",
-            "network.cookie.cookieBehavior.trackerCookieBlocking",
-            None,
-            "Blocks third-party cookies from domains on the tracking protection list.",
-        ),
-        (
             "Social Tracker Cookie Blocking",
             "privacy.socialtracking.block_cookies.enabled",
             None,
@@ -133,12 +127,6 @@ OTHER_PRIVACY_PREFS = {
         ),
     ],
     "Other Privacy Features": [
-        (
-            "Cookie Banner UI",
-            "cookiebanners.ui.desktop.enabled",
-            None,
-            "Shows cookie banner reduction controls in Firefox settings.",
-        ),
         (
             "Strip on Share",
             "privacy.query_stripping.strip_on_share.enabled",
@@ -403,13 +391,15 @@ def _build_pref_links(pref_name, pref_info, firefox_js_overrides, all_js_prefs):
     links = []
     if pref_name in pref_info:
         path = "modules/libpref/init/StaticPrefList.yaml"
-        links.append(f"[StaticPrefList.yaml]({make_searchfox_link(pref_name, path)})")
+        links.append(
+            f'<a href="{make_searchfox_link(pref_name, path)}">StaticPrefList.yaml</a>'
+        )
     if pref_name in all_js_prefs:
         path = "modules/libpref/init/all.js"
-        links.append(f"[all.js]({make_searchfox_link(pref_name, path)})")
+        links.append(f'<a href="{make_searchfox_link(pref_name, path)}">all.js</a>')
     if pref_name in firefox_js_overrides:
         path = "browser/app/profile/firefox.js"
-        links.append(f"[firefox.js]({make_searchfox_link(pref_name, path)})")
+        links.append(f'<a href="{make_searchfox_link(pref_name, path)}">firefox.js</a>')
     if not links:
         return f"`{pref_name}`"
     return f"`{pref_name}`: " + ", ".join(links)

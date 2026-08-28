@@ -13,6 +13,8 @@ ChromeUtils.importESModule(
 const lazy = XPCOMUtils.declareLazy({
   AddonSearchEngine:
     "moz-src:///toolkit/components/search/AddonSearchEngine.sys.mjs",
+  AppProvidedConfigEngine:
+    "moz-src:///toolkit/components/search/ConfigSearchEngine.sys.mjs",
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
   SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
@@ -27,7 +29,7 @@ const lazy = XPCOMUtils.declareLazy({
     onUpdate: () => window.gSearchPane._engineStore.notifyRebuildViews(),
   },
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarUtils: "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UserSearchEngine:
     "moz-src:///toolkit/components/search/UserSearchEngine.sys.mjs",
 });
@@ -183,7 +185,7 @@ class EngineStore {
     this.notifyRowCountChanged(0, visibleEngines.length);
 
     gSearchPane.showRestoreDefaults(
-      engines.some(e => e.isAppProvided && e.hidden)
+      engines.some(e => e instanceof lazy.AppProvidedConfigEngine && e.hidden)
     );
   }
 
@@ -267,10 +269,11 @@ class EngineStore {
     var clonedObj = {
       iconURL: null,
     };
-    for (let i of ["id", "name", "alias", "hidden", "isAppProvided"]) {
+    for (let i of ["id", "name", "alias", "hidden"]) {
       clonedObj[i] = aEngine[i];
     }
     clonedObj.isAddonEngine = aEngine instanceof lazy.AddonSearchEngine;
+    clonedObj.isAppProvided = aEngine instanceof lazy.AppProvidedConfigEngine;
     clonedObj.isUserEngine = aEngine instanceof lazy.UserSearchEngine;
     clonedObj.originalEngine = aEngine;
 
@@ -330,6 +333,7 @@ class EngineStore {
     return lazy.SearchService.moveEngine(
       aEngine.originalEngine,
       aNewIndex,
+      null,
       true
     );
   }
@@ -354,7 +358,7 @@ class EngineStore {
 
     this.engines.splice(index, 1)[0];
 
-    if (aEngine.isAppProvided) {
+    if (aEngine instanceof lazy.AppProvidedConfigEngine) {
       gSearchPane.showRestoreDefaults(true);
     }
 
@@ -417,7 +421,7 @@ class EngineStore {
         this.engines.splice(i, 0, e);
         let engine = e.originalEngine;
         engine.hidden = false;
-        await lazy.SearchService.moveEngine(engine, i, true);
+        await lazy.SearchService.moveEngine(engine, i, null, true);
         added++;
       }
     }
@@ -487,8 +491,8 @@ class EngineView {
     this._localShortcutL10nNames = new Map();
 
     let getIDs = (suffix = "") =>
-      lazy.UrlbarUtils.LOCAL_SEARCH_MODES.map(mode => {
-        let name = lazy.UrlbarUtils.getResultSourceName(mode.source);
+      lazy.UrlbarShared.LOCAL_SEARCH_MODES.map(mode => {
+        let name = lazy.UrlbarShared.getResultSourceName(mode.source);
         return { id: `urlbar-search-mode-${name}${suffix}` };
       });
 
@@ -502,7 +506,7 @@ class EngineView {
       let localizedNames = await document.l10n.formatValues(localizedIDs);
       let englishNames = await englishSearchStrings.formatValues(englishIDs);
 
-      lazy.UrlbarUtils.LOCAL_SEARCH_MODES.forEach(({ source }, index) => {
+      lazy.UrlbarShared.LOCAL_SEARCH_MODES.forEach(({ source }, index) => {
         let localizedName = localizedNames[index];
         let englishName = englishNames[index];
 
@@ -674,7 +678,7 @@ class EngineView {
     if (index < engineCount) {
       return null;
     }
-    return lazy.UrlbarUtils.LOCAL_SEARCH_MODES[index - engineCount];
+    return lazy.UrlbarShared.LOCAL_SEARCH_MODES[index - engineCount];
   }
 
   /**
@@ -884,10 +888,10 @@ class EngineView {
 
   // nsITreeView
   get rowCount() {
-    let localModes = lazy.UrlbarUtils.LOCAL_SEARCH_MODES;
+    let localModes = lazy.UrlbarShared.LOCAL_SEARCH_MODES;
     if (!lazy.UrlbarPrefs.get("scotchBonnet.enableOverride")) {
       localModes = localModes.filter(
-        mode => mode.source != lazy.UrlbarUtils.RESULT_SOURCE.ACTIONS
+        mode => mode.source != lazy.UrlbarShared.RESULT_SOURCE.ACTIONS
       );
     }
     return this._engineStore.engines.length + localModes.length;
@@ -988,7 +992,7 @@ class EngineView {
       // the icons in CSS.
       let shortcut = this._getLocalShortcut(index);
       if (shortcut) {
-        return lazy.UrlbarUtils.getResultSourceName(shortcut.source);
+        return lazy.UrlbarShared.getResultSourceName(shortcut.source);
       }
     }
     return "";

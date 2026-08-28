@@ -184,6 +184,35 @@ export class PrivacySettingHelpers {
     Preferences.getSetting("reloadTabsHint").value = true;
   }
 
+  /**
+   * Forces the URL classifier to refresh the cryptomining tracker tables so the
+   * change takes effect immediately rather than at the next scheduled update.
+   */
+  static updateCryptominingLists() {
+    let listValue = [
+      "urlclassifier.features.cryptomining.blacklistTables",
+      "urlclassifier.features.cryptomining.whitelistTables",
+    ]
+      .map(l => Services.prefs.getStringPref(l))
+      .join(",");
+    lazy.listManager.forceUpdates(listValue);
+  }
+
+  /**
+   * Forces the URL classifier to refresh the fingerprinting tracker tables so
+   * the change takes effect immediately rather than at the next scheduled
+   * update.
+   */
+  static updateFingerprintingLists() {
+    let listValue = [
+      "urlclassifier.features.fingerprinting.blacklistTables",
+      "urlclassifier.features.fingerprinting.whitelistTables",
+    ]
+      .map(l => Services.prefs.getStringPref(l))
+      .join(",");
+    lazy.listManager.forceUpdates(listValue);
+  }
+
   static async onBaselineAllowListSettingChange(value, setting) {
     if (value) {
       PrivacySettingHelpers.maybeNotifyUserToReload();
@@ -266,7 +295,11 @@ export class PrivacySettingHelpers {
 
   static shouldDisableETPCategoryControls() {
     let policy = Services.policies.getActivePolicies();
-    return policy?.EnableTrackingProtection?.Locked || policy?.Cookies?.Locked;
+    return (
+      policy?.EnableTrackingProtection?.Locked ||
+      policy?.EnableTrackingProtection?.Category ||
+      policy?.Cookies?.Locked
+    );
   }
 }
 
@@ -316,6 +349,7 @@ Preferences.addAll([
   { id: "browser.urlbar.trustPanel.breachAlerts", type: "bool" },
   { id: "browser.urlbar.trustPanel.featureGate", type: "bool" },
   { id: "browser.urlbar.trustPanel.breachAlerts.featureGate", type: "bool" },
+  { id: "browser.urlbar.trackerCount.enabled", type: "bool" },
 
   // Button prefs
   { id: "pref.privacy.disable_button.cookie_exceptions", type: "bool" },
@@ -421,10 +455,6 @@ Preferences.addAll([
   { id: "dom.security.https_only_mode_pbm", type: "bool" },
   { id: "dom.security.https_first", type: "bool" },
   { id: "dom.security.https_first_pbm", type: "bool" },
-
-  // Cookie Banner Handling
-  { id: "cookiebanners.ui.desktop.enabled", type: "bool" },
-  { id: "cookiebanners.service.mode.privateBrowsing", type: "int" },
 
   // DoH
   { id: "network.trr.mode", type: "int" },
@@ -603,6 +633,7 @@ SettingGroupManager.registerGroups({
         controlAttrs: {
           type: "warning",
           dismissable: true,
+          role: "status",
         },
       },
     ],
@@ -653,6 +684,7 @@ SettingGroupManager.registerGroups({
         supportPage: "how-do-i-turn-do-not-track-feature",
         controlAttrs: {
           dismissable: true,
+          role: "status",
         },
       },
     ],
@@ -712,6 +744,9 @@ SettingGroupManager.registerGroups({
         id: "deleteOnCloseInfo",
         l10nId: "sitedata-delete-on-close-private-browsing3",
         control: "moz-message-bar",
+        controlAttrs: {
+          role: "status",
+        },
       },
       {
         id: "manageDataSettingsGroup",
@@ -839,7 +874,6 @@ SettingGroupManager.registerGroups({
     iconSrc: "chrome://devtools/skin/images/globe.svg",
     headingLevel: 1,
     supportPage: "prefs-connection-settings",
-    subcategory: "netsettings",
     items: [
       {
         id: "connectionSettings",
@@ -897,23 +931,46 @@ SettingGroupManager.registerGroups({
         l10nId: "history-clear-on-close-option",
       },
       {
-        id: "clearDataSettings",
-        l10nId: "history-clear-on-close-settings",
-        control: "moz-box-button",
+        id: "clearOnCloseGroup",
+        control: "moz-box-group",
         controlAttrs: {
-          "search-l10n-ids": `
-            clear-data-settings-label,
-            history-section-label,
-            item-history-and-downloads.label,
-            item-cookies.label,
-            item-active-logins.label,
-            item-cache.label,
-            item-form-search-history.label,
-            data-section-label,
-            item-site-settings.label,
-            item-offline-apps.label
-          `,
+          type: "default",
         },
+        items: [
+          {
+            id: "clearDataSettings",
+            l10nId: "history-clear-on-close-settings",
+            control: "moz-box-button",
+            controlAttrs: {
+              "search-l10n-ids": `
+                clear-data-settings-label,
+                history-section-label,
+                item-history-and-downloads.label,
+                item-cookies.label,
+                item-active-logins.label,
+                item-cache.label,
+                item-form-search-history.label,
+                data-section-label,
+                item-site-settings.label,
+                item-offline-apps.label
+              `,
+            },
+          },
+          {
+            id: "shutdownClearingExceptions",
+            l10nId: "history-shutdown-exceptions",
+            control: "moz-box-button",
+            controlAttrs: {
+              "search-l10n-ids": `
+                permissions-address,
+                permissions-allow.label,
+                permissions-remove.label,
+                permissions-remove-all.label,
+                permissions-exceptions-shutdown-clearing-desc
+              `,
+            },
+          },
+        ],
       },
       {
         id: "clearHistoryButton",
@@ -931,6 +988,9 @@ SettingGroupManager.registerGroups({
         id: "deleteOnCloseInfo",
         l10nId: "sitedata-delete-on-close-private-browsing4",
         control: "moz-message-bar",
+        controlAttrs: {
+          role: "status",
+        },
       },
       {
         id: "historyMode",
@@ -947,6 +1007,7 @@ SettingGroupManager.registerGroups({
               {
                 id: "customHistoryButton",
                 control: "moz-box-button",
+                loadPane: "history",
                 l10nId: "history-custom-button",
               },
             ],
@@ -989,23 +1050,46 @@ SettingGroupManager.registerGroups({
         l10nId: "history-clear-on-close-option",
         items: [
           {
-            id: "clearDataSettings",
-            l10nId: "history-clear-on-close-settings",
-            control: "moz-box-button",
+            id: "clearOnCloseGroup",
+            control: "moz-box-group",
             controlAttrs: {
-              "search-l10n-ids": `
-                    clear-data-settings-label,
-                    history-section-label,
-                    item-history-and-downloads.label,
-                    item-cookies.label,
-                    item-active-logins.label,
-                    item-cache.label,
-                    item-form-search-history.label,
-                    data-section-label,
-                    item-site-settings.label,
-                    item-offline-apps.label
-                  `,
+              type: "default",
             },
+            items: [
+              {
+                id: "clearDataSettings",
+                l10nId: "history-clear-on-close-settings",
+                control: "moz-box-button",
+                controlAttrs: {
+                  "search-l10n-ids": `
+                        clear-data-settings-label,
+                        history-section-label,
+                        item-history-and-downloads.label,
+                        item-cookies.label,
+                        item-active-logins.label,
+                        item-cache.label,
+                        item-form-search-history.label,
+                        data-section-label,
+                        item-site-settings.label,
+                        item-offline-apps.label
+                      `,
+                },
+              },
+              {
+                id: "shutdownClearingExceptions",
+                l10nId: "history-shutdown-exceptions",
+                control: "moz-box-button",
+                controlAttrs: {
+                  "search-l10n-ids": `
+                        permissions-address,
+                        permissions-allow.label,
+                        permissions-remove.label,
+                        permissions-remove-all.label,
+                        permissions-exceptions-shutdown-clearing-desc
+                      `,
+                },
+              },
+            ],
           },
         ],
       },
@@ -1029,6 +1113,7 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "dohAdvancedButton",
+            loadPane: "dnsOverHttps",
             l10nId: "preferences-doh-advanced-button",
             control: "moz-box-button",
           },
@@ -1045,6 +1130,9 @@ SettingGroupManager.registerGroups({
       {
         id: "dohStatusBox",
         control: "moz-message-bar",
+        controlAttrs: {
+          role: "status",
+        },
       },
       {
         id: "dohRadioGroup",
@@ -1114,9 +1202,15 @@ SettingGroupManager.registerGroups({
           {
             id: "etpStatusAdvancedButton",
             l10nId: "preferences-etp-status-advanced-button",
+            loadPane: "etp",
             control: "moz-box-button",
           },
         ],
+      },
+      {
+        id: "etpTrackerCountEnabled",
+        l10nId: "preferences-etp-tracker-count-enabled",
+        control: "moz-checkbox",
       },
       {
         id: "protectionsDashboardLink",
@@ -1183,6 +1277,7 @@ SettingGroupManager.registerGroups({
               {
                 id: "etpCustomizeButton",
                 l10nId: "preferences-etp-customize-button",
+                loadPane: "etpCustomize",
                 control: "moz-box-button",
               },
             ],
@@ -1193,8 +1288,9 @@ SettingGroupManager.registerGroups({
         id: "reloadTabsHint",
         control: "moz-message-bar",
         l10nId: "preferences-etp-reload-tabs-hint",
-        options: [
+        items: [
           {
+            id: "reloadTabsHintButton",
             control: "moz-button",
             l10nId: "preferences-etp-reload-tabs-hint-button",
             slot: "actions",
@@ -1215,6 +1311,8 @@ SettingGroupManager.registerGroups({
           ".imageAlignment": "end",
           ".imageSrc":
             "chrome://browser/content/preferences/etp-toggle-promo.svg",
+          imagewidth: "large",
+          imagedisplay: "cover",
         },
       },
       {
@@ -1249,8 +1347,9 @@ SettingGroupManager.registerGroups({
         id: "reloadTabsHint",
         control: "moz-message-bar",
         l10nId: "preferences-etp-reload-tabs-hint",
-        options: [
+        items: [
           {
+            id: "reloadTabsHintButton",
             control: "moz-button",
             l10nId: "preferences-etp-reload-tabs-hint-button",
             slot: "actions",
@@ -1289,28 +1388,38 @@ SettingGroupManager.registerGroups({
             options: [
               {
                 value: Ci.nsICookieService.BEHAVIOR_ACCEPT.toString(),
-                l10nId: "preferences-etpc-custom-cookie-behavior-accept-all",
+                l10nId: "preferences-etp-custom-cookie-behavior-accept-all",
               },
               {
                 value: Ci.nsICookieService.BEHAVIOR_REJECT_TRACKER.toString(),
-                l10nId: "sitedata-option-block-cross-site-trackers",
+                l10nId:
+                  "preferences-etp-custom-cookie-behavior-block-cross-site-cookies",
+                hidden:
+                  Services.prefs.getIntPref("network.cookie.cookieBehavior") !==
+                  Ci.nsICookieService.BEHAVIOR_REJECT_TRACKER,
               },
               {
                 value:
-                  Ci.nsICookieService.BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN.toString(),
-                l10nId: "sitedata-option-block-cross-site-cookies2",
+                  Ci.nsICookieService.BEHAVIOR_PARTITION_FOREIGN.toString(),
+                l10nId:
+                  "preferences-etp-custom-cookie-behavior-isolate-cross-site-cookies",
               },
               {
                 value: Ci.nsICookieService.BEHAVIOR_LIMIT_FOREIGN.toString(),
-                l10nId: "sitedata-option-block-unvisited",
+                l10nId:
+                  "preferences-etp-custom-cookie-behavior-block-unvisited",
+                hidden:
+                  Services.prefs.getIntPref("network.cookie.cookieBehavior") !==
+                  Ci.nsICookieService.BEHAVIOR_LIMIT_FOREIGN,
               },
               {
                 value: Ci.nsICookieService.BEHAVIOR_REJECT_FOREIGN.toString(),
-                l10nId: "sitedata-option-block-all-cross-site-cookies",
+                l10nId:
+                  "preferences-etp-custom-cookie-behavior-block-all-cross-site-cookies",
               },
               {
                 value: Ci.nsICookieService.BEHAVIOR_REJECT.toString(),
-                l10nId: "sitedata-option-block-all",
+                l10nId: "preferences-etp-custom-cookie-behavior-block-all",
               },
             ],
           },
@@ -1379,12 +1488,14 @@ SettingGroupManager.registerGroups({
     ],
   },
   connectionLink: {
+    subcategory: "netsettings",
     l10nId: "preferences-connection-link-section",
     iconSrc: "chrome://devtools/skin/images/globe.svg",
     items: [
       {
         id: "connectionLinkButton",
         l10nId: "preferences-connection-link-button",
+        loadPane: "connectionSecurity",
         control: "moz-box-button",
       },
     ],
@@ -1397,10 +1508,7 @@ SettingGroupManager.registerGroups({
     items: [
       {
         id: "ipProtectionNotOptedInSection",
-        l10nId: "ip-protection-not-opted-in-3",
-        l10nArgs: {
-          maxUsage: "50",
-        },
+        l10nId: "ip-protection-not-opted-in-4",
         control: "moz-promo",
         controlAttrs: {
           imagesrc:
@@ -1792,11 +1900,11 @@ if (SECURITY_PRIVACY_STATUS_CARD_ENABLED) {
       id: "warningSafeBrowsing",
     },
     {
-      l10nId: "security-privacy-issue-warning-doh",
+      l10nId: "security-privacy-issue-warning-doh2",
       id: "warningDoH",
     },
     {
-      l10nId: "security-privacy-issue-warning-ech",
+      l10nId: "security-privacy-issue-warning-ech2",
       id: "warningECH",
     },
 
@@ -1887,24 +1995,33 @@ if (SECURITY_PRIVACY_STATUS_CARD_ENABLED) {
       id: "appUpdateStatus",
       cachedValue: undefined,
       setup(emitChange) {
-        if (lazy.AppConstants.MOZ_UPDATER && !lazy.isPackagedApp) {
-          let appUpdater = new lazy.AppUpdater();
-          /**
-           * @param {number} appStatus
-           * @param {any[]} _args
-           */
-          let listener = (appStatus, ..._args) => {
-            this.cachedValue = appStatus;
-            emitChange();
-          };
-          appUpdater.addListener(listener);
-          appUpdater.check();
-          return () => {
-            appUpdater.removeListener(listener);
-            appUpdater.stop();
-          };
+        if (!lazy.AppConstants.MOZ_UPDATER || lazy.isPackagedApp) {
+          return () => {};
         }
-        return () => {};
+        // Reuse the AppUpdater driven by about-firefox.mjs's updateState
+        // setting so we don't kick off a parallel update check and download.
+        let sharedAppUpdater = window.gAppUpdater?._appUpdater;
+        let appUpdater = sharedAppUpdater ?? new lazy.AppUpdater();
+        /**
+         * @param {number} appStatus
+         * @param {any[]} _args
+         */
+        let listener = (appStatus, ..._args) => {
+          this.cachedValue = appStatus;
+          emitChange();
+        };
+        appUpdater.addListener(listener);
+        if (sharedAppUpdater) {
+          this.cachedValue = appUpdater.status;
+        } else {
+          appUpdater.check();
+        }
+        return () => {
+          appUpdater.removeListener(listener);
+          if (!sharedAppUpdater) {
+            appUpdater.stop();
+          }
+        };
       },
       get() {
         return this.cachedValue;
@@ -2624,12 +2741,16 @@ Preferences.addSetting(
   })
 );
 
-// Trigger site data calculation the first time the privacy pane is shown in
-// this prefs document. siteDataSize, clearSiteDataButton, and siteDataSettings
-// all consume the resulting "sitedatamanager:*" notifications.
+// Trigger site data calculation the first time the privacy pane or the
+// search-results pane is shown in this prefs document. siteDataSize,
+// clearSiteDataButton, and siteDataSettings all consume the resulting
+// "sitedatamanager:*" notifications.
 {
   let onPaneShown = event => {
-    if (event.detail.category === "panePrivacy") {
+    if (
+      event.detail.category === "panePrivacy" ||
+      event.detail.category === "paneSearchResults"
+    ) {
       lazy.SiteDataManager.updateSites();
       window.removeEventListener("paneshown", onPaneShown);
     }
@@ -2639,6 +2760,10 @@ Preferences.addSetting(
 
 Preferences.addSetting({
   id: "cookieExceptions",
+  disabled: () =>
+    Services.prefs.prefIsLocked(
+      "pref.privacy.disable_button.cookie_exceptions"
+    ),
   onUserClick() {
     gSubDialog.open(
       "chrome://browser/content/preferences/dialogs/permissions.xhtml",
@@ -2872,9 +2997,13 @@ Preferences.addSetting({
       });
     }
   },
-  disabled({ privateBrowsingAutoStart }) {
-    // Disable history dropdown if PBM autostart is locked on.
-    return privateBrowsingAutoStart.locked && privateBrowsingAutoStart.value;
+  disabled({ privateBrowsingAutoStart, sanitizeOnShutdown }) {
+    // Disable history dropdown if PBM autostart is locked on, or if
+    // SanitizeOnShutdown policy locks clear-on-shutdown on (forces "custom").
+    return (
+      (privateBrowsingAutoStart.locked && privateBrowsingAutoStart.value) ||
+      (sanitizeOnShutdown.locked && sanitizeOnShutdown.value)
+    );
   },
   getControlConfig(config, { privateBrowsingAutoStart }, setting) {
     let l10nId = null;
@@ -2928,6 +3057,9 @@ Preferences.addSetting({
   visible({ historyMode }) {
     return PrivateBrowsingUtils.enabled && historyMode.value == "custom";
   },
+  disabled({ historyMode }) {
+    return historyMode.disabled;
+  },
 });
 Preferences.addSetting({
   id: "rememberHistory",
@@ -2958,9 +3090,13 @@ Preferences.addSetting({
   visible({ historyMode }) {
     return historyMode.value == "custom";
   },
-  disabled({ privateBrowsingAutoStart }) {
-    return privateBrowsingAutoStart.value;
+  disabled({ privateBrowsingAutoStart, historyMode }) {
+    return privateBrowsingAutoStart.value || historyMode.disabled;
   },
+});
+
+Preferences.addSetting({
+  id: "clearOnCloseGroup",
 });
 
 Preferences.addSetting({
@@ -2980,6 +3116,30 @@ Preferences.addSetting({
       },
       {
         mode: "clearOnShutdown",
+      }
+    );
+  },
+});
+
+Preferences.addSetting({
+  id: "shutdownClearingExceptions",
+  deps: ["historyMode", "alwaysClear"],
+  visible({ historyMode }) {
+    return historyMode.value == "custom";
+  },
+  disabled({ alwaysClear }) {
+    return !alwaysClear.value || alwaysClear.disabled;
+  },
+  onUserClick() {
+    gSubDialog.open(
+      "chrome://browser/content/preferences/dialogs/permissions.xhtml",
+      {},
+      {
+        blockVisible: false,
+        sessionVisible: false,
+        allowVisible: true,
+        prefilledHost: "",
+        permissionType: "persist-data-on-shutdown",
       }
     );
   },
@@ -3010,7 +3170,7 @@ Preferences.addSetting({
   id: "viewCertificatesButton",
   deps: ["disableOpenCertManager"],
   disabled: deps => {
-    return deps.disableOpenCertManager.value;
+    return deps.disableOpenCertManager.locked;
   },
   onUserClick: () => {
     PrivacySettingHelpers.showCertificates();
@@ -3020,7 +3180,7 @@ Preferences.addSetting({
   id: "viewSecurityDevicesButton",
   deps: ["disableOpenDeviceManager"],
   disabled: deps => {
-    return deps.disableOpenDeviceManager.value;
+    return deps.disableOpenDeviceManager.locked;
   },
   onUserClick: () => {
     PrivacySettingHelpers.showSecurityDevices();
@@ -3056,6 +3216,8 @@ Preferences.addSetting({
 
 Preferences.addSetting({
   id: "dohExceptionsButton",
+  deps: ["dohMode"],
+  disabled: ({ dohMode }) => dohMode.locked,
   onUserClick: () => PrivacySettingHelpers.showDoHExceptions(),
 });
 
@@ -3233,6 +3395,7 @@ Preferences.addSetting({
   // Therefore, we set dohMode and dohURL as deps here. This is a smell, but needed
   // for the mismatch of control-to-pref.
   deps: ["dohFallbackIfCustom", "dohMode", "dohURL"],
+  disabled: ({ dohMode }) => dohMode.locked,
   onUserChange: (val, deps) => {
     let value = null;
     if (val == "default") {
@@ -3240,9 +3403,9 @@ Preferences.addSetting({
     } else if (val == "off") {
       value = "dohOffRadio";
     } else if (val == "custom" && deps.dohFallbackIfCustom.value) {
-      value = "dohEnabledRadio";
-    } else if (val == "custom" && !deps.dohFallbackIfCustom.value) {
       value = "dohStrictRadio";
+    } else if (val == "custom" && !deps.dohFallbackIfCustom.value) {
+      value = "dohEnabledRadio";
     }
     if (value) {
       Glean.securityDohSettings.modeChangedButton.record({
@@ -3267,9 +3430,9 @@ Preferences.addSetting({
   set: (val, deps) => {
     if (val == "custom") {
       if (deps.dohFallbackIfCustom.value) {
-        deps.dohMode.value = Ci.nsIDNSService.MODE_TRRFIRST;
-      } else {
         deps.dohMode.value = Ci.nsIDNSService.MODE_TRRONLY;
+      } else {
+        deps.dohMode.value = Ci.nsIDNSService.MODE_TRRFIRST;
       }
     } else if (val == "off") {
       deps.dohMode.value = Ci.nsIDNSService.MODE_TRROFF;
@@ -3315,23 +3478,24 @@ Preferences.addSetting({
   // Therefore, we set dohMode as a dep here. This is a smell, but needed
   // for the mismatch of control-to-pref.
   deps: ["dohMode"],
+  disabled: ({ dohMode }) => dohMode.locked,
   onUserChange: val => {
     if (val) {
       Glean.securityDohSettings.modeChangedButton.record({
-        value: "dohEnabledRadio",
+        value: "dohStrictRadio",
       });
     } else {
       Glean.securityDohSettings.modeChangedButton.record({
-        value: "dohStrictRadio",
+        value: "dohEnabledRadio",
       });
     }
   },
   get: (val, deps) => {
     // If we are in a custom mode, we need to get the value from the Setting
-    if (deps.dohMode.value == Ci.nsIDNSService.MODE_TRRFIRST) {
+    if (deps.dohMode.value == Ci.nsIDNSService.MODE_TRRONLY) {
       return true;
     }
-    if (deps.dohMode.value == Ci.nsIDNSService.MODE_TRRONLY) {
+    if (deps.dohMode.value == Ci.nsIDNSService.MODE_TRRFIRST) {
       return false;
     }
 
@@ -3342,10 +3506,10 @@ Preferences.addSetting({
     // Toggle the preference that controls the setting if are in a custom mode
     // This should be the only case where the checkbox is enabled, but we can be
     // careful and test.
-    if (deps.dohMode.value == Ci.nsIDNSService.MODE_TRRFIRST && !val) {
-      deps.dohMode.value = Ci.nsIDNSService.MODE_TRRONLY;
-    } else if (deps.dohMode.value == Ci.nsIDNSService.MODE_TRRONLY && val) {
+    if (deps.dohMode.value == Ci.nsIDNSService.MODE_TRRONLY && !val) {
       deps.dohMode.value = Ci.nsIDNSService.MODE_TRRFIRST;
+    } else if (deps.dohMode.value == Ci.nsIDNSService.MODE_TRRFIRST && val) {
+      deps.dohMode.value = Ci.nsIDNSService.MODE_TRRONLY;
     }
     // Propagate to the real preference
     return val;
@@ -3354,28 +3518,36 @@ Preferences.addSetting({
 
 Preferences.addSetting({
   id: "dohCustomProvider",
-  deps: ["dohProviderSelect", "dohURL"],
+  pref: "network.trr.custom_uri",
+  deps: ["dohProviderSelect", "dohMode", "dohURL"],
   visible: deps => {
     return deps.dohProviderSelect.value == "custom";
   },
-  get(_val, deps) {
-    return deps.dohURL.value;
-  },
+  disabled: ({ dohMode, dohURL }) => dohMode.locked || dohURL.locked,
   set(val, deps) {
-    deps.dohURL.value = val;
+    // Apply the edit to the effective TRR URI as well; otherwise
+    // network.trr.uri would still match a built-in provider and
+    // dohProviderSelect would flip off "custom" the moment the user
+    // committed the edit.
+    // We also can't set the value to an empty string or the DoH
+    // service ignores the dohURL pref. So we use a single space
+    // that tells the service "there is an empty value here"
+    let newValue = val?.trim() || " ";
+    deps.dohURL.value = newValue;
+    return newValue;
   },
 });
 
 Preferences.addSetting({
   id: "dohProviderSelect",
-  deps: ["dohURL", "dohDefaultURL"],
-  _custom: false,
+  deps: ["dohURL", "dohCustomProvider", "dohDefaultURL", "dohMode"],
+  disabled: ({ dohMode, dohURL }) => dohMode.locked || dohURL.locked,
   onUserChange: value => {
     Glean.securityDohSettings.providerChoiceValue.record({
       value,
     });
   },
-  getControlConfig(config, deps) {
+  getControlConfig(config) {
     let options = [];
 
     let resolvers = lazy.DoHConfigController.currentConfig.providerList;
@@ -3386,10 +3558,6 @@ Preferences.addSetting({
       // the default value for the pref isn't included in the resolvers list
       // so we'll make a stub for it. Without an id, we'll have to use the url as the label
       resolvers.unshift({ uri: defaultURI });
-    }
-    let currentURI = deps.dohURL.value;
-    if (currentURI && !resolvers.some(p => p.uri == currentURI)) {
-      this._custom = true;
     }
 
     options = resolvers.map(resolver => {
@@ -3417,21 +3585,46 @@ Preferences.addSetting({
     };
   },
   get(_val, deps) {
-    if (this._custom) {
+    let currentURI = deps.dohURL.value || deps.dohDefaultURL.value;
+    let resolvers = lazy.DoHConfigController.currentConfig.providerList;
+    // We always show the custom state if the current URI matches the custom pref,
+    // or if it is not in the list of resolvers.
+    if (
+      currentURI == deps.dohCustomProvider.value ||
+      !resolvers.some(p => p.uri == currentURI)
+    ) {
       return "custom";
-    }
-    let currentURI = deps.dohURL.value;
-    if (!currentURI) {
-      currentURI = deps.dohDefaultURL.value;
     }
     return currentURI;
   },
   set(val, deps, setting) {
-    if (val != "custom") {
-      this._custom = false;
-      deps.dohURL.value = val;
+    if (val == "custom") {
+      let customURI = Services.prefs.getStringPref(
+        "network.trr.custom_uri",
+        ""
+      );
+      // If we have a value from the pref, take it.
+      // Otherwise, steal the current provider's URI.
+      if (customURI?.trim()) {
+        deps.dohURL.value = customURI?.trim();
+      } else {
+        deps.dohCustomProvider.value = deps.dohURL.value;
+      }
     } else {
-      this._custom = true;
+      deps.dohURL.value = val;
+      // Clear the custom pref if it matches one of the resolvers in the dropdown
+      let resolvers = lazy.DoHConfigController.currentConfig.providerList;
+      if (resolvers.some(p => p.uri == deps.dohCustomProvider.value)) {
+        // Setting the pref to empty string will make it have the default
+        // pref value which makes us fallback to using the default TRR
+        // resolver in network.trr.default_provider_uri.
+        // Instead, we set it to "(space)" which is then
+        // treated as an entered value that fails to parse as a URI.
+        // Regardless, this should never be actually assigned to
+        // network.trr.uri, and this is just used to clear out a URI
+        // taken from a provider in the list.
+        deps.dohCustomProvider.value = " ";
+      }
     }
     setting.emit("change");
     return val;
@@ -3515,6 +3708,22 @@ Preferences.addSetting({
 });
 
 Preferences.addSetting({
+  id: "urlbarNimbusListener",
+  setup(onChange) {
+    window.NimbusFeatures.urlbar.onUpdate(onChange);
+    return () => window.NimbusFeatures.urlbar.offUpdate(onChange);
+  },
+});
+
+Preferences.addSetting({
+  id: "etpTrackerCountEnabled",
+  pref: "browser.urlbar.trackerCount.enabled",
+  deps: ["urlbarNimbusListener"],
+  visible: () =>
+    window.NimbusFeatures.urlbar.getVariable("trackerCountFeatureGate"),
+});
+
+Preferences.addSetting({
   id: "protectionsDashboardLink",
 });
 
@@ -3563,6 +3772,10 @@ Preferences.addSetting({
   visible(_, setting) {
     return setting.value;
   },
+});
+
+Preferences.addSetting({
+  id: "reloadTabsHintButton",
   onUserClick() {
     PrivacySettingHelpers.reloadAllOtherTabs();
   },
@@ -3596,6 +3809,10 @@ Preferences.addSetting({
 
 Preferences.addSetting({
   id: "etpManageExceptionsButton",
+  disabled: () =>
+    Services.prefs.prefIsLocked(
+      "pref.privacy.disable_button.tracking_protection_exceptions"
+    ),
   onUserClick() {
     let params = {
       permissionType: "trackingprotection",
@@ -3690,9 +3907,43 @@ Preferences.addSetting({
   pref: "privacy.trackingprotection.pbmode.enabled",
 });
 
+// We don't expose email tracking protection directly on the privacy UI;
+// instead it follows the tracking protection controls. The all-windows email
+// pref mirrors the all-windows tracking protection pref, and the private
+// windows email pref mirrors the private windows tracking protection pref.
+Preferences.addSetting({
+  id: "trackingProtectionEmailEnabled",
+  pref: "privacy.trackingprotection.emailtracking.enabled",
+});
+
+Preferences.addSetting({
+  id: "trackingProtectionEmailEnabledPBM",
+  pref: "privacy.trackingprotection.emailtracking.pbmode.enabled",
+});
+
+// Social tracking protection isn't exposed directly either; it follows the
+// all-windows tracking protection control, but only when the user is blocking
+// social tracking cookies (socialBlockCookies). This mirrors the old UI.
+Preferences.addSetting({
+  id: "trackingProtectionSocialEnabled",
+  pref: "privacy.trackingprotection.socialtracking.enabled",
+});
+
+Preferences.addSetting({
+  id: "socialBlockCookies",
+  pref: "privacy.socialtracking.block_cookies.enabled",
+});
+
 Preferences.addSetting({
   id: "etpCustomTrackingProtectionEnabledContext",
-  deps: ["trackingProtectionEnabled", "trackingProtectionEnabledPBM"],
+  deps: [
+    "trackingProtectionEnabled",
+    "trackingProtectionEnabledPBM",
+    "trackingProtectionEmailEnabled",
+    "trackingProtectionEmailEnabledPBM",
+    "trackingProtectionSocialEnabled",
+    "socialBlockCookies",
+  ],
   get(_, { trackingProtectionEnabled, trackingProtectionEnabledPBM }) {
     if (trackingProtectionEnabled.value && trackingProtectionEnabledPBM.value) {
       return "all";
@@ -3701,20 +3952,47 @@ Preferences.addSetting({
     }
     return null;
   },
-  set(value, { trackingProtectionEnabled, trackingProtectionEnabledPBM }) {
+  set(
+    value,
+    {
+      trackingProtectionEnabled,
+      trackingProtectionEnabledPBM,
+      trackingProtectionEmailEnabled,
+      trackingProtectionEmailEnabledPBM,
+      trackingProtectionSocialEnabled,
+      socialBlockCookies,
+    }
+  ) {
     if (value == "all") {
       trackingProtectionEnabled.value = true;
       trackingProtectionEnabledPBM.value = true;
+      trackingProtectionEmailEnabled.value = true;
+      trackingProtectionEmailEnabledPBM.value = true;
+      if (socialBlockCookies.value) {
+        trackingProtectionSocialEnabled.value = true;
+      }
     } else if (value == "pbmOnly") {
       trackingProtectionEnabled.value = false;
       trackingProtectionEnabledPBM.value = true;
+      trackingProtectionEmailEnabled.value = false;
+      trackingProtectionEmailEnabledPBM.value = true;
+      if (socialBlockCookies.value) {
+        trackingProtectionSocialEnabled.value = false;
+      }
     }
   },
 });
 
 Preferences.addSetting({
   id: "etpCustomTrackingProtectionEnabled",
-  deps: ["trackingProtectionEnabled", "trackingProtectionEnabledPBM"],
+  deps: [
+    "trackingProtectionEnabled",
+    "trackingProtectionEnabledPBM",
+    "trackingProtectionEmailEnabled",
+    "trackingProtectionEmailEnabledPBM",
+    "trackingProtectionSocialEnabled",
+    "socialBlockCookies",
+  ],
   disabled: ({ trackingProtectionEnabled, trackingProtectionEnabledPBM }) => {
     return (
       trackingProtectionEnabled.locked || trackingProtectionEnabledPBM.locked
@@ -3725,13 +4003,32 @@ Preferences.addSetting({
       trackingProtectionEnabled.value || trackingProtectionEnabledPBM.value
     );
   },
-  set(value, { trackingProtectionEnabled, trackingProtectionEnabledPBM }) {
+  set(
+    value,
+    {
+      trackingProtectionEnabled,
+      trackingProtectionEnabledPBM,
+      trackingProtectionEmailEnabled,
+      trackingProtectionEmailEnabledPBM,
+      trackingProtectionSocialEnabled,
+      socialBlockCookies,
+    }
+  ) {
     if (value) {
       trackingProtectionEnabled.value = false;
       trackingProtectionEnabledPBM.value = true;
+      trackingProtectionEmailEnabled.value = false;
+      trackingProtectionEmailEnabledPBM.value = true;
     } else {
       trackingProtectionEnabled.value = false;
       trackingProtectionEnabledPBM.value = false;
+      trackingProtectionEmailEnabled.value = false;
+      trackingProtectionEmailEnabledPBM.value = false;
+    }
+    // Neither toggle branch enables all-windows tracking protection, so social
+    // trackers are never blocked here; clear the pref to match the old UI.
+    if (socialBlockCookies.value) {
+      trackingProtectionSocialEnabled.value = false;
     }
   },
 });
@@ -3739,11 +4036,17 @@ Preferences.addSetting({
 Preferences.addSetting({
   id: "etpCustomCryptominingProtectionEnabled",
   pref: "privacy.trackingprotection.cryptomining.enabled",
+  onUserChange() {
+    PrivacySettingHelpers.updateCryptominingLists();
+  },
 });
 
 Preferences.addSetting({
   id: "etpCustomKnownFingerprintingProtectionEnabled",
   pref: "privacy.trackingprotection.fingerprinting.enabled",
+  onUserChange() {
+    PrivacySettingHelpers.updateFingerprintingLists();
+  },
 });
 
 Preferences.addSetting({
@@ -3798,6 +4101,9 @@ Preferences.addSetting({
       etpCustomFingerprintingProtectionEnabledPBM.value = false;
     }
   },
+  onUserChange(value) {
+    Glean.privacyUiFppClick.checkbox.record({ checked: value });
+  },
 });
 
 Preferences.addSetting({
@@ -3837,5 +4143,8 @@ Preferences.addSetting({
       etpCustomFingerprintingProtectionEnabled.value = false;
       etpCustomFingerprintingProtectionEnabledPBM.value = true;
     }
+  },
+  onUserChange(value) {
+    Glean.privacyUiFppClick.menu.record({ value });
   },
 });

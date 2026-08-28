@@ -75,6 +75,16 @@
   <string name="mozac_summarize_settings_shake_to_summarize">Протресите за сажимање</string>
   <!-- Description for the shake to summarize toggle in settings -->
   <string name="mozac_summarize_settings_shake_to_summarize_description">Протресите ваш уређај од стране до стране да бисте сажели страницу.</string>
+  <!-- Label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity">Осетљивост трескања</string>
+  <!-- Description for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_description">Подесите колико јако треба да протресете да бисте покренули сумирање.</string>
+  <!-- Low option label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_low">Ниско</string>
+  <!-- Medium option label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_medium">Средње</string>
+  <!-- High option label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_high">Високо</string>
   <!-- Message for summary by model, %1$s is the name of the model that is being displayed -->
   <string name="mozac_feature_summarize_summary_model">Сажетак од %1$s</string>
   <!-- Disclaimer message -->
@@ -85,4 +95,10 @@
   <string name="mozac_ai_controls_page_summary_description">Странице и сажеци се никада не чувају.</string>
   <!-- Button text for the Error dismiss button on Shake to Summarize -->
   <string name="mozac_summarize_error_dissmiss">Одбаци</string>
+  <!-- Title for the Mozilla account sign-in screen, shown when summarization results in a connection failure. -->
+  <string name="mozac_summarize_fxa_sign_in_title">Пријавите се да бисте резимирали</string>
+  <!-- Message on the sign-in screen, inviting the user to continue with an existing Mozilla account or create a new one -->
+  <string xmlns:ns0="http://schemas.android.com/tools" name="mozac_summarize_fxa_sign_in_message" ns0:ignore="BrandUsage">Користите свој Mozilla налог да бисте наставили или направите нови да бисте започели.</string>
+  <!-- Label for the button that starts the sign-in flow -->
+  <string name="mozac_summarize_fxa_sign_in_button_positive">Пријави се</string>
 </resources>

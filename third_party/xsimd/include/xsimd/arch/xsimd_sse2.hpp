@@ -12,13 +12,13 @@
 #ifndef XSIMD_SSE2_HPP
 #define XSIMD_SSE2_HPP
 
-#include <complex>
-#include <limits>
-#include <type_traits>
-
 #include "../types/xsimd_batch_constant.hpp"
 #include "../types/xsimd_sse2_register.hpp"
 #include "./utils/shifts.hpp"
+
+#include <complex>
+#include <limits>
+#include <type_traits>
 
 namespace xsimd
 {
@@ -345,7 +345,7 @@ namespace xsimd
         XSIMD_INLINE batch<T, A> bitwise_lshift(
             batch<T, A> const& self, batch_constant<T, A, Vs...> shifts, requires_arch<sse2> req) noexcept
         {
-            using uint_t = typename std::make_unsigned<T>::type;
+            using uint_t = std::make_unsigned_t<T>;
 
             XSIMD_IF_CONSTEXPR(utils::all_equals(shifts))
             {
@@ -1100,32 +1100,42 @@ namespace xsimd
             return { load_unaligned(mem, batch_bool<char, A> {}, r).data };
         }
 
+        namespace detail
+        {
+            // Plain moves store-forward; vmaskmov never does on Intel and its
+            // stores are microcoded on AMD. So wider archs delegate the masks
+            // that lower to plain moves here rather than taking their runtime path.
+            template <class T, class A, bool... Values>
+            constexpr bool lowers_to_plain_moves(batch_bool_constant<T, A, Values...> mask) noexcept
+            {
+                return (mask.is_prefix() && mask.any() && !mask.all())
+                    || mask.suffix() == mask.size / 2;
+            }
+        }
+
         // load_masked
         template <class A, class T, bool... Values, class Mode, class = std::enable_if_t<std::is_integral<T>::value>>
-        XSIMD_INLINE batch<T, A> load_masked(T const* mem, batch_bool_constant<T, A, Values...> mask, Mode, requires_arch<sse2>) noexcept
+        XSIMD_INLINE batch<T, A> load_masked(T const* mem, batch_bool_constant<T, A, Values...> mask, convert<T>, Mode, requires_arch<sse2>) noexcept
         {
-            XSIMD_IF_CONSTEXPR(mask.mask() == 0x1)
+            XSIMD_IF_CONSTEXPR(sizeof(T) == 2 && mask.prefix() == 1)
             {
-                XSIMD_IF_CONSTEXPR(sizeof(T) == 2)
-                {
-                    return mm_loadu_si16(mem);
-                }
-                XSIMD_IF_CONSTEXPR(sizeof(T) == 4)
-                {
-                    return mm_loadu_si32(mem);
-                }
-                XSIMD_IF_CONSTEXPR(sizeof(T) == 8)
-                {
-                    return mm_loadu_si64(mem);
-                }
+                return _mm_loadu_si16(mem);
             }
-            else XSIMD_IF_CONSTEXPR(sizeof(T) == 2 && mask.mask() == 0x3)
+            else XSIMD_IF_CONSTEXPR(sizeof(T) == 4 && mask.prefix() == 1)
             {
-                return mm_loadu_si32(mem);
+                return _mm_loadu_si32(mem);
             }
-            else XSIMD_IF_CONSTEXPR(sizeof(T) == 4 && mask.mask() == 0x3)
+            else XSIMD_IF_CONSTEXPR(sizeof(T) == 8 && mask.prefix() == 1)
             {
-                return mm_loadu_si64(mem);
+                return _mm_loadu_si64(mem);
+            }
+            else XSIMD_IF_CONSTEXPR(sizeof(T) == 2 && mask.prefix() == 2)
+            {
+                return _mm_loadu_si32(mem);
+            }
+            else XSIMD_IF_CONSTEXPR(sizeof(T) == 4 && mask.prefix() == 2)
+            {
+                return _mm_loadu_si64(mem);
             }
             else
             {
@@ -1133,19 +1143,24 @@ namespace xsimd
             }
         }
         template <class A, bool... Values, class Mode>
-        XSIMD_INLINE batch<float, A> load_masked(float const* mem, batch_bool_constant<float, A, Values...> mask, Mode, requires_arch<sse2>) noexcept
+        XSIMD_INLINE batch<float, A> load_masked(float const* mem, batch_bool_constant<float, A, Values...> mask, convert<float>, Mode, requires_arch<sse2>) noexcept
         {
-            XSIMD_IF_CONSTEXPR(mask.mask() == 0x1)
+            XSIMD_IF_CONSTEXPR(mask.prefix() == 1)
             {
                 return _mm_load_ss(mem);
             }
-            else XSIMD_IF_CONSTEXPR(mask.countr_one() == 2)
+            else XSIMD_IF_CONSTEXPR(mask.prefix() == 2)
             {
                 return _mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64 const*>(mem));
             }
-            else XSIMD_IF_CONSTEXPR(mask.countl_one() == 2)
+            else XSIMD_IF_CONSTEXPR(mask.suffix() == 2)
             {
                 return _mm_loadh_pi(_mm_setzero_ps(), reinterpret_cast<__m64 const*>(mem + 2));
+            }
+            else XSIMD_IF_CONSTEXPR(mask.prefix() == 3)
+            {
+                __m128 const lo2 = _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<__m128i const*>(mem)));
+                return _mm_shuffle_ps(lo2, _mm_load_ss(mem + 2), _MM_SHUFFLE(3, 0, 1, 0));
             }
             else
             {
@@ -1153,13 +1168,13 @@ namespace xsimd
             }
         }
         template <class A, bool... Values, class Mode>
-        XSIMD_INLINE batch<double, A> load_masked(double const* mem, batch_bool_constant<double, A, Values...> mask, Mode, requires_arch<sse2>) noexcept
+        XSIMD_INLINE batch<double, A> load_masked(double const* mem, batch_bool_constant<double, A, Values...> mask, convert<double>, Mode, requires_arch<sse2>) noexcept
         {
-            XSIMD_IF_CONSTEXPR(mask.countr_one() == 1)
+            XSIMD_IF_CONSTEXPR(mask.prefix() == 1)
             {
                 return _mm_load_sd(mem);
             }
-            else XSIMD_IF_CONSTEXPR(mask.countl_one() == 1)
+            else XSIMD_IF_CONSTEXPR(mask.suffix() == 1)
             {
                 return _mm_loadh_pd(_mm_setzero_pd(), mem + 1);
             }
@@ -1173,17 +1188,22 @@ namespace xsimd
         template <class A, bool... Values, class Mode>
         XSIMD_INLINE void store_masked(float* mem, batch<float, A> const& src, batch_bool_constant<float, A, Values...> mask, Mode, requires_arch<sse2>) noexcept
         {
-            XSIMD_IF_CONSTEXPR(mask.mask() == 0x1)
+            XSIMD_IF_CONSTEXPR(mask.prefix() == 1)
             {
                 _mm_store_ss(mem, src);
             }
-            else XSIMD_IF_CONSTEXPR(mask.countr_one() == 2)
+            else XSIMD_IF_CONSTEXPR(mask.prefix() == 2)
             {
                 _mm_storel_pi(reinterpret_cast<__m64*>(mem), src);
             }
-            else XSIMD_IF_CONSTEXPR(mask.countl_one() == 2)
+            else XSIMD_IF_CONSTEXPR(mask.suffix() == 2)
             {
                 _mm_storeh_pi(reinterpret_cast<__m64*>(mem + 2), src);
+            }
+            else XSIMD_IF_CONSTEXPR(mask.prefix() == 3)
+            {
+                _mm_storel_pi(reinterpret_cast<__m64*>(mem), src);
+                _mm_store_ss(mem + 2, _mm_movehl_ps(src, src));
             }
             else
             {
@@ -1194,11 +1214,11 @@ namespace xsimd
         template <class A, bool... Values, class Mode>
         XSIMD_INLINE void store_masked(double* mem, batch<double, A> const& src, batch_bool_constant<double, A, Values...> mask, Mode, requires_arch<sse2>) noexcept
         {
-            XSIMD_IF_CONSTEXPR(mask.countr_one() == 1)
+            XSIMD_IF_CONSTEXPR(mask.prefix() == 1)
             {
                 _mm_store_sd(mem, src);
             }
-            else XSIMD_IF_CONSTEXPR(mask.countl_one() == 1)
+            else XSIMD_IF_CONSTEXPR(mask.suffix() == 1)
             {
                 _mm_storeh_pd(mem + 1, src);
             }
@@ -1433,9 +1453,68 @@ namespace xsimd
 
         // mul
         template <class A>
+        XSIMD_INLINE batch<uint8_t, A> mul(batch<uint8_t, A> const& self, batch<uint8_t, A> const& other, requires_arch<sse2>) noexcept
+        {
+            // Low byte of an N-bit*N-bit product is bitwise identical for
+            // signed and unsigned operands. Split into even/odd bytes inside
+            // each 16-bit lane, do two 16-bit mullos, then re-interleave.
+            __m128i mask = _mm_set1_epi16(0x00FF);
+            __m128i a_even = _mm_and_si128(self, mask);
+            __m128i b_even = _mm_and_si128(other, mask);
+            __m128i a_odd = _mm_srli_epi16(self, 8);
+            __m128i b_odd = _mm_srli_epi16(other, 8);
+            __m128i p_even = _mm_and_si128(_mm_mullo_epi16(a_even, b_even), mask);
+            __m128i p_odd = _mm_slli_epi16(_mm_mullo_epi16(a_odd, b_odd), 8);
+            return _mm_or_si128(p_even, p_odd);
+        }
+        template <class A>
+        XSIMD_INLINE batch<int8_t, A> mul(batch<int8_t, A> const& self, batch<int8_t, A> const& other, requires_arch<sse2>) noexcept
+        {
+            return bitwise_cast<int8_t>(mul(bitwise_cast<uint8_t>(self), bitwise_cast<uint8_t>(other), sse2 {}));
+        }
+        template <class A>
         XSIMD_INLINE batch<int16_t, A> mul(batch<int16_t, A> const& self, batch<int16_t, A> const& other, requires_arch<sse2>) noexcept
         {
             return _mm_mullo_epi16(self, other);
+        }
+
+        // mul_hi
+        template <class A>
+        XSIMD_INLINE batch<int8_t, A> mul_hi(batch<int8_t, A> const& self, batch<int8_t, A> const& other, requires_arch<sse2>) noexcept
+        {
+            // Sign-extend bytes to 16-bit (unpack-with-self followed by srai 8
+            // duplicates the byte then arithmetic-shifts the sign in), do the
+            // 16x16->16 multiply, then take the high byte of each product.
+            __m128i a_lo = _mm_srai_epi16(_mm_unpacklo_epi8(self, self), 8);
+            __m128i a_hi = _mm_srai_epi16(_mm_unpackhi_epi8(self, self), 8);
+            __m128i b_lo = _mm_srai_epi16(_mm_unpacklo_epi8(other, other), 8);
+            __m128i b_hi = _mm_srai_epi16(_mm_unpackhi_epi8(other, other), 8);
+            __m128i p_lo = _mm_srai_epi16(_mm_mullo_epi16(a_lo, b_lo), 8);
+            __m128i p_hi = _mm_srai_epi16(_mm_mullo_epi16(a_hi, b_hi), 8);
+            // results already lie in [-128, 127], so packs is exact (no saturation kicks in).
+            return _mm_packs_epi16(p_lo, p_hi);
+        }
+        template <class A>
+        XSIMD_INLINE batch<uint8_t, A> mul_hi(batch<uint8_t, A> const& self, batch<uint8_t, A> const& other, requires_arch<sse2>) noexcept
+        {
+            __m128i zero = _mm_setzero_si128();
+            __m128i a_lo = _mm_unpacklo_epi8(self, zero);
+            __m128i a_hi = _mm_unpackhi_epi8(self, zero);
+            __m128i b_lo = _mm_unpacklo_epi8(other, zero);
+            __m128i b_hi = _mm_unpackhi_epi8(other, zero);
+            __m128i p_lo = _mm_srli_epi16(_mm_mullo_epi16(a_lo, b_lo), 8);
+            __m128i p_hi = _mm_srli_epi16(_mm_mullo_epi16(a_hi, b_hi), 8);
+            return _mm_packus_epi16(p_lo, p_hi);
+        }
+        template <class A>
+        XSIMD_INLINE batch<int16_t, A> mul_hi(batch<int16_t, A> const& self, batch<int16_t, A> const& other, requires_arch<sse2>) noexcept
+        {
+            return _mm_mulhi_epi16(self, other);
+        }
+        template <class A>
+        XSIMD_INLINE batch<uint16_t, A> mul_hi(batch<uint16_t, A> const& self, batch<uint16_t, A> const& other, requires_arch<sse2>) noexcept
+        {
+            return _mm_mulhi_epu16(self, other);
         }
 
         // nearbyint_as_int
@@ -1966,7 +2045,7 @@ namespace xsimd
         {
             _mm_stream_ps(mem, self);
         }
-        template <class A, class T, class = typename std::enable_if<std::is_integral<T>::value, void>::type>
+        template <class A, class T, class = std::enable_if_t<std::is_integral<T>::value, void>>
         XSIMD_INLINE void store_stream(T* mem, batch<T, A> const& self, requires_arch<sse2>) noexcept
         {
             _mm_stream_si128((__m128i*)mem, self);
@@ -2262,20 +2341,71 @@ namespace xsimd
                                        aligned_mode,
                                        requires_arch<sse2>) noexcept
         {
-            XSIMD_IF_CONSTEXPR(mask.countr_one() == 2)
+            XSIMD_IF_CONSTEXPR(mask.prefix() == 2)
             {
                 _mm_storel_pi(reinterpret_cast<__m64*>(mem), src);
             }
-            else XSIMD_IF_CONSTEXPR(mask.countl_one() == 2)
+            else XSIMD_IF_CONSTEXPR(mask.suffix() == 2)
             {
                 _mm_storeh_pi(reinterpret_cast<__m64*>(mem + 2), src);
             }
             else
             {
-                store_masked<A>(mem, src, mask, requires_arch<common> {});
+                store_masked<A>(mem, src, mask, aligned_mode {}, common {});
             }
         }
 
+        // get (must appear after first and swizzle so it can delegate through the xsimd API)
+        namespace detail
+        {
+            // broadcast lane index I across a batch_constant<IdxT, A, I, I, ..., I> matching batch<T, A>::size
+            template <class T, class A, size_t I, size_t... Is>
+            XSIMD_INLINE auto broadcast_lane_index(std::index_sequence<Is...>) noexcept
+                -> batch_constant<as_unsigned_integer_t<T>, A, static_cast<as_unsigned_integer_t<T>>(Is * 0 + I)...>
+            {
+                return {};
+            }
+
+            template <class T, class A, size_t I>
+            XSIMD_INLINE auto broadcast_lane_index() noexcept
+                -> decltype(broadcast_lane_index<T, A, I>(std::make_index_sequence<batch<T, A>::size> {}))
+            {
+                return {};
+            }
+        }
+
+        template <class A, size_t I, class T>
+        XSIMD_INLINE typename std::enable_if<std::is_integral<T>::value && sizeof(T) <= 2, T>::type
+        get(batch<T, A> const& self, ::xsimd::index<I>, requires_arch<sse2>) noexcept
+        {
+            XSIMD_IF_CONSTEXPR(I == 0)
+            {
+                return first(self, A {});
+            }
+            else XSIMD_IF_CONSTEXPR(sizeof(T) == 2)
+            {
+                return static_cast<T>(_mm_extract_epi16(self, I));
+            }
+            else
+            {
+                // SSE2 has no pextrb; byte-lane shift + movd is the shortest path for I>0.
+                return static_cast<T>(_mm_cvtsi128_si32(_mm_srli_si128(self, I)) & 0xFF);
+            }
+        }
+
+        template <class A, size_t I, class T>
+        XSIMD_INLINE typename std::enable_if<(std::is_integral<T>::value && sizeof(T) >= 4) || std::is_floating_point<T>::value, T>::type
+        get(batch<T, A> const& self, ::xsimd::index<I>, requires_arch<sse2>) noexcept
+        {
+            XSIMD_IF_CONSTEXPR(I == 0)
+            {
+                return first(self, A {});
+            }
+            else
+            {
+                return first(swizzle(self, detail::broadcast_lane_index<T, A, I>(), A {}), A {});
+            }
+        }
     }
 }
 

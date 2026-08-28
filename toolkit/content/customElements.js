@@ -877,6 +877,7 @@
         "moz-support-link",
         "chrome://global/content/elements/moz-support-link.mjs",
       ],
+      ["moz-textarea", "chrome://global/content/elements/moz-textarea.mjs"],
       ["moz-toggle", "chrome://global/content/elements/moz-toggle.mjs"],
       [
         "moz-visual-picker",
@@ -886,7 +887,12 @@
         "moz-visual-picker-item",
         "chrome://global/content/elements/moz-visual-picker.mjs",
       ],
+      [
+        "moz-segmented-control",
+        "chrome://global/content/elements/moz-segmented-control.mjs",
+      ],
       ["panel-list", "chrome://global/content/elements/panel-list.mjs"],
+      ["theme-picker", "chrome://global/content/elements/theme-picker.mjs"],
     ];
     document.addEventListener(
       "DOMContentLoaded",

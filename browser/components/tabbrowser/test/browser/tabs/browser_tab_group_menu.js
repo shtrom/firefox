@@ -10,7 +10,7 @@ const { sinon } = ChromeUtils.importESModule(
   "resource://testing-common/Sinon.sys.mjs"
 );
 const { TabStateFlusher } = ChromeUtils.importESModule(
-  "resource:///modules/sessionstore/TabStateFlusher.sys.mjs"
+  "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs"
 );
 
 function readClipboardText() {
@@ -69,7 +69,7 @@ add_task(async function test_tabGroupCreatePanel() {
     let group = gBrowser.addTabGroup([tab], {
       color: "cyan",
       label: "Food",
-      isUserTriggered: true,
+      metricsContext: gBrowser.TabMetrics.userTriggeredContext(),
     });
     await panelShown;
     return group;
@@ -386,6 +386,9 @@ add_task(async function test_saveAndCloseGroup() {
 
   Assert.ok(gBrowser.getTabGroupById(group.id), "Group exists in browser");
 
+  await Services.fog.testFlushAllChildren();
+  Services.fog.testResetFOG();
+
   let events = [
     BrowserTestUtils.waitForPopupEvent(tabgroupPanel, "hidden"),
     BrowserTestUtils.waitForEvent(group, "TabGroupSaved"),
@@ -400,6 +403,32 @@ add_task(async function test_saveAndCloseGroup() {
     "Group was removed from browser"
   );
   Assert.ok(SessionStore.getSavedTabGroup(group.id), "Group is in savedGroups");
+
+  let tabGroupSaveTelemetry = Glean.tabgroup.save.testGetValue();
+  Assert.equal(tabGroupSaveTelemetry.length, 1, "Should be one recorded save");
+  Assert.deepEqual(
+    tabGroupSaveTelemetry[0].extra,
+    {
+      user_triggered: "true",
+      id: group.id,
+    },
+    "tabgroup.save event extra_keys has correct values after tab group save"
+  );
+
+  let tabGroupDeleteTelemetry = Glean.tabgroup.delete.testGetValue();
+  Assert.equal(
+    tabGroupDeleteTelemetry.length,
+    1,
+    "Should be one recorded delete"
+  );
+  Assert.deepEqual(
+    tabGroupDeleteTelemetry[0].extra,
+    {
+      id: group.id,
+      source: gBrowser.TabMetrics.METRIC_SOURCE.TAB_GROUP_MENU,
+    },
+    "tabgroup.delete event extra_keys has correct values after tab group delete"
+  );
 
   SessionStore.forgetSavedTabGroup(group.id);
 
@@ -473,4 +502,108 @@ add_task(async function test_copyAllLinksInGroup_singleTab() {
 
   Services.clipboard.emptyClipboard(Ci.nsIClipboard.kGlobalClipboard);
   await removeTabGroup(group);
+});
+
+/**
+ * Tests that the swatches are positioned within tab-group-properties-and-actions
+ * when Nova is disabled.
+ */
+add_task(async function test_swatchLayoutDefault() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.nova.enabled", false]],
+  });
+
+  let { tabgroupEditor, group } = await createTabGroupAndOpenEditPanel(
+    [],
+    "test_swatchLayoutDefault"
+  );
+  let tabgroupPanel = tabgroupEditor.panel;
+  let swatches = tabgroupPanel.querySelector(".tab-group-editor-swatches");
+  let nameContainer = tabgroupPanel.querySelector(".tab-group-editor-name");
+  let propertiesActions = tabgroupPanel.querySelector(
+    "#tab-group-properties-and-actions"
+  );
+
+  Assert.notEqual(
+    swatches.nextElementSibling,
+    nameContainer,
+    "Swatches are not directly above the name field"
+  );
+  Assert.equal(
+    swatches.parentElement,
+    propertiesActions,
+    "Swatches are in the properties-and-actions container"
+  );
+
+  let panelHidden = BrowserTestUtils.waitForPopupEvent(tabgroupPanel, "hidden");
+  tabgroupPanel.hidePopup();
+  await panelHidden;
+
+  await removeTabGroup(group);
+  await SpecialPowers.popPrefEnv();
+});
+
+/**
+ * Tests that the swatches are positioned before the name field
+ * when Nova is enabled, and that their positions are restored
+ * when Nova is disabled.
+ */
+add_task(async function test_swatchLayoutNova() {
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.nova.enabled", true]],
+  });
+
+  let { tabgroupEditor, group } = await createTabGroupAndOpenEditPanel(
+    [],
+    "test_swatchLayoutNova"
+  );
+  let tabgroupPanel = tabgroupEditor.panel;
+  let swatches = tabgroupPanel.querySelector(".tab-group-editor-swatches");
+  let nameContainer = tabgroupPanel.querySelector(".tab-group-editor-name");
+  let propertiesActions = tabgroupPanel.querySelector(
+    "#tab-group-properties-and-actions"
+  );
+
+  Assert.equal(
+    swatches.nextElementSibling,
+    nameContainer,
+    "Swatches are directly above the name field when Nova is enabled"
+  );
+  Assert.notEqual(
+    swatches.parentElement,
+    propertiesActions,
+    "Swatches are not in the properties-and-actions container when Nova is enabled"
+  );
+
+  let panelHidden = BrowserTestUtils.waitForPopupEvent(tabgroupPanel, "hidden");
+  tabgroupPanel.hidePopup();
+  await panelHidden;
+  await SpecialPowers.popPrefEnv();
+
+  // Verify layout is restored when we re-open the panel and disable Nova.
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.nova.enabled", false]],
+  });
+
+  let panelShown = BrowserTestUtils.waitForPopupEvent(tabgroupPanel, "shown");
+  tabgroupEditor.openEditModal(group);
+  await panelShown;
+
+  Assert.notEqual(
+    swatches.nextElementSibling,
+    nameContainer,
+    "Swatches are not directly above the name field after disabling Nova"
+  );
+  Assert.equal(
+    swatches.parentElement,
+    propertiesActions,
+    "Swatches are back in the properties-and-actions container after disabling Nova"
+  );
+
+  panelHidden = BrowserTestUtils.waitForPopupEvent(tabgroupPanel, "hidden");
+  tabgroupPanel.hidePopup();
+  await panelHidden;
+
+  await removeTabGroup(group);
+  await SpecialPowers.popPrefEnv();
 });

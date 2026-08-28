@@ -6,7 +6,8 @@
 
 const { LocalizationHelper } = require("resource://devtools/shared/l10n.js");
 const { clampDimensionsIfNeeded } = ChromeUtils.importESModule(
-  "moz-src:///browser/components/screenshots/ScreenshotsUtils.sys.mjs"
+  "moz-src:///browser/components/screenshots/ScreenshotsUtils.sys.mjs",
+  { global: "shared" }
 );
 
 const CONTAINER_FLASHING_DURATION = 500;
@@ -115,7 +116,7 @@ async function captureScreenshot(args, browsingContext) {
         rect,
         actualRatio,
         "rgb(255,255,255)",
-        args.fullpage
+        { resetScrollPosition: args.fullpage }
       );
 
       const fileScale = args.fileScale || actualRatio;

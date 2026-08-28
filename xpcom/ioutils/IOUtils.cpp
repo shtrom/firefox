@@ -7,6 +7,8 @@
 #include <cstdint>
 
 #include "ErrorList.h"
+#include "PathUtils.h"
+#include "ScopedNSSTypes.h"
 #include "js/ArrayBuffer.h"
 #include "js/ColumnNumber.h"  // JS::ColumnNumberOneOrigin
 #include "js/JSON.h"
@@ -16,6 +18,7 @@
 #include "mozilla/Assertions.h"
 #include "mozilla/AutoRestore.h"
 #include "mozilla/CheckedInt.h"
+#include "mozilla/Components.h"
 #include "mozilla/Compression.h"
 #include "mozilla/Encoding.h"
 #include "mozilla/EndianUtils.h"
@@ -23,7 +26,6 @@
 #include "mozilla/FileUtils.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/ResultExtensions.h"
-#include "mozilla/Services.h"
 #include "mozilla/Span.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/TextUtils.h"
@@ -35,7 +37,6 @@
 #include "mozilla/dom/WorkerCommon.h"
 #include "mozilla/dom/WorkerRef.h"
 #include "mozilla/ipc/LaunchError.h"
-#include "PathUtils.h"
 #include "nsCOMPtr.h"
 #include "nsError.h"
 #include "nsFileStreams.h"
@@ -45,8 +46,8 @@
 #include "nsIInputStream.h"
 #include "nsISupports.h"
 #include "nsLocalFile.h"
-#include "nsNetUtil.h"
 #include "nsNSSComponent.h"
+#include "nsNetUtil.h"
 #include "nsPrintfCString.h"
 #include "nsReadableUtils.h"
 #include "nsString.h"
@@ -58,7 +59,6 @@
 #include "prio.h"
 #include "prtime.h"
 #include "prtypes.h"
-#include "ScopedNSSTypes.h"
 #include "secoidt.h"
 
 #if defined(XP_UNIX) && !defined(ANDROID)
@@ -403,7 +403,7 @@ RefPtr<SyncReadFile> IOUtils::OpenFileForSyncReading(GlobalObject& aGlobal,
     return nullptr;
   }
 
-  RefPtr<nsFileRandomAccessStream> stream = new nsFileRandomAccessStream();
+  RefPtr stream = MakeRefPtr<nsFileRandomAccessStream>();
   if (nsresult rv =
           stream->Init(file, PR_RDONLY | nsIFile::OS_READAHEAD, 0666, 0);
       NS_FAILED(rv)) {
@@ -1209,6 +1209,11 @@ already_AddRefed<Promise> IOUtils::GetFile(
           return;
         }
 
+        if (!parent) {
+          promise->MaybeResolve(file);
+          return;
+        }
+
         state->mEventQueue
             ->template Dispatch<Ok>([parent = std::move(parent)]() {
               return MakeDirectorySync(parent, /* aCreateAncestors = */ true,
@@ -1285,7 +1290,7 @@ Result<IOUtils::JsBuffer, IOUtils::IOError> IOUtils::ReadSync(
 
   const int64_t offset = static_cast<int64_t>(aOffset);
 
-  RefPtr<nsFileRandomAccessStream> stream = new nsFileRandomAccessStream();
+  RefPtr stream = MakeRefPtr<nsFileRandomAccessStream>();
   if (nsresult rv =
           stream->Init(aFile, PR_RDONLY | nsIFile::OS_READAHEAD, 0666, 0);
       NS_FAILED(rv)) {
@@ -1522,7 +1527,7 @@ Result<uint32_t, IOUtils::IOError> IOUtils::WriteSync(
                    aByteArray.Length());
     }
 
-    RefPtr<nsFileOutputStream> stream = new nsFileOutputStream();
+    RefPtr stream = MakeRefPtr<nsFileOutputStream>();
     if (nsresult rv = stream->Init(writeFile, flags, 0666, 0); NS_FAILED(rv)) {
       // Normalize platform-specific errors for opening a directory to an access
       // denied error.
@@ -2459,7 +2464,7 @@ nsresult IOUtils::EventQueue::SetShutdownHooks() {
   constexpr static auto STACK = u"IOUtils::EventQueue::SetShutdownHooks"_ns;
   constexpr static auto FILE = NS_LITERAL_STRING_FROM_CSTRING(__FILE__);
 
-  nsCOMPtr<nsIAsyncShutdownService> svc = services::GetAsyncShutdownService();
+  nsCOMPtr<nsIAsyncShutdownService> svc = components::AsyncShutdown::Service();
   if (!svc) {
     return NS_ERROR_NOT_AVAILABLE;
   }

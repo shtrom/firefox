@@ -63,6 +63,46 @@ template struct StyleStrong<StyleLockedPositionTryRule>;
 template struct StyleStrong<StyleLockedNestedDeclarationsRule>;
 template struct StyleStrong<StyleViewTransitionRule>;
 
+template <typename T, size_t N>
+inline StyleOwnedArray<T, N>::StyleOwnedArray(const StyleOwnedArray& aOther)
+    : ptr(static_cast<T*>(moz_xmalloc(N * sizeof(T)))) {
+  for (size_t i = 0; i < N; ++i) {
+    new (&ptr[i]) T(aOther.ptr[i]);
+  }
+}
+
+template <typename T, size_t N>
+template <typename... Args>
+  requires(sizeof...(Args) == N)
+inline StyleOwnedArray<T, N>::StyleOwnedArray(Args&&... aArgs)
+    : ptr(static_cast<T*>(malloc(N * sizeof(T)))) {
+  size_t i = 0;
+  (new (&ptr[i++]) T(std::forward<Args>(aArgs)), ...);
+}
+
+template <typename T, size_t N>
+inline StyleOwnedArray<T, N>& StyleOwnedArray<T, N>::operator=(
+    const StyleOwnedArray& aOther) {
+  if (this == &aOther) {
+    return *this;
+  }
+  for (size_t i = 0; i < N; ++i) {
+    ptr[i].~T();
+  }
+  for (size_t i = 0; i < N; ++i) {
+    new (&ptr[i]) T(aOther.ptr[i]);
+  }
+  return *this;
+}
+
+template <typename T, size_t N>
+inline StyleOwnedArray<T, N>::~StyleOwnedArray() {
+  for (size_t i = 0; i < N; ++i) {
+    ptr[i].~T();
+  }
+  free(ptr);
+}
+
 template <typename T>
 inline void StyleOwnedSlice<T>::Clear() {
   if (!len) {
@@ -191,12 +231,6 @@ inline bool StyleHeaderSlice<H, T>::operator==(
 }
 
 template <typename H, typename T>
-inline bool StyleHeaderSlice<H, T>::operator!=(
-    const StyleHeaderSlice& aOther) const {
-  return !(*this == aOther);
-}
-
-template <typename H, typename T>
 inline StyleHeaderSlice<H, T>::~StyleHeaderSlice() {
   for (T& elem : Span(data, len)) {
     elem.~T();
@@ -288,7 +322,7 @@ inline bool StyleAtom::IsStatic() const { return !!(_0 & 1); }
 
 inline nsAtom* StyleAtom::AsAtom() const {
   if (IsStatic()) {
-    return const_cast<nsStaticAtom*>(&detail::gGkAtoms.mAtoms[_0 >> 1]);
+    return nsGkAtoms::GetAtomByIndex(_0 >> 1);
   }
   return reinterpret_cast<nsAtom*>(_0);
 }
@@ -308,7 +342,7 @@ inline void StyleAtom::Release() {
 inline StyleAtom::StyleAtom(already_AddRefed<nsAtom> aAtom) {
   nsAtom* atom = aAtom.take();
   if (atom->IsStatic()) {
-    size_t index = atom->AsStatic() - &detail::gGkAtoms.mAtoms[0];
+    size_t index = nsGkAtoms::IndexOf(atom->AsStatic());
     _0 = (index << 1) | 1;
   } else {
     _0 = reinterpret_cast<uintptr_t>(atom);
@@ -532,6 +566,7 @@ using LengthOrAuto = StyleLengthOrAuto;
 using NonNegativeLength = StyleNonNegativeLength;
 using NonNegativeLengthOrAuto = StyleNonNegativeLengthOrAuto;
 using BorderRadius = StyleBorderRadius;
+using CornerShapeRect = StyleCornerShapeRect;
 
 bool StyleCSSPixelLength::IsZero() const { return _0 == 0.0f; }
 
@@ -663,10 +698,6 @@ bool LengthPercentage::operator==(const LengthPercentage& aOther) const {
   return aOther.IsCalc() && AsCalc() == aOther.AsCalc();
 }
 
-bool LengthPercentage::operator!=(const LengthPercentage& aOther) const {
-  return !(*this == aOther);
-}
-
 LengthPercentage LengthPercentage::Zero() { return {}; }
 
 LengthPercentage LengthPercentage::FromPixels(CSSCoord aCoord) {
@@ -740,9 +771,6 @@ nscoord StyleCalcLengthPercentage::Resolve(nscoord aBasis,
   return aRounder(result * AppUnitsPerCSSPixel());
 }
 
-template <>
-void StyleCalcNode::ScaleLengthsBy(float);
-
 CSSCoord LengthPercentage::ResolveToCSSPixels(CSSCoord aPercentageBasis) const {
   if (IsLength()) {
     return AsLength().ToCSSPixels();
@@ -793,15 +821,6 @@ template <typename Rounder>
 nscoord LengthPercentage::Resolve(nscoord aPercentageBasis,
                                   Rounder aRounder) const {
   return Resolve([aPercentageBasis] { return aPercentageBasis; }, aRounder);
-}
-
-void LengthPercentage::ScaleLengthsBy(float aScale) {
-  if (IsLength()) {
-    AsLength().ScaleBy(aScale);
-  }
-  if (IsCalc()) {
-    AsCalc().node.ScaleLengthsBy(aScale);
-  }
 }
 
 #define IMPL_LENGTHPERCENTAGE_FORWARDS(ty_)                                 \
@@ -1105,8 +1124,8 @@ inline void StyleFontWeight::ToString(nsACString& aString) const {
   Servo_FontWeight_ToCss(this, &aString);
 }
 
-inline void StyleFontStretch::ToString(nsACString& aString) const {
-  Servo_FontStretch_ToCss(this, &aString);
+inline void StyleFontWidth::ToString(nsACString& aString) const {
+  Servo_FontWidth_ToCss(this, &aString);
 }
 
 inline void StyleFontStyle::ToString(nsACString& aString) const {
@@ -1130,7 +1149,7 @@ inline float StyleFontStyle::SlantAngle() const {
   return IsNormal() ? 0 : IsItalic() ? DEFAULT_OBLIQUE_DEGREES : ObliqueAngle();
 }
 
-using FontStretch = StyleFontStretch;
+using FontWidth = StyleFontWidth;
 using FontSlantStyle = StyleFontStyle;
 using FontWeight = StyleFontWeight;
 
@@ -1501,6 +1520,84 @@ template <>
 inline Span<const mozilla::StyleAtom>
 StyleTreeScoped<StyleAnchorNameIdent>::AsSpan() const {
   return value.AsSpan();
+}
+
+inline StyleNumericType::StyleNumericType()
+    : exponents{},
+      percent_hint(StyleOptional<StyleNumericBaseType>::None()),
+      non_zero_count(0),
+      non_zero_except_percent_count(0) {}
+
+inline StyleNumericType StyleNumericType::Empty() { return StyleNumericType(); }
+
+// See declaration for synchronization requirements.
+inline StyleNumericType StyleNumericType::WithBaseType(
+    StyleNumericBaseType aBaseType) {
+  auto result = Empty();
+  result.exponents[static_cast<size_t>(aBaseType)] = 1;
+  result.non_zero_count = 1;
+
+  if (aBaseType != StyleNumericBaseType::Percent) {
+    result.non_zero_except_percent_count = 1;
+  }
+
+  return result;
+}
+
+inline StyleNumericType StyleNumericType::Number() { return Empty(); }
+
+inline StyleNumericType StyleNumericType::Percent() {
+  return WithBaseType(StyleNumericBaseType::Percent);
+}
+
+inline StyleNumericType StyleNumericType::Length() {
+  return WithBaseType(StyleNumericBaseType::Length);
+}
+
+inline StyleNumericType StyleNumericType::Angle() {
+  return WithBaseType(StyleNumericBaseType::Angle);
+}
+
+inline StyleNumericType StyleNumericType::Time() {
+  return WithBaseType(StyleNumericBaseType::Time);
+}
+
+inline StyleNumericType StyleNumericType::Frequency() {
+  return WithBaseType(StyleNumericBaseType::Frequency);
+}
+
+inline StyleNumericType StyleNumericType::Resolution() {
+  return WithBaseType(StyleNumericBaseType::Resolution);
+}
+
+inline StyleNumericType StyleNumericType::Flex() {
+  return WithBaseType(StyleNumericBaseType::Flex);
+}
+
+inline int32_t StyleNumericType::Exponent(
+    StyleNumericBaseType aBaseType) const {
+  return exponents[static_cast<size_t>(aBaseType)];
+}
+
+inline bool StyleNumericType::MatchesLength() const {
+  return Servo_NumericType_MatchesLength(this);
+}
+
+inline bool StyleNumericType::MatchesAngle() const {
+  return Servo_NumericType_MatchesAngle(this);
+}
+
+inline bool StyleNumericType::MatchesLengthPercentage() const {
+  return Servo_NumericType_MatchesLengthPercentage(this);
+}
+
+inline bool StyleNumericType::MatchesNumber() const {
+  return Servo_NumericType_MatchesNumber(this);
+}
+
+inline bool StyleNumericType::operator==(const StyleNumericType& aOther) const {
+  return ArrayEqual(exponents, aOther.exponents) &&
+         percent_hint == aOther.percent_hint;
 }
 
 }  // namespace mozilla

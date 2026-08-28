@@ -15,39 +15,41 @@ import com.android.tools.lint.detector.api.Severity
 import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiTypes
+import java.util.EnumSet
 import org.jetbrains.uast.UBinaryExpressionWithType
 import org.jetbrains.uast.UCallExpression
-import org.jetbrains.uast.UExpression
 import org.jetbrains.uast.UastBinaryExpressionWithTypeKind.InstanceCheck
 import org.jetbrains.uast.skipParenthesizedExprDown
-import java.util.EnumSet
 
 /**
- * Detects `assertTrue(x is SomeType)` patterns and suggests replacing them with
- * `assertIs<SomeType>(x)` from `kotlin.test`, which provides smart casts and
- * more informative failure messages.
+ * Detects `assertTrue(x is SomeType)` patterns and suggests replacing them with `assertIs<SomeType>(x)` from
+ * `kotlin.test`, which provides smart casts and more informative failure messages.
  */
 class AssertIsDetector : Detector(), Detector.UastScanner {
 
     companion object {
-        private val Implementation = Implementation(
-            AssertIsDetector::class.java,
-            EnumSet.of(Scope.JAVA_FILE, Scope.TEST_SOURCES),
-        )
+        private val Implementation =
+            Implementation(
+                AssertIsDetector::class.java,
+                EnumSet.of(Scope.JAVA_FILE, Scope.TEST_SOURCES),
+            )
 
         @JvmField
-        val ISSUE_USE_ASSERT_IS: Issue = Issue.create(
-            id = "AssertTrueInsteadOfAssertIs",
-            briefDescription = "Use assertIs<Type>() instead of assertTrue(x is Type)",
-            explanation = """
-                `assertIs<SomeType>(x)` from `kotlin.test` gives a smart cast on the variable \
-                and a descriptive error on failure.
-            """.trimIndent(),
-            category = Category.TESTING,
-            priority = 6,
-            severity = Severity.WARNING,
-            implementation = Implementation,
-        )
+        val ISSUE_USE_ASSERT_IS: Issue =
+            Issue.create(
+                id = "AssertTrueInsteadOfAssertIs",
+                briefDescription = "Use assertIs<Type>() instead of assertTrue(x is Type)",
+                explanation =
+                    """
+                    `assertIs<SomeType>(x)` from `kotlin.test` gives a smart cast on the variable \
+                    and a descriptive error on failure.
+                    """
+                        .trimIndent(),
+                category = Category.TESTING,
+                priority = 6,
+                severity = Severity.WARNING,
+                implementation = Implementation,
+            )
     }
 
     override fun getApplicableMethodNames(): List<String> = listOf("assertTrue")
@@ -59,15 +61,10 @@ class AssertIsDetector : Detector(), Detector.UastScanner {
     ) {
         // JUnit: assertTrue(Boolean) or assertTrue(String, Boolean)
         // kotlin.test: assertTrue(Boolean) or assertTrue(Boolean, String?)
-        val args = node.valueArguments.map(UExpression::skipParenthesizedExprDown)
-        val booleanArg = args.firstOrNull {
-            it.skipParenthesizedExprDown().getExpressionType() == PsiTypes.booleanType()
-        }
+        val args = node.valueArguments.map { it.skipParenthesizedExprDown() }
+        val booleanArg = args.firstOrNull { it.getExpressionType() == PsiTypes.booleanType() }
         val stringArg = args.firstOrNull {
-            (
-                it.skipParenthesizedExprDown()
-                .getExpressionType() as? PsiClassType
-            )?.name == String::class.simpleName
+            (it.getExpressionType() as? PsiClassType)?.name == String::class.simpleName
         }
 
         if (booleanArg is UBinaryExpressionWithType && booleanArg.operationKind is InstanceCheck) {
@@ -75,20 +72,23 @@ class AssertIsDetector : Detector(), Detector.UastScanner {
             val operand = booleanArg.operand.sourcePsi?.text
             val message = stringArg?.sourcePsi?.text
 
-            val replacementText = if (type == null || operand == null) {
-                null
-            } else if (message != null) {
-                "assertIs<$type>($operand, $message)"
-            } else {
-                "assertIs<$type>($operand)"
-            }
+            val replacementText =
+                if (type == null || operand == null) {
+                    null
+                } else if (message != null) {
+                    "assertIs<$type>($operand, $message)"
+                } else {
+                    "assertIs<$type>($operand)"
+                }
 
             val quickFix = replacementText?.let {
+                val fullyQualified = "kotlin.test.$replacementText"
                 LintFix.create()
                     .name("Replace with $replacementText")
                     .replace()
                     .all()
-                    .with(replacementText)
+                    .with(fullyQualified)
+                    .shortenNames()
                     .build()
             }
 

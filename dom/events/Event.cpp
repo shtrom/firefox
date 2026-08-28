@@ -44,6 +44,7 @@
 #include "nsIFrame.h"
 #include "nsJSEnvironment.h"
 #include "nsLayoutUtils.h"
+#include "nsPIDOMWindowInlines.h"
 #include "nsPIWindowRoot.h"
 #include "nsRFPService.h"
 
@@ -108,7 +109,7 @@ void Event::InitPresContextData(nsPresContext* aPresContext) {
   mPresContext = aPresContext;
   // Get the explicit original target (if it's anonymous make it null)
   {
-    nsIContent* content = GetTargetFromFrame();
+    nsIContent* content = GetExplicitTargetFromFrame();
     if (content && !content->IsInNativeAnonymousSubtree()) {
       mExplicitOriginalTarget = content;
     } else {
@@ -320,7 +321,7 @@ void Event::ComposedPath(nsTArray<RefPtr<EventTarget>>& aPath) {
 //
 // Get the actual event target node (may have been retargeted for mouse events)
 //
-nsIContent* Event::GetTargetFromFrame() {
+nsIContent* Event::GetExplicitTargetFromFrame() {
   if (!mPresContext) {
     return nullptr;
   }
@@ -331,8 +332,8 @@ nsIContent* Event::GetTargetFromFrame() {
     return nullptr;
   }
 
-  // get the real content
-  return targetFrame->GetContentForEvent(mEvent);
+  // Get the real content rather than proper event target node for mEvent
+  return targetFrame->GetExplicitEventTargetContent(mEvent);
 }
 
 EventTarget* Event::GetExplicitOriginalTarget() const {
@@ -747,7 +748,8 @@ nsIFrame* Event::GetPrimaryFrameOfEventTarget(const nsPresContext& aPresContext,
   // For compat, see https://github.com/w3c/csswg-drafts/issues/1508. In SVG
   // we just return the coordinates of the outer SVG box. This is all kinda
   // unfortunate.
-  if (frame->HasAnyStateBits(NS_FRAME_SVG_LAYOUT) &&
+  if ((frame->HasAnyStateBits(NS_FRAME_SVG_LAYOUT) ||
+       frame->IsInSVGTextSubtree()) &&
       StaticPrefs::dom_events_offset_in_svg_relative_to_svg_root()) {
     return SVGUtils::GetOuterSVGFrame(frame);
   }

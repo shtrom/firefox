@@ -26,7 +26,10 @@ namespace js {
 namespace wasm {
 
 static const uint32_t MagicNumber = 0x6d736100;  // "\0asm"
-static const uint32_t EncodingVersion = 0x01;
+static const uint32_t EncodingVersionModule = 0x01;
+#ifdef ENABLE_WASM_COMPONENTS
+static const uint32_t EncodingVersionComponent = 0x0001000d;
+#endif
 
 enum class SectionId {
   Custom = 0,
@@ -44,6 +47,22 @@ enum class SectionId {
   DataCount = 12,
   Tag = 13,
 };
+
+#ifdef ENABLE_WASM_COMPONENTS
+enum class ComponentSectionId {
+  Custom = 0,
+  CoreModule = 1,
+  CoreInstance = 2,
+  CoreType = 3,
+  Component = 4,
+  Instance = 5,
+  Alias = 6,
+  Type = 7,
+  Canon = 8,
+  Import = 10,
+  Export = 11,
+};
+#endif
 
 // WebAssembly type encodings are all single-byte negative SLEB128s, hence:
 //  forall tc:TypeCode. ((tc & SLEB128SignMask) == SLEB128SignBit
@@ -224,6 +243,10 @@ enum class Trap {
 
   Limit
 };
+
+// Returns `true` if there is any possibility that a trap of kind `t` might
+// resume.  Only returns `false` if `t` definitely won't resume.
+bool TrapMightResume(Trap t);
 
 #ifdef JS_JITSPEW
 const char* NameOfTrap(Trap t);
@@ -1048,58 +1071,18 @@ enum class BuiltinModuleId {
 
 enum class MozOp {
   // ------------------------------------------------------------------------
-  // These operators are emitted internally when compiling asm.js and are
-  // rejected by wasm validation.  They are prefixed by MozPrefix.
-
-  // asm.js-specific operators.  They start at 1 so as to check for
+  // Internal operators emitted by SpiderMonkey, prefixed by MozPrefix and
+  // rejected by wasm validation. They start at 1 so as to check for
   // uninitialized (zeroed) storage.
-  TeeGlobal = 0x01,
-  I32Min,
-  I32Max,
-  I32Neg,
-  I32BitNot,
-  I32Abs,
-  F32TeeStoreF64,
-  F64TeeStoreF32,
-  I32TeeStore8,
-  I32TeeStore16,
-  I64TeeStore8,
-  I64TeeStore16,
-  I64TeeStore32,
-  I32TeeStore,
-  I64TeeStore,
-  F32TeeStore,
-  F64TeeStore,
-  F64Mod,
-  F64SinNative,
-  F64SinFdlibm,
-  F64CosNative,
-  F64CosFdlibm,
-  F64TanNative,
-  F64TanFdlibm,
-  F64Asin,
-  F64Acos,
-  F64Atan,
-  F64Exp,
-  F64Log,
-  F64Pow,
-  F64Atan2,
 
-  // asm.js-style call_indirect with the callee evaluated first.
-  OldCallDirect,
-  OldCallIndirect,
-
-  // Everything above this must be asm.js.
-  LastAsmJSOp = OldCallIndirect,
+  // Call a builtin module funcs. The operator has argument leb u32 to specify
+  // particular operation id. See BuiltinModuleFuncId above.
+  CallBuiltinModuleFunc = 0x01,
 
 #ifdef ENABLE_WASM_JSPI
   // Check that there is a WebAssembly.promising function ready to suspend to.
   GuardSuspending,
 #endif
-
-  // Call a builtin module funcs. The operator has argument leb u32 to specify
-  // particular operation id. See BuiltinModuleFuncId above.
-  CallBuiltinModuleFunc,
 
   Limit
 };
@@ -1236,6 +1219,31 @@ static const unsigned MaxArrayNewFixedElements = 10000;
 static const unsigned MaxArrayPayloadBytes = 1987654321;
 static_assert(uint64_t(MaxArrayPayloadBytes) <
               (uint64_t(1) << (8 * sizeof(uint32_t))));
+
+#ifdef ENABLE_WASM_COMPONENTS
+// TODO(wasm-cm): These implementation limits are arbitrarily chosen.
+static const uint32_t MaxComponentCoreModules = 100;
+static const uint32_t MaxComponentCoreInstances = 1000;
+static const uint32_t MaxComponentCoreInstantiateArgs = MaxImports;
+static const uint32_t MaxComponentCoreFuncs = MaxFuncs;
+static const uint32_t MaxComponentCoreTables = MaxTables;
+static const uint32_t MaxComponentCoreMemories = MaxMemories;
+static const uint32_t MaxComponentCoreGlobals = MaxGlobals;
+static const uint32_t MaxComponentCoreTags = MaxTags;
+static const uint32_t MaxComponentTypes = 1000000;
+static const uint32_t MaxComponentImports = 1000000;
+static const uint32_t MaxComponentExports = 1000000;
+static const uint32_t MaxComponentFuncs = 1000000;
+static const uint32_t MaxComponentRecordFields = 10000;
+static const uint32_t MaxComponentVariantCases = 10000;
+static const uint32_t MaxComponentTupleTypes = 10000;
+static const uint32_t MaxComponentFlagLabels = 32;
+static const uint32_t MaxComponentEnumCases = 10000;
+static const uint32_t MaxComponentParams = 1000;
+static const uint32_t MaxComponentCanonOpts = 1000;
+static const uint32_t MaxComponentFlatteningDepth = 63;
+static const uint32_t MaxComponentInlineExports = MaxComponentImports;
+#endif
 
 // These limits pertain to our WebAssembly implementation only.
 

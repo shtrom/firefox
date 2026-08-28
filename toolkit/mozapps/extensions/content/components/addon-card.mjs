@@ -11,7 +11,6 @@ import {
   detachUpdateHandler,
   getAddonMessageInfo,
   getOptionsType,
-  getScreenshotUrlForAddon,
   getUpdateInstall,
   hasPermission,
   isAllowedInPrivateBrowsing,
@@ -21,6 +20,7 @@ import {
   showPermissionsPrompt,
 } from "../aboutaddons-utils.mjs";
 import { gViewController } from "../view-controller.mjs";
+import { shouldShowNativeThemeCheckbox } from "./native-theme-colors-checkbox.mjs";
 
 const { AddonManager } = ChromeUtils.importESModule(
   "resource://gre/modules/AddonManager.sys.mjs"
@@ -46,6 +46,29 @@ const PRIVATE_BROWSING_PERMS = {
 };
 
 /**
+ * @typedef {object} AddonMessageInfo
+ * @property {string} [messageId]
+ * @property {object} [messageArgs]
+ * @property {"error"|"warning"} [type]
+ * @property {string} [linkUrl]
+ * @property {string} [linkId]
+ * @property {string} [linkSumoPage]
+ */
+
+/**
+ * @typedef {object} AddonMessageInfoOptions
+ * @property {boolean} isCardExpanded
+ * @property {boolean} isInDisabledSection
+ */
+
+/**
+ * @callback GetAddonMessageInfoHook
+ * @param {AddonWrapper} addon
+ * @param {AddonMessageInfoOptions} options
+ * @returns {Promise<AddonMessageInfo>}
+ */
+
+/**
  * A card component for managing an add-on. It should be initialized by setting
  * the add-on with `setAddon()` before being connected to the document.
  *
@@ -54,11 +77,39 @@ const PRIVATE_BROWSING_PERMS = {
  *    document.body.appendChild(card);
  */
 export class AddonCard extends AboutAddonsHTMLElement {
+  /** @type {GetAddonMessageInfoHook} */
+  static #getAddonMessageInfoHook = getAddonMessageInfo;
+
+  /**
+   * Register embedder hooks that override addon-card behavior for downstream
+   * consumers (e.g. Thunderbird).
+   *
+   * The caller should call this method only once with all hook callbacks to
+   * be set. The callbacks missing from the hooks object will be cleared.
+   *
+   * The caller is also responsible for refreshing already-rendered cards if
+   * needed, e.g.
+   * `document.querySelectorAll("addon-card").forEach(card => card.update())`.
+   *
+   * @param {object} [hooks]
+   * @param {GetAddonMessageInfoHook|null} [hooks.getAddonMessageInfo]
+   *   Pass a function to override the default resolution of the card's
+   *   banner content. The hook may delegate to the default implementation
+   *   exported from aboutaddons-utils.mjs for cases it does not handle.
+   *   Setting it to `null`, `undefined` or omitting it resets the hook to the
+   *   default.
+   */
+  static setEmbedderHooks(hooks) {
+    const { getAddonMessageInfo: getAddonMessageInfoHook } = hooks ?? {};
+    AddonCard.#getAddonMessageInfoHook =
+      getAddonMessageInfoHook ?? getAddonMessageInfo;
+  }
+
   static get markup() {
     return `
       <template>
         <div class="card addon">
-          <img class="card-heading-image" role="presentation" />
+          <theme-preview></theme-preview>
           <div class="addon-card-collapsed">
             <img class="card-heading-icon addon-icon" alt="" />
             <div class="card-contents">
@@ -99,11 +150,12 @@ export class AddonCard extends AboutAddonsHTMLElement {
                 >
                 </a>
                 <div class="spacer"></div>
-                <button
+                <moz-button
                   class="theme-enable-button"
+                  size="small"
                   action="toggle-disabled"
                   hidden
-                ></button>
+                ></moz-button>
                 <moz-toggle
                   class="extension-enable-button"
                   action="toggle-disabled"
@@ -111,18 +163,22 @@ export class AddonCard extends AboutAddonsHTMLElement {
                   hidden
                 ></moz-toggle>
                 <mlmodel-card-header-additions></mlmodel-card-header-additions>
-                <button
+                <moz-button
+                  type="ghost"
+                  size="small"
+                  iconsrc="chrome://global/skin/icons/more.svg"
                   class="more-options-button"
-                  action="more-options"
                   data-l10n-id="addon-options-button"
-                  aria-haspopup="menu"
-                  aria-expanded="false"
-                ></button>
+                ></moz-button>
               </div>
               <mlmodel-card-list-additions></mlmodel-card-list-additions>
               <span class="addon-description" tabindex="-1"></span>
             </div>
           </div>
+          <native-theme-colors-checkbox
+            class="native-theme-checkbox-list"
+            hidden
+          ></native-theme-colors-checkbox>
           <moz-message-bar
             class="update-postponed-bar"
             data-l10n-id="install-postponed-message2"
@@ -221,19 +277,31 @@ export class AddonCard extends AboutAddonsHTMLElement {
       perms.permissions = [permission];
     } else if (type === "origin") {
       perms.origins = [permission];
+    } else if (type === "file_scheme_access") {
+      // Note: the visibility of this permission does not imply that the
+      // extension has declared file:-access. If an extension removes file
+      // access in an update, a previously granted internal permission is not
+      // removed. We show the permission UI to allow the user to remove it, but
+      // when the page is reloaded the control will disappear.
+      perms.permissions = ["internal:fileSchemeAllowed"];
+      // TODO: Consider also granting/revoking file: host permissions along
+      // with the internal permission. These permissions can currently not
+      // be controlled separately from <all_urls> in the UI (bug 1765828).
     } else if (type === "data_collection") {
       perms.data_collection = [permission];
     } else {
       throw new Error("unknown permission type changed");
     }
 
-    let normalized = lazy.ExtensionPermissions.normalizeOptional(
-      perms,
-      addon.optionalPermissions
-    );
+    if (type !== "file_scheme_access") {
+      perms = lazy.ExtensionPermissions.normalizeOptional(
+        perms,
+        addon.optionalPermissions
+      );
+    }
 
     let policy = WebExtensionPolicy.getByID(addon.id);
-    lazy.ExtensionPermissions[action](addon.id, normalized, policy?.extension);
+    lazy.ExtensionPermissions[action](addon.id, perms, policy?.extension);
   }
 
   async handleEvent(e) {
@@ -348,12 +416,6 @@ export class AddonCard extends AboutAddonsHTMLElement {
           }
           gViewController.loadView(`detail/${this.addon.id}`);
           break;
-        case "more-options":
-          // Open panel on click from the keyboard.
-          if (e.inputSource == MouseEvent.MOZ_SOURCE_KEYBOARD) {
-            this.panel.toggle(e);
-          }
-          break;
         case "report":
           this.panel.hide();
           openAbuseReport({ addonId: addon.id, reportEntryPoint: "menu" });
@@ -370,7 +432,13 @@ export class AddonCard extends AboutAddonsHTMLElement {
           // Handle a click on the card itself.
           if (
             !this.expanded &&
-            (e.target === this.addonNameEl || !e.target.closest("a"))
+            (e.target === this.addonNameEl || !e.target.closest("a")) &&
+            // moz-button handles its own click/toggle; exclude it here to
+            // avoid navigating to the detail page when the menu is opened.
+            !e.target.classList.contains("more-options-button") &&
+            // Exclude the native theme checkbox so clicking it doesn't also
+            // navigate to the detail page.
+            !e.target.closest("native-theme-colors-checkbox")
           ) {
             e.preventDefault();
             gViewController.loadView(`detail/${this.addon.id}`);
@@ -423,17 +491,11 @@ export class AddonCard extends AboutAddonsHTMLElement {
           break;
         }
       }
-    } else if (e.type == "mousedown") {
-      // Open panel on mousedown when the mouse is used.
-      if (action == "more-options" && e.button == 0) {
-        this.panel.toggle(e);
-      }
     } else if (e.type === "shown" || e.type === "hidden") {
       let panelOpen = e.type === "shown";
       // The card will be dimmed if it's disabled, but when the panel is open
       // that should be reverted so the menu items can be easily read.
       this.toggleAttribute("panelopen", panelOpen);
-      this.optionsButton.setAttribute("aria-expanded", panelOpen);
     }
   }
 
@@ -448,7 +510,6 @@ export class AddonCard extends AboutAddonsHTMLElement {
   registerListeners() {
     this.addEventListener("change", this);
     this.addEventListener("click", this);
-    this.addEventListener("mousedown", this);
     this.addEventListener("toggle", this);
     this.panel.addEventListener("shown", this);
     this.panel.addEventListener("hidden", this);
@@ -457,7 +518,6 @@ export class AddonCard extends AboutAddonsHTMLElement {
   removeListeners() {
     this.removeEventListener("change", this);
     this.removeEventListener("click", this);
-    this.removeEventListener("mousedown", this);
     this.removeEventListener("toggle", this);
     this.panel.removeEventListener("shown", this);
     this.panel.removeEventListener("hidden", this);
@@ -472,18 +532,17 @@ export class AddonCard extends AboutAddonsHTMLElement {
 
     card.setAttribute("active", addon.isActive);
 
-    // Set the icon or theme preview.
+    card.querySelector("theme-preview").addon = addon;
+
+    // Set the visibility of the native theme colors checkbox.
+    card.querySelector(".native-theme-checkbox-list").hidden =
+      this.expanded || !shouldShowNativeThemeCheckbox(addon);
+
+    // Set the icon.
     let iconEl = card.querySelector(".addon-icon");
-    let preview = card.querySelector(".card-heading-image");
     if (addon.type == "theme") {
       iconEl.hidden = true;
-      let screenshotUrl = getScreenshotUrlForAddon(addon);
-      if (screenshotUrl) {
-        preview.src = screenshotUrl;
-      }
-      preview.hidden = !screenshotUrl;
     } else {
-      preview.hidden = true;
       iconEl.hidden = false;
       if (addon.type == "plugin") {
         iconEl.src = PLUGIN_ICON_URL;
@@ -529,8 +588,8 @@ export class AddonCard extends AboutAddonsHTMLElement {
 
     // Badge the more options button if there's an update.
     let moreOptionsButton = card.querySelector(".more-options-button");
-    moreOptionsButton.classList.toggle(
-      "more-options-button-badged",
+    moreOptionsButton.toggleAttribute(
+      "attention",
       !!(this.updateInstall && isInState(this.updateInstall, "available"))
     );
 
@@ -599,6 +658,7 @@ export class AddonCard extends AboutAddonsHTMLElement {
   async updateMessage() {
     const messageBar = this.card.querySelector(".addon-card-message");
 
+    const resolveMessageInfo = AddonCard.#getAddonMessageInfoHook;
     const {
       linkUrl,
       linkId,
@@ -606,7 +666,7 @@ export class AddonCard extends AboutAddonsHTMLElement {
       messageId,
       messageArgs,
       type = "",
-    } = await getAddonMessageInfo(this.addon, {
+    } = await resolveMessageInfo(this.addon, {
       isCardExpanded: this.expanded,
       isInDisabledSection:
         !this.expanded &&
@@ -703,9 +763,21 @@ export class AddonCard extends AboutAddonsHTMLElement {
 
     let panelType = addon.type == "plugin" ? "plugin-options" : "addon-options";
     this.options = document.createElement(panelType);
+
+    // Derive (from the add-on id) an id for the element wrapping the panel-list element
+    // to wire up to the addon-card more options moz-button (the addon-options / plugin-options
+    // components will derive the panel-list id from their own id set here and will return it
+    // from their panelListId getter.
+    this.options.id = `addon-card-options-${lazy.ExtensionCommon.makeWidgetId(addon.id)}`;
+
     this.options.render();
     this.card.appendChild(this.options);
     this.optionsButton = this.card.querySelector(".more-options-button");
+
+    // Wire up the addon-card more-options moz-button with the corresponding panel-list element.
+    customElements
+      .whenDefined("moz-button")
+      .then(() => (this.optionsButton.menuId = this.options.panelListId));
 
     // Set the contents.
     this.update();

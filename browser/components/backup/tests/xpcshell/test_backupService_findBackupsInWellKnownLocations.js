@@ -33,9 +33,9 @@ add_task(
     let bs = new BackupService();
     let sandbox = sinon.createSandbox();
 
-    // getBackupFileInfo should return without throwing to simulate
+    // loadBackupFileInfo should return without throwing to simulate
     // what happens when a valid backup file's validity is checked
-    sandbox.stub(bs, "getBackupFileInfo").callsFake(async _filePath => {});
+    sandbox.stub(bs, "loadBackupFileInfo").callsFake(async _filePath => {});
     sandbox.stub(BackupService, "docsDirFolderPath").get(() => null);
     sandbox.stub(BackupService, "oneDriveFolderPath").get(() => null);
 
@@ -66,7 +66,10 @@ add_task(
     const TWO = "FirefoxBackup_two_20241202-130000.000.html";
     await touchBackupFile(BACKUP_DIR, TWO);
 
-    let result2 = await bs.findBackupsInWellKnownLocations();
+    let result2 = await bs.findBackupsInWellKnownLocations({
+      validateFile: false,
+      multipleFiles: false,
+    });
     Assert.ok(
       !result2.found,
       "Found should be false when multiple candidates exist and validateFile=false"
@@ -137,7 +140,9 @@ add_task(async function test_findBackupInDocsAfterSignInToOneDrive() {
     path: oneDriveDir,
   }));
 
-  const result = await backupService.findBackupsInWellKnownLocations();
+  const result = await backupService.findBackupsInWellKnownLocations({
+    validateFile: false,
+  });
   Assert.ok(result.found, "Backup found in Documents");
 
   sandbox.restore();
@@ -173,7 +178,9 @@ add_task(async function test_findBackupInOneDriveDocsAfterSignInToOneDrive() {
     path: oneDriveDir,
   }));
 
-  const result = await backupService.findBackupsInWellKnownLocations();
+  const result = await backupService.findBackupsInWellKnownLocations({
+    validateFile: false,
+  });
   Assert.ok(result.found, "Backup found in OneDrive/Documents");
 
   sandbox.restore();
@@ -194,7 +201,7 @@ add_task(async function test_backupDetectionComplete_telemetry() {
 
     let bs = new BackupService();
     let sandbox = sinon.createSandbox();
-    sandbox.stub(bs, "getBackupFileInfo").callsFake(async _filePath => {});
+    sandbox.stub(bs, "loadBackupFileInfo").callsFake(async _filePath => {});
     sandbox.stub(BackupService, "docsDirFolderPath").get(() => null);
     sandbox.stub(BackupService, "oneDriveFolderPath").get(() => null);
 

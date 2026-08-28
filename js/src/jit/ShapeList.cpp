@@ -22,7 +22,8 @@ const JSClassOps ShapeListObject::classOps_ = {
 };
 
 /* static */ ShapeListObject* ShapeListObject::create(JSContext* cx) {
-  NativeObject* obj = NewTenuredObjectWithGivenProto(cx, &class_, nullptr);
+  NativeObject* obj =
+      NewObjectWithGivenProto(cx, &class_, nullptr, {.newKind = TenuredObject});
   if (!obj) {
     return nullptr;
   }
@@ -62,7 +63,7 @@ bool ShapeListObject::traceWeak(JSTracer* trc) {
   const HeapSlot* src = elements_;
   const HeapSlot* end = src + length;
   HeapSlot* dst = elements_;
-  while (src != end) {
+  while (src < end) {
     Shape* shape = static_cast<Shape*>(src->toPrivate());
     MOZ_ASSERT(shape->is<Shape>());
     if (TraceManuallyBarrieredWeakEdge(trc, &shape, "ShapeListObject shape")) {
@@ -96,7 +97,8 @@ const JSClassOps ShapeListWithOffsetsObject::classOps_ = {
 
 /* static */ ShapeListWithOffsetsObject* ShapeListWithOffsetsObject::create(
     JSContext* cx) {
-  NativeObject* obj = NewTenuredObjectWithGivenProto(cx, &class_, nullptr);
+  NativeObject* obj =
+      NewObjectWithGivenProto(cx, &class_, nullptr, {.newKind = TenuredObject});
   if (!obj) {
     return nullptr;
   }
@@ -143,10 +145,12 @@ bool ShapeListWithOffsetsObject::traceWeak(JSTracer* trc) {
     return false;  // Object may be uninitialized.
   }
 
+  MOZ_RELEASE_ASSERT(length % 2 == 0, "elements must be shape/offset pairs");
+
   const HeapSlot* src = elements_;
   const HeapSlot* end = src + length;
   HeapSlot* dst = elements_;
-  while (src != end) {
+  while (src < end) {
     Shape* shape = static_cast<Shape*>(src[0].toPrivate());
     uint32_t offset = src[1].toPrivateUint32();
     MOZ_ASSERT(shape->is<Shape>());

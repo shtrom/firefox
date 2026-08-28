@@ -409,8 +409,6 @@ class alignas(16) Instance {
   const Code& code() const { return *code_; }
   inline const CodeMetadata& codeMeta() const;
   inline const CodeTailMetadata& codeTailMeta() const;
-  inline const CodeMetadataForAsmJS* codeMetaForAsmJS() const;
-  inline bool isAsmJS() const;
 
   // This method returns a pointer to the GC object that owns this Instance.
   // Instances may be reached via weak edges (e.g., Realm::instances_)
@@ -503,7 +501,6 @@ class alignas(16) Instance {
 
   void addSizeOfMisc(mozilla::MallocSizeOf mallocSizeOf,
                      SeenSet<CodeMetadata>* seenCodeMeta,
-                     SeenSet<CodeMetadataForAsmJS>* seenCodeMetaForAsmJS,
                      SeenSet<Code>* seenCode, SeenSet<Table>* seenTables,
                      size_t* code, size_t* data) const;
 
@@ -626,7 +623,7 @@ class alignas(16) Instance {
                            uint32_t dstIndex, void* srcArray, uint32_t srcIndex,
                            uint32_t numElements, uint32_t elementSize);
 #ifdef ENABLE_WASM_JSPI
-  static void* contNew(Instance* instance, void* funcRef);
+  static void* contNew(Instance* instance, void* funcRef, void* baseFrameStub);
   static void* contNewEmpty(Instance* instance);
   static void contUnwind(Instance* instance, wasm::Handlers* handlers);
 #endif

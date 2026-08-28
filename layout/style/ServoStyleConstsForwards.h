@@ -71,6 +71,7 @@ class FontPaletteValueSet;
 }  // namespace mozilla
 using gfxFontVariation = mozilla::gfx::FontVariation;
 using gfxFontFeature = mozilla::gfx::FontFeature;
+struct gfxFontVariationAxis;
 
 enum nsCSSUnit : uint32_t;
 enum nsChangeHint : uint32_t;
@@ -133,7 +134,6 @@ class Loader;
 class LoaderReusableStyleSheets;
 class SheetLoadData;
 using SheetLoadDataHolder = nsMainThreadPtrHolder<SheetLoadData>;
-enum SheetParsingMode : uint8_t;
 }  // namespace css
 
 namespace dom {
@@ -193,8 +193,6 @@ struct StyleBox {
 
   bool operator==(const StyleBox& aOther) const { return *(*this) == *aOther; }
 
-  bool operator!=(const StyleBox& aOther) const { return *(*this) != *aOther; }
-
  private:
   T* mRaw;
 };
@@ -205,7 +203,6 @@ struct StyleBox {
 using StyleLoader = css::Loader;
 using StyleLoaderReusableStyleSheets = css::LoaderReusableStyleSheets;
 using StyleCallerType = dom::CallerType;
-using StyleSheetParsingMode = css::SheetParsingMode;
 using StyleSheetLoadData = css::SheetLoadData;
 using StyleSheetLoadDataHolder = css::SheetLoadDataHolder;
 using StyleGeckoMallocSizeOf = MallocSizeOf;

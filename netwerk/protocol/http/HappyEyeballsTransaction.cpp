@@ -3,14 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // HttpLog.h should generally be included first
-#include "HttpLog.h"
-
 #include "HappyEyeballsTransaction.h"
 
 #include "ConnectionHandle.h"
-#include "HttpConnectionBase.h"
 #include "Http2Session.h"
 #include "Http3Session.h"
+#include "HttpConnectionBase.h"
+#include "HttpLog.h"
 #include "nsHttpConnection.h"
 #include "nsHttpTransaction.h"
 #include "nsITLSSocketControl.h"
@@ -27,15 +26,34 @@ namespace mozilla::net {
 
 HappyEyeballsTransaction::HappyEyeballsTransaction(
     nsHttpConnectionInfo* aConnInfo, nsIInterfaceRequestor* aCallbacks,
-    uint32_t aCaps, StatusForwarder&& aStatusForwarder,
+    uint32_t aCaps, uint64_t aBrowserId, StatusForwarder&& aStatusForwarder,
+    ClientAuthForwarder&& aClientAuthRequestedForwarder,
+    ClientAuthForwarder&& aClientAuthSelectedForwarder,
     ZeroRttHandle* aZeroRttHandle)
     : SpeculativeTransaction(aConnInfo, aCallbacks, aCaps,
                              /* aCallback */ nullptr,
                              /* reportActivity */ false),
       mStatusForwarder(std::move(aStatusForwarder)),
-      mZeroRttHandle(aZeroRttHandle) {
+      mClientAuthRequestedForwarder(std::move(aClientAuthRequestedForwarder)),
+      mClientAuthSelectedForwarder(std::move(aClientAuthSelectedForwarder)),
+      mZeroRttHandle(aZeroRttHandle),
+      mBrowserId(aBrowserId) {
   LOG1(("HappyEyeballsTransaction ctor %p handle=%p", this,
         mZeroRttHandle.get()));
+}
+
+void HappyEyeballsTransaction::OnClientAuthCertificateRequested() {
+  LOG(("HappyEyeballsTransaction::OnClientAuthCertificateRequested %p", this));
+  if (mClientAuthRequestedForwarder) {
+    mClientAuthRequestedForwarder();
+  }
+}
+
+void HappyEyeballsTransaction::OnClientAuthCertificateSelected() {
+  LOG(("HappyEyeballsTransaction::OnClientAuthCertificateSelected %p", this));
+  if (mClientAuthSelectedForwarder) {
+    mClientAuthSelectedForwarder();
+  }
 }
 
 HappyEyeballsTransaction::~HappyEyeballsTransaction() {
@@ -60,6 +78,33 @@ void HappyEyeballsTransaction::OnTransportStatus(nsITransport* aTransport,
   if (mStatusForwarder) {
     mStatusForwarder(aTransport, aStatus, aProgress);
   }
+}
+
+bool HappyEyeballsTransaction::Do0RTT(bool aCanSendEarlyData) {
+  if (!mZeroRttHandle) {
+    return false;
+  }
+
+  // WebSocket / WebTransport upgrades over HTTP/2 (or HTTP/3) use extended
+  // CONNECT, which can't be issued before the peer's
+  // SETTINGS_ENABLE_CONNECT_PROTOCOL is known — i.e. it can't be sent as TLS
+  // early data — and the 0-RTT adoption path can't graft the real transaction
+  // onto a muxed session as a tunnel. Decline 0-RTT for an upgrade on a
+  // multiplexed racer; the connection still resumes TLS and the upgrade is
+  // dispatched through the tunnel post-handshake. Over HTTP/1 the upgrade is a
+  // plain request, so 0-RTT is safe.
+  if (nsHttpTransaction* real = mZeroRttHandle->RealTxn()) {
+    if (real->IsWebsocketUpgrade() || real->IsForWebTransport()) {
+      nsAHttpConnection* handle = Connection();
+      RefPtr<HttpConnectionBase> base =
+          handle ? handle->HttpConnection() : nullptr;
+      if (base && (base->UsingSpdy() || base->UsingHttp3())) {
+        return false;
+      }
+    }
+  }
+
+  return mZeroRttHandle->Do0RTT(this, aCanSendEarlyData);
 }
 
 nsresult HappyEyeballsTransaction::ReadSegments(nsAHttpSegmentReader* aReader,
@@ -106,7 +151,18 @@ nsresult HappyEyeballsTransaction::ReadSegments(nsAHttpSegmentReader* aReader,
 nsresult HappyEyeballsTransaction::WriteSegments(nsAHttpSegmentWriter* aWriter,
                                                  uint32_t aCount,
                                                  uint32_t* aCountWritten) {
-  MOZ_ASSERT_UNREACHABLE("Shoud not be called");
+  LOG(("HappyEyeballsTransaction::WriteSegments %p mState=%d", this,
+       (uint32_t)mState));
+  // Only the adopted winner has had its carrier swapped to the real txn, so it
+  // is the only state in which the carrier should never route response bytes
+  // here. A Racing attempt that lost the race can still receive early server
+  // data (e.g. an h3 0-RTT loser's stream delivers HeaderReady before the
+  // attempt is torn down); a Closed one can be hit after Finish0RTT closed it.
+  // In both cases drop the bytes rather than assert.
+  if (mState != State::Adopted) {
+    return NS_BASE_STREAM_CLOSED;
+  }
+  MOZ_ASSERT_UNREACHABLE("Should not be called");
   return NullHttpTransaction::WriteSegments(aWriter, aCount, aCountWritten);
 }
 
@@ -187,7 +243,22 @@ void HappyEyeballsTransaction::Transition(State aNext,
         }
       }
 
+      // For an accepted 0-RTT winner the real txn's request was already sent as
+      // early data, so its ReadSegments never runs again to refresh the
+      // security info the way Finish0RTT would. Now that the connection is
+      // attached, do that refresh so the channel doesn't see a null
+      // securityInfo on the resumed connection.
+      if (Entered0RTT()) {
+        mRealTxn->RefreshSecurityInfoAfter0RTTAdopt();
+      }
+
       SetConnection(nullptr);
+      // The HET no longer participates in 0-RTT coordination after adoption.
+      // Break the RefPtr cycle between ZeroRttHandle::mWinner (RefPtr<HET>)
+      // and HET::mZeroRttHandle (RefPtr<ZeroRttHandle>): Cleanup() drops
+      // mWinner; clearing mZeroRttHandle here drops the HET's ref back to the
+      // handle.
+      mZeroRttHandle = nullptr;
       break;
     }
 
@@ -223,13 +294,36 @@ bool HappyEyeballsTransaction::AllowedToConnectToIpAddressSpace(
   return real->AllowedToConnectToIpAddressSpace(aTargetIpAddressSpace);
 }
 
-nsHttpRequestHead* HappyEyeballsTransaction::RequestHead() {
+const nsHttpRequestHead* HappyEyeballsTransaction::RequestHead() {
   if (mZeroRttHandle) {
     if (nsHttpTransaction* real = mZeroRttHandle->RealTxn()) {
       return real->RequestHead();
     }
   }
   return SpeculativeTransaction::RequestHead();
+}
+
+void HappyEyeballsTransaction::MaybeRemoveSSLTokens() {
+  nsAHttpConnection* handle = Connection();
+  if (!handle) {
+    return;
+  }
+  RefPtr<HttpConnectionBase> base = handle->HttpConnection();
+  RefPtr<nsHttpConnection> conn = do_QueryObject(base);
+  if (!conn) {
+    return;
+  }
+  nsCOMPtr<nsITLSSocketControl> tlsCtrl;
+  conn->GetTLSSocketControl(getter_AddRefs(tlsCtrl));
+  nsCOMPtr<nsITransportSecurityInfo> secInfo;
+  if (tlsCtrl) {
+    tlsCtrl->GetSecurityInfo(getter_AddRefs(secInfo));
+  }
+  if (mZeroRttHandle) {
+    if (nsHttpTransaction* realTxn = mZeroRttHandle->RealTxn()) {
+      realTxn->RemoveSSLTokens(secInfo);
+    }
+  }
 }
 
 nsresult HappyEyeballsTransaction::FetchHTTPSRR() {

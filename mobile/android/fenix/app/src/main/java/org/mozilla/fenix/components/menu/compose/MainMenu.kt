@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -47,13 +45,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import mozilla.components.compose.base.theme.surfaceDimVariant
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.displayName
 import mozilla.components.feature.addons.ui.summary
 import mozilla.components.service.fxa.manager.AccountState
 import mozilla.components.service.fxa.manager.AccountState.AuthenticationProblem
 import mozilla.components.service.fxa.store.Account
+import mozilla.components.ui.icons.R as iconsR
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.menu.MenuAccessPoint
 import org.mozilla.fenix.components.menu.MenuDialogTestTag.DESKTOP_SITE_OFF
@@ -67,7 +65,6 @@ import org.mozilla.fenix.theme.PreviewThemeProvider
 import org.mozilla.fenix.theme.Theme
 import org.mozilla.fenix.theme.ThemedValue
 import org.mozilla.fenix.theme.ThemedValueProvider
-import mozilla.components.ui.icons.R as iconsR
 
 /**
  * Wrapper column containing the main menu items.
@@ -75,8 +72,7 @@ import mozilla.components.ui.icons.R as iconsR
  * @param accessPoint The [MenuAccessPoint] that was used to navigate to the menu dialog.
  * @param account [Account] information available for a synced account.
  * @param accountState The [AccountState] of a Mozilla account.
- * @param showQuitMenu Whether or not the button to delete browsing data and quit
- * should be visible.
+ * @param showQuitMenu Whether or not the button to delete browsing data and quit should be visible.
  * @param isBottomToolbar Whether or not the browser toolbar is at the bottom.
  * @param isExpandedToolbarEnabled Whether or not the expanded toolbar layout is enabled.
  * @param isSiteLoading Whether or not the tab is loading.
@@ -85,7 +81,6 @@ import mozilla.components.ui.icons.R as iconsR
  * @param isBookmarked Whether or not the current tab is bookmarked.
  * @param isDesktopMode Whether or not the desktop mode is enabled.
  * @param isPdf Whether or not the current tab is a PDF.
- * @param isPrivate Whether or not the current browsing mode is private
  * @param isReaderViewActive Whether or not Reader View is active or not.
  * @param isExtensionsProcessDisabled Whether or not the extensions process is disabled due to extension errors.
  * @param isMoreMenuHighlighted Whether or not the more menu icon is highlighted.
@@ -102,10 +97,10 @@ import mozilla.components.ui.icons.R as iconsR
  * @param onCustomizeReaderViewMenuClick Invoked when the user clicks on the Customize Reader View button.
  * @param onMozillaAccountButtonClick Invoked when the user clicks on Mozilla account button.
  * @param onSettingsButtonClick Invoked when the user clicks on the settings button.
+ * @param onCustomizeHomepageButtonClick Invoked when the user clicks on the customize homepage button.
  * @param onBookmarkPageMenuClick Invoked when the user clicks on the bookmark page menu item.
  * @param onEditBookmarkButtonClick Invoked when the user clicks on the edit bookmark button.
- * @param onSwitchToDesktopSiteMenuClick Invoked when the user clicks on the switch to desktop site
- * menu toggle.
+ * @param onSwitchToDesktopSiteMenuClick Invoked when the user clicks on the switch to desktop site menu toggle.
  * @param onFindInPageMenuClick Invoked when the user clicks on the find in page menu item.
  * @param onBannerClick Invoked when the user clicks on the banner.
  * @param onBannerDismiss Invoked when the user clicks on the dismiss button.
@@ -141,7 +136,6 @@ fun MainMenu(
     isBookmarked: Boolean,
     isDesktopMode: Boolean,
     isPdf: Boolean,
-    isPrivate: Boolean,
     isReaderViewActive: Boolean,
     isExtensionsProcessDisabled: Boolean,
     isMoreMenuHighlighted: Boolean,
@@ -158,6 +152,7 @@ fun MainMenu(
     onCustomizeReaderViewMenuClick: () -> Unit,
     onMozillaAccountButtonClick: () -> Unit,
     onSettingsButtonClick: () -> Unit,
+    onCustomizeHomepageButtonClick: () -> Unit,
     onBookmarkPageMenuClick: () -> Unit,
     onEditBookmarkButtonClick: () -> Unit,
     onSwitchToDesktopSiteMenuClick: () -> Unit,
@@ -182,24 +177,22 @@ fun MainMenu(
     extensionSubmenu: @Composable () -> Unit,
 ) {
     MenuFrame(
-        contentModifier = Modifier
-            .padding(
+        contentModifier =
+            Modifier.padding(
                 start = 8.dp,
-                top = if (accessPoint != MenuAccessPoint.Home &&
-                    (isBottomToolbar || isExpandedToolbarEnabled)
-                ) {
-                    0.dp
-                } else {
-                    8.dp
-                },
+                top =
+                    if (accessPoint != MenuAccessPoint.Home && (isBottomToolbar || isExpandedToolbarEnabled)) {
+                        0.dp
+                    } else {
+                        8.dp
+                    },
                 end = 8.dp,
-                bottom = if (accessPoint != MenuAccessPoint.Home &&
-                    (isBottomToolbar || isExpandedToolbarEnabled)
-                ) {
-                    84.dp
-                } else {
-                    16.dp
-                },
+                bottom =
+                    if (accessPoint != MenuAccessPoint.Home && (isBottomToolbar || isExpandedToolbarEnabled)) {
+                        84.dp
+                    } else {
+                        16.dp
+                    },
             ),
         scrollState = scrollState,
         header = {
@@ -278,7 +271,6 @@ fun MainMenu(
             MenuGroup {
                 ExtensionsMenuItem(
                     inCustomTab = false,
-                    isPrivate = isPrivate,
                     isExtensionsProcessDisabled = isExtensionsProcessDisabled,
                     isExtensionsExpanded = isExtensionsExpanded,
                     isAllWebExtensionsDisabled = isAllWebExtensionsDisabled,
@@ -295,7 +287,6 @@ fun MainMenu(
                 isBookmarked = isBookmarked,
                 isDesktopMode = isDesktopMode,
                 isPdf = isPdf,
-                isPrivate = isPrivate,
                 isExtensionsProcessDisabled = isExtensionsProcessDisabled,
                 isExtensionsExpanded = isExtensionsExpanded,
                 isMoreMenuHighlighted = isMoreMenuHighlighted,
@@ -326,9 +317,16 @@ fun MainMenu(
             MozillaAccountMenuItem(
                 account = account,
                 accountState = accountState,
-                isPrivate = isPrivate,
                 onClick = onMozillaAccountButtonClick,
             )
+
+            if (accessPoint == MenuAccessPoint.Home) {
+                MenuItem(
+                    label = stringResource(id = R.string.browser_menu_customize_homepage),
+                    beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_home_24),
+                    onClick = onCustomizeHomepageButtonClick,
+                )
+            }
 
             MenuItem(
                 label = stringResource(id = R.string.browser_menu_settings),
@@ -338,23 +336,20 @@ fun MainMenu(
         }
 
         if (showQuitMenu) {
-            QuitMenuGroup(
-                onQuitMenuClick = onQuitMenuClick,
-            )
+            QuitMenuGroup(onQuitMenuClick = onQuitMenuClick)
         }
     }
 }
 
 @Composable
-private fun QuitMenuGroup(
-    onQuitMenuClick: () -> Unit,
-) {
+private fun QuitMenuGroup(onQuitMenuClick: () -> Unit) {
     MenuGroup {
         MenuItem(
-            label = stringResource(
-                id = R.string.browser_menu_delete_browsing_data_on_quit,
-                stringResource(id = R.string.app_name),
-            ),
+            label =
+                stringResource(
+                    id = R.string.browser_menu_delete_browsing_data_on_quit,
+                    stringResource(id = R.string.app_name),
+                ),
             beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_cross_circle_fill_24),
             state = MenuItemState.WARNING,
             onClick = onQuitMenuClick,
@@ -368,7 +363,6 @@ private fun ToolsAndActionsMenuGroup(
     isBookmarked: Boolean,
     isDesktopMode: Boolean,
     isPdf: Boolean,
-    isPrivate: Boolean,
     isExtensionsProcessDisabled: Boolean,
     isExtensionsExpanded: Boolean,
     isMoreMenuHighlighted: Boolean,
@@ -389,15 +383,12 @@ private fun ToolsAndActionsMenuGroup(
         val labelId = R.string.browser_menu_desktop_site
         val badgeText: String
         val menuItemState: MenuItemState
-        val badgeBackgroundColor: Color
 
         if (isDesktopMode) {
             badgeText = stringResource(id = R.string.browser_feature_desktop_site_on)
-            badgeBackgroundColor = MaterialTheme.colorScheme.primaryContainer
             menuItemState = if (isPdf) MenuItemState.DISABLED else MenuItemState.ACTIVE
         } else {
             badgeText = stringResource(id = R.string.browser_feature_desktop_site_off)
-            badgeBackgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
             menuItemState = if (isPdf) MenuItemState.DISABLED else MenuItemState.ENABLED
         }
 
@@ -423,13 +414,15 @@ private fun ToolsAndActionsMenuGroup(
         )
 
         MenuItem(
-            modifier = Modifier.semantics {
-                testTagsAsResourceId = true
-                testTag = when (menuItemState) {
-                    MenuItemState.ACTIVE -> DESKTOP_SITE_ON
-                    else -> DESKTOP_SITE_OFF
-                }
-            },
+            modifier =
+                Modifier.semantics {
+                    testTagsAsResourceId = true
+                    testTag =
+                        when (menuItemState) {
+                            MenuItemState.ACTIVE -> DESKTOP_SITE_ON
+                            else -> DESKTOP_SITE_OFF
+                        }
+                },
             label = stringResource(id = labelId),
             stateDescription = badgeText,
             beforeIconPainter = painterResource(id = iconsR.drawable.mozac_ic_device_desktop_24),
@@ -448,7 +441,6 @@ private fun ToolsAndActionsMenuGroup(
 
         ExtensionsMenuItem(
             inCustomTab = false,
-            isPrivate = isPrivate,
             isExtensionsProcessDisabled = isExtensionsProcessDisabled,
             isExtensionsExpanded = isExtensionsExpanded,
             isAllWebExtensionsDisabled = isAllWebExtensionsDisabled,
@@ -485,23 +477,24 @@ private fun MoreMenuButtonGroup(
         onClick = onMoreMenuClick,
     ) {
         Row(
-            modifier = Modifier
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    shape = RoundedCornerShape(16.dp),
-                )
-                .padding(2.dp),
+            modifier =
+                Modifier.background(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = MaterialTheme.shapes.large,
+                    )
+                    .padding(2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 painter = painterResource(id = iconsR.drawable.mozac_ic_chevron_down_20),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.semantics {
-                    testTagsAsResourceId = true
-                    testTag = MORE_OPTION_CHEVRON
-                },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                    Modifier.semantics {
+                        testTagsAsResourceId = true
+                        testTag = MORE_OPTION_CHEVRON
+                    },
             )
         }
     }
@@ -517,40 +510,32 @@ private fun LibraryMenuGroup(
     onPasswordsMenuClick: () -> Unit,
 ) {
     val spacerWidth = 2.dp
-    val innerRounding = 4.dp
-    val outerRounding = 28.dp
 
-    val leftShape = RoundedCornerShape(
-        topStart = outerRounding,
-        topEnd = innerRounding,
-        bottomStart = outerRounding,
-        bottomEnd = innerRounding,
-    )
-    val middleShape = RoundedCornerShape(innerRounding)
-    val rightShape = RoundedCornerShape(
-        topStart = innerRounding,
-        topEnd = outerRounding,
-        bottomStart = innerRounding,
-        bottomEnd = outerRounding,
-    )
+    val leftShape =
+        MaterialTheme.shapes.extraLarge.copy(
+            topEnd = MaterialTheme.shapes.extraSmall.topEnd,
+            bottomEnd = MaterialTheme.shapes.extraSmall.bottomEnd,
+        )
+    val middleShape = MaterialTheme.shapes.extraSmall
+    val rightShape =
+        MaterialTheme.shapes.extraLarge.copy(
+            topStart = MaterialTheme.shapes.extraSmall.topStart,
+            bottomStart = MaterialTheme.shapes.extraSmall.bottomStart,
+        )
 
     Row(
-        Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .semantics {
-                this.collectionInfo = CollectionInfo(
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min).semantics {
+            this.collectionInfo =
+                CollectionInfo(
                     rowCount = 1,
                     columnCount = 4,
                 )
-            },
+        },
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LibraryMenuItem(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
             iconRes = iconsR.drawable.mozac_ic_history_24,
             labelRes = R.string.library_history,
             shape = leftShape,
@@ -561,9 +546,7 @@ private fun LibraryMenuGroup(
         Spacer(Modifier.width(spacerWidth))
 
         LibraryMenuItem(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
             iconRes = iconsR.drawable.mozac_ic_bookmark_tray_fill_24,
             labelRes = R.string.library_bookmarks,
             shape = middleShape,
@@ -574,9 +557,7 @@ private fun LibraryMenuGroup(
         Spacer(Modifier.width(spacerWidth))
 
         LibraryMenuItem(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
             isHighlighted = isDownloadHighlighted,
             iconRes = iconsR.drawable.mozac_ic_download_24,
             labelRes = R.string.library_downloads,
@@ -588,9 +569,7 @@ private fun LibraryMenuGroup(
         Spacer(Modifier.width(spacerWidth))
 
         LibraryMenuItem(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
             iconRes = iconsR.drawable.mozac_ic_login_24,
             labelRes = R.string.browser_menu_passwords,
             shape = rightShape,
@@ -615,9 +594,7 @@ internal fun Addons(
     onDiscoverMoreExtensionsMenuClick: () -> Unit,
     onWebExtensionMenuItemClick: () -> Unit,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         if (accessPoint == MenuAccessPoint.Home && availableAddons.isNotEmpty()) {
             AddonsMenuItems(
                 availableAddons = availableAddons,
@@ -670,20 +647,22 @@ private fun AddonsMenuItems(
     onIconClick: (Addon) -> Unit,
 ) {
     Column(
-        modifier = Modifier.padding(top = 2.dp)
-            .semantics {
-                collectionInfo = CollectionInfo(
-                    rowCount = availableAddons.size,
-                    columnCount = 1,
-                )
+        modifier =
+            Modifier.padding(top = 2.dp).semantics {
+                collectionInfo =
+                    CollectionInfo(
+                        rowCount = availableAddons.size,
+                        columnCount = 1,
+                    )
             },
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         for ((index, addon) in availableAddons.withIndex()) {
-            val description = stringResource(
-                R.string.browser_menu_extension_plus_icon_content_description_2,
-                addon.displayName(LocalContext.current),
-            )
+            val description =
+                stringResource(
+                    R.string.browser_menu_extension_plus_icon_content_description_2,
+                    addon.displayName(LocalContext.current),
+                )
 
             AddonMenuItem(
                 addon = addon,
@@ -705,20 +684,20 @@ private fun MoreExtensionsMenuItem(
     label: String,
 ) {
     Column(
-        modifier = Modifier
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = LocalIndication.current,
-            ) { onClick.invoke() }
-            .clearAndSetSemantics {
-                role = Role.Button
-                contentDescription = label
-            }
-            .wrapContentSize()
-            .clip(shape = RoundedCornerShape(4.dp))
-            .background(
-                color = MaterialTheme.colorScheme.surfaceDimVariant,
-            ),
+        modifier =
+            Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = LocalIndication.current,
+                ) {
+                    onClick.invoke()
+                }
+                .clearAndSetSemantics {
+                    role = Role.Button
+                    contentDescription = label
+                }
+                .wrapContentSize()
+                .clip(shape = MaterialTheme.shapes.extraSmall)
+                .background(color = MaterialTheme.colorScheme.surfaceBright)
     ) {
         MenuTextItem(
             label = label,
@@ -730,19 +709,13 @@ private fun MoreExtensionsMenuItem(
 
 @Preview
 @Composable
-private fun MenuDialogPreview(
-    @PreviewParameter(PreviewThemeProvider::class) theme: Theme,
-) {
+private fun MenuDialogPreview(@PreviewParameter(PreviewThemeProvider::class) theme: Theme) {
     FirefoxTheme(theme) {
-        Column(
-            modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.surface),
-        ) {
+        Column(modifier = Modifier.background(color = MaterialTheme.colorScheme.surface)) {
             MainMenu(
                 accessPoint = MenuAccessPoint.Browser,
                 account = null,
                 accountState = AuthenticationProblem,
-                isPrivate = false,
                 showQuitMenu = true,
                 isBottomToolbar = false,
                 isExpandedToolbarEnabled = false,
@@ -769,6 +742,7 @@ private fun MenuDialogPreview(
                 onCustomizeReaderViewMenuClick = {},
                 onMozillaAccountButtonClick = {},
                 onSettingsButtonClick = {},
+                onCustomizeHomepageButtonClick = {},
                 onBookmarkPageMenuClick = {},
                 onEditBookmarkButtonClick = {},
                 onSwitchToDesktopSiteMenuClick = {},
@@ -799,18 +773,14 @@ private fun MenuDialogPreview(
 @Preview
 @Composable
 private fun MenuDialogPrivatePreview(
-    @PreviewParameter(SiteLoadingPreviewParameterProvider::class) state: ThemedValue<Boolean>,
+    @PreviewParameter(SiteLoadingPreviewParameterProvider::class) state: ThemedValue<Boolean>
 ) {
     FirefoxTheme(theme = state.theme) {
-        Column(
-            modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.surface),
-        ) {
+        Column(modifier = Modifier.background(color = MaterialTheme.colorScheme.surface)) {
             MainMenu(
                 accessPoint = MenuAccessPoint.Home,
                 account = null,
                 accountState = AuthenticationProblem,
-                isPrivate = false,
                 showQuitMenu = true,
                 isBottomToolbar = true,
                 isExpandedToolbarEnabled = false,
@@ -835,6 +805,7 @@ private fun MenuDialogPrivatePreview(
                 onCustomizeReaderViewMenuClick = {},
                 onMozillaAccountButtonClick = {},
                 onSettingsButtonClick = {},
+                onCustomizeHomepageButtonClick = {},
                 onBookmarkPageMenuClick = {},
                 onEditBookmarkButtonClick = {},
                 onSwitchToDesktopSiteMenuClick = {},
@@ -863,18 +834,19 @@ private fun MenuDialogPrivatePreview(
                         availableAddons = listOf(),
                         webExtensionMenuItems = mapOf(),
                         addonInstallationInProgress = null,
-                        recommendedAddons = listOf(
-                            Addon(
-                                id = "id",
-                                translatableName = mapOf(Addon.DEFAULT_LOCALE to "name"),
-                                translatableSummary = mapOf(Addon.DEFAULT_LOCALE to "summary"),
+                        recommendedAddons =
+                            listOf(
+                                Addon(
+                                    id = "id",
+                                    translatableName = mapOf(Addon.DEFAULT_LOCALE to "name"),
+                                    translatableSummary = mapOf(Addon.DEFAULT_LOCALE to "summary"),
+                                ),
+                                Addon(
+                                    id = "id",
+                                    translatableName = mapOf(Addon.DEFAULT_LOCALE to "name"),
+                                    translatableSummary = mapOf(Addon.DEFAULT_LOCALE to "summary"),
+                                ),
                             ),
-                            Addon(
-                                id = "id",
-                                translatableName = mapOf(Addon.DEFAULT_LOCALE to "name"),
-                                translatableSummary = mapOf(Addon.DEFAULT_LOCALE to "summary"),
-                            ),
-                        ),
                         onAddonSettingsClick = {},
                         onAddonClick = {},
                         onInstallAddonClick = {},
@@ -889,9 +861,6 @@ private fun MenuDialogPrivatePreview(
 }
 
 /**
- * A [PreviewParameterProvider] implementation that provides boolean values
- * representing the loading state of a site.
+ * A [PreviewParameterProvider] implementation that provides boolean values representing the loading state of a site.
  */
-class SiteLoadingPreviewParameterProvider : ThemedValueProvider<Boolean>(
-    sequenceOf(true, false),
-)
+class SiteLoadingPreviewParameterProvider : ThemedValueProvider<Boolean>(sequenceOf(true, false))

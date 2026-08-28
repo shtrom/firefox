@@ -14,21 +14,21 @@
 #include "mozilla/dom/Element.h"
 
 #include "MOZMenuOpeningCoordinator.h"
-#include "nsISupports.h"
+#include "PresShell.h"
+#include "nsCocoaUtils.h"
+#include "nsComputedDOMStyle.h"
+#include "nsDeviceContext.h"
 #include "nsGkAtoms.h"
+#include "nsIFrame.h"
+#include "nsISupports.h"
 #include "nsMenuGroupOwnerX.h"
 #include "nsMenuItemX.h"
+#include "nsMenuPopupFrame.h"
 #include "nsMenuUtilsX.h"
 #include "nsNativeThemeColors.h"
 #include "nsObjCExceptions.h"
-#include "nsThreadUtils.h"
-#include "PresShell.h"
-#include "nsCocoaUtils.h"
-#include "nsIFrame.h"
 #include "nsPresContext.h"
-#include "nsDeviceContext.h"
-#include "nsMenuPopupFrame.h"
-#include "nsComputedDOMStyle.h"
+#include "nsThreadUtils.h"
 
 namespace mozilla {
 
@@ -184,50 +184,42 @@ void NativeMenuMac::OnMenuWillOpen(dom::Element* aPopupElement) {
   }
 
   // Our caller isn't keeping us alive, so make sure we stay alive throughout
-  // this function in case one of the observer notifications destroys us.
+  // this function in case one of the notifications destroys us.
   RefPtr<NativeMenuMac> kungFuDeathGrip(this);
 
-  for (NativeMenu::Observer* observer : mObservers.Clone()) {
-    observer->OnNativeSubMenuWillOpen(aPopupElement);
-  }
+  OnSubMenuWillOpen(aPopupElement);
 }
 
 void NativeMenuMac::OnMenuDidOpen(dom::Element* aPopupElement) {
   // Our caller isn't keeping us alive, so make sure we stay alive throughout
-  // this function in case one of the observer notifications destroys us.
+  // this function in case one of the notifications destroys us.
   RefPtr<NativeMenuMac> kungFuDeathGrip(this);
 
-  for (NativeMenu::Observer* observer : mObservers.Clone()) {
-    if (aPopupElement == mElement) {
-      observer->OnNativeMenuOpened();
-    } else {
-      observer->OnNativeSubMenuDidOpen(aPopupElement);
-    }
+  if (aPopupElement == mElement) {
+    OnOpened();
+  } else {
+    OnSubMenuDidOpen(aPopupElement);
   }
 }
 
 void NativeMenuMac::OnMenuWillActivateItem(dom::Element* aPopupElement,
                                            dom::Element* aMenuItemElement) {
   // Our caller isn't keeping us alive, so make sure we stay alive throughout
-  // this function in case one of the observer notifications destroys us.
+  // this function in case one of the notifications destroys us.
   RefPtr<NativeMenuMac> kungFuDeathGrip(this);
 
-  for (NativeMenu::Observer* observer : mObservers.Clone()) {
-    observer->OnNativeMenuWillActivateItem(aMenuItemElement);
-  }
+  OnWillActivateItem(aMenuItemElement);
 }
 
 void NativeMenuMac::OnMenuClosed(dom::Element* aPopupElement) {
   // Our caller isn't keeping us alive, so make sure we stay alive throughout
-  // this function in case one of the observer notifications destroys us.
+  // this function in case one of the notifications destroys us.
   RefPtr<NativeMenuMac> kungFuDeathGrip(this);
 
-  for (NativeMenu::Observer* observer : mObservers.Clone()) {
-    if (aPopupElement == mElement) {
-      observer->OnNativeMenuClosed();
-    } else {
-      observer->OnNativeSubMenuClosed(aPopupElement);
-    }
+  if (aPopupElement == mElement) {
+    OnClosed();
+  } else {
+    OnSubMenuClosed(aPopupElement);
   }
 }
 
@@ -275,27 +267,7 @@ void NativeMenuMac::ShowMenuAnchored(nsIFrame* aClickedFrame,
 
   NSAppearance* appearance = NativeAppearanceForContent(mMenu->Content());
   NSMenu* menu = mMenu->NativeNSMenu();
-
-  // XUL accepts many more anchor popup alignments than Cocoa. Map to the best
-  // approximate edge setting. Because the view the button cell gets anchored
-  // to is not flipped, NSRectEdgeMinY represents the bottom edge.
-  NSRectEdge edge;
-  switch (position) {
-    case POPUPPOSITION_BEFORESTART:
-    case POPUPPOSITION_BEFOREEND:
-      edge = NSRectEdgeMaxY;
-      break;
-    case POPUPPOSITION_STARTBEFORE:
-    case POPUPPOSITION_STARTAFTER:
-      edge = NSRectEdgeMinX;
-      break;
-    case POPUPPOSITION_ENDBEFORE:
-    case POPUPPOSITION_ENDAFTER:
-      edge = NSRectEdgeMaxX;
-      break;
-    default:
-      edge = NSRectEdgeMinY;
-  }
+  NSRectEdge edge = nsCocoaUtils::PopupPositionToNSRectEdge(position);
 
   // Get the font size of the menupopup element which will be used to size the
   // NSPopUpButtonCell, except for pull-down menus, which do not use custom font

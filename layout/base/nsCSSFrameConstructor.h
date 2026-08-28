@@ -17,6 +17,7 @@
 #include "mozilla/LinkedList.h"
 #include "mozilla/ScrollStyles.h"
 #include "mozilla/UniquePtr.h"
+#include "mozilla/dom/ChildIterator.h"
 #include "nsCOMPtr.h"
 #include "nsFrameManager.h"
 #include "nsIAnonymousContentCreator.h"
@@ -47,8 +48,6 @@ namespace dom {
 
 class CharacterData;
 class Text;
-class FlattenedChildIterator;
-
 }  // namespace dom
 }  // namespace mozilla
 
@@ -877,7 +876,7 @@ class nsCSSFrameConstructor final : public nsFrameManager {
     // Also, the return value is always non-null, thanks to infallible 'new'.
     FrameConstructionItem* AppendItem(
         nsCSSFrameConstructor* aFCtor, const FrameConstructionData* aFCData,
-        nsIContent* aContent, already_AddRefed<ComputedStyle>&& aComputedStyle,
+        nsIContent* aContent, already_AddRefed<ComputedStyle> aComputedStyle,
         bool aSuppressWhiteSpaceOptimizations) {
       FrameConstructionItem* item = new (aFCtor)
           FrameConstructionItem(aFCData, aContent, std::move(aComputedStyle),
@@ -891,7 +890,7 @@ class nsCSSFrameConstructor final : public nsFrameManager {
     // Arguments are the same as AppendItem().
     FrameConstructionItem* PrependItem(
         nsCSSFrameConstructor* aFCtor, const FrameConstructionData* aFCData,
-        nsIContent* aContent, already_AddRefed<ComputedStyle>&& aComputedStyle,
+        nsIContent* aContent, already_AddRefed<ComputedStyle> aComputedStyle,
         bool aSuppressWhiteSpaceOptimizations) {
       FrameConstructionItem* item = new (aFCtor)
           FrameConstructionItem(aFCData, aContent, std::move(aComputedStyle),
@@ -928,7 +927,6 @@ class nsCSSFrameConstructor final : public nsFrameManager {
         MOZ_ASSERT(&mList == &aOther.mList, "Iterators for different lists?");
         return mCurrent == aOther.mCurrent;
       }
-      bool operator!=(const Iterator& aOther) const = default;
 
       Iterator& operator=(const Iterator& aOther) {
         MOZ_ASSERT(&mList == &aOther.mList, "Iterators for different lists?");
@@ -1110,7 +1108,7 @@ class nsCSSFrameConstructor final : public nsFrameManager {
       : public mozilla::LinkedListElement<FrameConstructionItem> {
     FrameConstructionItem(const FrameConstructionData* aFCData,
                           nsIContent* aContent,
-                          already_AddRefed<ComputedStyle>&& aComputedStyle,
+                          already_AddRefed<ComputedStyle> aComputedStyle,
                           bool aSuppressWhiteSpaceOptimizations)
         : mFCData(aFCData),
           mContent(aContent),
@@ -1225,7 +1223,7 @@ class nsCSSFrameConstructor final : public nsFrameManager {
     explicit AutoFrameConstructionItem(nsCSSFrameConstructor* aFCtor,
                                        Args&&... args)
         : mFCtor(aFCtor),
-          mItem(new(aFCtor)
+          mItem(new (aFCtor)
                     FrameConstructionItem(std::forward<Args>(args)...)) {
       MOZ_ASSERT(mFCtor);
     }
@@ -1515,12 +1513,12 @@ class nsCSSFrameConstructor final : public nsFrameManager {
    * ConstructOuterSVG and ConstructMarker, which both want an anonymous block
    * child for their children to go in to.
    */
-  nsContainerFrame* ConstructFrameWithAnonymousChild(
+  nsContainerFrame* ConstructSVGFrameWithAnonymousChild(
       nsFrameConstructorState& aState, FrameConstructionItem& aItem,
       nsContainerFrame* aParentFrame, nsFrameList& aFrameList,
       ContainerFrameCreationFunc aConstructor,
       ContainerFrameCreationFunc aInnerConstructor,
-      mozilla::PseudoStyleType aInnerPseudo, bool aCandidateRootFrame);
+      PseudoStyleType aInnerPseudo, bool aCandidateRootFrame);
 
   /**
    * Construct an SVGOuterSVGFrame.

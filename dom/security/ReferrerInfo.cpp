@@ -34,7 +34,6 @@
 #include "nsNetUtil.h"
 #include "nsScriptSecurityManager.h"
 #include "nsStreamUtils.h"
-#include "nsWhitespaceTokenizer.h"
 
 static mozilla::LazyLogModule gReferrerInfoLog("ReferrerInfo");
 #define LOG(msg) MOZ_LOG(gReferrerInfoLog, mozilla::LogLevel::Debug, msg)
@@ -646,7 +645,8 @@ nsresult ReferrerInfo::LimitReferrerLength(
   // 'ePolicySchemeHostPort' or the 'origin' of any other policy is still over
   // the length limit. If so, truncate the referrer entirely.
   AutoTArray<nsString, 2> params = {
-      referrerLengthLimit, NS_ConvertUTF8toUTF16(aInAndOutTrimmedReferrer)};
+      std::move(referrerLengthLimit),
+      NS_ConvertUTF8toUTF16(aInAndOutTrimmedReferrer)};
   LogMessageToConsole(aChannel, "ReferrerOriginLengthOverLimitation", params);
   aInAndOutTrimmedReferrer.Truncate();
 
@@ -666,7 +666,7 @@ nsresult ReferrerInfo::GetOriginFromReferrerURI(nsIURI* aReferrer,
     return rv;
   }
 
-  aResult = scheme;
+  aResult = std::move(scheme);
   aResult.AppendLiteral("://");
   // Note we explicitly cleared UserPass above, so do not need to build it.
   rv = aReferrer->GetAsciiHostPort(asciiHostPort);
@@ -1200,28 +1200,6 @@ static ReferrerPolicy ReferrerPolicyFromAttribute(const Element& aElement) {
   return aElement.GetReferrerPolicyAsEnum();
 }
 
-static bool HasRelNoReferrer(const Element& aElement) {
-  // rel=noreferrer is only supported in <a>, <area>, and <form>
-  if (!aElement.IsAnyOfHTMLElements(nsGkAtoms::a, nsGkAtoms::area,
-                                    nsGkAtoms::form) &&
-      !aElement.IsSVGElement(nsGkAtoms::a)) {
-    return false;
-  }
-
-  nsAutoString rel;
-  aElement.GetAttr(nsGkAtoms::rel, rel);
-  nsWhitespaceTokenizerTemplate<nsContentUtils::IsHTMLWhitespace> tok(rel);
-
-  while (tok.hasMoreTokens()) {
-    const nsAString& token = tok.nextToken();
-    if (token.LowerCaseEqualsLiteral("noreferrer")) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 NS_IMETHODIMP
 ReferrerInfo::InitWithElement(const Element* aElement) {
   MOZ_ASSERT(!mInitialized);
@@ -1239,7 +1217,7 @@ ReferrerInfo::InitWithElement(const Element* aElement) {
   }
 
   mOriginalPolicy = mPolicy;
-  mSendReferrer = !HasRelNoReferrer(*aElement);
+  mSendReferrer = !nsContentUtils::HasRelNoReferrer(*aElement);
   mOriginalReferrer = aElement->OwnerDoc()->GetDocumentURIAsReferrer();
 
   mInitialized = true;
@@ -1737,25 +1715,6 @@ ReferrerInfo::Write(nsIObjectOutputStream* aStream) {
     return rv;
   }
   return NS_OK;
-}
-
-void ReferrerInfo::RecordTelemetry(nsIHttpChannel* aChannel) {
-#ifdef DEBUG
-  MOZ_ASSERT(!mTelemetryRecorded);
-  mTelemetryRecorded = true;
-#endif  // DEBUG
-
-  // The telemetry probe has 18 buckets. The first 9 buckets are for same-site
-  // requests and the rest 9 buckets are for cross-site requests.
-  uint32_t telemetryOffset =
-      IsCrossSiteRequest(aChannel)
-          ? UnderlyingValue(
-                MaxContiguousEnumValue<dom::ReferrerPolicy>::value) +
-                1
-          : 0;
-
-  glean::security::referrer_policy_count.AccumulateSingleSample(
-      static_cast<uint32_t>(mPolicy) + telemetryOffset);
 }
 
 }  // namespace mozilla::dom

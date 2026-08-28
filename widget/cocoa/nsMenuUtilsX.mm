@@ -5,24 +5,24 @@
 #include "nsMenuUtilsX.h"
 #include <unordered_set>
 
+#include "NativeMenuMac.h"
+#include "gfxPlatform.h"
 #include "mozilla/EventForwards.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/dom/Event.h"
 #include "mozilla/dom/XULCommandEvent.h"
-#include "nsMenuBarX.h"
-#include "nsMenuX.h"
-#include "nsMenuItemX.h"
-#include "NativeMenuMac.h"
-#include "nsObjCExceptions.h"
 #include "nsCocoaUtils.h"
 #include "nsCocoaWindow.h"
 #include "nsComputedDOMStyle.h"
 #include "nsGkAtoms.h"
 #include "nsGlobalWindowInner.h"
+#include "nsMenuBarX.h"
+#include "nsMenuItemX.h"
+#include "nsMenuX.h"
+#include "nsObjCExceptions.h"
 #include "nsPIDOMWindow.h"
 #include "nsQueryObject.h"
-#include "gfxPlatform.h"
 
 using namespace mozilla;
 
@@ -34,8 +34,8 @@ void nsMenuUtilsX::DispatchCommandTo(nsIContent* aTargetContent,
   MOZ_ASSERT(aTargetContent, "null ptr");
 
   dom::Document* doc = aTargetContent->OwnerDoc();
-  RefPtr<dom::XULCommandEvent> event =
-      new dom::XULCommandEvent(doc, doc->GetPresContext(), nullptr);
+  auto event =
+      MakeRefPtr<dom::XULCommandEvent>(doc, doc->GetPresContext(), nullptr);
 
   bool ctrlKey = aModifierFlags & NSEventModifierFlagControl;
   bool altKey = aModifierFlags & NSEventModifierFlagOption;

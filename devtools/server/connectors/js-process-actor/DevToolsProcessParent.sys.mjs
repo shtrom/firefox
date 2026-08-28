@@ -130,6 +130,22 @@ export class DevToolsProcessParent extends JSProcessActorParent {
         `Watcher Actor with ID '${watcherActorID}' can't be found.`
       );
     }
+    const { innerWindowId } = targetActorForm;
+    if (innerWindowId) {
+      const windowGlobal = WindowGlobalParent.getByInnerWindowId(innerWindowId);
+      if (!windowGlobal) {
+        throw new Error(
+          `Unable to find WindowGlobal in the parent process for ${innerWindowId}`
+        );
+      }
+      if (windowGlobal.domProcess != this.manager) {
+        throw new Error(
+          `The target's window global  ${innerWindowId}' ${windowGlobal.domProcess.osPid} doesn't relate to this process ${this.manager.osPid}`
+        );
+      }
+    } else if (targetActorForm.isTopLevelTarget) {
+      throw new Error("Unexpected top level target without an innerWindowId");
+    }
     const connection = watcher.conn;
 
     // If this is the first target actor for this watcher,
@@ -318,7 +334,9 @@ export class DevToolsProcessParent extends JSProcessActorParent {
     // Use a timeout to detect when it happens.
     const timeout = setTimeout(() => {
       this.#frozen = true;
-      console.error(
+      // A process being slow to reply is common and recoverable, especially
+      // during startup, so log this as a warning rather than an error.
+      console.warn(
         `Content process ${osPid} isn't responsive while sending "${msg}" request. DevTools will ignore this process for now.`
       );
       // Do not consider timeout as an error as it may easily break the frontend.
@@ -338,7 +356,7 @@ export class DevToolsProcessParent extends JSProcessActorParent {
       // Ignore frozen processes when the JS Process Actor is destroyed.
       // Either the process was shut down or DevTools unregistered the Actor.
       if (this.#frozen && !this.#destroyed) {
-        console.error(
+        console.warn(
           `Content process ${osPid} is responsive again. DevTools resumes operations against it.`
         );
       }

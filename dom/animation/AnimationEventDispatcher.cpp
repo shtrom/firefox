@@ -4,10 +4,12 @@
 
 #include "mozilla/AnimationEventDispatcher.h"
 
+#include "mozilla/AnimationUtils.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/ContentEvents.h"
 #include "mozilla/EventDispatcher.h"
 #include "mozilla/EventListenerManager.h"
+#include "mozilla/dom/Animation.h"
 #include "mozilla/dom/AnimationEffect.h"
 #include "mozilla/dom/AnimationPlaybackEvent.h"
 #include "mozilla/dom/CSSAnimation.h"
@@ -109,7 +111,7 @@ void AnimationEventDispatcher::Disconnect() {
 void AnimationEventDispatcher::QueueEvent(AnimationEventInfo&& aEvent) {
   const bool wasEmpty = mPendingEvents.IsEmpty();
   mPendingEvents.AppendElement(std::move(aEvent));
-  mIsSorted = !wasEmpty;
+  mIsSorted = wasEmpty;
   if (wasEmpty) {
     ScheduleDispatch();
   }
@@ -255,8 +257,18 @@ void AnimationEventInfo::Dispatch(nsPresContext* aPresContext) {
     }
 
     dom::AnimationPlaybackEventInit init;
-    init.mCurrentTime = data.mCurrentTime;
-    init.mTimelineTime = data.mTimelineTime;
+    const bool progressBased = mAnimation->AcceptsPercentageBasedTime();
+    nsIGlobalObject* global = mAnimation->GetParentObject();
+    if (!data.mCurrentTime.IsNull()) {
+      AnimationUtils::DoubleToCSSNumberish(data.mCurrentTime.Value(),
+                                           progressBased, global,
+                                           init.mCurrentTime.SetValue());
+    }
+    if (!data.mTimelineTime.IsNull()) {
+      AnimationUtils::DoubleToCSSNumberish(data.mTimelineTime.Value(),
+                                           progressBased, global,
+                                           init.mTimelineTime.SetValue());
+    }
     MOZ_ASSERT(nsDependentAtomString(data.mOnEvent).Find(u"on"_ns) == 0,
                "mOnEvent atom should start with 'on'!");
     RefPtr<dom::AnimationPlaybackEvent> event =

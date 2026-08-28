@@ -166,6 +166,14 @@ class nsRange final : public mozilla::dom::AbstractRange,
   already_AddRefed<nsRange> CloneRange() const;
 
   /**
+   * Return this if the both start/end containers of mCrossShadowBoundaryRange
+   * are in the flattened containers in the flattened tree. Otherwise, return
+   * a clone but mCrossShadowBoundaryRange is adjusted to end of the closest
+   * flattened ancestor node.
+   */
+  already_AddRefed<nsRange> GetRangeInFlatTree() const;
+
+  /**
    * SetStartAndEnd() works similar to call both SetStart() and SetEnd().
    * Different from calls them separately, this does nothing if either
    * the start point or the end point is invalid point.
@@ -394,7 +402,9 @@ class nsRange final : public mozilla::dom::AbstractRange,
 
   using ElementHandler = void (*)(mozilla::dom::Element*);
   /**
-   * Cut or delete the range's contents.
+   * Cut or delete the range's contents. If this handles the Range in
+   * TreeKind::DOM (aAllowCrossShadowBoundary is "No" or Nothing and the pref is
+   * disabled), this does nothing if the range crosses some shadow boundaries.
    *
    * @param aFragment DocumentFragment containing the nodes.
    *                  May be null to indicate the caller doesn't want a
@@ -404,10 +414,18 @@ class nsRange final : public mozilla::dom::AbstractRange,
    *                        passed to it, instead of being deleted. Any
    *                        mutation that trips nsMutationGuard is disallowed.
    *                        Currently incompatible with non-null aFragment.
+   * @param aAllowCrossShadowBoundary If this is set, this considers whether
+   *                                  this handles range in
+   *                                  TreeKind::FlatForSelection or
+   *                                  TreeKind::DOM from the value.
+   *                                  Otherwise, considers it from the pref.
    * @param aRv The error if any.
    */
   void CutContents(mozilla::dom::DocumentFragment** aFragment,
-                   ElementHandler aElementHandler, ErrorResult& aRv);
+                   ElementHandler aElementHandler,
+                   const mozilla::Maybe<AllowRangeCrossShadowBoundary>&
+                       aAllowCrossShadowBoundary,
+                   ErrorResult& aRv);
 
   static nsresult CloneParentsBetween(nsINode* aAncestor, nsINode* aNode,
                                       nsINode** aClosestAncestor,

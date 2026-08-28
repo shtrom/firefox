@@ -17,13 +17,13 @@
 #include "mozilla/gfx/DeviceManagerDx.h"
 #include "mozilla/gfx/FileHandleWrapper.h"
 #include "mozilla/gfx/Logging.h"
-#include "mozilla/gfx/gfxVars.h"
 #include "mozilla/gfx/SourceSurfaceD3D11.h"
+#include "mozilla/gfx/gfxVars.h"
 #include "mozilla/ipc/FileDescriptor.h"
+#include "mozilla/layers/CompositeProcessD3D11FencesHolderMap.h"
 #include "mozilla/layers/CompositorBridgeChild.h"
 #include "mozilla/layers/D3D11ZeroCopyTextureImage.h"
 #include "mozilla/layers/FenceD3D11.h"
-#include "mozilla/layers/CompositeProcessD3D11FencesHolderMap.h"
 #include "mozilla/layers/GpuProcessD3D11TextureMap.h"
 #include "mozilla/layers/HelpersD3D11.h"
 #include "mozilla/webrender/RenderD3D11TextureHost.h"
@@ -238,8 +238,6 @@ DataTextureSourceD3D11::DataTextureSourceD3D11(gfx::SurfaceFormat aFormat,
                                                TextureSourceProvider* aProvider,
                                                TextureFlags aFlags)
     : DataTextureSourceD3D11(aProvider->GetD3D11Device(), aFormat, aFlags) {}
-
-DataTextureSourceD3D11::~DataTextureSourceD3D11() {}
 
 enum class SerializeWithMoz2D : bool { No, Yes };
 
@@ -519,10 +517,13 @@ D3D11TextureData* D3D11TextureData::Create(IntSize aSize, SurfaceFormat aFormat,
     case gfx::SurfaceFormat::YUV420P10:
     case gfx::SurfaceFormat::YUV422P10:
     case gfx::SurfaceFormat::NV16:
+    case gfx::SurfaceFormat::P210:
     case gfx::SurfaceFormat::YUY2:
     case gfx::SurfaceFormat::HSV:
     case gfx::SurfaceFormat::Lab:
     case gfx::SurfaceFormat::Depth:
+    case gfx::SurfaceFormat::CMYK:
+    case gfx::SurfaceFormat::InvertedCMYK:
     case gfx::SurfaceFormat::UNKNOWN:
       // Per advice from Sotaro, these formats are not supported for video.
       gfxCriticalNoteOnce
@@ -648,8 +649,8 @@ D3D11TextureData* D3D11TextureData::Create(IntSize aSize, SurfaceFormat aFormat,
       sD3D11TextureUsage,
       new TextureMemoryMeasurer(newDesc.Width * newDesc.Height * 4));
 
-  RefPtr<gfx::FileHandleWrapper> handle =
-      new gfx::FileHandleWrapper(UniqueFileHandle(sharedHandle));
+  RefPtr handle =
+      MakeRefPtr<gfx::FileHandleWrapper>(UniqueFileHandle(sharedHandle));
 
   if (useFence) {
     auto* fencesHolderMap = CompositeProcessD3D11FencesHolderMap::Get();
@@ -743,8 +744,8 @@ DXGIYCbCrTextureData* DXGIYCbCrTextureData::Create(
   if (FAILED(hr)) {
     return nullptr;
   }
-  const RefPtr<gfx::FileHandleWrapper> sharedHandleY =
-      new gfx::FileHandleWrapper(UniqueFileHandle(handleY));
+  const RefPtr sharedHandleY =
+      MakeRefPtr<gfx::FileHandleWrapper>(UniqueFileHandle(handleY));
 
   aTextureCb->QueryInterface((IDXGIResource1**)getter_AddRefs(resource));
 
@@ -755,8 +756,8 @@ DXGIYCbCrTextureData* DXGIYCbCrTextureData::Create(
   if (FAILED(hr)) {
     return nullptr;
   }
-  const RefPtr<gfx::FileHandleWrapper> sharedHandleCb =
-      new gfx::FileHandleWrapper(UniqueFileHandle(handleCb));
+  const RefPtr sharedHandleCb =
+      MakeRefPtr<gfx::FileHandleWrapper>(UniqueFileHandle(handleCb));
 
   aTextureCr->QueryInterface((IDXGIResource1**)getter_AddRefs(resource));
   HANDLE handleCr;
@@ -766,8 +767,8 @@ DXGIYCbCrTextureData* DXGIYCbCrTextureData::Create(
   if (FAILED(hr)) {
     return nullptr;
   }
-  const RefPtr<gfx::FileHandleWrapper> sharedHandleCr =
-      new gfx::FileHandleWrapper(UniqueFileHandle(handleCr));
+  const RefPtr sharedHandleCr =
+      MakeRefPtr<gfx::FileHandleWrapper>(UniqueFileHandle(handleCr));
 
   auto* fenceHolderMap = CompositeProcessD3D11FencesHolderMap::Get();
   if (!fenceHolderMap) {
@@ -1037,6 +1038,13 @@ already_AddRefed<gfx::DataSourceSurface> DXGITextureHostD3D11::GetAsSurface(
   D3D11_TEXTURE2D_DESC textureDesc = {0};
   d3dTexture->GetDesc(&textureDesc);
 
+  if (textureDesc.Format != SurfaceFormatToDXGIFormat(mFormat)) {
+    gfxCriticalNoteOnce << "Declared format does not match texture format: "
+                        << static_cast<int>(mFormat) << " "
+                        << static_cast<int>(textureDesc.Format);
+    return nullptr;
+  }
+
   RefPtr<ID3D11DeviceContext> context;
   d3d11Device->GetImmediateContext(getter_AddRefs(context));
 
@@ -1104,7 +1112,7 @@ void DXGITextureHostD3D11::CreateRenderTexture(
     const wr::ExternalImageId& aExternalImageId) {
   MOZ_ASSERT(mExternalImageId.isSome());
 
-  RefPtr<wr::RenderDXGITextureHost> texture = new wr::RenderDXGITextureHost(
+  RefPtr texture = MakeRefPtr<wr::RenderDXGITextureHost>(
       mHandle, mGpuProcessTextureId, mArrayIndex, mFormat, mColorSpace,
       mColorRange, mTransferFunction, mHDRMetadata, mSize, mHasKeyedMutex,
       mFencesHolderId);
@@ -1166,11 +1174,16 @@ void DXGITextureHostD3D11::PushResourceUpdates(
         return;
       }
 
-      wr::ImageDescriptor descriptor(mSize, GetFormat());
+      auto format = wr::SurfaceFormatToImageFormat(GetFormat());
+      if (NS_WARN_IF(!format)) {
+        return;
+      }
+      wr::ImageDescriptor descriptor(mSize, *format,
+                                     wr::ToOpacityType(GetFormat()));
       // Prefer TextureExternal unless the backend requires TextureRect.
       TextureHost::NativeTexturePolicy policy =
-          TextureHost::BackendNativeTexturePolicy(aResources.GetBackendType(),
-                                                  mSize);
+          TextureHost::BackendNativeTexturePolicy(
+              aResources.GetCapabilities().mBackendType, mSize);
       auto imageType = policy == TextureHost::NativeTexturePolicy::REQUIRE
                            ? wr::ExternalImageType::TextureHandle(
                                  wr::ImageBufferKind::TextureRect)
@@ -1191,17 +1204,17 @@ void DXGITextureHostD3D11::PushResourceUpdates(
       MOZ_ASSERT(mSize.width % 2 == 0);
       MOZ_ASSERT(mSize.height % 2 == 0);
 
-      wr::ImageDescriptor descriptor0(mSize, mFormat == gfx::SurfaceFormat::NV12
-                                                 ? gfx::SurfaceFormat::A8
-                                                 : gfx::SurfaceFormat::A16);
-      wr::ImageDescriptor descriptor1(mSize / 2,
-                                      mFormat == gfx::SurfaceFormat::NV12
-                                          ? gfx::SurfaceFormat::R8G8
-                                          : gfx::SurfaceFormat::R16G16);
+      const bool isNV12 = mFormat == gfx::SurfaceFormat::NV12;
+      wr::ImageDescriptor descriptor0(
+          mSize, isNV12 ? wr::ImageFormat::R8 : wr::ImageFormat::R16,
+          wr::OpacityType::HasAlphaChannel);
+      wr::ImageDescriptor descriptor1(
+          mSize / 2, isNV12 ? wr::ImageFormat::RG8 : wr::ImageFormat::RG16,
+          isNV12 ? wr::OpacityType::Opaque : wr::OpacityType::HasAlphaChannel);
       // Prefer TextureExternal unless the backend requires TextureRect.
       TextureHost::NativeTexturePolicy policy =
-          TextureHost::BackendNativeTexturePolicy(aResources.GetBackendType(),
-                                                  mSize);
+          TextureHost::BackendNativeTexturePolicy(
+              aResources.GetCapabilities().mBackendType, mSize);
       auto imageType = policy == TextureHost::NativeTexturePolicy::REQUIRE
                            ? wr::ExternalImageType::TextureHandle(
                                  wr::ImageBufferKind::TextureRect)
@@ -1314,10 +1327,13 @@ void DXGITextureHostD3D11::PushDisplayItems(
     case gfx::SurfaceFormat::YUV420P10:
     case gfx::SurfaceFormat::YUV422P10:
     case gfx::SurfaceFormat::NV16:
+    case gfx::SurfaceFormat::P210:
     case gfx::SurfaceFormat::YUY2:
     case gfx::SurfaceFormat::HSV:
     case gfx::SurfaceFormat::Lab:
     case gfx::SurfaceFormat::Depth:
+    case gfx::SurfaceFormat::CMYK:
+    case gfx::SurfaceFormat::InvertedCMYK:
     case gfx::SurfaceFormat::UNKNOWN: {
       // Per advice from Sotaro, these formats are not supported for video.
       MOZ_ASSERT_UNREACHABLE("unexpected to be called");
@@ -1412,7 +1428,7 @@ void DXGIYCbCrTextureHostD3D11::CreateRenderTexture(
     const wr::ExternalImageId& aExternalImageId) {
   MOZ_ASSERT(mExternalImageId.isSome());
 
-  RefPtr<wr::RenderTextureHost> texture = new wr::RenderDXGIYCbCrTextureHost(
+  RefPtr texture = MakeRefPtr<wr::RenderDXGIYCbCrTextureHost>(
       mHandles, mYUVColorSpace, mColorDepth, mColorRange, mTransferFunction,
       mSizeY, mSizeCbCr, mFencesHolderId);
 
@@ -1454,8 +1470,8 @@ void DXGIYCbCrTextureHostD3D11::PushResourceUpdates(
   // Use a size that is the maximum of the Y and CbCr sizes.
   IntSize textureSize = std::max(mSizeY, mSizeCbCr);
   TextureHost::NativeTexturePolicy policy =
-      TextureHost::BackendNativeTexturePolicy(aResources.GetBackendType(),
-                                              textureSize);
+      TextureHost::BackendNativeTexturePolicy(
+          aResources.GetCapabilities().mBackendType, textureSize);
   auto imageType = policy == TextureHost::NativeTexturePolicy::REQUIRE
                        ? wr::ExternalImageType::TextureHandle(
                              wr::ImageBufferKind::TextureRect)
@@ -1463,9 +1479,11 @@ void DXGIYCbCrTextureHostD3D11::PushResourceUpdates(
                              wr::ImageBufferKind::TextureExternal);
 
   // y
-  wr::ImageDescriptor descriptor0(mSizeY, gfx::SurfaceFormat::A8);
+  wr::ImageDescriptor descriptor0(mSizeY, wr::ImageFormat::R8,
+                                  wr::OpacityType::HasAlphaChannel);
   // cb and cr
-  wr::ImageDescriptor descriptor1(mSizeCbCr, gfx::SurfaceFormat::A8);
+  wr::ImageDescriptor descriptor1(mSizeCbCr, wr::ImageFormat::R8,
+                                  wr::OpacityType::HasAlphaChannel);
   (aResources.*method)(aImageKeys[0], descriptor0, aExtID, imageType, 0,
                        /* aNormalizedUvs */ false);
   (aResources.*method)(aImageKeys[1], descriptor1, aExtID, imageType, 1,
@@ -1867,7 +1885,7 @@ bool SyncObjectD3D11Client::Init(ID3D11Device* aDevice, bool aFallible) {
   aDevice->QueryInterface((ID3D11Device1**)getter_AddRefs(device1));
   if (!device1) {
     gfxCriticalNoteOnce << "Failed to get ID3D11Device1";
-    return 0;
+    return false;
   }
 
   HRESULT hr = device1->OpenSharedResource1(

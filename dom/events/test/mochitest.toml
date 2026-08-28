@@ -471,6 +471,12 @@ skip-if = [
 ["test_deviceSensor.html"]
 tags = "os_integration"
 
+["test_deviceorientation_threshold.html"]
+skip-if = [
+  "os == 'android'", # Android fires deviceorientation from the device sensors.
+  "xorigin", # nsIDeviceSensor doesn't dispatch sensor event to another process.
+]
+
 ["test_disabled_events.html"]
 
 ["test_dnd_with_modifiers.html"]
@@ -585,8 +591,6 @@ skip-if = [
   "os == 'linux' && os_version == '24.04' && display == 'x11' && condprof", # Bug 1781387
   "os == 'win' && condprof", # Bug 1773806
 ]
-
-["test_hover_mouseleave.html"]
 
 ["test_legacy_event.html"]
 

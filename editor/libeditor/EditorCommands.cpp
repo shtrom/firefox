@@ -13,6 +13,7 @@
 #include "mozilla/dom/DataTransfer.h"
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/Selection.h"
+#include "mozilla/dom/UserActivation.h"
 #include "nsCommandParams.h"
 #include "nsIClipboard.h"
 #include "nsIEditingSession.h"
@@ -445,7 +446,8 @@ nsresult PasteCommand::DoCommand(Command aCommand, EditorBase& aEditorBase,
   // confirmation which are all handled in parent process before sending the
   // paste event.
   if (!nsContentUtils::PrincipalHasPermission(*subjectPrincipal,
-                                              nsGkAtoms::clipboardRead)) {
+                                              nsGkAtoms::clipboardRead) &&
+      !dom::UserActivation::IsHandlingKeyboardInputWithPasteActions()) {
     MOZ_DIAGNOSTIC_ASSERT(StaticPrefs::dom_execCommand_paste_enabled(),
                           "How did we get here?");
     // This will spin the event loop.
@@ -467,6 +469,58 @@ nsresult PasteCommand::DoCommand(Command aCommand, EditorBase& aEditorBase,
 }
 
 nsresult PasteCommand::GetCommandStateParams(
+    Command aCommand, nsCommandParams& aParams, EditorBase* aEditorBase,
+    nsIEditingSession* aEditingSession) const {
+  return aParams.SetBool(STATE_ENABLED,
+                         IsCommandEnabled(aCommand, aEditorBase));
+}
+
+/*****************************************************************************
+ * mozilla::PasteNoFormattingCommand
+ *****************************************************************************/
+
+StaticRefPtr<PasteNoFormattingCommand> PasteNoFormattingCommand::sInstance;
+
+bool PasteNoFormattingCommand::IsCommandEnabled(Command aCommand,
+                                                EditorBase* aEditorBase) const {
+  return aEditorBase && aEditorBase->IsSelectionEditable() &&
+         aEditorBase->CanPaste(nsIClipboard::kGlobalClipboard);
+}
+
+nsresult PasteNoFormattingCommand::DoCommand(Command aCommand,
+                                             EditorBase& aEditorBase,
+                                             nsIPrincipal* aPrincipal) const {
+#ifdef DEBUG
+  // cmd_pasteNoFormatting is not available through document.execCommand.
+  // So it should always have clipboardRead permission.
+  nsCOMPtr<nsIPrincipal> subjectPrincipal =
+      aPrincipal ? aPrincipal
+                 : nsContentUtils::SubjectPrincipalOrSystemIfNativeCaller();
+  MOZ_ASSERT(nsContentUtils::PrincipalHasPermission(*subjectPrincipal,
+                                                    nsGkAtoms::clipboardRead));
+#endif
+  nsresult rv;
+  if (HTMLEditor* htmlEditor = aEditorBase.GetAsHTMLEditor()) {
+    // Known live because we hold a ref above in "editor"
+    rv = MOZ_KnownLive(htmlEditor)
+             ->PasteNoFormattingAsAction(nsIClipboard::kGlobalClipboard,
+                                         EditorBase::DispatchPasteEvent::Yes,
+                                         nullptr, aPrincipal);
+    NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
+                         "HTMLEditor::PasteNoFormattingAsAction("
+                         "DispatchPasteEvent::Yes) failed");
+  } else {
+    rv = aEditorBase.PasteAsAction(nsIClipboard::kGlobalClipboard,
+                                   EditorBase::DispatchPasteEvent::Yes, nullptr,
+                                   aPrincipal);
+    NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
+                         "EditorBase::PasteAsAction(nsIClipboard::"
+                         "kGlobalClipboard, DispatchPasteEvent::Yes) failed");
+  }
+  return rv;
+}
+
+nsresult PasteNoFormattingCommand::GetCommandStateParams(
     Command aCommand, nsCommandParams& aParams, EditorBase* aEditorBase,
     nsIEditingSession* aEditingSession) const {
   return aParams.SetBool(STATE_ENABLED,

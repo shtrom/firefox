@@ -101,6 +101,7 @@ MOZ_MTLOG_MODULE("mtransport")
 const char kNrIceTransportUdp[] = "udp";
 const char kNrIceTransportTcp[] = "tcp";
 const char kNrIceTransportTls[] = "tls";
+static constexpr UINT4 kRegularNominationDelayMs = 20;
 
 static bool initialized = false;
 
@@ -223,7 +224,7 @@ static bool ToNicerStunStruct(const char* aAddrForFqdn,
   }
 
   if (isTls) {
-    aResult->addr.tls = 1;
+    aResult->addr.tls = true;
   }
 
   nr_transport_addr_fmt_addr_string(&(aResult->addr));
@@ -349,8 +350,7 @@ RefPtr<NrIceMediaStream> NrIceCtx::CreateStream(const std::string& id,
     return nullptr;
   }
 
-  RefPtr<NrIceMediaStream> stream =
-      new NrIceMediaStream(this, id, name, components);
+  RefPtr stream = MakeRefPtr<NrIceMediaStream>(this, id, name, components);
   streams_[id] = stream;
   return stream;
 }
@@ -372,6 +372,19 @@ int NrIceCtx::select_pair(void* obj, nr_ice_media_stream* stream,
   MOZ_MTLOG(ML_DEBUG, "select pair called: potential_ct = " << potential_ct);
   MOZ_ASSERT(stream->local_stream);
   MOZ_ASSERT(!stream->local_stream->obsolete);
+
+  for (int i = 0; i < potential_ct; ++i) {
+    nr_ice_cand_pair* pair = potentials[i];
+    if (pair->state != NR_ICE_PAIR_STATE_SUCCEEDED) {
+      continue;
+    }
+
+    if (pair->restart_nominated_cb_timer) {
+      return 0;
+    }
+
+    return nr_ice_candidate_pair_nominate(pair, kRegularNominationDelayMs);
+  }
 
   return 0;
 }
@@ -503,11 +516,9 @@ int NrIceCtx::candidate_error(void* obj, nr_ice_media_stream* stream,
   uint16_t port = 0;
   if (!(ctx->ctx_->flags & NR_ICE_CTX_FLAGS_OBFUSCATE_HOST_ADDRESSES)) {
     nsCString host;
-    int32_t portInt = 0;
     if (!nr_transport_addr_get_addrstring_and_port(&candidate->base, &host,
-                                                   &portInt)) {
+                                                   &port)) {
       address = host.get();
-      port = static_cast<uint16_t>(portInt);
     }
   }
 
@@ -892,9 +903,12 @@ nsresult NrIceCtx::SetIceServers(const nsTArray<ParsedIceServer>& aServers,
     // Test whether this uses an IP addr, or is an FQDN.
     // We could use PR_StringToNetAddr instead, but that pulls in an extra
     // dependency.
-    nr_transport_addr unused;
-    bool isFqdn = !!nr_str_port_to_transport_addr(
-        entry.mUri.mHost.get(), entry.mUri.mPort, IPPROTO_UDP, &unused);
+    nr_transport_addr parsed;
+    bool isFqdn = false;
+    if (!nr_str_port_to_transport_addr(entry.mUri.mHost.get(), entry.mUri.mPort,
+                                       IPPROTO_UDP, &parsed)) {
+      isFqdn = parsed.fqdn[0] != '\0';
+    }
 
     if (isFqdn) {
       // Not a parseable IP address -- treat as FQDN.

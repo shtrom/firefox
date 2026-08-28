@@ -14,19 +14,19 @@
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/SVGDocument.h"
 #include "mozilla/dom/SVGSVGElement.h"
+#include "nsComponentManagerUtils.h"
 #include "nsICategoryManager.h"
 #include "nsIChannel.h"
-#include "nsIDocumentViewer.h"
 #include "nsIDocumentLoaderFactory.h"
+#include "nsIDocumentViewer.h"
 #include "nsIHttpChannel.h"
 #include "nsIObserverService.h"
 #include "nsIParser.h"
 #include "nsIRequest.h"
 #include "nsIStreamListener.h"
 #include "nsIXMLContentSink.h"
-#include "nsNetCID.h"
-#include "nsComponentManagerUtils.h"
 #include "nsMimeTypes.h"
+#include "nsNetCID.h"
 #include "nsRefreshDriver.h"
 
 namespace mozilla {
@@ -66,18 +66,36 @@ nsIFrame* SVGDocumentWrapper::GetRootLayoutFrame() const {
   return rootElem ? rootElem->GetPrimaryFrame() : nullptr;
 }
 
-void SVGDocumentWrapper::UpdateViewportBounds(const nsIntSize& aViewportSize) {
+void SVGDocumentWrapper::UpdateViewportBounds(const CSSSize& aViewportSize) {
   MOZ_ASSERT(!mIgnoreInvalidation, "shouldn't be reentrant");
   mIgnoreInvalidation = true;
+
+  // We want to make sure our (maybe fractional) viewport gets used as-is.
+  // However, the document viewer deals with whole device pixels.
+  //
+  // Ceil our doc viewer bounds (to avoid any potential clipping), and set the
+  // layout viewport explicitly as well.
+  const auto intSize =
+      LayoutDeviceIntSize::Ceil(aViewportSize.width, aViewportSize.height);
+  const nsSize maybeFractionalSize = CSSPixel::ToAppUnits(aViewportSize);
 
   LayoutDeviceIntRect currentBounds;
   mViewer->GetBounds(currentBounds);
 
+  bool changed = false;
+  if (currentBounds.Size() != intSize) {
+    mViewer->SetBounds(LayoutDeviceIntRect(LayoutDeviceIntPoint(), intSize));
+    changed = true;
+  }
+
+  if (RefPtr ps = GetPresShell();
+      ps && ps->GetLayoutViewportSize() != maybeFractionalSize) {
+    ps->SetLayoutViewportSize(maybeFractionalSize, /* aDelay = */ false);
+    changed = true;
+  }
+
   // If the bounds have changed, we need to do a layout flush.
-  if (currentBounds.Size().ToUnknownSize() != aViewportSize) {
-    mViewer->SetBounds(LayoutDeviceIntRect(
-        LayoutDeviceIntPoint(),
-        LayoutDeviceIntSize::FromUnknownSize(aViewportSize)));
+  if (changed) {
     FlushLayout();
   }
 
@@ -192,7 +210,8 @@ void SVGDocumentWrapper::TickRefreshDriver() {
 NS_IMETHODIMP
 SVGDocumentWrapper::OnDataAvailable(nsIRequest* aRequest, nsIInputStream* inStr,
                                     uint64_t sourceOffset, uint32_t count) {
-  return mListener->OnDataAvailable(aRequest, inStr, sourceOffset, count);
+  nsCOMPtr<nsIStreamListener> listener = mListener;
+  return listener->OnDataAvailable(aRequest, inStr, sourceOffset, count);
 }
 
 /** nsIRequestObserver methods **/
@@ -202,7 +221,8 @@ SVGDocumentWrapper::OnStartRequest(nsIRequest* aRequest) {
   nsresult rv = SetupViewer(aRequest, getter_AddRefs(mViewer),
                             getter_AddRefs(mLoadGroup));
 
-  if (NS_SUCCEEDED(rv) && NS_SUCCEEDED(mListener->OnStartRequest(aRequest))) {
+  nsCOMPtr<nsIStreamListener> listener = mListener;
+  if (NS_SUCCEEDED(rv) && NS_SUCCEEDED(listener->OnStartRequest(aRequest))) {
     mViewer->GetDocument()->SetIsBeingUsedAsImage();
     StopAnimation();  // otherwise animations start automatically in helper doc
 
@@ -216,8 +236,8 @@ SVGDocumentWrapper::OnStartRequest(nsIRequest* aRequest) {
 
 NS_IMETHODIMP
 SVGDocumentWrapper::OnStopRequest(nsIRequest* aRequest, nsresult status) {
-  if (mListener) {
-    mListener->OnStopRequest(aRequest, status);
+  if (nsCOMPtr<nsIStreamListener> listener = mListener) {
+    listener->OnStopRequest(aRequest, status);
     mListener = nullptr;
   }
 

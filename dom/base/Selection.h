@@ -159,7 +159,7 @@ class Selection final : public nsSupportsWeakReference,
   using IsUnlinking = AbstractRange::IsUnlinking;
 
  protected:
-  virtual ~Selection();
+  ~Selection();
 
  public:
   /**
@@ -168,7 +168,7 @@ class Selection final : public nsSupportsWeakReference,
   explicit Selection(SelectionType aSelectionType,
                      nsFrameSelection* aFrameSelection);
 
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS_FINAL
   NS_DECL_CYCLE_COLLECTION_WRAPPERCACHE_CLASS(Selection)
 
   /**
@@ -232,6 +232,7 @@ class Selection final : public nsSupportsWeakReference,
   // utility methods for scrolling the selection into view
   nsPresContext* GetPresContext() const;
   PresShell* GetPresShell() const;
+  Document* GetDocument() const;
   nsFrameSelection* GetFrameSelection() const { return mFrameSelection; }
   // Returns a rect containing the selection region, and frame that that
   // position is relative to. For SELECTION_ANCHOR_REGION or
@@ -338,6 +339,12 @@ class Selection final : public nsSupportsWeakReference,
   // Get the anchor-to-focus range if we don't care which end is
   // anchor and which end is focus.
   const nsRange* GetAnchorFocusRange() const { return mAnchorFocusRange; }
+
+  /**
+   * Set mAnchorFocusRange to mStyledRanges.mRanges[aIndex] if aIndex is a
+   * valid index.
+   */
+  void SetAnchorFocusRange(size_t aIndex);
 
   void GetDirection(nsAString& aDirection) const;
 
@@ -688,6 +695,17 @@ class Selection final : public nsSupportsWeakReference,
   MOZ_CAN_RUN_SCRIPT void CollapseToStart(mozilla::ErrorResult& aRv);
 
   /**
+   * Same as CollapseToStart(), but collapses to the start of aRange instead of
+   * to the start of the first range of this selection.  aRange does not need to
+   * be, and does not become, part of this selection.  Callers which only want
+   * the caret at a range's start should prefer this over adding the range and
+   * then calling CollapseToStart(), which makes the whole of aRange part of the
+   * selection first.
+   */
+  MOZ_CAN_RUN_SCRIPT void CollapseToStartOf(const AbstractRange& aRange,
+                                            mozilla::ErrorResult& aRv);
+
+  /**
    * Collapses the whole selection to a single point at the end
    * of the current selection (irrespective of direction).  If content
    * is focused and editable, the caret will blink there.
@@ -902,7 +920,14 @@ class Selection final : public nsSupportsWeakReference,
 
   SelectionCustomColors* GetCustomColors() const { return mCustomColors.get(); }
 
-  MOZ_CAN_RUN_SCRIPT void NotifySelectionListeners(bool aCalledByJS);
+  enum class IsFromRangeMutationObserver { Yes, No };
+  /**
+   * IsFromRangeMutationObserver::Yes should only be passed if the selection
+   * change is due to a nsRange observing a DOM mutation.
+   */
+  MOZ_CAN_RUN_SCRIPT void NotifySelectionListeners(
+      bool aCalledByJS, IsFromRangeMutationObserver aIsFromRange =
+                            IsFromRangeMutationObserver::No);
   MOZ_CAN_RUN_SCRIPT void NotifySelectionListeners();
 
   bool ChangesDuringBatching() const { return mChangesDuringBatching; }
@@ -949,11 +974,6 @@ class Selection final : public nsSupportsWeakReference,
     ScrollFlags mFlags;
   };
 
-  /**
-   * Set mAnchorFocusRange to mStyledRanges.mRanges[aIndex] if aIndex is a valid
-   * index.
-   */
-  void SetAnchorFocusRange(size_t aIndex);
   void RemoveAnchorFocusRange() { mAnchorFocusRange = nullptr; }
   void SelectFramesOf(nsIContent* aContent, bool aSelected) const;
 
@@ -976,8 +996,6 @@ class Selection final : public nsSupportsWeakReference,
    */
   MOZ_CAN_RUN_SCRIPT nsresult MaybeAddTableCellRange(nsRange& aRange,
                                                      Maybe<size_t>* aOutIndex);
-
-  Document* GetDocument() const;
 
   MOZ_CAN_RUN_SCRIPT void RemoveAllRangesInternal(
       mozilla::ErrorResult& aRv, IsUnlinking aIsUnlinking = IsUnlinking::No);
@@ -1038,9 +1056,9 @@ class Selection final : public nsSupportsWeakReference,
     template <typename PT, typename RT, typename ArrayType>
     static size_t FindInsertionPoint(
         const ArrayType& aElementArray,
-        const RangeBoundaryBase<PT, RT>& aBoundary,
+        const RangeBoundaryBase<PT, RT>& aBoundary, RangeBoundaryFor aFor,
         int32_t (*aComparator)(const RangeBoundaryBase<PT, RT>&,
-                               const AbstractRange&));
+                               RangeBoundaryFor aFor, const AbstractRange&));
 
     /**
      * Works on the same principle as GetRangesForIntervalArray, however
@@ -1128,7 +1146,7 @@ class Selection final : public nsSupportsWeakReference,
     // order. This method will also move invalid `StaticRange`s into
     // `mInvalidStaticRanges` (and previously-invalid-now-valid-again
     // `StaticRange`s back into `mRanges`).
-    void ReorderRangesIfNecessary();
+    [[nodiscard]] nsresult ReorderRangesIfNecessary();
 
     // These are the ranges inside this selection. They are kept sorted in order
     // of DOM start position.
@@ -1315,6 +1333,26 @@ inline std::ostream& operator<<(
       return aStream << "<Illegal value>";
   }
 }
+
+/**
+ * Use this to detect unexpected selection changes. This is almost the same as
+ * nsMutationGuard. So, when you fix some bugs of this, you should change
+ * nsMutationGuard too.
+ */
+class SelectionChangeGuard {
+ public:
+  SelectionChangeGuard() : mStartingGeneration(sGeneration) {}
+
+  [[nodiscard]] bool Changed(uint32_t aIgnoreCount) const {
+    return (sGeneration - mStartingGeneration) > aIgnoreCount;
+  }
+
+  static void DidChange() { sGeneration++; }
+
+ private:
+  uint64_t mStartingGeneration;
+  static uint64_t sGeneration;
+};
 
 }  // namespace mozilla
 

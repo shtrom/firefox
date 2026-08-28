@@ -103,7 +103,7 @@ inline const StyleTrackBreadth& StyleTrackSize::GetMin() const {
   static const StyleTrackBreadth kAuto = StyleTrackBreadth::Auto();
   if (IsBreadth()) {
     // <flex> behaves like minmax(auto, <flex>)
-    return AsBreadth().IsFr() ? kAuto : AsBreadth();
+    return AsBreadth().IsFlex() ? kAuto : AsBreadth();
   }
   if (IsMinmax()) {
     return AsMinmax()._0;
@@ -433,6 +433,7 @@ enum class GridLineSide {
 
 struct nsGridContainerFrame::TrackSize {
   enum StateBits : uint16_t {
+    eNone = 0,
     eAutoMinSizing = 1 << 0,
     eMinContentMinSizing = 1 << 1,
     eMaxContentMinSizing = 1 << 2,
@@ -493,12 +494,10 @@ struct nsGridContainerFrame::TrackSize {
 
 MOZ_MAKE_ENUM_CLASS_BITWISE_OPERATORS(TrackSize::StateBits)
 
-static_assert(
-    std::is_trivially_copyable<nsGridContainerFrame::TrackSize>::value,
-    "Must be trivially copyable");
-static_assert(
-    std::is_trivially_destructible<nsGridContainerFrame::TrackSize>::value,
-    "Must be trivially destructible");
+static_assert(std::is_trivially_copyable_v<nsGridContainerFrame::TrackSize>,
+              "Must be trivially copyable");
+static_assert(std::is_trivially_destructible_v<nsGridContainerFrame::TrackSize>,
+              "Must be trivially destructible");
 
 TrackSize::StateBits nsGridContainerFrame::TrackSize::Initialize(
     nscoord aPercentageBasis, const StyleTrackSize& aSize) {
@@ -545,7 +544,7 @@ TrackSize::StateBits nsGridContainerFrame::TrackSize::Initialize(
       mState |= eMaxContentMinSizing;
       break;
     default:
-      MOZ_ASSERT(!min.IsFr(), "<flex> min-sizing is invalid as a track size");
+      MOZ_ASSERT(!min.IsFlex(), "<flex> min-sizing is invalid as a track size");
       mBase = ::ResolveToDefiniteSize(min, aPercentageBasis);
   }
   switch (maxSizeTag) {
@@ -559,7 +558,7 @@ TrackSize::StateBits nsGridContainerFrame::TrackSize::Initialize(
                                               : eMaxContentMaxSizing;
       mLimit = NS_UNCONSTRAINEDSIZE;
       break;
-    case Tag::Fr:
+    case Tag::Flex:
       mState |= eFlexMaxSizing;
       mLimit = NS_UNCONSTRAINEDSIZE;
       break;
@@ -1404,7 +1403,7 @@ void GridItemInfo::AdjustForRemovedTracks(
  * writing-mode, same as in other track-sizing functions.
  */
 struct nsGridContainerFrame::UsedTrackSizes {
-  UsedTrackSizes() : mCanResolveLineRangeSize{false, false} {}
+  UsedTrackSizes() = default;
 
   /**
    * Setup mTrackPlans by copying track sizes from aFrame's grid container
@@ -1428,7 +1427,7 @@ struct nsGridContainerFrame::UsedTrackSizes {
   // subgrids/items may have zero tracks).
   PerLogicalAxis<TrackPlan> mTrackPlans;
   // True if mTrackPlans can be used to resolve line range sizes in an axis.
-  PerLogicalAxis<bool> mCanResolveLineRangeSize;
+  PerLogicalAxis<bool> mCanResolveLineRangeSize{false, false};
 
   NS_DECLARE_FRAME_PROPERTY_DELETABLE(Prop, UsedTrackSizes)
 };
@@ -2542,7 +2541,7 @@ struct nsGridContainerFrame::Tracks {
   explicit Tracks(LogicalAxis aAxis)
       : mContentBoxSize(NS_UNCONSTRAINEDSIZE),
         mGridGap(NS_UNCONSTRAINEDSIZE),
-        mStateUnion(TrackSize::StateBits{0}),
+        mStateUnion(TrackSize::StateBits::eNone),
         mAxis(aAxis),
         mCanResolveLineRangeSize(false),
         mIsMasonry(false) {
@@ -4031,35 +4030,20 @@ static Subgrid* SubgridComputeMarginBorderPadding(
     return subgrid;
   }
 
-  bool scroller = false;
-  nsIFrame* outerFrame = nullptr;
   if (ScrollContainerFrame* scrollContainerFrame =
           aGridItem.mFrame->GetScrollTargetFrame()) {
-    scroller = true;
-    outerFrame = scrollContainerFrame;
-  }
-
-  if (outerFrame) {
     MOZ_ASSERT(sz.ComputedLogicalMargin(cbWM) == LogicalMargin(cbWM) &&
-                   sz.ComputedLogicalBorder(cbWM) == LogicalMargin(cbWM),
-               "A scrolled inner frame / button content frame "
-               "should not have any margin or border / padding!");
-
-    // Add the margin and border from the (outer) frame. Padding is factored-in
-    // for scrollers already (except for the scrollbar gutter), but not for
-    // button-content.
-    SizeComputationInput szOuterFrame(outerFrame, nullptr, cbWM,
+                   sz.ComputedLogicalBorderPadding(cbWM) == LogicalMargin(cbWM),
+               "A scrolled inner frame should not have any margin or border / "
+               "padding!");
+    // Add the margin and border from the scroller frame.
+    SizeComputationInput szOuterFrame(scrollContainerFrame, nullptr, cbWM,
                                       pmPercentageBasis);
-    subgrid->mMarginBorderPadding += szOuterFrame.ComputedLogicalMargin(cbWM) +
-                                     szOuterFrame.ComputedLogicalBorder(cbWM);
-    if (scroller) {
-      nsMargin ssz = static_cast<ScrollContainerFrame*>(outerFrame)
-                         ->IntrinsicScrollbarGutterSize();
-      subgrid->mMarginBorderPadding += LogicalMargin(cbWM, ssz);
-    } else {
-      subgrid->mMarginBorderPadding +=
-          szOuterFrame.ComputedLogicalPadding(cbWM);
-    }
+    subgrid->mMarginBorderPadding +=
+        szOuterFrame.ComputedLogicalMargin(cbWM) +
+        szOuterFrame.ComputedLogicalBorderPadding(cbWM) +
+        LogicalMargin(cbWM,
+                      scrollContainerFrame->IntrinsicScrollbarGutterSize());
   }
 
   if (nsFieldSetFrame* f = do_QueryFrame(aGridItem.mFrame)) {
@@ -6277,7 +6261,7 @@ void nsGridContainerFrame::Tracks::CalculateSizes(
 TrackSize::StateBits nsGridContainerFrame::Tracks::StateBitsForRange(
     const LineRange& aRange) const {
   MOZ_ASSERT(!aRange.IsAuto(), "must have a definite range");
-  TrackSize::StateBits state = TrackSize::StateBits{0};
+  TrackSize::StateBits state = TrackSize::StateBits::eNone;
   for (auto i : aRange.Range()) {
     state |= mSizes[i].mState;
   }
@@ -7263,7 +7247,7 @@ void nsGridContainerFrame::Tracks::ResolveIntrinsicSize(
     // one span size.
     for (; spanGroupStart != end; spanGroupStart = spanGroupEnd) {
       const uint32_t span = spanGroupStart->mSpan;
-      TrackSize::StateBits stateBitsForSpan{0};
+      TrackSize::StateBits stateBitsForSpan = TrackSize::StateBits::eNone;
       MOZ_ASSERT(spanGroupEnd == spanGroupStart);
       // Find the end of this group if items with the same span size.
       // Accumulate state bits for the items with this span size to avoid
@@ -7334,7 +7318,7 @@ void nsGridContainerFrame::Tracks::ResolveIntrinsicSize(
     }
 
     // Step 4
-    TrackSize::StateBits stateBitsForSpan{0};
+    TrackSize::StateBits stateBitsForSpan = TrackSize::StateBits::eNone;
     for (const SpanningItemData& spanningData : flexSpanningItems) {
       const TrackSize::StateBits bits =
           StateBitsForRange(spanningData.mLineRange);
@@ -7400,7 +7384,7 @@ float nsGridContainerFrame::Tracks::FindFrUnitSize(
   for (auto i : aRange.Range()) {
     const TrackSize& sz = mSizes[i];
     if (sz.mState & TrackSize::eFlexMaxSizing) {
-      flexFactorSum += aFunctions.MaxSizingFor(i).AsFr();
+      flexFactorSum += aFunctions.MaxSizingFor(i).AsFlex()._0;
     } else {
       leftOverSpace -= sz.mBase;
       if (leftOverSpace <= 0) {
@@ -7421,7 +7405,7 @@ float nsGridContainerFrame::Tracks::FindFrUnitSize(
       if (track == kAutoLine) {
         continue;  // Track marked as inflexible in a prev. iter of this loop.
       }
-      float flexFactor = aFunctions.MaxSizingFor(track).AsFr();
+      float flexFactor = aFunctions.MaxSizingFor(track).AsFlex()._0;
       const nscoord base = mSizes[track].mBase;
       if (flexFactor * hypotheticalFrSize < base) {
         // 12.7.1.4: Treat this track as inflexible.
@@ -7455,7 +7439,7 @@ float nsGridContainerFrame::Tracks::FindUsedFlexFraction(
   // floored at 1).
   float fr = 0.0f;
   for (uint32_t track : aFlexTracks) {
-    float flexFactor = aFunctions.MaxSizingFor(track).AsFr();
+    float flexFactor = aFunctions.MaxSizingFor(track).AsFlex()._0;
     float possiblyDividedBaseSize = (flexFactor > 1.0f)
                                         ? mSizes[track].mBase / flexFactor
                                         : mSizes[track].mBase;
@@ -7528,7 +7512,7 @@ void nsGridContainerFrame::Tracks::StretchFlexibleTracks(
                                     aAvailableSize);
     if (fr != 0.0f) {
       for (uint32_t i : flexTracks) {
-        float flexFactor = aFunctions.MaxSizingFor(i).AsFr();
+        float flexFactor = aFunctions.MaxSizingFor(i).AsFlex()._0;
         nscoord flexLength = NSToCoordRound(flexFactor * fr);
         nscoord& base = mSizes[i].mBase;
         if (flexLength > base) {
@@ -8323,14 +8307,16 @@ nscoord nsGridContainerFrame::ReflowInFragmentainer(
 
   // Set |endRow| to the first row that doesn't fit.
   uint32_t endRow = numRows;
-  for (uint32_t row = startRow; row < numRows; ++row) {
-    auto& sz = aGridRI.mRows.mSizes[row];
-    const nscoord bEnd = sz.mPosition + sz.mBase;
-    nscoord remainingAvailableSize = childAvailableSize - bEnd;
-    if (remainingAvailableSize < 0 ||
-        (isBDBClone && remainingAvailableSize < bpBEnd)) {
-      endRow = row;
-      break;
+  if (childAvailableSize != NS_UNCONSTRAINEDSIZE) {
+    for (uint32_t row = startRow; row < numRows; ++row) {
+      auto& sz = aGridRI.mRows.mSizes[row];
+      const nscoord bEnd = sz.mPosition + sz.mBase;
+      nscoord remainingAvailableSize = childAvailableSize - bEnd;
+      if (remainingAvailableSize < 0 ||
+          (isBDBClone && remainingAvailableSize < bpBEnd)) {
+        endRow = row;
+        break;
+      }
     }
   }
 
@@ -8421,8 +8407,10 @@ nscoord nsGridContainerFrame::ReflowInFragmentainer(
         aGridRI.mReflowInput->ComputedBSize());
   }
 
-  // Check for overflow and set aStatus INCOMPLETE if so.
-  bool overflow = bSize + bpBEnd > childAvailableSize;
+  // Check for overflow and set aStatus INCOMPLETE if so. Note that we should
+  // not overflow an unconstrained available block-size.
+  const bool overflow = childAvailableSize != NS_UNCONSTRAINEDSIZE &&
+                        bSize + bpBEnd > childAvailableSize;
   if (overflow) {
     if (avoidBreakInside) {
       aStatus.SetInlineLineBreakBeforeAndReset();
@@ -8483,7 +8471,7 @@ nscoord nsGridContainerFrame::ReflowInFragmentainer(
       aStatus.SetOverflowIncomplete();
       aStatus.SetNextInFlowNeedsReflow();
     }
-  } else {
+  } else if (childAvailableSize != NS_UNCONSTRAINEDSIZE) {
     // Children always have the full size of the rows in this fragment.
     childAvailableSize = std::max(childAvailableSize, bEndRow);
   }
@@ -8793,9 +8781,10 @@ nscoord nsGridContainerFrame::MasonryLayout(GridReflowInput& aGridRI,
       //  don't affect intrinsic sizing in any way)
       GridItemInfo* item = nullptr;
       auto* ph = static_cast<nsPlaceholderFrame*>(child);
-      if (ph->GetOutOfFlowFrame()->GetParent() == this) {
+      auto* oof = ph->GetOutOfFlowFrame();
+      if (oof && oof->GetParent() == this) {
         item = &aGridRI.mAbsPosItems[absposIndex++];
-        MOZ_RELEASE_ASSERT(item->mFrame == ph->GetOutOfFlowFrame());
+        MOZ_RELEASE_ASSERT(item->mFrame == oof);
         auto masonryStart = item->mArea.LineRangeForAxis(masonryAxis).mStart;
         // If the item was placed by the author at line 1 (masonryStart == 0)
         // then include it to be placed at the masonry-box start.  If it's
@@ -9340,8 +9329,13 @@ void nsGridContainerFrame::ReflowAbsoluteChildren(
   // with respect to the grid container's padding-box (CB).
   LogicalMargin pad(aGridRI.mReflowInput->ComputedLogicalPadding(wm));
   const LogicalPoint gridOrigin(wm, pad.IStart(wm), pad.BStart(wm));
+  const nscoord gridContentBSize =
+      (aGridRI.mInFragmentainer && !aGridRI.mRows.mSizes.IsEmpty())
+          ? aGridRI.mRows.GridLineEdge(aGridRI.mRows.mSizes.Length(),
+                                       GridLineSide::BeforeGridGap)
+          : aContentBSize;
   const LogicalRect gridCB(wm, 0, 0, aContentArea.ISize(wm) + pad.IStartEnd(wm),
-                           aContentBSize + pad.BStartEnd(wm));
+                           gridContentBSize + pad.BStartEnd(wm));
   const nsSize gridCBPhysicalSize = gridCB.Size(wm).GetPhysicalSize(wm);
   size_t i = 0;
   for (nsIFrame* child : absoluteContainer->GetChildList()) {
@@ -9364,8 +9358,11 @@ void nsGridContainerFrame::ReflowAbsoluteChildren(
   AbsPosReflowFlags flags{
       AbsPosReflowFlag::AllowFragmentation, AbsPosReflowFlag::CBWidthChanged,
       AbsPosReflowFlag::CBHeightChanged, AbsPosReflowFlag::IsGridContainerCB};
-  absoluteContainer->Reflow(this, PresContext(), *aGridRI.mReflowInput, aStatus,
-                            paddingRect, flags, &aDesiredSize.mOverflowAreas);
+  nsReflowStatus absposStatus;
+  absoluteContainer->Reflow(this, PresContext(), *aGridRI.mReflowInput,
+                            absposStatus, paddingRect, flags,
+                            &aDesiredSize.mOverflowAreas);
+  aStatus.MergeCompletionStatusFrom(absposStatus);
 }
 
 nscoord nsGridContainerFrame::ComputeBSizeForResolvingRowSizes(
@@ -9423,6 +9420,8 @@ void nsGridContainerFrame::Reflow(nsPresContext* aPresContext,
                                   ReflowOutput& aDesiredSize,
                                   const ReflowInput& aReflowInput,
                                   nsReflowStatus& aStatus) {
+  NormalizeChildLists();
+
   if (IsHiddenByContentVisibilityOfInFlowParentForLayout()) {
     return;
   }
@@ -9436,8 +9435,6 @@ void nsGridContainerFrame::Reflow(nsPresContext* aPresContext,
   if (IsFrameTreeTooDeep(aReflowInput, aDesiredSize, aStatus)) {
     return;
   }
-
-  NormalizeChildLists();
 
 #ifdef DEBUG
   mDidPushItemsBitMayLie = false;
@@ -9950,9 +9947,9 @@ void nsGridContainerFrame::Reflow(nsPresContext* aPresContext,
       }
     }
 
-    ComputedGridLineInfo* columnLineInfo = new ComputedGridLineInfo(
+    ComputedGridLineInfo* columnLineInfo = new ComputedGridLineInfo{
         std::move(columnLineNames), std::move(colBeforeRepeatAuto),
-        std::move(colAfterRepeatAuto), std::move(colNamesFollowingRepeat));
+        std::move(colAfterRepeatAuto), std::move(colNamesFollowingRepeat)};
     SetProperty(GridColumnLineInfo(), columnLineInfo);
 
     // Generate row lines next.
@@ -9990,9 +9987,9 @@ void nsGridContainerFrame::Reflow(nsPresContext* aPresContext,
       }
     }
 
-    ComputedGridLineInfo* rowLineInfo = new ComputedGridLineInfo(
+    ComputedGridLineInfo* rowLineInfo = new ComputedGridLineInfo{
         std::move(rowLineNames), std::move(rowBeforeRepeatAuto),
-        std::move(rowAfterRepeatAuto), std::move(rowNamesFollowingRepeat));
+        std::move(rowAfterRepeatAuto), std::move(rowNamesFollowingRepeat)};
     SetProperty(GridRowLineInfo(), rowLineInfo);
 
     // Generate area info for explicit areas. Implicit areas are handled
@@ -10058,7 +10055,7 @@ void nsGridContainerFrame::UpdateSubgridFrameState() {
 }
 
 nsFrameState nsGridContainerFrame::ComputeSelfSubgridMasonryBits() const {
-  nsFrameState bits = nsFrameState(0);
+  nsFrameState bits = NS_FRAME_STATE_NONE;
   const auto* pos = StylePosition();
 
   // We can only have masonry layout in one axis.
@@ -10141,7 +10138,7 @@ void nsGridContainerFrame::Init(nsIContent* aContent, nsContainerFrame* aParent,
     AddStateBits(NS_FRAME_FONT_INFLATION_FLOW_ROOT);
   }
 
-  nsFrameState bits = nsFrameState(0);
+  nsFrameState bits = NS_FRAME_STATE_NONE;
   if (MOZ_LIKELY(!aPrevInFlow)) {
     bits = ComputeSelfSubgridMasonryBits();
   } else {
@@ -10850,7 +10847,7 @@ nscoord nsGridContainerFrame::TrackPlan::DistributeToFlexTrackSizes(
   for (uint32_t track : aGrowableTracks) {
     MOZ_ASSERT(aTracks.mSizes[track].mState & TrackSize::eFlexMaxSizing,
                "Only flex-sized tracks should be growable during step 4");
-    totalFr += aFunctions.MaxSizingFor(track).AsFr();
+    totalFr += aFunctions.MaxSizingFor(track).AsFlex()._0;
   }
   MOZ_ASSERT(totalFr >= 0.0, "flex fractions must be non-negative.");
 
@@ -10865,7 +10862,7 @@ nscoord nsGridContainerFrame::TrackPlan::DistributeToFlexTrackSizes(
     if (sz.IsFrozen()) {
       continue;
     }
-    const double trackFr = aFunctions.MaxSizingFor(track).AsFr();
+    const double trackFr = aFunctions.MaxSizingFor(track).AsFlex()._0;
     nscoord size = NSToCoordRoundWithClamp(frSize * trackFr);
     // This shouldn't happen in theory, but it could happen due to a
     // combination of floating-point error during the multiplication above

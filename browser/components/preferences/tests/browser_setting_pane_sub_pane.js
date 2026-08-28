@@ -7,57 +7,7 @@ describe("setting-pane", () => {
   let doc, win;
 
   beforeEach(async function setup() {
-    await openPreferencesViaOpenPreferencesAPI("sync", { leaveOpen: true });
-    doc = gBrowser.selectedBrowser.contentDocument;
-    win = doc.documentGlobal;
-    win.Preferences.addSetting({
-      id: "testLoadSubPane",
-      onUserClick: () => win.gotoPref("paneTestSubPane"),
-    });
-    win.SettingGroupManager.registerGroup("testTopLevelGroup", {
-      l10nId: "home-default-browser-title",
-      headingLevel: 2,
-      items: [
-        {
-          id: "testLoadSubPane",
-          control: "moz-box-button",
-          controlAttrs: {
-            label: "Top level setting",
-          },
-        },
-      ],
-    });
-    win.SettingPaneManager.registerPane("testTopLevel", {
-      l10nId: "home-section",
-      groupIds: ["testTopLevelGroup"],
-    });
-    let syncCategory = doc.getElementById("category-sync");
-    let testTopLevelCategory = syncCategory.cloneNode(true);
-    testTopLevelCategory.setAttribute("view", "paneTestTopLevel");
-    syncCategory.insertAdjacentElement("afterend", testTopLevelCategory);
-    win.Preferences.addSetting({
-      id: "testSetting",
-      get: () => true,
-    });
-    win.SettingGroupManager.registerGroup("testSubGroup", {
-      headingLevel: 2,
-      items: [
-        {
-          id: "testSetting",
-          controlAttrs: {
-            label: "Test setting",
-          },
-        },
-      ],
-    });
-    win.SettingPaneManager.registerPane("testSubPane", {
-      parent: "testTopLevel",
-      l10nId: "containers-section-header",
-      groupIds: ["testSubGroup"],
-    });
-    let viewChanged = waitForPaneChange("paneTestTopLevel");
-    win.gotoPref("paneTestTopLevel");
-    await viewChanged;
+    ({ doc, win } = await setupTestSubPane());
   });
 
   afterEach(() => BrowserTestUtils.removeTab(gBrowser.selectedTab));
@@ -84,7 +34,7 @@ describe("setting-pane", () => {
     ok(pageHeader, "There is a page header");
     is(
       pageHeader.dataset.l10nId,
-      "containers-section-header",
+      "containers-section-header2",
       "Page header has its l10nId"
     );
     let heading = pageHeader.headingEl;
@@ -146,7 +96,7 @@ describe("setting-pane", () => {
 
     is(
       breadcrumbs[1].dataset.l10nId,
-      "containers-section-header",
+      "containers-section-header2",
       "Second breadcrumb has the sub-pane l10nId"
     );
     is(

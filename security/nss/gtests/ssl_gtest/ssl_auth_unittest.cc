@@ -539,6 +539,64 @@ TEST_P(TlsConnectClientAuthStream13, PostHandshakeAuth) {
   EXPECT_TRUE(SECITEM_ItemsAreEqual(&cert1->derCert, &cert2->derCert));
 }
 
+// Rewrites a client's post-handshake KeyUpdate into a (minimal, well-formed)
+// CertificateRequest, a message a client must never send.
+class KeyUpdateToCertificateRequest : public TlsRecordFilter {
+ public:
+  KeyUpdateToCertificateRequest(const std::shared_ptr<TlsAgent>& a)
+      : TlsRecordFilter(a) {}
+
+ protected:
+  PacketFilter::Action FilterRecord(const TlsRecordHeader& header,
+                                    const DataBuffer& record, size_t* offset,
+                                    DataBuffer* output) override {
+    if (header.content_type() != ssl_ct_application_data) {
+      return KEEP;
+    }
+    uint16_t protection_epoch = 0;
+    uint8_t inner_content_type = 0;
+    DataBuffer plaintext;
+    TlsRecordHeader out_header;
+    if (!Unprotect(header, record, &protection_epoch, &inner_content_type,
+                   &plaintext, &out_header) ||
+        !plaintext.len() || inner_content_type != ssl_ct_handshake) {
+      return KEEP;
+    }
+    uint32_t msg_type = 0;
+    if (!plaintext.Read(0, 1, &msg_type) ||
+        msg_type != kTlsHandshakeKeyUpdate) {
+      return KEEP;
+    }
+    // CertificateRequest: type, 3-byte length, empty request context (1-byte
+    // length), empty extensions (2-byte length).
+    const uint8_t cert_request[] = {
+        kTlsHandshakeCertificateRequest, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00};
+    DataBuffer replacement(cert_request, sizeof(cert_request));
+    DataBuffer ciphertext;
+    if (!Protect(spec(protection_epoch), out_header, inner_content_type,
+                 replacement, &ciphertext, &out_header)) {
+      return KEEP;
+    }
+    *offset = out_header.Write(output, *offset, ciphertext);
+    return CHANGE;
+  }
+};
+
+// A TLS 1.3 server with post-handshake auth enabled must reject a
+// CertificateRequest received from the client rather than process it.
+TEST_F(TlsConnectStreamTls13, ServerRejectsClientCertificateRequest) {
+  EnsureTlsSetup();
+  server_->SetOption(SSL_ENABLE_POST_HANDSHAKE_AUTH, PR_TRUE);
+  auto filter = MakeTlsFilter<KeyUpdateToCertificateRequest>(client_);
+  filter->EnableDecryption();
+  Connect();
+
+  EXPECT_EQ(SECSuccess, SSL_KeyUpdate(client_->ssl_fd(), PR_FALSE));
+  server_->ExpectSendAlert(kTlsAlertUnexpectedMessage);
+  server_->Handshake();
+  server_->CheckErrorCode(SSL_ERROR_RX_UNEXPECTED_CERT_REQUEST);
+}
+
 TEST_P(TlsConnectClientAuthStream13, PostHandshakeAuthAfterResumption) {
   ConfigureSessionCache(RESUME_BOTH, RESUME_TICKET);
   ConfigureVersion(SSL_LIBRARY_VERSION_TLS_1_3);
@@ -1489,16 +1547,6 @@ static const SSLSignatureScheme kSignatureSchemeRsaSha384[] = {
 static const SSLSignatureScheme kSignatureSchemeRsaSha256[] = {
     ssl_sig_rsa_pkcs1_sha256};
 
-static SSLNamedGroup NamedGroupForEcdsa384(const TlsConnectTestBase* ctbase) {
-  // NSS tries to match the group size to the symmetric cipher. In TLS 1.1 and
-  // 1.0, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA is the highest priority suite, so
-  // we use P-384. With TLS 1.2 on we pick AES-128 GCM so use x25519.
-  if (ctbase->GetVersion() <= SSL_LIBRARY_VERSION_TLS_1_1) {
-    return ssl_grp_ec_secp384r1;
-  }
-  return ctbase->GetDefaultGroupFromKEA(ctbase->GetDefaultKEA());
-}
-
 // When signature algorithms match up, this should connect successfully; even
 // for TLS 1.1 and 1.0, where they should be ignored.
 TEST_P(TlsConnectGeneric, SignatureAlgorithmServerAuth) {
@@ -1508,8 +1556,7 @@ TEST_P(TlsConnectGeneric, SignatureAlgorithmServerAuth) {
   server_->SetSignatureSchemes(kSignatureSchemeEcdsaSha384,
                                PR_ARRAY_SIZE(kSignatureSchemeEcdsaSha384));
   Connect();
-  CheckKeys(GetDefaultKEA(), NamedGroupForEcdsa384(this), ssl_auth_ecdsa,
-            ssl_sig_ecdsa_secp384r1_sha384);
+  CheckKeys(ssl_auth_ecdsa, ssl_sig_ecdsa_secp384r1_sha384);
 }
 
 // Here the client picks a single option, which should work in all versions.
@@ -1527,8 +1574,7 @@ TEST_P(TlsConnectGeneric, SignatureAlgorithmClientOnly) {
             SSL_SignaturePrefSet(client_->ssl_fd(), clientAlgorithms,
                                  PR_ARRAY_SIZE(clientAlgorithms)));
   Connect();
-  CheckKeys(GetDefaultKEA(), NamedGroupForEcdsa384(this), ssl_auth_ecdsa,
-            ssl_sig_ecdsa_secp384r1_sha384);
+  CheckKeys(ssl_auth_ecdsa, ssl_sig_ecdsa_secp384r1_sha384);
 }
 
 // Here the server picks a single option, which should work in all versions.
@@ -1538,8 +1584,7 @@ TEST_P(TlsConnectGeneric, SignatureAlgorithmServerOnly) {
   server_->SetSignatureSchemes(kSignatureSchemeEcdsaSha384,
                                PR_ARRAY_SIZE(kSignatureSchemeEcdsaSha384));
   Connect();
-  CheckKeys(GetDefaultKEA(), NamedGroupForEcdsa384(this), ssl_auth_ecdsa,
-            ssl_sig_ecdsa_secp384r1_sha384);
+  CheckKeys(ssl_auth_ecdsa, ssl_sig_ecdsa_secp384r1_sha384);
 }
 
 // In TLS 1.2, curve and hash aren't bound together.

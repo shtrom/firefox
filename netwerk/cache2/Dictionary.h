@@ -5,7 +5,15 @@
 #ifndef mozilla_net_Dictionary_h
 #define mozilla_net_Dictionary_h
 
+#include <vector>
+
+#include "mozilla/RefPtr.h"
+#include "mozilla/TimeStamp.h"
+#include "mozilla/Vector.h"
+#include "mozilla/dom/RequestBinding.h"
+#include "mozilla/net/urlpattern_glue.h"
 #include "nsCOMPtr.h"
+#include "nsHashKeys.h"
 #include "nsICacheEntry.h"
 #include "nsICacheEntryOpenCallback.h"
 #include "nsICacheStorageService.h"
@@ -14,16 +22,9 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIObserver.h"
 #include "nsIStreamListener.h"
-#include "mozilla/RefPtr.h"
-#include "mozilla/Vector.h"
 #include "nsString.h"
 #include "nsTArray.h"
-#include <vector>
-#include "mozilla/dom/RequestBinding.h"
-#include "mozilla/TimeStamp.h"
 #include "nsTHashMap.h"
-#include "nsHashKeys.h"
-#include "mozilla/net/urlpattern_glue.h"
 
 class nsICacheStorage;
 class nsIIOService;
@@ -189,8 +190,9 @@ class DictionaryCacheEntry final : public nsICacheEntryOpenCallback,
   // Populated on MainThread after hash validation succeeds
   Vector<uint8_t> mDictionaryData;
 
-  // Atomic flag indicating dictionary data is complete and validated
-  Atomic<bool, Relaxed> mDictionaryDataComplete{false};
+  // Publishes mDictionaryData to reader threads. ReleaseAcquire so that
+  // the non-atomic mDictionaryData write is visible before readers see true.
+  Atomic<bool, ReleaseAcquire> mDictionaryDataComplete{false};
 
   // Temporary buffer for accumulating dictionary data during cache reads
   // Only accessed by cache I/O thread during stream callbacks (serialized)
@@ -343,6 +345,12 @@ class DictionaryCache final : public nsIObserver {
 
   nsresult Init();
   static void Shutdown();
+
+  // Test-only: undo Shutdown()'s permanent disable so the cache can be used
+  // again after a simulated restart (see
+  // nsICacheTesting::startupCacheForTesting). The instance is recreated lazily
+  // by GetInstance().
+  static void ResetShutdownForTesting() { sShutdown = false; }
 
   nsresult AddEntry(nsIURI* aURI, const nsACString& aKey,
                     const nsACString& aPattern, nsTArray<nsCString>& aMatchDest,

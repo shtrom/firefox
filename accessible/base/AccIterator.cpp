@@ -4,19 +4,18 @@
 
 #include "AccIterator.h"
 
-#include "AccGroupInfo.h"
 #include "ARIAMap.h"
+#include "AccGroupInfo.h"
 #include "DocAccessible-inl.h"
 #include "LocalAccessible-inl.h"
-#include "nsAccUtils.h"
 #include "XULTreeAccessible.h"
-
 #include "mozilla/a11y/DocAccessibleParent.h"
 #include "mozilla/dom/DocumentOrShadowRoot.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/ElementInternals.h"
 #include "mozilla/dom/HTMLLabelElement.h"
 #include "mozilla/dom/TreeOrderedArrayInlines.h"
+#include "nsAccUtils.h"
 
 using namespace mozilla;
 using namespace mozilla::a11y;
@@ -258,6 +257,11 @@ LocalAccessible* HTMLLabelIterator::Next() {
   // Go up tree to get a name of ancestor label if there is one (an ancestor
   // <label> implicitly points to us). Don't go up farther than form or
   // document.
+  if (mAcc->IsDoc()) {
+    // Bug 2021491: It's possible, albeit very silly, for a labelable element to
+    // be at the root of a document.
+    return nullptr;
+  }
   LocalAccessible* walkUp = mAcc->LocalParent();
   while (walkUp && !walkUp->IsDoc()) {
     nsIContent* walkUpEl = walkUp->GetContent();

@@ -16,6 +16,10 @@ enum class StyleScroller : uint8_t;
 enum class StyleOverflow : uint8_t;
 }  // namespace mozilla
 
+namespace mozilla::layers {
+enum class ScrollDirection : uint8_t;
+}  // namespace mozilla::layers
+
 namespace mozilla::dom {
 enum class ScrollAxis : uint8_t;
 struct ScrollTimelineOptions;
@@ -29,6 +33,7 @@ class ElementAnimationData;
 namespace dom {
 class Document;
 class Element;
+struct ScopedTimelineName;
 
 /**
  * Implementation notes
@@ -89,6 +94,22 @@ class ScrollTimeline : public AnimationTimeline,
     };
     Type mType = Type::Root;
 
+    static Type TypeFromStyleScroller(StyleScroller aType) {
+      switch (aType) {
+        case StyleScroller::Root:
+          break;
+        case StyleScroller::Nearest:
+          return Type::Nearest;
+        case StyleScroller::SelfElement:
+          return Type::Self;
+        default:
+          MOZ_ASSERT_UNREACHABLE("Unhandled scroller type");
+          break;
+      }
+
+      return Type::Root;
+    }
+
    private:
     // This is the target (that is being animade) for:
     //   - Type::Root
@@ -115,21 +136,7 @@ class ScrollTimeline : public AnimationTimeline,
 
     static ScrollerInfo Anonymous(StyleScroller aType,
                                   const NonOwningAnimationTarget& aTarget) {
-      const auto type = [aType]() {
-        switch (aType) {
-          case StyleScroller::Root:
-            break;
-          case StyleScroller::Nearest:
-            return Type::Nearest;
-          case StyleScroller::SelfElement:
-            return Type::Self;
-          default:
-            MOZ_ASSERT_UNREACHABLE("Unhandled scroller type");
-            break;
-        }
-
-        return Type::Root;
-      }();
+      const auto type = TypeFromStyleScroller(aType);
       // Store the animation target - we will look up the source at evaluation
       // time.
       return {type, aTarget.mElement, aTarget.mPseudoRequest};
@@ -148,37 +155,58 @@ class ScrollTimeline : public AnimationTimeline,
   };
 
  public:
-  // Resolved state of this scroll timeline. Assumed to be short-lived.
-  class State {
+  // A snapshot of the resolved scroll state of this timeline. The
+  // frame-derived values are captured when the snapshot is built (while the
+  // current time is sampled in UpdateCachedCurrentTime), rather than queried
+  // lazily.
+  class StateSnapshot {
     friend class ScrollTimeline;
     friend class ViewTimeline;
 
    public:
-    // A helper to get the physical orientation of this scroll-timeline.
-    layers::ScrollDirection Axis() const;
-    StyleOverflow SourceScrollStyle() const;
-    bool APZIsActiveForSource() const;
+    // The default snapshot represents an inactive timeline.
+    StateSnapshot() = default;
+
+    // The physical scroll direction this timeline is linked to.
+    layers::ScrollDirection Axis() const { return mPhysicalAxis; }
+    StyleOverflow SourceScrollStyle() const { return mSourceScrollStyle; }
+    bool APZIsActiveForSource() const { return mAPZIsActiveForSource; }
     // May return null if script created us.
     Element* SourceElement() const { return mSource.mElement; }
-    bool ScrollingDirectionIsAvailable() const;
+    bool ScrollingDirectionIsAvailable() const {
+      return mScrollingDirectionAvailable;
+    }
     // If the source of a ScrollTimeline is an element whose principal box does
     // not exist or is not a scroll container, then its phase is the timeline
     // inactive phase. It is otherwise in the active phase. This returns true if
     // the timeline is in active phase.
     // https://drafts.csswg.org/web-animations-1/#inactive-timeline
-    // Note: This function is called only for compositor animations, so we must
-    // have the primary frame (principal box) for the source element if it
-    // exists.
-    bool IsActive() const { return GetScrollContainerFrame(); }
+    bool IsActive() const { return mActive; }
+    // Resolved live from the source element. Only used while building the
+    // snapshot and while sampling the current time.
     const ScrollContainerFrame* GetScrollContainerFrame() const;
 
+    RefPtr<Element>& SourceElementForCycleCollection() {
+      return mSource.mElement;
+    }
+
    private:
-    State(const NonOwningAnimationTarget& aResolvedSource,
-          StyleScrollAxis aAxis, bool aIsRoot)
-        : mSource{aResolvedSource}, mAxis{aAxis}, mIsRoot{aIsRoot} {}
-    NonOwningAnimationTarget mSource;
-    StyleScrollAxis mAxis;
-    bool mIsRoot;
+    StateSnapshot(const NonOwningAnimationTarget& aResolvedSource,
+                  StyleScrollAxis aAxis, bool aIsRoot);
+
+    layers::ScrollDirection ComputePhysicalAxis() const;
+
+    OwningAnimationTarget mSource;
+    StyleScrollAxis mAxis{};
+    bool mIsRoot = false;
+
+    // Values captured from the scroll container frame at construction. Only
+    // meaningful when mActive is true.
+    bool mActive = false;
+    layers::ScrollDirection mPhysicalAxis{};
+    bool mScrollingDirectionAvailable = false;
+    StyleOverflow mSourceScrollStyle{};
+    bool mAPZIsActiveForSource = false;
   };
 
   ScrollTimeline() = delete;
@@ -191,8 +219,7 @@ class ScrollTimeline : public AnimationTimeline,
   // scroll-timeline-name property.
   static already_AddRefed<ScrollTimeline> MakeNamed(
       Document* aDocument, Element* aReferenceElement,
-      const PseudoStyleRequest& aPseudoRequest,
-      const StyleScrollTimeline& aStyleTimeline);
+      const PseudoStyleRequest& aPseudoRequest, StyleScrollAxis aAxis);
 
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(ScrollTimeline, AnimationTimeline)
@@ -201,19 +228,20 @@ class ScrollTimeline : public AnimationTimeline,
                        JS::Handle<JSObject*> aGivenProto) override;
 
   // ScrollTimeline methods.
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY
   static already_AddRefed<ScrollTimeline> Constructor(
       const GlobalObject& aGlobal, const ScrollTimelineOptions& aOptions,
       ErrorResult& aRv);
-  // MOZ_CAN_RUN_SCRIPT because GetScrollingElement may flush in quirks mode.
-  MOZ_CAN_RUN_SCRIPT Element* GetSource() const;
+  Element* GetSource() const;
   dom::ScrollAxis GetScrollAxis() const;
 
-  State GetState() const {
-    return State{mScrollerInfo.Source(), mAxis,
-                 mScrollerInfo.mType == ScrollerInfo::Type::Root};
-  };
+  // Returns the snapshot captured at the last UpdateCachedCurrentTime(). If we
+  // haven't sampled yet, returns an inactive snapshot rather than recomputing
+  // live.
+  StateSnapshot GetSnapshot() const;
 
   // AnimationTimeline methods.
+  void GetCurrentTime(Nullable<OwningCSSNumberish>& aRetVal) const override;
   Nullable<TimeDuration> GetCurrentTimeAsDuration() const override;
   bool TracksWallclockTime() const override { return false; }
   Nullable<TimeDuration> ToTimelineTime(
@@ -251,6 +279,8 @@ class ScrollTimeline : public AnimationTimeline,
 
   void WillRefresh();
 
+  bool UpdateIfStale();
+
   // May return null if script created us.
   Element* SourceElement() const { return mScrollerInfo.Source().mElement; }
 
@@ -264,19 +294,23 @@ class ScrollTimeline : public AnimationTimeline,
 
   void ReplacePropertiesWith(const Element* aReferenceElement,
                              const PseudoStyleRequest& aPseudoRequest,
-                             const StyleScrollTimeline& aNew);
+                             const dom::ScopedTimelineName& aName,
+                             StyleScrollAxis aAxis);
 
   void NotifyAnimationUpdated(Animation& aAnimation) override;
 
   void NotifyAnimationContentVisibilityChanged(Animation* aAnimation,
                                                bool aIsVisible) override;
 
-  virtual void UpdateCachedCurrentTime();
+  // Updates mCachedCurrentTime. Returns true if the cached value changed.
+  virtual bool UpdateCachedCurrentTime();
 
   virtual std::pair<double, double> IntervalForAttachmentRange(
       const AnimationRange& aStyleRange) const;
 
   void AutoAlignStartTime();
+
+  bool IsReusableAnonymousTimeline(const StyleScrollFunction& aScroll) const;
 
  protected:
   virtual ~ScrollTimeline();
@@ -284,6 +318,9 @@ class ScrollTimeline : public AnimationTimeline,
                  StyleScrollAxis aAxis);
 
   void TimelineDataDidChange();
+
+  // Builds a fresh snapshot of the scroll state from the current layout.
+  StateSnapshot ComputeSnapshot() const;
 
   // The timeline data used to represent the full range of the timeline.
   struct ComputedTimelineData {
@@ -307,11 +344,13 @@ class ScrollTimeline : public AnimationTimeline,
 
   RefPtr<Document> mDocument;
 
-  // FIXME: Bug 1765211: We may have to update the source element once the
-  // overflow property of the scroll-container is updated when we are using
-  // nearest scroller.
   ScrollerInfo mScrollerInfo;
   StyleScrollAxis mAxis;
+
+  // The scroll state captured when the current time was last sampled. Kept in
+  // sync with mCachedCurrentTime by the UpdateCachedCurrentTime() overrides,
+  // and returned by GetSnapshot().
+  Maybe<StateSnapshot> mCachedStateSnapshot;
 
   struct CurrentTimeData {
     // The position of the scroller, and this may be negative for RTL or
@@ -319,10 +358,55 @@ class ScrollTimeline : public AnimationTimeline,
     // needs to take care of that.
     nscoord mPosition = 0;
     nscoord mMaxScrollOffset = 0;
+    bool operator==(const CurrentTimeData& aOther) const = default;
   };
 
  private:
   Maybe<CurrentTimeData> mCachedCurrentTime;
+};
+
+// A name-referenced timeline that is referring to a not-yet-existing timeline.
+// Was formerly considered inactive timeline, but is now a separate concept:
+// See https://github.com/w3c/csswg-drafts/issues/9256#issuecomment-4556112966.
+// Feels that it should be derived from `AnimationTimeline`, but that adds a lot
+// of special handling, and only finite (i.e. Scroll and view) timelines are
+// referred to by name. Also, derived from scroll timeline in WebKit & Blink.
+// Note that inactive timelines can be constructed through JS, like `new
+// ScrollTimeline({source: null})`, but that doesn't refer to the timeline
+// by name.
+class UnresolvedTimeline final : public ScrollTimeline {
+ public:
+  Nullable<TimeDuration> GetCurrentTimeAsDuration() const override {
+    // Inactive timeline, by definition.
+    return {};
+  }
+
+  TimeStamp ToTimeStamp(const TimeDuration& aTimelineTime) const override {
+    return {};
+  }
+  bool IsUnresolvedTimeline() const override { return true; }
+
+  JSObject* WrapObject(JSContext*, JS::Handle<JSObject*>) override {
+    // OM should return null for timeline, so this should be ok.
+    return nullptr;
+  }
+
+  Nullable<TimeDuration> TimelineDuration(
+      const AnimationRange&) const override {
+    return TimeDuration::FromMilliseconds(PROGRESS_TIMELINE_DURATION_MILLISEC);
+  }
+
+  NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(UnresolvedTimeline, ScrollTimeline)
+
+ private:
+  explicit UnresolvedTimeline(Document* aDocument);
+  ~UnresolvedTimeline() override = default;
+
+  // ctor is private because only dynamic allocation is permitted, so this is
+  // fine.
+  template <typename T, typename... Args>
+  friend already_AddRefed<T> mozilla::MakeAndAddRef(Args&&... aArgs);
 };
 
 }  // namespace dom

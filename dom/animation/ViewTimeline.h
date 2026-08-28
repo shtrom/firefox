@@ -9,10 +9,11 @@
 
 namespace mozilla {
 class ScrollContainerFrame;
-struct TimelineRangeOffset;
 }  // namespace mozilla
 
 namespace mozilla::dom {
+class CSSNumericValue;
+struct ViewTimelineOptions;
 
 /*
  * A view progress timeline is a segment of a scroll progress timeline that are
@@ -34,8 +35,8 @@ class ViewTimeline final : public ScrollTimeline {
   // property, and we use this subject to look up its nearest scroll container.
   static already_AddRefed<ViewTimeline> MakeNamed(
       Document* aDocument, Element* aSubject,
-      const PseudoStyleRequest& aPseudoRequest,
-      const StyleViewTimeline& aStyleTimeline);
+      const PseudoStyleRequest& aPseudoRequest, StyleScrollAxis aAxis,
+      const StyleViewTimelineInset& aInset);
 
   static already_AddRefed<ViewTimeline> MakeAnonymous(
       Document* aDocument, const NonOwningAnimationTarget& aTarget,
@@ -45,21 +46,24 @@ class ViewTimeline final : public ScrollTimeline {
                        JS::Handle<JSObject*> aGivenProto) override;
 
   // ViewTimeline methods.
-  Element* Subject() const {
-    MOZ_ASSERT(mSubject);
-    return mSubject;
-  }
-  Nullable<double> GetStartOffset() const;
-  Nullable<double> GetEndOffset() const;
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY
+  static already_AddRefed<ViewTimeline> Constructor(
+      const GlobalObject& aGlobal, const ViewTimelineOptions& aOptions,
+      ErrorResult& aRv);
+  Element* Subject() const { return mSubject; }
+  already_AddRefed<CSSNumericValue> GetStartOffset(ErrorResult& aRv) const;
+  already_AddRefed<CSSNumericValue> GetEndOffset(ErrorResult& aRv) const;
 
   bool IsViewTimeline() const override { return true; }
   const ViewTimeline* AsViewTimeline() const override { return this; }
 
   void ReplacePropertiesWith(Element* aSubjectElement,
                              const PseudoStyleRequest& aPseudoRequest,
-                             const StyleViewTimeline& aNew);
+                             const dom::ScopedTimelineName& aName,
+                             StyleScrollAxis aAxis,
+                             const StyleViewTimelineInset& aInset);
 
-  void UpdateCachedCurrentTime() override;
+  bool UpdateCachedCurrentTime() override;
 
   std::pair<double, double> IntervalForAttachmentRange(
       const AnimationRange& aStyleRange) const override;
@@ -72,15 +76,19 @@ class ViewTimeline final : public ScrollTimeline {
                                     PseudoStyleRequest{mSubjectPseudoType}};
   }
 
+  bool IsReusableAnonymousTimeline(
+      const StyleGenericViewFunction<StyleLengthPercentage>& aView) const;
+
  private:
   ~ViewTimeline() = default;
   ViewTimeline(Document* aDocument, const ScrollerInfo& aScrollerInfo,
                StyleScrollAxis aAxis, Element* aSubject,
                PseudoStyleType aSubjectPseudoType,
-               const StyleViewTimelineInset& aInset)
+               const StyleViewTimelineInset& aInset, bool aIsAnonymous)
       : ScrollTimeline(aDocument, aScrollerInfo, aAxis),
         mSubject(aSubject),
         mSubjectPseudoType(aSubjectPseudoType),
+        mIsAnonymous(aIsAnonymous),
         mInset(aInset) {}
 
   Maybe<ComputedTimelineData> ComputeTimelineData() const override;
@@ -103,6 +111,7 @@ class ViewTimeline final : public ScrollTimeline {
   // FIXME: Bug 1928437. We have to update mSubjectPseudoType to use
   // PseudoStyleRequest.
   PseudoStyleType mSubjectPseudoType;
+  bool mIsAnonymous;
 
   // FIXME: Bug 1817073. view-timeline-inset is an animatable property. However,
   // the inset from view() is not animatable, so for named view timeline, this
@@ -132,6 +141,10 @@ class ViewTimeline final : public ScrollTimeline {
              mSubjectPosition != aOther.mSubjectPosition ||
              mSubjectSize != aOther.mSubjectSize ||
              mInsetStart != aOther.mInsetStart || mInsetEnd != aOther.mInsetEnd;
+    }
+    bool operator==(const CurrentTimeData& aOther) const {
+      return mScrollData.mPosition == aOther.mScrollData.mPosition &&
+             !IsChanged(aOther);
     }
   };
   Maybe<CurrentTimeData> mCachedCurrentTime;

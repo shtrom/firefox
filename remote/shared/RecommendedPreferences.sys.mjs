@@ -91,6 +91,10 @@ const COMMON_PREFERENCES = new Map([
   // of Firefox aren't downloaded and applied, enforce its presence.
   ["app.update.disabledForTesting", true],
 
+  // Disable scroll axis lock, WebDriver should be able to scroll arbitrary
+  // directions.
+  ["apz.axis_lock.mode", 0],
+
   // Increase the APZ content response timeout in tests to 1 minute.
   // This is to accommodate the fact that test environments tends to be
   // slower than production environments (with the b2g emulator being
@@ -113,6 +117,12 @@ const COMMON_PREFERENCES = new Map([
 
   // Set global `dump` function to log strings to `stdout` for release builds as well.
   ["browser.dom.window.dump.enabled", true],
+
+  // Don't open the downloads panel every time a download begins.
+  // The first download ever run in a new profile will still open the panel,
+  // but because "browser.download.panel.shown" is set to true,
+  // this preference is going to act as the first download already happened.
+  ["browser.download.alwaysOpenPanel", false],
 
   // Indicate that the download panel has been shown once so that
   // whichever download test runs first doesn't show the popup
@@ -137,6 +147,9 @@ const COMMON_PREFERENCES = new Map([
   // Background thumbnails in particular cause grief, and disabling
   // thumbnails in general cannot hurt
   ["browser.pagethumbnails.capturing_disabled", true],
+
+  // Do not show the preonboarding modal/splash which can interfere with tests
+  ["browser.preonboarding.enabled", false],
 
   // Disable geolocation ping(#1)
   ["browser.region.network.url", ""],
@@ -383,6 +396,9 @@ const COMMON_PREFERENCES = new Map([
 
   // Do not download intermediate certificates
   ["security.remote_settings.intermediates.enabled", false],
+
+  // Disable the WebAuthn consents prompt
+  ["security.webauthn.related_origin_requests_mode", 1],
 
   // Disable logging for remote settings
   ["services.settings.loglevel", "off"],

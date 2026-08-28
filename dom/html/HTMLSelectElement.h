@@ -25,15 +25,20 @@ class EventChainPostVisitor;
 class EventChainPreVisitor;
 class SelectContentData;
 class PresState;
+class WidgetMouseEvent;
 
 namespace dom {
 
 class ContentList;
 class FormData;
+class HTMLButtonElement;
 class HTMLCollection;
 class HTMLElementOrLong;
 class HTMLOptionElementOrHTMLOptGroupElement;
 class HTMLSelectElement;
+class HTMLSelectedContentElement;
+
+enum class SelectedContentUpdateMode : uint8_t { MicroTask, ScriptRunner };
 
 /**
  * Implementation of &lt;select&gt;
@@ -71,9 +76,8 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
 
   using ConstraintValidation::GetValidationMessage;
 
-  explicit HTMLSelectElement(
-      already_AddRefed<mozilla::dom::NodeInfo>&& aNodeInfo,
-      FromParser aFromParser = NOT_FROM_PARSER);
+  explicit HTMLSelectElement(already_AddRefed<mozilla::dom::NodeInfo> aNodeInfo,
+                             FromParser aFromParser = NOT_FROM_PARSER);
 
   NS_IMPL_FROMNODE_HTML_WITH_TAG(HTMLSelectElement, select)
 
@@ -157,7 +161,7 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   // getting removed.
   using IgnoredOptionList = Span<RefPtr<HTMLOptionElement>>;
   HTMLOptionElement* GetSelectedOption(IgnoredOptionList = {}) const;
-  void SetSelectedIndex(int32_t aIdx) { SetSelectedIndexInternal(aIdx, true); }
+  void SetSelectedIndex(int32_t aIdx);
   void GetValue(nsAString& aValue) const;
   void SetValue(const nsAString& aValue);
 
@@ -165,7 +169,7 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   // via bindings.
   void SetCustomValidity(const nsAString& aError);
 
-  void ShowPicker(ErrorResult& aRv);
+  MOZ_CAN_RUN_SCRIPT void ShowPicker(ErrorResult& aRv);
 
   using nsINode::Remove;
 
@@ -190,7 +194,7 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   bool RestoreState(PresState* aState) override;
 
   // Overriden nsIFormControl methods
-  NS_IMETHOD Reset() override;
+  MOZ_CAN_RUN_SCRIPT NS_IMETHOD Reset() override;
   NS_IMETHOD SubmitNamesValues(FormData* aFormData) override;
 
   void FieldSetDisabledChanged(bool aNotify) override;
@@ -273,10 +277,19 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   /** Is this a combobox? */
   bool IsCombobox() const { return !Multiple() && Size() <= 1; }
 
+  bool IsBaseSelectAppearance() const;
+  nsGenericHTMLElement* GetPickerElement() const;
+  MOZ_CAN_RUN_SCRIPT void TogglePickerInternal(
+      bool aIsSourceTouchEvent = false);
+
   bool OpenInParentProcess() const { return mIsOpenInParentProcess; }
   void SetOpenInParentProcess(bool aVal) {
     mIsOpenInParentProcess = aVal;
     SetStates(ElementState::OPEN, aVal);
+  }
+
+  void OnPopoverStateChanged(bool aOpen) {
+    SetStates(ElementState::OPEN, aOpen);
   }
 
   void GetPreviewValue(nsAString& aValue) { aValue = mPreviewValue; }
@@ -287,13 +300,53 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   }
   void GetAutofillState(nsAString& aState) { GetFormAutofillState(aState); }
 
+  HTMLButtonElement* GetFirstButton() const;
+
   void SetupShadowTree();
+  void GetSlotNameFor(const ShadowRoot&, const nsIContent&,
+                      nsAString&) const override;
+  void OnChildBeforeSlotted(ShadowRoot&, nsIContent&) override;
+  void OnChildUnslotted(ShadowRoot&, nsIContent&) override;
 
   // Returns the text node that has the selected <option>'s text.
   // Note that it might return null for printing.
   Text* GetSelectedContentText() const;
   void SelectedContentTextMightHaveChanged(bool aNotify = true,
                                            IgnoredOptionList = {});
+
+  // https://html.spec.whatwg.org/#selectedness-setting-algorithm
+  // aIgnored: options to skip (for pre-removal handling where options are still
+  // in the list but about to be unbound).
+  void RunSelectednessSettingAlgorithm(bool aNotify = true,
+                                       bool aSkipSelectedcontentUpdate = false,
+                                       IgnoredOptionList aIgnored = {});
+
+  // Schedules an update of all descendant selectedcontent elements.
+  // Multiple calls coalesce into a single update.
+  // aForceUpdate: skips IsInComposedDoc and mSelectedContentUpdatePending
+  // guards. Used by spec algorithms (select.value, select.selectedIndex) that
+  // must update selectedcontent even on disconnected selects and must not be
+  // coalesced with deferred mutation-driven updates.
+  void ScheduleSelectedContentUpdate(
+      SelectedContentUpdateMode aMode = SelectedContentUpdateMode::MicroTask,
+      bool aForceUpdate = false);
+
+  // https://html.spec.whatwg.org/#update-a-select's-descendant-selectedcontent-elements
+  MOZ_CAN_RUN_SCRIPT void UpdateDescendantSelectedContentElements();
+  // Runs UpdateDescendantSelectedContentElements only if an update is still
+  // pending. Entry point for the microtask and script-runner schedulers so they
+  // coalesce into a single update.
+  MOZ_CAN_RUN_SCRIPT void RunPendingSelectedContentUpdate();
+  // https://html.spec.whatwg.org/#update-a-selectedcontent
+  MOZ_CAN_RUN_SCRIPT void UpdateSelectedContentElement(
+      HTMLSelectedContentElement* aSelectedContent);
+  // https://html.spec.whatwg.org/#clone-an-option-into-a-selectedcontent
+  MOZ_CAN_RUN_SCRIPT void CloneOptionIntoSelectedContent(
+      HTMLOptionElement* aOption, HTMLSelectedContentElement* aSelectedContent);
+
+  void ScrollToSelectedOption() { return ScrollToOption(SelectedIndex()); }
+
+  void ResetListBoxSelection(bool aAllowScrolling);
 
  protected:
   virtual ~HTMLSelectElement();
@@ -311,13 +364,6 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
    * @param aStartIndex the index to start with
    */
   void FindSelectedIndex(int32_t aStartIndex, bool aNotify);
-  /**
-   * Try to select an option if nothing is selected.
-   * @param aIgnore option elements to ignore for the computation, for removal
-   *                handling.
-   * @return true if something was selected, false otherwise
-   */
-  bool TrySelectSomething(bool aNotify, IgnoredOptionList aIgnore = {});
   /**
    * Called to trigger notifications of frames and fixing selected index
    *
@@ -375,12 +421,6 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   /** Get the frame as an nsListControlFrame (MAY RETURN nullptr) */
   nsListControlFrame* GetListBoxFrame();
 
-  /**
-   * Helper method for dispatching ContentReset notifications to list box
-   * frames.
-   */
-  void DispatchContentReset();
-
   void SetSelectedIndexInternal(int32_t aIndex, bool aNotify);
 
   void OnSelectionChanged();
@@ -399,9 +439,39 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   MOZ_CAN_RUN_SCRIPT nsresult HandleMouseUp(EventChainPostVisitor&);
   MOZ_CAN_RUN_SCRIPT nsresult HandleMouseMove(EventChainPostVisitor&);
 
+  // Returns the option targeted by aEvent, using the listbox frame
+  // for the necessary hit-testing geometry.
+  HTMLOptionElement* GetListBoxOptionFromEvent(const WidgetMouseEvent&);
+
+  // Grabs/releases mouse capture for listbox drag-selection.
+  void CaptureMouseEvents(bool aGrabMouseEvents);
+
+  // Selection-model helpers shared by the keyboard and mouse handlers above.
+  // The selection range (mStartSelectionIndex/mEndSelectionIndex) is only
+  // meaningful for a listbox, hence the nsListControlFrame argument used for
+  // the associated view updates (scrolling, focus invalidation and a11y
+  // events).
+  MOZ_CAN_RUN_SCRIPT
+  bool PerformListBoxSelection(int32_t aClickedIndex, bool aIsShift,
+                               bool aIsControl);
+  MOZ_CAN_RUN_SCRIPT
+  bool ListBoxSingleSelection(int32_t aClickedIndex, bool aDoToggle);
+  bool ExtendedSelection(int32_t aStartIndex, int32_t aEndIndex,
+                         bool aClearAll);
+  bool ToggleOptionSelected(int32_t aIndex);
+  void InitListBoxSelectionRange(int32_t aClickedIndex);
+  MOZ_CAN_RUN_SCRIPT void UpdateSelection();
+  MOZ_CAN_RUN_SCRIPT
+  void UpdateListBoxSelectionAfterKeyEvent(int32_t aNewIndex,
+                                           uint32_t aCharCode, bool aIsShift,
+                                           bool aIsControlOrMeta);
+  void RemoveOptionFromListBoxSelection(HTMLOptionElement& aOption);
+  void ScrollToOption(int32_t aIndex);
+  MOZ_CAN_RUN_SCRIPT void DoScrollToOption(int32_t aIndex);
   void AdjustIndexForDisabledOpt(int32_t aStartIndex, int32_t& aNewIndex,
                                  int32_t aNumOptions, int32_t aDoAdjustInc,
                                  int32_t aDoAdjustIncNext);
+  void MaybeFireMenuItemActiveEvent(nsIContent* aPreviousCurrentOption);
   bool IsOptionInteractivelySelectable(uint32_t aIndex) const;
   int32_t GetEndSelectionIndex() const;
   int32_t ItemsPerPage() const;
@@ -422,6 +492,7 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   RefPtr<HTMLOptionsCollection> mOptions;
   nsContentUtils::AutocompleteAttrState mAutocompleteAttrState;
   nsContentUtils::AutocompleteAttrState mAutocompleteInfoState;
+
   /** false if the parser is in the middle of adding children. */
   bool mIsDoneAddingChildren : 1;
   /** true if our disabled state has changed from the default **/
@@ -437,6 +508,25 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
   bool mButtonDown : 1 = false;
   bool mControlSelectMode : 1 = false;
   /**
+   * True once a selectedcontent update has been scheduled (as a microtask or a
+   * script runner) but has not run yet. Used to coalesce multiple mutations
+   * into a single update.
+   */
+  bool mSelectedContentUpdatePending : 1 = false;
+  /**
+   * True while we are cloning the selected option into our descendant
+   * selectedcontent elements. Used to ignore the mutation observer
+   * notifications caused by that cloning, which would otherwise schedule a
+   * redundant update.
+   */
+  bool mIsUpdatingSelectedContent : 1 = false;
+  /**
+   * True if the selection changed since the last mousedown that started a
+   * drag, used to decide whether to fire input/change on the matching
+   * mouseup.
+   */
+  bool mListBoxSelectionChangedSinceDragStart : 1 = false;
+  /**
    * The temporary restore state in case we try to restore before parser is
    * done adding options
    */
@@ -451,6 +541,29 @@ class HTMLSelectElement final : public nsGenericHTMLFormControlElementWithState,
    * The current displayed preview text.
    */
   nsString mPreviewValue;
+
+  static constexpr int32_t kNothingSelected = -1;
+
+  /**
+   * Listbox selection range, only meaningful while a listbox frame exists.
+   * mEnd is the option focused for keyboard navigation.
+   */
+  struct {
+    RefPtr<HTMLOptionElement> mStart;
+    RefPtr<HTMLOptionElement> mEnd;
+    // Whether mStart's index <= mEnd's index.
+    bool mStartIsLow = true;
+
+    void SetTo(HTMLOptionElement* aOption) {
+      mStart = mEnd = aOption;
+      mStartIsLow = true;
+    }
+
+    void Clear() {
+      mStart = mEnd = nullptr;
+      mStartIsLow = true;
+    }
+  } mListBoxSelection;
 
  private:
   static void MapAttributesIntoRule(MappedDeclarationsBuilder&);

@@ -7,39 +7,40 @@
 #include <cmath>
 
 #include "AppleUtils.h"
+#include "ImageRegion.h"
 #include "gfx2DGlue.h"
 #include "gfxContext.h"
 #include "gfxPlatform.h"
 #include "gfxUtils.h"
-#include "ImageRegion.h"
-#include "nsClipboard.h"
-#include "nsCocoaUtils.h"
-#include "nsChildView.h"
-#include "nsMenuBarX.h"
-#include "nsCocoaWindow.h"
-#include "nsCOMPtr.h"
-#include "nsIInterfaceRequestorUtils.h"
-#include "nsIAppShellService.h"
-#include "nsIOSPermissionRequest.h"
-#include "nsIRunnable.h"
-#include "nsIAppWindow.h"
-#include "nsIBaseWindow.h"
-#include "nsITransferable.h"
-#include "nsMenuUtilsX.h"
-#include "nsNetUtil.h"
-#include "nsPrimitiveHelpers.h"
-#include "nsToolkit.h"
-#include "nsCRT.h"
 #include "mozilla/ClearOnShutdown.h"
 #include "mozilla/Logging.h"
 #include "mozilla/MiscEvents.h"
 #include "mozilla/Preferences.h"
-#include "mozilla/TextEvents.h"
+#include "mozilla/SVGImageContext.h"
 #include "mozilla/StaticMutex.h"
 #include "mozilla/StaticPrefs_media.h"
-#include "mozilla/SVGImageContext.h"
+#include "mozilla/TextEvents.h"
 #include "mozilla/dom/Promise.h"
 #include "mozilla/gfx/2D.h"
+#include "nsCOMPtr.h"
+#include "nsCRT.h"
+#include "nsChildView.h"
+#include "nsClipboard.h"
+#include "nsCocoaUtils.h"
+#include "nsCocoaWindow.h"
+#include "nsIAppShellService.h"
+#include "nsIAppWindow.h"
+#include "nsIBaseWindow.h"
+#include "nsIInterfaceRequestorUtils.h"
+#include "nsIOSPermissionRequest.h"
+#include "nsIRunnable.h"
+#include "nsITransferable.h"
+#include "nsMenuBarX.h"
+#include "nsMenuPopupFrame.h"
+#include "nsMenuUtilsX.h"
+#include "nsNetUtil.h"
+#include "nsPrimitiveHelpers.h"
+#include "nsToolkit.h"
 
 using namespace mozilla;
 using namespace mozilla::widget;
@@ -80,6 +81,9 @@ NSString* const kUrlsWithTitlesPboardType = @"WebURLsWithTitlesPboardType";
 NSString* const kMozWildcardPboardType = @"org.mozilla.MozillaWildcard";
 NSString* const kMozCustomTypesPboardType = @"org.mozilla.custom-clipdata";
 NSString* const kMozFileUrlsPboardType = @"org.mozilla.file-urls";
+NSString* const kWebCustomFormatPboardTypePrefix =
+    @"org.w3.web-custom-format.type-";
+NSString* const kWebCustomFormatMapPboardType = @"org.w3.web-custom-format.map";
 
 @implementation UTIHelper
 
@@ -90,6 +94,8 @@ NSString* const kMozFileUrlsPboardType = @"org.mozilla.file-urls";
       [aType isEqualToString:kPublicUrlPboardType] ||
       [aType isEqualToString:kPublicUrlNamePboardType] ||
       [aType isEqualToString:kMozFileUrlsPboardType] ||
+      [aType isEqualToString:kWebCustomFormatPboardTypePrefix] ||
+      [aType isEqualToString:kWebCustomFormatMapPboardType] ||
       [aType isEqualToString:(NSString*)kPasteboardTypeFileURLPromise] ||
       [aType isEqualToString:(NSString*)kPasteboardTypeFilePromiseContent] ||
       [aType isEqualToString:(NSString*)kUTTypeFileURL] ||
@@ -389,7 +395,7 @@ nsresult nsCocoaUtils::CreateCGImageFromSurface(SourceSurface* aSurface,
   *aResult = ::CGImageCreate(
       width, height, 8, 32, map.mStride, colorSpace,
       kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst, dataProvider,
-      NULL, 0, kCGRenderingIntentDefault);
+      nullptr, 0, kCGRenderingIntentDefault);
   ::CGColorSpaceRelease(colorSpace);
   ::CGDataProviderRelease(dataProvider);
   return *aResult ? NS_OK : NS_ERROR_FAILURE;
@@ -419,7 +425,7 @@ nsresult nsCocoaUtils::CreateNSImageFromCGImage(CGImageRef aInputImage,
   NSRect imageRect = ::NSMakeRect(0.0, 0.0, width, height);
 
   NSBitmapImageRep* offscreenRep = [[NSBitmapImageRep alloc]
-      initWithBitmapDataPlanes:NULL
+      initWithBitmapDataPlanes:nullptr
                     pixelsWide:width
                     pixelsHigh:height
                  bitsPerSample:8
@@ -514,7 +520,7 @@ nsresult nsCocoaUtils::CreateNSImageFromImageContainer(
 
   NS_ENSURE_TRUE(surface, NS_ERROR_FAILURE);
 
-  CGImageRef imageRef = NULL;
+  CGImageRef imageRef = nullptr;
   nsresult rv = nsCocoaUtils::CreateCGImageFromSurface(surface, &imageRef,
                                                        aIsEntirelyBlack);
   if (NS_FAILED(rv) || !imageRef) {
@@ -1050,31 +1056,35 @@ uint32_t nsCocoaUtils::ConvertGeckoKeyCodeToMacCharCode(uint32_t aKeyCode) {
 }
 
 NSEventModifierFlags nsCocoaUtils::ConvertWidgetModifiersToMacModifierFlags(
-    nsIWidget::Modifiers aNativeModifiers) {
-  if (!aNativeModifiers) {
+    nsIWidget::NativeModifiers aNativeModifiers) {
+  if (aNativeModifiers == nsIWidget::NativeModifiers::NO_MODIFIERS) {
     return 0;
   }
   struct ModifierFlagMapEntry {
-    nsIWidget::Modifiers mWidgetModifier;
+    nsIWidget::NativeModifiers mWidgetModifier;
     NSEventModifierFlags mModifierFlags;
   };
   static constexpr ModifierFlagMapEntry sModifierFlagMap[] = {
-      {nsIWidget::CAPS_LOCK, NSEventModifierFlagCapsLock},
-      {nsIWidget::SHIFT_L, NSEventModifierFlagShift | 0x0002},
-      {nsIWidget::SHIFT_R, NSEventModifierFlagShift | 0x0004},
-      {nsIWidget::CTRL_L, NSEventModifierFlagControl | 0x0001},
-      {nsIWidget::CTRL_R, NSEventModifierFlagControl | 0x2000},
-      {nsIWidget::ALT_L, NSEventModifierFlagOption | 0x0020},
-      {nsIWidget::ALT_R, NSEventModifierFlagOption | 0x0040},
-      {nsIWidget::COMMAND_L, NSEventModifierFlagCommand | 0x0008},
-      {nsIWidget::COMMAND_R, NSEventModifierFlagCommand | 0x0010},
-      {nsIWidget::NUMERIC_KEY_PAD, NSEventModifierFlagNumericPad},
-      {nsIWidget::HELP, NSEventModifierFlagHelp},
-      {nsIWidget::FUNCTION, NSEventModifierFlagFunction}};
+      {nsIWidget::NativeModifiers::CAPS_LOCK, NSEventModifierFlagCapsLock},
+      {nsIWidget::NativeModifiers::SHIFT_L, NSEventModifierFlagShift | 0x0002},
+      {nsIWidget::NativeModifiers::SHIFT_R, NSEventModifierFlagShift | 0x0004},
+      {nsIWidget::NativeModifiers::CTRL_L, NSEventModifierFlagControl | 0x0001},
+      {nsIWidget::NativeModifiers::CTRL_R, NSEventModifierFlagControl | 0x2000},
+      {nsIWidget::NativeModifiers::ALT_L, NSEventModifierFlagOption | 0x0020},
+      {nsIWidget::NativeModifiers::ALT_R, NSEventModifierFlagOption | 0x0040},
+      {nsIWidget::NativeModifiers::COMMAND_L,
+       NSEventModifierFlagCommand | 0x0008},
+      {nsIWidget::NativeModifiers::COMMAND_R,
+       NSEventModifierFlagCommand | 0x0010},
+      {nsIWidget::NativeModifiers::NUMERIC_KEY_PAD,
+       NSEventModifierFlagNumericPad},
+      {nsIWidget::NativeModifiers::HELP, NSEventModifierFlagHelp},
+      {nsIWidget::NativeModifiers::FUNCTION, NSEventModifierFlagFunction}};
 
   NSEventModifierFlags modifierFlags = 0;
   for (const ModifierFlagMapEntry& entry : sModifierFlagMap) {
-    if (aNativeModifiers & entry.mWidgetModifier) {
+    if ((aNativeModifiers & entry.mWidgetModifier) !=
+        nsIWidget::NativeModifiers::NO_MODIFIERS) {
       modifierFlags |= entry.mModifierFlags;
     }
   }
@@ -1834,4 +1844,23 @@ void nsCocoaUtils::SetTransferDataForTypeFromPasteboardItem(
   }
 
   NS_OBJC_END_TRY_IGNORE_BLOCK;
+}
+
+NSRectEdge nsCocoaUtils::PopupPositionToNSRectEdge(int8_t aPosition) {
+  // XUL accepts many more anchor popup alignments than Cocoa. Map to the best
+  // approximate edge setting. Due to Cocoa's flipped Y-axis, NSRectEdgeMinY
+  // represents the bottom edge.
+  switch (aPosition) {
+    case POPUPPOSITION_BEFORESTART:
+    case POPUPPOSITION_BEFOREEND:
+      return NSRectEdgeMaxY;
+    case POPUPPOSITION_STARTBEFORE:
+    case POPUPPOSITION_STARTAFTER:
+      return NSRectEdgeMinX;
+    case POPUPPOSITION_ENDBEFORE:
+    case POPUPPOSITION_ENDAFTER:
+      return NSRectEdgeMaxX;
+    default:
+      return NSRectEdgeMinY;
+  }
 }

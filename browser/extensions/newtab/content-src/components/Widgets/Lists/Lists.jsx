@@ -11,10 +11,12 @@ import React, {
 } from "react";
 import { useSelector, batch } from "react-redux";
 import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
-import { useIntersectionObserver } from "../../../lib/utils";
 import { WIDGET_REGISTRY, resolveWidgetSize } from "common/WidgetsRegistry.mjs";
 import { WidgetCelebration } from "../WidgetCelebration";
 import { useWidgetCelebration } from "../useWidgetCelebration";
+import { SizeSubmenu } from "../SizeSubmenu";
+import { WidgetMenuFooter } from "../WidgetMenuFooter";
+import { useWidgetTelemetry } from "../useWidgetTelemetry";
 
 const TASK_TYPE = {
   IN_PROGRESS: "tasks",
@@ -38,6 +40,7 @@ const PREF_WIDGETS_LISTS_MAX_LISTITEMS = "widgets.lists.maxListItems";
 const PREF_WIDGETS_LISTS_BADGE_ENABLED = "widgets.lists.badge.enabled";
 const PREF_WIDGETS_LISTS_BADGE_LABEL = "widgets.lists.badge.label";
 const PREF_WIDGETS_LISTS_SIZE = "widgets.lists.size";
+// @nova-cleanup(remove-pref): Delete this const; see getListsWidgetSize below.
 const PREF_NOVA_ENABLED = "nova.enabled";
 const LISTS_EMPTY_STATE_ILLUSTRATION =
   "chrome://newtab/content/data/content/assets/lists-empty-state-comet.svg";
@@ -158,6 +161,7 @@ function Lists({
   handleUserInteraction,
   isMaximized,
   widgetsMayBeMaximized,
+  widgetEnabledMap,
 }) {
   const prefs = useSelector(state => state.Prefs.values);
   const { selected, lists } = useSelector(state => state.ListsWidget);
@@ -168,6 +172,10 @@ function Lists({
   const [showCompactCompleted, setShowCompactCompleted] = useState(false);
   const selectedList = useMemo(() => lists[selected], [lists, selected]);
 
+  // @nova-cleanup(remove-pref): Delete novaEnabled and collapse
+  // getListsWidgetSize to just the Nova branch, deleting everything after it
+  // (the PREF_WIDGETS_LISTS_SIZE fallback chain) and the now-unused
+  // PREF_WIDGETS_LISTS_SIZE const.
   const novaEnabled = prefs[PREF_NOVA_ENABLED];
   const listsWidget = WIDGET_REGISTRY.find(w => w.id === "lists");
   const getListsWidgetSize = () => {
@@ -195,9 +203,7 @@ function Lists({
 
   const inputRef = useRef(null);
   const reorderListRef = useRef(null);
-  const sizeSubmenuRef = useRef(null);
   const widgetRef = useRef(null);
-  const impressionFired = useRef(false);
   const {
     celebrationFrame,
     celebrationId,
@@ -205,6 +211,17 @@ function Lists({
     isCelebrating,
     triggerCelebration,
   } = useWidgetCelebration(widgetRef);
+
+  // Pre-hook code reported widget_size as "medium" when the widgets row is
+  // not maximizable, regardless of the resolved widgetSize. Preserve that.
+  const telemetrySize = widgetsMayBeMaximized ? widgetSize : "medium";
+  const { impressionRef, recordUserAction } = useWidgetTelemetry({
+    dispatch,
+    widget: listsWidget,
+    widgetSize: telemetrySize,
+    legacyImpressionTypes: [at.WIDGETS_LISTS_USER_IMPRESSION],
+    legacyUserEventType: at.WIDGETS_LISTS_USER_EVENT,
+  });
 
   const handleListInteraction = useCallback(
     () => handleUserInteraction("lists"),
@@ -226,35 +243,8 @@ function Lists({
     [dispatch, handleListInteraction]
   );
 
-  // store selectedList with useMemo so it isnt re-calculated on every re-render
+  // store selectedList with useMemo so it isn't re-calculated on every re-render
   const isValidUrl = useCallback(str => URL.canParse(str), []);
-
-  const handleIntersection = useCallback(() => {
-    if (impressionFired.current) {
-      return;
-    }
-    impressionFired.current = true;
-
-    batch(() => {
-      dispatch(
-        ac.AlsoToMain({
-          type: at.WIDGETS_LISTS_USER_IMPRESSION,
-        })
-      );
-      const telemetryData = {
-        widget_name: "lists",
-        widget_size: widgetsMayBeMaximized ? widgetSize : "medium",
-      };
-      dispatch(
-        ac.AlsoToMain({
-          type: at.WIDGETS_IMPRESSION,
-          data: telemetryData,
-        })
-      );
-    });
-  }, [dispatch, widgetsMayBeMaximized, widgetSize]);
-
-  const listsRef = useIntersectionObserver(handleIntersection);
 
   const reorderLists = useCallback(
     (draggedElement, targetElement, before = false) => {
@@ -379,24 +369,10 @@ function Lists({
             data: { lists: updatedLists },
           })
         );
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_LISTS_USER_EVENT,
-            data: { userAction: USER_ACTION_TYPES.TASK_CREATE },
-          })
-        );
-        const telemetryData = {
-          widget_name: "lists",
-          widget_source: "widget",
-          user_action: USER_ACTION_TYPES.TASK_CREATE,
-          widget_size: widgetsMayBeMaximized ? widgetSize : "medium",
-        };
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_USER_EVENT,
-            data: telemetryData,
-          })
-        );
+        recordUserAction(USER_ACTION_TYPES.TASK_CREATE, {
+          source: "widget",
+          legacy: true,
+        });
       });
       setNewTask("");
     }
@@ -464,24 +440,11 @@ function Lists({
         })
       );
       if (userAction) {
-        dispatch(
-          ac.AlsoToMain({
-            type: at.WIDGETS_LISTS_USER_EVENT,
-            data: { userAction },
-          })
-        );
-        const telemetryData = {
-          widget_name: "lists",
-          widget_source: "widget",
-          user_action: userAction,
-          widget_size: widgetsMayBeMaximized ? widgetSize : "medium",
-        };
-        dispatch(
-          ac.AlsoToMain({
-            type: at.WIDGETS_USER_EVENT,
-            data: telemetryData,
-          })
-        );
+        recordUserAction(userAction, {
+          source: "widget",
+          legacy: true,
+          alsoToMain: true,
+        });
       }
     });
     handleListInteraction();
@@ -505,24 +468,10 @@ function Lists({
           data: { lists: updatedLists },
         })
       );
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_LISTS_USER_EVENT,
-          data: { userAction: USER_ACTION_TYPES.TASK_DELETE },
-        })
-      );
-      const telemetryData = {
-        widget_name: "lists",
-        widget_source: "widget",
-        user_action: USER_ACTION_TYPES.TASK_DELETE,
-        widget_size: widgetsMayBeMaximized ? widgetSize : "medium",
-      };
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_USER_EVENT,
-          data: telemetryData,
-        })
-      );
+      recordUserAction(USER_ACTION_TYPES.TASK_DELETE, {
+        source: "widget",
+        legacy: true,
+      });
     });
     handleListInteraction();
   }
@@ -579,24 +528,10 @@ function Lists({
             data: id,
           })
         );
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_LISTS_USER_EVENT,
-            data: { userAction: USER_ACTION_TYPES.LIST_CREATE },
-          })
-        );
-        const telemetryData = {
-          widget_name: "lists",
-          widget_source: "widget",
-          user_action: USER_ACTION_TYPES.LIST_CREATE,
-          widget_size: widgetsMayBeMaximized ? widgetSize : "medium",
-        };
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_USER_EVENT,
-            data: telemetryData,
-          })
-        );
+        recordUserAction(USER_ACTION_TYPES.LIST_CREATE, {
+          source: "widget",
+          legacy: true,
+        });
       });
       handleListInteraction();
       return;
@@ -617,24 +552,10 @@ function Lists({
             data: { lists: updatedLists },
           })
         );
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_LISTS_USER_EVENT,
-            data: { userAction: USER_ACTION_TYPES.LIST_EDIT },
-          })
-        );
-        const telemetryData = {
-          widget_name: "lists",
-          widget_source: "widget",
-          user_action: USER_ACTION_TYPES.LIST_EDIT,
-          widget_size: widgetsMayBeMaximized ? widgetSize : "medium",
-        };
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_USER_EVENT,
-            data: telemetryData,
-          })
-        );
+        recordUserAction(USER_ACTION_TYPES.LIST_EDIT, {
+          source: "widget",
+          legacy: true,
+        });
       });
       setIsEditing(false);
       handleListInteraction();
@@ -685,53 +606,12 @@ function Lists({
             data: key,
           })
         );
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_LISTS_USER_EVENT,
-            data: { userAction: USER_ACTION_TYPES.LIST_DELETE },
-          })
-        );
-        const telemetryData = {
-          widget_name: "lists",
-          widget_source: "widget",
-          user_action: USER_ACTION_TYPES.LIST_DELETE,
-          widget_size: widgetsMayBeMaximized ? widgetSize : "medium",
-        };
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_USER_EVENT,
-            data: telemetryData,
-          })
-        );
+        recordUserAction(USER_ACTION_TYPES.LIST_DELETE, {
+          source: "widget",
+          legacy: true,
+        });
       });
     }
-    handleListInteraction();
-  }
-
-  function handleHideLists() {
-    batch(() => {
-      dispatch(
-        ac.OnlyToMain({
-          type: at.SET_PREF,
-          data: {
-            name: "widgets.lists.enabled",
-            value: false,
-          },
-        })
-      );
-      const telemetryData = {
-        widget_name: "lists",
-        widget_source: "context_menu",
-        enabled: false,
-        widget_size: widgetsMayBeMaximized ? widgetSize : "medium",
-      };
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_ENABLED,
-          data: telemetryData,
-        })
-      );
-    });
     handleListInteraction();
   }
 
@@ -762,39 +642,10 @@ function Lists({
       console.error("Copy failed", err);
     }
 
-    batch(() => {
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_LISTS_USER_EVENT,
-          data: { userAction: USER_ACTION_TYPES.LIST_COPY },
-        })
-      );
-      const telemetryData = {
-        widget_name: "lists",
-        widget_source: "widget",
-        user_action: USER_ACTION_TYPES.LIST_COPY,
-        widget_size: widgetsMayBeMaximized ? widgetSize : "medium",
-      };
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_USER_EVENT,
-          data: telemetryData,
-        })
-      );
+    recordUserAction(USER_ACTION_TYPES.LIST_COPY, {
+      source: "widget",
+      legacy: true,
     });
-    handleListInteraction();
-  }
-
-  function handleLearnMore() {
-    dispatch(
-      ac.OnlyToMain({
-        type: at.OPEN_LINK,
-        data: {
-          url: "https://support.mozilla.org/kb/firefox-new-tab-widgets",
-          where: "tab",
-        },
-      })
-    );
     handleListInteraction();
   }
 
@@ -807,39 +658,15 @@ function Lists({
             data: { name: PREF_WIDGETS_LISTS_SIZE, value: size },
           })
         );
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_USER_EVENT,
-            data: {
-              widget_name: "lists",
-              widget_source: "context_menu",
-              user_action: USER_ACTION_TYPES.CHANGE_SIZE,
-              action_value: size,
-              widget_size: size,
-            },
-          })
-        );
+        recordUserAction(USER_ACTION_TYPES.CHANGE_SIZE, {
+          source: "context_menu",
+          value: size,
+          size,
+        });
       });
     },
-    [dispatch]
+    [dispatch, recordUserAction]
   );
-
-  useEffect(() => {
-    const el = sizeSubmenuRef.current;
-    if (!el) {
-      return undefined;
-    }
-
-    const listener = e => {
-      const item = e.composedPath().find(node => node.dataset?.size);
-      if (item) {
-        handleChangeSize(item.dataset.size);
-      }
-    };
-
-    el.addEventListener("click", listener);
-    return () => el.removeEventListener("click", listener);
-  }, [handleChangeSize]);
 
   useEffect(() => {
     setIsAddingTask(false);
@@ -937,10 +764,11 @@ function Lists({
 
   return (
     <article
+      // @nova-cleanup(remove-conditional): Always apply col-4.
       className={`lists widget ${novaEnabled ? "col-4" : ""} ${listsSizeClass} ${isMaximized ? "is-maximized" : ""}${showEmptyState ? " is-empty" : ""}${hasVisibleTasks ? " has-visible-tasks" : ""}${isAddingTask ? " is-adding-task" : ""}${isCelebrating ? " is-celebrating" : ""}`}
       ref={el => {
         widgetRef.current = el;
-        listsRef.current = [el];
+        impressionRef(el);
       }}
     >
       {isCelebrating && celebrationFrame ? (
@@ -1022,7 +850,7 @@ function Lists({
           )}
         <moz-button
           className="lists-panel-button"
-          data-l10n-id="newtab-menu-section-tooltip"
+          data-l10n-id="newtab-widget-lists-menu-button"
           iconSrc="chrome://global/skin/icons/more.svg"
           menuId="lists-panel"
           type="ghost"
@@ -1042,40 +870,33 @@ function Lists({
             data-l10n-id="newtab-widget-lists-menu-delete"
             onClick={() => handleDeleteList()}
           ></panel-item>
-          <hr />
           <panel-item
             data-l10n-id="newtab-widget-lists-menu-copy"
             onClick={() => handleCopyListToClipboard()}
           ></panel-item>
-          {novaEnabled && widgetsMayBeMaximized && (
-            <panel-item submenu="lists-size-submenu">
-              <span data-l10n-id="newtab-widget-menu-change-size"></span>
-              <panel-list
-                ref={sizeSubmenuRef}
-                slot="submenu"
-                id="lists-size-submenu"
-              >
-                {["medium", "large"].map(size => (
-                  <panel-item
-                    key={size}
-                    type="checkbox"
-                    checked={widgetSize === size || undefined}
-                    data-size={size}
-                    data-l10n-id={`newtab-widget-size-${size}`}
-                  />
-                ))}
-              </panel-list>
-            </panel-item>
-          )}
-          <panel-item
-            data-l10n-id="newtab-widget-menu-hide"
-            onClick={() => handleHideLists()}
-          ></panel-item>
-          <panel-item
-            className="learn-more"
-            data-l10n-id="newtab-widget-lists-menu-learn-more"
-            onClick={handleLearnMore}
-          ></panel-item>
+          <WidgetMenuFooter
+            dispatch={dispatch}
+            widgetId="lists"
+            widgetEnabledMap={widgetEnabledMap}
+            widgetName="lists"
+            enabledPref="widgets.lists.enabled"
+            widgetSize={widgetsMayBeMaximized ? widgetSize : "medium"}
+            learnMoreL10nId="newtab-widget-lists-menu-learn-more"
+            onLearnMore={handleListInteraction}
+            sizeSubmenu={
+              // @nova-cleanup(remove-conditional): Drop the novaEnabled check,
+              // keep widgetsMayBeMaximized.
+              novaEnabled &&
+              widgetsMayBeMaximized && (
+                <SizeSubmenu
+                  submenuId="lists-size-submenu"
+                  sizes={["medium", "large"]}
+                  checkedSize={widgetSize}
+                  onChangeSize={handleChangeSize}
+                />
+              )
+            }
+          />
         </panel-list>
       </div>
       {(showInlineAddButton || isAddingTask) && (
@@ -1341,6 +1162,9 @@ function EditableText({
 }) {
   const [tempValue, setTempValue] = useState(value);
   const inputRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const previousFocusRef = useRef(null);
+  const cancellingRef = useRef(false);
 
   // True if tempValue is empty, null/undefined, or only whitespace
   const showPlaceholder = (tempValue ?? "").trim() === "";
@@ -1351,24 +1175,49 @@ function EditableText({
 
   useEffect(() => {
     if (isEditing) {
+      cancellingRef.current = false;
+      previousFocusRef.current = document.activeElement;
       inputRef.current?.focus();
-    } else {
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (!isEditing) {
       setTempValue(value);
     }
   }, [isEditing, value]);
+
+  const handleRestoreFocus = () => {
+    const target = previousFocusRef.current;
+    if (target && document.contains(target)) {
+      target.focus();
+    }
+  };
 
   function handleKeyDown(e) {
     if (e.key === "Enter") {
       onSave(tempValue.trim());
       setIsEditing(false);
     } else if (e.key === "Escape") {
+      cancellingRef.current = true;
       setIsEditing(false);
       setTempValue(value);
       onCancel?.();
+      handleRestoreFocus();
     }
   }
 
-  function handleOnBlur() {
+  function handleOnBlur(e) {
+    // Skip save when cancelling via Escape or the clear button — the
+    // restored focus would otherwise trip handleOnBlur into saving.
+    if (cancellingRef.current) {
+      cancellingRef.current = false;
+      return;
+    }
+    // Skip save when focus moved to the cancel button so its click handler can run.
+    if (e.relatedTarget && wrapperRef.current?.contains(e.relatedTarget)) {
+      return;
+    }
     if (!saveOnBlur) {
       if (tempValue.trim()) {
         return;
@@ -1377,12 +1226,19 @@ function EditableText({
       onCancel?.();
       return;
     }
-
     onSave(tempValue.trim());
     setIsEditing(false);
   }
 
-  return isEditing ? (
+  function handleClear() {
+    cancellingRef.current = true;
+    setIsEditing(false);
+    setTempValue(value);
+    onCancel?.();
+    handleRestoreFocus();
+  }
+
+  const input = (
     <input
       className={`edit-${type}`}
       ref={inputRef}
@@ -1395,9 +1251,29 @@ function EditableText({
       {...(inputL10nId ? { "data-l10n-id": inputL10nId } : {})}
       {...(inputL10nId ? { "data-l10n-attrs": inputL10nAttrs } : {})}
     />
-  ) : (
-    [children]
   );
+
+  if (!isEditing) {
+    return [children];
+  }
+
+  if (type === "list") {
+    return (
+      <div className="edit-list-wrapper" ref={wrapperRef}>
+        {input}
+        <moz-button
+          className="edit-list-clear"
+          type="icon ghost"
+          size="small"
+          iconSrc="chrome://global/skin/icons/close.svg"
+          data-l10n-id="newtab-widget-lists-edit-clear"
+          onClick={handleClear}
+        />
+      </div>
+    );
+  }
+
+  return input;
 }
 
 export { Lists };

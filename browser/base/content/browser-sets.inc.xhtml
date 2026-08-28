@@ -56,6 +56,8 @@
     <command id="cmd_reportBrokenSite"/>
     <command id="cmd_translate" />
     <command id="cmd_openAboutTranslations" />
+    <command id="cmd_editPDF" />
+    <command id="cmd_openReferrals" />
     <!-- work-around bug 392512 -->
     <command id="Browser:AddBookmarkAs" />
     <command id="Browser:SearchBookmarks" />
@@ -86,6 +88,8 @@
     <command id="Browser:NextTab" />
     <command id="Browser:PrevTab" />
     <command id="Browser:ShowAllTabs" />
+    <command id="Browser:AddTabSplitView" />
+    <command id="Browser:SeparateTabSplitView" />
     <command id="cmd_fullZoomReduce" />
     <command id="cmd_fullZoomEnlarge" />
     <command id="cmd_fullZoomReset" />
@@ -96,6 +100,7 @@
     <command id="Browser:OpenLocation" />
     <command id="Browser:RestoreLastSession" disabled="true"/>
     <command id="Browser:NewUserContextTab" />
+    <command id="Browser:AddContainer" />
     <command id="Browser:OpenAboutContainers" />
     <command id="Tools:Search" />
     <command id="Tools:Downloads" />
@@ -112,8 +117,10 @@
     <command id="History:RestoreLastClosedTabOrWindowOrSession" />
     <command id="History:SearchHistory" />
 
-    <command id="wrCaptureCmd" disabled="true"/>
-    <command id="wrToggleCaptureSequenceCmd" disabled="true"/>
+    <!-- The keys for these commands are registered dynamically by gGfxUtils
+         when gfx.webrender.debug.enable-capture is set. -->
+    <command id="wrCaptureCmd"/>
+    <command id="wrToggleCaptureSequenceCmd"/>
 #ifdef NIGHTLY_BUILD
     <command id="windowRecordingCmd" />
 #endif
@@ -273,8 +280,8 @@
 #ifdef XP_MACOSX
     <key id="key_findSelection" data-l10n-id="search-find-selection-shortcut" command="cmd_findSelection" modifiers="accel"/>
 #endif
-    <key data-l10n-id="search-find-again-shortcut-alt" command="cmd_findAgain"/>
-    <key data-l10n-id="search-find-again-shortcut-alt" command="cmd_findPrevious" modifiers="shift"/>
+    <key id="key_findAgain2" data-l10n-id="search-find-again-shortcut-alt" command="cmd_findAgain"/>
+    <key id="key_findPrevious2" data-l10n-id="search-find-again-shortcut-alt" command="cmd_findPrevious" modifiers="shift"/>
 
     <key id="addBookmarkAsKb" data-l10n-id="bookmark-this-page-shortcut" command="Browser:AddBookmarkAs" modifiers="accel"/>
     <key id="bookmarkAllTabsKb"
@@ -296,6 +303,14 @@
 
     <key id="viewGenaiChatSidebarKb"
          data-l10n-id="ai-chatbot-sidebar-shortcut"
+#ifdef XP_MACOSX
+         modifiers="control"
+#else
+         modifiers="accel,alt"
+#endif
+         />
+    <key id="viewOpenTabsSidebarKb"
+         data-l10n-id="open-tabs-sidebar-shortcut2"
 #ifdef XP_MACOSX
          modifiers="control"
 #else
@@ -358,6 +373,8 @@
     <key id="key_restoreLastClosedTabOrWindowOrSession" command="History:RestoreLastClosedTabOrWindowOrSession" data-l10n-id="tab-new-shortcut" modifiers="accel,shift"/>
     <key id="key_undoCloseWindow" command="History:UndoCloseWindow" data-l10n-id="window-new-shortcut" modifiers="accel,shift"/>
 
+    <key id="key_addTabSplitView" command="Browser:AddTabSplitView"/>
+    <key id="key_separateTabSplitView" command="Browser:SeparateTabSplitView"/>
     <key id="key_duplicateTab" command="Browser:DuplicateTab"/>
 
 #ifdef XP_GNOME
@@ -376,20 +393,6 @@
 #expand    <key id="key_selectTab8" key="8" modifiers="__NUM_SELECT_TAB_MODIFIER__"/>
 #expand    <key id="key_selectLastTab" key="9" modifiers="__NUM_SELECT_TAB_MODIFIER__"/>
 
-    <key id="key_wrCaptureCmd"
-#ifdef XP_MACOSX
-    key="3" modifiers="control,shift"
-#else
-    key="#" modifiers="control"
-#endif
-    command="wrCaptureCmd"/>
-    <key id="key_wrToggleCaptureSequenceCmd"
-#ifdef XP_MACOSX
-    key="6" modifiers="control,shift"
-#else
-    key="^" modifiers="control"
-#endif
-    command="wrToggleCaptureSequenceCmd"/>
 #ifdef NIGHTLY_BUILD
     <key id="key_windowRecordingCmd"
 #ifdef XP_MACOSX

@@ -51,6 +51,10 @@
     :members:
     :exclude-members: LoginsApiError
 ```
+```{js:autoclass} RustLogins.sys.LoginsBridgedEngine
+    :members:
+    :exclude-members: LoginsBridgedEngine
+```
 ```{js:autoclass} RustLogins.sys.LoginsDeletionMetrics
     :members:
     :exclude-members: LoginsDeletionMetrics

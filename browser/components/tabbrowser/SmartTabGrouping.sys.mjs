@@ -13,6 +13,7 @@ import {
 } from "chrome://global/content/ml/NLPUtils.sys.mjs";
 
 import {
+  agglomerativeClusterCosine,
   computeCentroidFrom2DArray,
   computeRandScore,
   euclideanDistance,
@@ -22,6 +23,11 @@ import {
 } from "chrome://global/content/ml/ClusterAlgos.sys.mjs";
 
 import { AIFeature } from "chrome://global/content/ml/AIFeature.sys.mjs";
+import { embeddingsGeneratorFactory } from "chrome://global/content/ml/EmbeddingsGenerator.sys.mjs";
+
+/**
+ * @typedef {import("chrome://global/content/ml/EmbeddingsGenerator.sys.mjs").EmbeddingsGenerator} EmbeddingsGenerator
+ */
 
 const lazy = {};
 
@@ -54,10 +60,21 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "browser.tabs.groups.smart.topicModelRevision"
 );
 
+// Test/Nimbus override to pick the clustering method, e.g. "AGGLOMERATIVE".
 XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
-  "embeddingModelRevision",
-  "browser.tabs.groups.smart.embeddingModelRevision"
+  "clusterMethod",
+  "browser.tabs.groups.smart.clusterMethod",
+  ""
+);
+
+// AGGLOMERATIVE cosine-distance cutoff, as an int in thousandths (800 => 0.80).
+// 0 keeps the config default. Stored as an int since prefs have no float type.
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "agglomerativeThresholdInt",
+  "browser.tabs.groups.smart.agglomerativeThresholdInt",
+  0
 );
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -67,8 +84,12 @@ XPCOMUtils.defineLazyPreferenceGetter(
 );
 
 const EMBED_TEXT_KEY = "combined_text";
+// Cap the items compared when scoring cluster cohesion so the O(n^2) pairwise
+// cost stays bounded for unexpectedly large clusters (20 items => 190 pairs).
+const MAX_COHESION_ITEMS = 20;
 export const CLUSTER_METHODS = {
   KMEANS: "KMEANS",
+  AGGLOMERATIVE: "AGGLOMERATIVE", // hierarchical, average-linkage cosine + threshold
 };
 
 // Methods for finding similar items for an existing cluster
@@ -84,7 +105,6 @@ export const PREGROUPED_HANDLING_METHODS = {
 };
 
 const EXPECTED_TOPIC_MODEL_OBJECTS = 6;
-const EXPECTED_EMBEDDING_MODEL_OBJECTS = 4;
 
 const MAX_NON_SUMMARIZED_SEARCH_LENGTH = 26;
 
@@ -103,7 +123,6 @@ const ML_TASK_FEATURE_EXTRACTION = "feature-extraction";
 const ML_TASK_TEXT2TEXT = "text2text-generation";
 
 const STG_FEATURE_ID = "smart-tab-grouping";
-const STG_EMBEDDING_FEATURE_ID = "smart-tab-embedding";
 const STG_TOPIC_FEATURE_ID = "smart-tab-topic";
 
 const LABEL_REASONS = {
@@ -114,23 +133,15 @@ const LABEL_REASONS = {
 };
 
 export const SMART_TAB_GROUPING_CONFIG = {
-  embedding: {
-    dtype: "q8",
-    timeoutMS: 2 * 60 * 1000, // 2 minutes
-    taskName: ML_TASK_FEATURE_EXTRACTION,
-    featureId: STG_EMBEDDING_FEATURE_ID,
-    engineId: FEATURES[STG_EMBEDDING_FEATURE_ID].engineId,
-    backend: "onnx-native",
-    fallbackBackend: "onnx",
-  },
+  // Embeddings use the shared embeddingsGeneratorFactory.forGeneral() model;
+  // see _generateEmbeddings.
   topicGeneration: {
     dtype: "q8",
     timeoutMS: 2 * 60 * 1000, // 2 minutes
     taskName: ML_TASK_TEXT2TEXT,
     featureId: STG_TOPIC_FEATURE_ID,
     engineId: FEATURES[STG_TOPIC_FEATURE_ID].engineId,
-    backend: "onnx-native",
-    fallbackBackend: "onnx",
+    backend: "best-onnx",
   },
   dataConfig: {
     titleKey: "label",
@@ -138,8 +149,11 @@ export const SMART_TAB_GROUPING_CONFIG = {
   },
   clustering: {
     dimReductionMethod: null, // Not completed.
-    clusterImplementation: CLUSTER_METHODS.KMEANS,
+    clusterImplementation: CLUSTER_METHODS.AGGLOMERATIVE,
     clusteringTriesPerK: 3,
+    // AGGLOMERATIVE cosine-distance cutoff; lower = stricter (more, smaller
+    // groups), higher = more lenient (fewer, larger groups).
+    agglomerativeThreshold: 0.85,
     anchorMethod: ANCHOR_METHODS.FIXED,
     pregroupedHandlingMethod: PREGROUPED_HANDLING_METHODS.EXCLUDE,
     pregroupedSilhouetteBoost: 2, // Relative weight of the cluster's score and all other cluster's combined
@@ -245,6 +259,14 @@ export class SmartTabGroupingManager extends AIFeature {
   constructor(config) {
     super();
     this.config = config || structuredClone(SMART_TAB_GROUPING_CONFIG);
+    // Optional pref overrides for the clustering method and AGGLOMERATIVE tau.
+    const clustering = this.config.clustering;
+    if (lazy.clusterMethod in CLUSTER_METHODS) {
+      clustering.clusterImplementation = lazy.clusterMethod;
+    }
+    if (lazy.agglomerativeThresholdInt > 0) {
+      clustering.agglomerativeThreshold = lazy.agglomerativeThresholdInt / 1000;
+    }
   }
 
   /**
@@ -376,10 +398,9 @@ export class SmartTabGroupingManager extends AIFeature {
    * @returns {Promise<void>}
    */
   static async deleteSmartTabModels() {
-    const engineIds = [
-      FEATURES[STG_TOPIC_FEATURE_ID].engineId,
-      FEATURES[STG_EMBEDDING_FEATURE_ID].engineId,
-    ];
+    // The embedding model is shared (forGeneral); only the topic model is
+    // STG-owned, so don't uninstall the embedding model here.
+    const engineIds = [FEATURES[STG_TOPIC_FEATURE_ID].engineId];
     // Remove all ML Engine files associated with this feature.
     await lazy.MLUninstallService.uninstall({
       engineIds,
@@ -398,20 +419,25 @@ export class SmartTabGroupingManager extends AIFeature {
   }
 
   /**
-   * Initializes the embedding engine by running a test request
-   * This helps remove the init latency
+   * Shared embeddings generator (forGeneral), created on first use.
+   *
+   * @returns {EmbeddingsGenerator}
+   */
+  getEmbeddingsGenerator() {
+    if (!this.embeddingsGenerator) {
+      this.embeddingsGenerator = embeddingsGeneratorFactory.forGeneral();
+    }
+    return this.embeddingsGenerator;
+  }
+
+  /**
+   * Warms up the embedding engine to remove first-use init latency.
    */
   async initEmbeddingEngine() {
-    if (!SmartTabGroupingManager.isEngineClosed(this.embeddingEngine)) {
-      return;
-    }
     try {
-      this.embeddingEngine = await this._createMLEngine(this.config.embedding);
-      const request = {
-        args: ["Test"],
-        options: { pooling: "mean", normalize: true },
-      };
-      this.embeddingEngine.run(request);
+      await this.getEmbeddingsGenerator().ensureEngine();
+      // warm up the engine
+      await this.getEmbeddingsGenerator().embedMany(["test"]);
     } catch (e) {}
   }
 
@@ -1036,11 +1062,6 @@ export class SmartTabGroupingManager extends AIFeature {
       lazy.topicModelRevision !== LATEST_MODEL_REVISION
     ) {
       initData.modelRevision = lazy.topicModelRevision;
-    } else if (
-      featureId === SMART_TAB_GROUPING_CONFIG.embedding.featureId &&
-      lazy.embeddingModelRevision !== LATEST_MODEL_REVISION
-    ) {
-      initData.modelRevision = lazy.embeddingModelRevision;
     }
     return initData;
   }
@@ -1062,7 +1083,6 @@ export class SmartTabGroupingManager extends AIFeature {
       modelId,
       modelRevision,
       backend,
-      fallbackBackend,
     } = engineConfig;
     let initData = {
       featureId,
@@ -1076,20 +1096,13 @@ export class SmartTabGroupingManager extends AIFeature {
     };
 
     initData = SmartTabGroupingManager.getUpdatedInitData(initData, featureId);
-    let engine;
-    try {
-      engine = await createEngine(initData, progressCallback);
-      this.backend = backend;
-    } catch (e) {
-      engine = await createEngine(
-        {
-          ...initData,
-          backend: fallbackBackend,
-        },
-        progressCallback
-      );
-      this.backend = fallbackBackend;
-    }
+    const engine = await createEngine(initData, progressCallback);
+    // For "best-onnx" (and similar) the actual backend is decided in the
+    // inference child and reported back via EnginePort:EngineReady, so
+    // read it off the engine. We deliberately don't fall back to the
+    // requested backend here: telemetry consumers only care about which
+    // concrete backend ran, never the "best-*" sentinel.
+    this.backend = engine.pipelineOptions?.backend;
     return engine;
   }
 
@@ -1101,22 +1114,11 @@ export class SmartTabGroupingManager extends AIFeature {
    * @private
    */
   async _generateEmbeddings(textToEmbedList) {
-    const inputData = {
-      inputArgs: textToEmbedList,
-      runOptions: {
-        pooling: "mean",
-        normalize: true,
-      },
-    };
-
-    if (SmartTabGroupingManager.isEngineClosed(this.embeddingEngine)) {
-      this.embeddingEngine = await this._createMLEngine(this.config.embedding);
+    if (!textToEmbedList?.length) {
+      return [];
     }
-    const request = {
-      args: [inputData.inputArgs],
-      options: inputData.runOptions,
-    };
-    return await this.embeddingEngine.run(request);
+    // embedMany mean-pools + normalizes and returns one vector per string.
+    return this.getEmbeddingsGenerator().embedMany(textToEmbedList);
   }
 
   /**
@@ -1274,6 +1276,28 @@ export class SmartTabGroupingManager extends AIFeature {
   }
 
   /**
+   * Clusters embeddings agglomeratively (average-linkage cosine). The number of
+   * groups emerges from `agglomerativeThreshold`, so there is no k-sweep.
+   *
+   * @param {object} params
+   * @param {object[]} params.tabs
+   * @param {number[][]} params.embeddings
+   * @returns {SmartTabGroupingResult}
+   */
+  _clusterEmbeddingsHAC({ tabs, embeddings }) {
+    const indices = agglomerativeClusterCosine(
+      embeddings,
+      this.config.clustering.agglomerativeThreshold
+    );
+    return new SmartTabGroupingResult({
+      indices,
+      tabs,
+      embeddings,
+      config: this.config,
+    });
+  }
+
+  /**
    * Generates clusters for a given list of tabs using precomputed embeddings or newly generated ones.
    *
    * @param {object[]} tabList - List of tab objects to be clustered.
@@ -1300,7 +1324,9 @@ export class SmartTabGroupingManager extends AIFeature {
       this.docEmbeddings = precomputedEmbeddings;
     } else {
       this.docEmbeddings = await this._generateEmbeddings(
-        structuredData.map(a => a[EMBED_TEXT_KEY])
+        structuredData.map(a =>
+          SmartTabGroupingManager.preprocessText(a[EMBED_TEXT_KEY])
+        )
       );
     }
     let bestResultCluster;
@@ -1308,20 +1334,32 @@ export class SmartTabGroupingManager extends AIFeature {
 
     const NUM_RUNS = 1;
     for (let i = 0; i < NUM_RUNS; i++) {
-      const curResult = this._clusterEmbeddings({
-        tabs: tabList,
-        embeddings: this.docEmbeddings,
-        k: numClusters,
-        randomFunc: randFunc,
-        anchorIndices,
-        alreadyGroupedIndices,
-      });
+      const curResult =
+        this.config.clustering.clusterImplementation ===
+        CLUSTER_METHODS.AGGLOMERATIVE
+          ? this._clusterEmbeddingsHAC({
+              tabs: tabList,
+              embeddings: this.docEmbeddings,
+            })
+          : this._clusterEmbeddings({
+              tabs: tabList,
+              embeddings: this.docEmbeddings,
+              k: numClusters,
+              randomFunc: randFunc,
+              anchorIndices,
+              alreadyGroupedIndices,
+            });
       const distance = curResult.getCentroidInertia();
       if (distance < bestResultDistance) {
         bestResultDistance = distance;
         bestResultCluster = curResult;
       }
     }
+    // Attach a per-group quality score (average pairwise cosine similarity) so
+    // callers can rank/threshold the suggested groups by confidence.
+    bestResultCluster?.clusterRepresentations.forEach(rep => {
+      rep.cohesion = rep.getCohesion();
+    });
     return bestResultCluster;
   }
 
@@ -1346,13 +1384,14 @@ export class SmartTabGroupingManager extends AIFeature {
   /**
    * Utility function that loads all required engines for Smart Tab Grouping and any dependent models
    *
-   * @param {(progress: { percentage: number }) => void} progressCallback callback function to call.
+   * @param {(progress: { percentage: number }) => void} [progressCallback] callback function to call.
    * Callback passes a dict with percentage indicating best effort 0.0-100.0 progress in model download.
+   * Optional: callers that don't surface progress can omit it.
    */
   async preloadAllModels(progressCallback) {
     let previousProgress = -1;
-    const expectedObjects =
-      EXPECTED_TOPIC_MODEL_OBJECTS + EXPECTED_EMBEDDING_MODEL_OBJECTS;
+    // Embedding download isn't wired into this aggregator; track topic only.
+    const expectedObjects = EXPECTED_TOPIC_MODEL_OBJECTS;
     // TODO - Find a way to get these fields. Add as a transformers js callback or within remotesettings
 
     const UPDATE_THRESHOLD_PERCENTAGE = 0.5;
@@ -1377,7 +1416,7 @@ export class SmartTabGroupingManager extends AIFeature {
           Math.abs(previousProgress - progress) > UPDATE_THRESHOLD_PERCENTAGE
         ) {
           // Update only once changes are above a threshold to avoid throttling the UI with events.
-          progressCallback({
+          progressCallback?.({
             percentage: progress,
           });
           previousProgress = progress;
@@ -1389,22 +1428,17 @@ export class SmartTabGroupingManager extends AIFeature {
       ],
     });
 
-    const [topicEngine, embeddingEngine] = await Promise.all([
+    const [topicEngine] = await Promise.all([
       this._createMLEngine(
         this.config.topicGeneration,
         mutliProgressAggregator?.aggregateCallback.bind(
           mutliProgressAggregator
         ) || null
       ),
-      this._createMLEngine(
-        this.config.embedding,
-        mutliProgressAggregator?.aggregateCallback.bind(
-          mutliProgressAggregator
-        ) || null
-      ),
+      // Warm up the shared embedding engine in parallel
+      this.initEmbeddingEngine(),
     ]);
     this.topicEngine = topicEngine;
-    this.embeddingEngine = embeddingEngine;
   }
 
   /**
@@ -1640,7 +1674,7 @@ export class SmartTabGroupingManager extends AIFeature {
       tabs_removed: numTabsRemoved,
       model_revision: embeddingEngineConfig.modelRevision || "",
       id,
-      backend: this.backend || "onnx-native",
+      backend: this.getEmbeddingsGenerator().options.backend || "onnx-native",
     });
   }
 
@@ -1657,11 +1691,9 @@ export class SmartTabGroupingManager extends AIFeature {
       );
     }
     if (!this.embeddingEngineConfig) {
+      const { featureId, taskName } = this.getEmbeddingsGenerator().options;
       this.embeddingEngineConfig =
-        await lazy.MLEngineParent.getInferenceOptions(
-          this.config.embedding.featureId,
-          this.config.embedding.taskName
-        );
+        await lazy.MLEngineParent.getInferenceOptions(featureId, taskName);
     }
     return {
       [ML_TASK_TEXT2TEXT]: this.topicEngineConfig,
@@ -1917,6 +1949,45 @@ class EmbeddingCluster {
       totalDistance += euclideanDistance(this.centroid, embedding, true);
     });
     return totalDistance;
+  }
+
+  /**
+   * Cohesion of the cluster: the average pairwise cosine similarity between its
+   * items' embeddings. Ranges from ~0 (unrelated) to 1 (near-identical). Used as
+   * a quality/confidence score for the group. Returns 0 for clusters with fewer
+   * than two items (no pair to compare).
+   *
+   * The pairwise comparison is O(n^2). Clusters larger than MAX_COHESION_ITEMS
+   * are first reduced to that many items, sampled evenly across the cluster, and
+   * those are compared exhaustively, so an unexpectedly large cluster can't cause
+   * a quadratic blow-up and no pair is measured twice.
+   *
+   * @returns {number}
+   */
+  getCohesion() {
+    const all = this.embeddings;
+    const total = all ? all.length : 0;
+    if (total < 2) {
+      return 0;
+    }
+    let embeddings = all;
+    if (total > MAX_COHESION_ITEMS) {
+      embeddings = [];
+      const step = total / MAX_COHESION_ITEMS;
+      for (let i = 0; i < MAX_COHESION_ITEMS; i++) {
+        embeddings.push(all[Math.floor(i * step)]);
+      }
+    }
+    const n = embeddings.length;
+    let sum = 0;
+    let pairs = 0;
+    for (let a = 0; a < n; a++) {
+      for (let b = a + 1; b < n; b++) {
+        sum += cosSim(embeddings[a], embeddings[b]);
+        pairs++;
+      }
+    }
+    return sum / pairs;
   }
 
   /**

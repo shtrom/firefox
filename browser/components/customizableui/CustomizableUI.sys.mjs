@@ -42,6 +42,7 @@ const kPrefCustomizationDebug = "browser.uiCustomization.debug";
 const kPrefDrawInTitlebar = "browser.tabs.inTitlebar";
 const kPrefUIDensity = "browser.uidensity";
 const kPrefAutoTouchMode = "browser.touchmode.auto";
+const kPrefNovaEnabled = "browser.nova.enabled";
 const kPrefAutoHideDownloadsButton = "browser.download.autohideButton";
 const kPrefProtonToolbarVersion = "browser.proton.toolbar.version";
 const kPrefHomeButtonUsed = "browser.engagement.home-button.has-used";
@@ -67,7 +68,7 @@ const kSubviewEvents = ["ViewShowing", "ViewHiding"];
  * The current version. We can use this to auto-add new default widgets as necessary.
  * (would be const but isn't because of testing purposes)
  */
-var kVersion = 24;
+var kVersion = 26;
 
 /**
  * Buttons removed from built-ins by version they were removed. kVersion must be
@@ -182,7 +183,9 @@ var gUIStateBeforeReset = {
   drawInTitlebar: null,
   currentTheme: null,
   uiDensity: null,
+  uiDensityHadUserValue: null,
   autoTouchMode: null,
+  autoTouchModeHadUserValue: null,
   sidebarPositionStart: null,
 };
 
@@ -317,6 +320,8 @@ var CustomizableUIInternal = {
   initialize() {
     lazy.log.debug("Initializing");
 
+    this._setAutoTouchModeDefault();
+
     lazy.AddonManagerPrivate.databaseReady.then(async () => {
       lazy.AddonManager.addAddonListener(this);
 
@@ -377,10 +382,7 @@ var CustomizableUIInternal = {
         type: CustomizableUI.TYPE_TOOLBAR,
         overflowable: true,
         defaultPlacements: navbarPlacements,
-        verticalTabsDefaultPlacements: [
-          "firefox-view-button",
-          "alltabs-button",
-        ],
+        verticalTabsDefaultPlacements: ["alltabs-button", "ai-window-toggle"],
         defaultCollapsed: false,
       },
       true
@@ -403,10 +405,11 @@ var CustomizableUIInternal = {
       {
         type: CustomizableUI.TYPE_TOOLBAR,
         defaultPlacements: [
-          "firefox-view-button",
           "tabbrowser-tabs",
           "new-tab-button",
+          "spring",
           "alltabs-button",
+          "ai-window-toggle",
         ],
         verticalTabsDefaultPlacements: [],
         defaultCollapsed: null,
@@ -447,6 +450,19 @@ var CustomizableUIInternal = {
     Services.prefs.addObserver(kPrefSidebarVerticalTabsEnabled, this);
     Services.prefs.addObserver(kPrefSidebarRevampEnabled, this);
     Services.prefs.addObserver(kPrefSidebarPositionStartEnabled, this);
+  },
+
+  // Sets the default for browser.touchmode.auto (whether the UI density
+  // auto-switches to touch in tablet mode) based on whether nova is enabled.
+  // The pref is sticky so that a user value is preserved even when it matches
+  // the default this derives at startup.
+  _setAutoTouchModeDefault() {
+    Services.prefs
+      .getDefaultBranch("")
+      .setBoolPref(
+        kPrefAutoTouchMode,
+        !Services.prefs.getBoolPref(kPrefNovaEnabled, false)
+      );
   },
 
   /**
@@ -850,6 +866,62 @@ var CustomizableUIInternal = {
         !navbarPlacements.includes("reset-pbm-toolbar-button")
       ) {
         navbarPlacements.push("reset-pbm-toolbar-button");
+      }
+    }
+
+    // Remove firefox view button for new profiles and users who have barely
+    // interacted with it (<=2 recorded clicks).
+    if (currentVersion < 25) {
+      let firefoxViewArea = CustomizableUI.verticalTabsEnabled
+        ? gSavedState.placements[CustomizableUI.AREA_NAVBAR]
+        : gSavedState.placements[CustomizableUI.AREA_TABSTRIP];
+      let defaultIndex = CustomizableUI.verticalTabsEnabled
+        ? firefoxViewArea?.indexOf("alltabs-button") - 1
+        : 0;
+      if (firefoxViewArea?.[defaultIndex] === "firefox-view-button") {
+        let shouldKeepFirefoxView = false;
+        try {
+          let { count } = JSON.parse(
+            Services.prefs.getStringPref("browser.firefox-view.button-clicks")
+          );
+          shouldKeepFirefoxView = count > 2;
+        } catch (e) {
+          console.error(e);
+        }
+        if (!shouldKeepFirefoxView) {
+          firefoxViewArea.splice(defaultIndex, 1);
+        }
+      }
+    }
+
+    // Add the flexible space that replaced the post-tabs titlebar-spacer to the
+    // left of the alltabs-button. Only the horizontal tab strip layout is
+    // touched, to match the defaults (a fresh vertical-tabs profile doesn't get
+    // this space). For users currently in vertical tabs, that layout lives in
+    // the horizontal snapshot rather than the live tabstrip placements.
+    if (currentVersion < 26) {
+      let insertBeforeAllTabs = placements => {
+        if (!placements) {
+          return placements;
+        }
+        let alltabsIndex = placements.indexOf("alltabs-button");
+        if (
+          alltabsIndex > 0 &&
+          !placements[alltabsIndex - 1].startsWith(kSpecialWidgetPfx + "spring")
+        ) {
+          placements.splice(alltabsIndex, 0, "spring");
+        }
+        return placements;
+      };
+
+      insertBeforeAllTabs(gSavedState.placements[CustomizableUI.AREA_TABSTRIP]);
+
+      let horizontalSnapshot =
+        CustomizableUIInternal.getSavedHorizontalSnapshotState();
+      if (horizontalSnapshot.length) {
+        CustomizableUIInternal.saveHorizontalTabStripState(
+          insertBeforeAllTabs(horizontalSnapshot)
+        );
       }
     }
   },
@@ -1426,8 +1498,9 @@ var CustomizableUIInternal = {
           }
         } else if (
           provider == CustomizableUI.PROVIDER_XUL &&
+          !this.isWidgetRemovable(node) &&
           node.parentNode != container &&
-          !this.isWidgetRemovable(node)
+          !aAreaNode.overflowable?.isInOverflowList(node)
         ) {
           placementsToRemove.add(id);
           continue;
@@ -3952,14 +4025,14 @@ var CustomizableUIInternal = {
   /**
    * @see CustomizableUI.createWidget
    * @param {CustomizableUICreateWidgetProperties} aProperties
+   * @param {string} [aSource]
+   *   One of the CustomizableUI.SOURCE_* constants; defaults to
+   *   CustomizableUI.SOURCE_EXTERNAL.
    * @returns {string}
    *   The ID of the created widget.
    */
-  createWidget(aProperties) {
-    let widget = this.normalizeWidget(
-      aProperties,
-      CustomizableUI.SOURCE_EXTERNAL
-    );
+  createWidget(aProperties, aSource = CustomizableUI.SOURCE_EXTERNAL) {
+    let widget = this.normalizeWidget(aProperties, aSource);
     // XXXunf This should probably throw.
     if (!widget) {
       lazy.log.error("unable to normalize widget");
@@ -4499,8 +4572,20 @@ var CustomizableUIInternal = {
         kPrefCustomizationState
       );
       gUIStateBeforeReset.uiDensity = Services.prefs.getIntPref(kPrefUIDensity);
+      // browser.uidensity is sticky, so an explicit value equal to the default
+      // (normal density) still counts as a user value. Remember whether one was
+      // set so undoReset can faithfully restore the automatic (no user value)
+      // state rather than pinning the density to normal.
+      gUIStateBeforeReset.uiDensityHadUserValue =
+        Services.prefs.prefHasUserValue(kPrefUIDensity);
       gUIStateBeforeReset.autoTouchMode =
         Services.prefs.getBoolPref(kPrefAutoTouchMode);
+      // browser.touchmode.auto is sticky, so an explicit value equal to the
+      // default still counts as a user value. Remember whether one was set so
+      // undoReset can faithfully restore the no-user-value state rather than
+      // pinning it with an explicit default-valued user pref.
+      gUIStateBeforeReset.autoTouchModeHadUserValue =
+        Services.prefs.prefHasUserValue(kPrefAutoTouchMode);
       gUIStateBeforeReset.currentTheme = gSelectedTheme;
       gUIStateBeforeReset.autoHideDownloadsButton = Services.prefs.getBoolPref(
         kPrefAutoHideDownloadsButton
@@ -4606,7 +4691,9 @@ var CustomizableUIInternal = {
       drawInTitlebar,
       currentTheme,
       uiDensity,
+      uiDensityHadUserValue,
       autoTouchMode,
+      autoTouchModeHadUserValue,
       autoHideDownloadsButton,
       sidebarPositionStart,
     } = gUIStateBeforeReset;
@@ -4618,8 +4705,16 @@ var CustomizableUIInternal = {
 
     Services.prefs.setCharPref(kPrefCustomizationState, uiCustomizationState);
     Services.prefs.setIntPref(kPrefDrawInTitlebar, drawInTitlebar);
-    Services.prefs.setIntPref(kPrefUIDensity, uiDensity);
-    Services.prefs.setBoolPref(kPrefAutoTouchMode, autoTouchMode);
+    if (uiDensityHadUserValue) {
+      Services.prefs.setIntPref(kPrefUIDensity, uiDensity);
+    } else {
+      Services.prefs.clearUserPref(kPrefUIDensity);
+    }
+    if (autoTouchModeHadUserValue) {
+      Services.prefs.setBoolPref(kPrefAutoTouchMode, autoTouchMode);
+    } else {
+      Services.prefs.clearUserPref(kPrefAutoTouchMode);
+    }
     Services.prefs.setBoolPref(
       kPrefAutoHideDownloadsButton,
       autoHideDownloadsButton
@@ -5156,6 +5251,12 @@ var CustomizableUIInternal = {
         );
         continue;
       }
+      // Remove all springs located in the tabs toolbar when vertical tabs are enabled
+      // there's one by default but the user could add as many as they want
+      if (this.isSpecialWidget(widgetId) && widgetId.includes("spring")) {
+        this.removeWidgetFromArea(widgetId);
+        continue;
+      }
       // if this is a extension, those are handled in a toolbarvisibilitychange handler in browser-addons.js
       if (CustomizableUI.isWebExtensionWidget(widgetId)) {
         lazy.log.debug(`Skipping a webextension saved placement ${widgetId}`);
@@ -5337,6 +5438,12 @@ var CustomizableUIInternal = {
             id,
             CustomizableUI.AREA_VERTICAL_TABSTRIP
           );
+          continue;
+        }
+        // Remove all springs located in the tabs toolbar when vertical tabs are enabled
+        // there's one by default but the user could add as many as they want
+        if (this.isSpecialWidget(id) && id.includes("spring")) {
+          this.removeWidgetFromArea(id);
           continue;
         }
         // We add the tab strip placements later in the case they have a custom position
@@ -6167,11 +6274,14 @@ export var CustomizableUI = {
    *
    * @param {CustomizableUICreateWidgetProperties} aProperties
    *   The properties for the widget to be created.
+   * @param {string} [aSource]
+   *   One of the CustomizableUI.SOURCE_* constants; defaults to
+   *   CustomizableUI.SOURCE_EXTERNAL.
    * @returns {WidgetGroupWrapper|XULWidgetGroupWrapper}
    */
-  createWidget(aProperties) {
+  createWidget(aProperties, aSource) {
     return CustomizableUIInternal.wrapWidget(
-      CustomizableUIInternal.createWidget(aProperties)
+      CustomizableUIInternal.createWidget(aProperties, aSource)
     );
   },
   /**
@@ -7127,7 +7237,11 @@ function WidgetGroupWrapper(aWidget) {
   });
 
   this.__defineGetter__("areaType", function () {
-    let areaProps = gAreas.get(aWidget.currentArea);
+    let { currentArea } = aWidget;
+    if (!currentArea) {
+      return null;
+    }
+    let areaProps = gAreas.get(currentArea);
     return areaProps && areaProps.get("type");
   });
 
@@ -7185,6 +7299,11 @@ function WidgetSingleWrapper(aWidget, aNode) {
   });
 
   this.__defineGetter__("overflowed", function () {
+    // A widget that isn't built in this window (e.g. showInPrivateBrowsing:false
+    // in a private window) can't be overflowed.
+    if (!aNode) {
+      return false;
+    }
     return aNode.getAttribute("overflowedItem") == "true";
   });
 

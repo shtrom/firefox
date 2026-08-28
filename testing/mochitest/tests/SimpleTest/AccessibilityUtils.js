@@ -785,6 +785,9 @@ this.AccessibilityUtils = (function () {
           node.getRootNode().host?.localName === "moz-radio") ||
         (role === Ci.nsIAccessibleRole.ROLE_RADIOBUTTON &&
           node.getRootNode().host?.localName === "moz-visual-picker-item") ||
+        // Sidebar lists also use a roving tabindex.
+        (role === Ci.nsIAccessibleRole.ROLE_SUMMARY &&
+          node.getRootNode().host?.localName === "sidebar-bookmark-list") ||
         shouldIgnoreTabIndex(node))
     );
   }
@@ -1314,6 +1317,10 @@ this.AccessibilityUtils = (function () {
         // Some tests click hidden nodes. These clearly aren't testing the UI
         // for the node itself (and presumably there is a test somewhere else
         // that does). Therefore, we can't (and shouldn't) do a11y checks.
+        a11yWarn(
+          "handleEvent() was unable to perform a11y checks on hidden node",
+          { DOMNode: composedTarget }
+        );
         return;
       }
       this.assertCanBeClicked(composedTarget);

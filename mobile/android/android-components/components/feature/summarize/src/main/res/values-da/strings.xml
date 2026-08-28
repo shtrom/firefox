@@ -75,6 +75,16 @@
   <string name="mozac_summarize_settings_shake_to_summarize">Ryst for at sammenfatte</string>
   <!-- Description for the shake to summarize toggle in settings -->
   <string name="mozac_summarize_settings_shake_to_summarize_description">Ryst din enhed fra side til side for at sammenfatte en side.</string>
+  <!-- Label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity">Rystefølsomhed</string>
+  <!-- Description for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_description">Juster hvor hårdt du skal ryste for at udløse sammenfatning.</string>
+  <!-- Low option label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_low">Lav</string>
+  <!-- Medium option label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_medium">Mellem</string>
+  <!-- High option label for the shake sensitivity slider in settings -->
+  <string name="mozac_summarize_settings_shake_sensitivity_high">Høj</string>
   <!-- Message for summary by model, %1$s is the name of the model that is being displayed -->
   <string name="mozac_feature_summarize_summary_model">Sammenfatning af %1$s</string>
   <!-- Disclaimer message -->
@@ -85,4 +95,10 @@
   <string name="mozac_ai_controls_page_summary_description">Sider og sammenfatninger gemmes aldrig.</string>
   <!-- Button text for the Error dismiss button on Shake to Summarize -->
   <string name="mozac_summarize_error_dissmiss">Afvis</string>
+  <!-- Title for the Mozilla account sign-in screen, shown when summarization results in a connection failure. -->
+  <string name="mozac_summarize_fxa_sign_in_title">Log ind for at sammenfatte</string>
+  <!-- Message on the sign-in screen, inviting the user to continue with an existing Mozilla account or create a new one -->
+  <string xmlns:ns0="http://schemas.android.com/tools" name="mozac_summarize_fxa_sign_in_message" ns0:ignore="BrandUsage">Brug din Mozilla-konto til at fortsætte, eller opret en for at komme i gang.</string>
+  <!-- Label for the button that starts the sign-in flow -->
+  <string name="mozac_summarize_fxa_sign_in_button_positive">Log ind</string>
 </resources>

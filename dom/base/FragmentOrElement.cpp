@@ -35,11 +35,13 @@
 #include "mozilla/dom/DocumentInlines.h"
 #include "mozilla/dom/EditContext.h"
 #include "mozilla/dom/Event.h"
+#include "mozilla/dom/HTMLHeadingElement.h"
 #include "mozilla/dom/NodeInfo.h"
 #include "mozilla/dom/RadioGroupContainer.h"
 #include "mozilla/dom/ScriptLoader.h"
 #include "mozilla/dom/StylePropertyMap.h"
 #include "mozilla/dom/StylePropertyMapReadOnly.h"
+#include "mozilla/dom/TreeIterator.h"
 #include "mozilla/dom/UnbindContext.h"
 #include "mozilla/mozInlineSpellChecker.h"
 #include "nsAtom.h"
@@ -152,6 +154,17 @@ void nsIContent::UnbindFromTree(nsINode* aNewParent,
   UnbindContext context(*this, aBatchState);
   context.SetIsMove(aNewParent != nullptr);
   UnbindFromTree(context);
+}
+
+HTMLSlotElement* nsIContent::GetAssignedSlotForSelection() const {
+  HTMLSlotElement* const assignedSlot = GetAssignedSlot();
+  if (!assignedSlot) {
+    return nullptr;
+  }
+  ShadowRoot* const containingShadowRoot = assignedSlot->GetContainingShadow();
+  return containingShadowRoot && !containingShadowRoot->IsUAWidget()
+             ? assignedSlot
+             : nullptr;
 }
 
 // https://dom.spec.whatwg.org/#dom-slotable-assignedslot
@@ -287,6 +300,18 @@ nsresult nsIContent::LookupNamespaceURIInternal(
   return NS_ERROR_FAILURE;
 }
 
+nsIContent* nsIContent::GetInclusiveEditableAncestor() const {
+  if (IsEditable()) {
+    return const_cast<nsIContent*>(this);
+  }
+  for (auto* const content : AncestorsOfType<nsIContent>()) {
+    if (content->IsEditable()) {
+      return content;
+    }
+  }
+  return nullptr;
+}
+
 nsAtom* nsIContent::GetLang() const {
   for (const Element* element = GetAsElementOrParentElement(); element;
        element = element->GetParentElement()) {
@@ -348,6 +373,15 @@ already_AddRefed<URLExtraData> nsIContent::GetURLDataForStyleAttr(
                                        aSubjectPrincipal);
   }
   return do_AddRef(doc->DefaultStyleAttrURLData());
+}
+
+void nsIContent::UpdateHeadingElementsOffsetChange() {
+  TreeIterator<FlattenedChildIterator> iter(*this);
+  for (; iter.GetCurrent(); iter.GetNext()) {
+    if (auto* heading = HTMLHeadingElement::FromNode(iter.GetCurrent())) {
+      heading->UpdateLevel(true);
+    }
+  }
 }
 
 void nsIContent::ConstructUbiNode(void* storage) {
@@ -665,7 +699,7 @@ FragmentOrElement::nsExtendedDOMSlots* FragmentOrElement::ExtendedDOMSlots() {
   if (!slots) {
     void* mem = AllocateSlots(sizeof(FatSlots));
     FatSlots* fatSlots = new (mem) FatSlots();
-    mSlots = fatSlots;
+    SetSlots(fatSlots);
     return fatSlots;
   }
 
@@ -781,7 +815,7 @@ size_t FragmentOrElement::nsExtendedDOMSlots::SizeOfExcludingThis(
 }
 
 FragmentOrElement::FragmentOrElement(
-    already_AddRefed<mozilla::dom::NodeInfo>&& aNodeInfo)
+    already_AddRefed<mozilla::dom::NodeInfo> aNodeInfo)
     : nsIContent(std::move(aNodeInfo)) {}
 
 FragmentOrElement::~FragmentOrElement() {
@@ -2054,6 +2088,12 @@ void FragmentOrElement::SetInnerHTMLInternal(const nsAString& aInnerHTML,
     parseContext = shadowRoot->GetHost();
   }
 
+  // https://html.spec.whatwg.org/#create-an-element-for-the-token
+  // Step 6: Let registry be the result of looking up a custom element registry
+  // given intendedParent.
+  Maybe<RefPtr<CustomElementRegistry>> customElementRegistry =
+      nsContentUtils::GetCustomElementRegistry(target);
+
   if (doc->IsHTMLDocument()) {
     doc->SuspendDOMNotifications();
     nsAtom* contextLocalName = parseContext->NodeInfo()->NameAtom();
@@ -2061,7 +2101,9 @@ void FragmentOrElement::SetInnerHTMLInternal(const nsAString& aInnerHTML,
 
     aError = nsContentUtils::ParseFragmentHTML(
         aInnerHTML, target, contextLocalName, contextNameSpaceID,
-        doc->GetCompatibilityMode() == eCompatibility_NavQuirks, true);
+        doc->GetCompatibilityMode() == eCompatibility_NavQuirks, true,
+        nsContentUtils::kParseFragmentPrivilegedDefaultSanitization,
+        std::move(customElementRegistry));
     doc->ResumeDOMNotifications();
     if (target->GetFirstChild()) {
       MutationObservers::NotifyContentAppended(target, target->GetFirstChild(),
@@ -2070,7 +2112,8 @@ void FragmentOrElement::SetInnerHTMLInternal(const nsAString& aInnerHTML,
     mb.NodesAdded();
   } else {
     RefPtr<DocumentFragment> df = nsContentUtils::CreateContextualFragment(
-        parseContext, aInnerHTML, true, aError);
+        parseContext, aInnerHTML, true, std::move(customElementRegistry),
+        aError);
     if (!aError.Failed()) {
       // Suppress assertion about node removal mutation events that can't have
       // listeners anyway, because no one has had the chance to register

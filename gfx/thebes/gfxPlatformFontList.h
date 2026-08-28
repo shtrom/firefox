@@ -5,28 +5,27 @@
 #ifndef GFXPLATFORMFONTLIST_H_
 #define GFXPLATFORMFONTLIST_H_
 
-#include "nsClassHashtable.h"
-#include "nsTHashMap.h"
-#include "nsTHashSet.h"
-#include "nsRefPtrHashtable.h"
-#include "nsTHashtable.h"
-
-#include "gfxFontUtils.h"
-#include "gfxFontInfoLoader.h"
+#include "SharedFontList.h"
+#include "base/process.h"
 #include "gfxFont.h"
 #include "gfxFontConstants.h"
+#include "gfxFontInfoLoader.h"
+#include "gfxFontUtils.h"
 #include "gfxPlatform.h"
-#include "SharedFontList.h"
-
-#include "base/process.h"
-#include "nsIMemoryReporter.h"
+#include "gfxUserFontSet.h"
 #include "mozilla/EnumeratedArray.h"
 #include "mozilla/FontPropertyTypes.h"
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/RangedArray.h"
 #include "mozilla/RecursiveMutex.h"
 #include "mozilla/ipc/SharedMemoryHandle.h"
+#include "nsClassHashtable.h"
+#include "nsIMemoryReporter.h"
 #include "nsLanguageAtomService.h"
+#include "nsRefPtrHashtable.h"
+#include "nsTHashMap.h"
+#include "nsTHashSet.h"
+#include "nsTHashtable.h"
 
 namespace mozilla {
 namespace fontlist {
@@ -184,7 +183,7 @@ class gfxPlatformFontList : public gfxFontInfoLoader {
   friend class InitOtherFamilyNamesRunnable;
 
  public:
-  typedef mozilla::StretchRange StretchRange;
+  typedef mozilla::WidthRange WidthRange;
   typedef mozilla::SlantStyleRange SlantStyleRange;
   typedef mozilla::WeightRange WeightRange;
   typedef mozilla::intl::Script Script;
@@ -491,32 +490,30 @@ class gfxPlatformFontList : public gfxFontInfoLoader {
   /**
    * Look up a font by name on the host platform.
    *
-   * Note that the style attributes (weight, stretch, style) are NOT used in
+   * Note that the style attributes (weight, width, style) are NOT used in
    * selecting the platform font, which is looked up by name only; these are
    * values to be recorded in the new font entry.
    */
-  virtual gfxFontEntry* LookupLocalFont(
+  virtual already_AddRefed<gfxFontEntry> LookupLocalFont(
       FontVisibilityProvider* aFontVisibilityProvider,
       const nsACString& aFontName, WeightRange aWeightForEntry,
-      StretchRange aStretchForEntry, SlantStyleRange aStyleForEntry) = 0;
+      WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry) = 0;
 
   /**
    * Create a new platform font from downloaded data (@font-face).
    *
-   * Note that the style attributes (weight, stretch, style) are NOT related
+   * Note that the style attributes (weight, width, style) are NOT related
    * (necessarily) to any values within the font resource itself; these are
    * values to be recorded in the new font entry and used for face selection,
    * in place of whatever inherent style attributes the resource may have.
    *
-   * This method takes ownership of the data block passed in as aFontData,
-   * and must ensure it is free()'d when no longer required.
+   * If the entry or the platform font instance wants to make sure the buffer
+   * persists, it should take a strong ref to aFontData.
    */
-  virtual gfxFontEntry* MakePlatformFont(const nsACString& aFontName,
-                                         WeightRange aWeightForEntry,
-                                         StretchRange aStretchForEntry,
-                                         SlantStyleRange aStyleForEntry,
-                                         const uint8_t* aFontData,
-                                         uint32_t aLength) = 0;
+  virtual already_AddRefed<gfxFontEntry> MakePlatformFont(
+      const nsACString& aFontName, WeightRange aWeightForEntry,
+      WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry,
+      FontData* aFontData) = 0;
 
   // get the standard family name on the platform for a given font name
   // (platforms may override, eg Mac)
@@ -906,10 +903,10 @@ class gfxPlatformFontList : public gfxFontInfoLoader {
   virtual gfxFontEntry* LookupInFaceNameLists(const nsACString& aFaceName)
       MOZ_REQUIRES(mLock);
 
-  gfxFontEntry* LookupInSharedFaceNameList(
+  already_AddRefed<gfxFontEntry> LookupInSharedFaceNameList(
       FontVisibilityProvider* aFontVisibilityProvider,
       const nsACString& aFaceName, WeightRange aWeightForEntry,
-      StretchRange aStretchForEntry, SlantStyleRange aStyleForEntry)
+      WidthRange aWidthForEntry, SlantStyleRange aStyleForEntry)
       MOZ_REQUIRES(mLock);
 
   // Add an entry for aName to the local names table, but only if it is not
@@ -971,7 +968,7 @@ class gfxPlatformFontList : public gfxFontInfoLoader {
   virtual nsresult InitFontListForPlatform() MOZ_REQUIRES(mLock) = 0;
   virtual void InitSharedFontListForPlatform() MOZ_REQUIRES(mLock) {}
 
-  virtual gfxFontEntry* CreateFontEntry(
+  virtual already_AddRefed<gfxFontEntry> CreateFontEntry(
       mozilla::fontlist::Face* aFace,
       const mozilla::fontlist::Family* aFamily) {
     return nullptr;
@@ -989,8 +986,8 @@ class gfxPlatformFontList : public gfxFontInfoLoader {
 
   // Create a new gfxFontFamily of the appropriate subclass for the platform,
   // used when AddWithLegacyFamilyName needs to create a new family.
-  virtual gfxFontFamily* CreateFontFamily(const nsACString& aName,
-                                          FontVisibility aVisibility) const = 0;
+  virtual already_AddRefed<gfxFontFamily> CreateFontFamily(
+      const nsACString& aName, FontVisibility aVisibility) const = 0;
 
   /**
    * For the post-startup font info loader task.

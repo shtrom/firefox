@@ -5,8 +5,9 @@
 #include "ScreenHelperGTK.h"
 
 #ifdef MOZ_X11
-#  include <gdk/gdkx.h>
 #  include <X11/Xlib.h>
+#  include <gdk/gdkx.h>
+
 #  include "X11UndefineNone.h"
 #endif /* MOZ_X11 */
 #ifdef MOZ_WAYLAND
@@ -16,16 +17,16 @@
 #include <gtk/gtk.h>
 
 #include "gfxPlatformGtk.h"
-#include "mozilla/dom/DOMTypes.h"
 #include "mozilla/Logging.h"
+#include "mozilla/ScopeExit.h"
+#include "mozilla/StaticPrefs_widget.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/ToString.h"
 #include "mozilla/WidgetUtilsGtk.h"
+#include "mozilla/dom/DOMTypes.h"
 #include "nsGtkUtils.h"
 #include "nsTArray.h"
 #include "nsWindow.h"
-#include "mozilla/ScopeExit.h"
-#include "mozilla/StaticPrefs_widget.h"
 
 struct wl_registry;
 
@@ -64,21 +65,28 @@ static uint32_t GetGTKPixelDepth() {
   return gdk_visual_get_depth(visual);
 }
 
+#ifdef MOZ_WAYLAND
 static already_AddRefed<Screen> MakeDummyScreen(unsigned int aMonitor) {
   LOG_SCREEN("MakeScreenGtk() create dummy screen for monitor [%d]", aMonitor);
-  return MakeAndAddRef<Screen>(LayoutDeviceIntRect(), LayoutDeviceIntRect(), 0,
-                               0, 0, DesktopToLayoutDeviceScale(1.0),
-                               CSSToLayoutDeviceScale(1.0), 1,
-                               Screen::IsPseudoDisplay::No, Screen::IsHDR(0));
+  return MakeAndAddRef<Screen>(
+      LayoutDeviceIntRect(), LayoutDeviceIntRect(), 0, 0, 0,
+      DesktopToLayoutDeviceScale(1.0), CSSToLayoutDeviceScale(1.0), 1,
+      Screen::IsPseudoDisplay::No, Screen::IsHDR(0), 80.0f, 80.0f);
 }
+#endif
 
 static already_AddRefed<Screen> MakeScreenGtk(unsigned int aMonitor,
-                                              bool aIsHDR) {
+                                              bool aIsHDR,
+                                              float aSDRContentBrightness,
+                                              float aHDRPeakBrightness) {
   gint geometryScaleFactor =
       ScreenHelperGTK::GetGTKMonitorScaleFactor(aMonitor);
 
-  LOG_SCREEN("MakeScreenGtk() Monitor [%d] scale %d aIsHDR %d", aMonitor,
-             geometryScaleFactor, aIsHDR);
+  LOG_SCREEN(
+      "MakeScreenGtk() Monitor [%d] scale %d aIsHDR %d aSDRContentBrightness "
+      "%f aHDRPeakBrightness %f",
+      aMonitor, geometryScaleFactor, aIsHDR, aSDRContentBrightness,
+      aHDRPeakBrightness);
 
   GdkRectangle workarea;
   GdkScreen* defaultScreen = gdk_screen_get_default();
@@ -102,7 +110,7 @@ static already_AddRefed<Screen> MakeScreenGtk(unsigned int aMonitor,
       // In such case use workarea is already scaled by fractional scale factor.
       nsWaylandDisplay::MonitorConfig* config =
           WaylandDisplayGet()->GetMonitorConfig(workarea.x, workarea.y);
-      (void)NS_WARN_IF(!config || !config->pendingChanges);
+      (void)NS_WARN_IF(!config || config->pendingChanges);
       if (config && !config->pendingChanges) {
         LOG_SCREEN("  MonitorConfig pixel size [%d, %d] -> [%d x %d]",
                    config->x, config->y, config->pixelWidth,
@@ -182,7 +190,8 @@ static already_AddRefed<Screen> MakeScreenGtk(unsigned int aMonitor,
       contentsScale.scale, defaultCssScale.scale, dpi, refreshRate, aIsHDR);
   return MakeAndAddRef<Screen>(
       rect, availRect, pixelDepth, pixelDepth, refreshRate, contentsScale,
-      defaultCssScale, dpi, Screen::IsPseudoDisplay::No, Screen::IsHDR(aIsHDR));
+      defaultCssScale, dpi, Screen::IsPseudoDisplay::No, Screen::IsHDR(aIsHDR),
+      aSDRContentBrightness, aHDRPeakBrightness);
 }
 
 #ifdef MOZ_WAYLAND
@@ -195,7 +204,12 @@ class WaylandMonitor {
 
   unsigned int GetMonitor() const { return mMonitor; }
 
-  void SetHDR(bool aIsHDR) { mIsHDR = aIsHDR; }
+  void SetHDR(bool aIsHDR, float aSDRContentBrightness,
+              float aHDRPeakBrightness) {
+    mIsHDR = aIsHDR;
+    mSDRContentBrightness = aSDRContentBrightness;
+    mHDRPeakBrightness = aHDRPeakBrightness;
+  }
 
   void ImageDescriptionReady();
   void ImageDescriptionDone();
@@ -212,6 +226,8 @@ class WaylandMonitor {
   wp_image_description_v1* mDescription = nullptr;
 
   bool mIsHDR = false;
+  float mSDRContentBrightness = 80.0f;
+  float mHDRPeakBrightness = 80.0f;
 };
 #endif
 
@@ -354,7 +370,8 @@ void image_description_info_luminances(
   LOG_SCREEN(
       "WaylandMonitor() [%p] num [%d] Luminance min %d max %d reference %d",
       monitor, monitor->GetMonitor(), min_lum, max_lum, reference_lum);
-  monitor->SetHDR(max_lum > reference_lum);
+  monitor->SetHDR(max_lum > reference_lum, static_cast<float>(reference_lum),
+                  static_cast<float>(max_lum));
 }
 /**
  * target primaries as chromaticity coordinates
@@ -452,12 +469,17 @@ static const struct wp_image_description_info_v1_listener
                                     image_description_info_target_max_fall};
 
 void WaylandMonitor::ImageDescriptionDone() {
-  LOG_SCREEN("WaylandMonitor() [%p] ImageDescriptionDone HDR %d", this, mIsHDR);
+  LOG_SCREEN(
+      "WaylandMonitor() [%p] ImageDescriptionDone HDR %d reference_lum %f "
+      "max_lum %f",
+      this, mIsHDR, mSDRContentBrightness, mHDRPeakBrightness);
   if (mScreenGetter) {
     // Don't create proper screen if it's thrown away anyway.
     bool dummyScreen = !mScreenGetter->CheckGetterSerial();
     mScreenGetter->AddScreen(dummyScreen ? MakeDummyScreen(mMonitor)
-                                         : MakeScreenGtk(mMonitor, mIsHDR));
+                                         : MakeScreenGtk(mMonitor, mIsHDR,
+                                                         mSDRContentBrightness,
+                                                         mHDRPeakBrightness));
   }
 }
 
@@ -590,6 +612,16 @@ void ScreenGetterGtk::Finish() {
 }
 
 RefPtr<Screen> ScreenHelperGTK::GetScreenForWindow(nsWindow* aWindow) {
+  GdkWindow* gdkWindow = aWindow->GetToplevelGdkWindow();
+  if (!gdkWindow) {
+    LOG_SCREEN("  failed, can't get GdkWindow");
+    return nullptr;
+  }
+
+  return GetScreenForGdkWindow(gdkWindow);
+}
+
+RefPtr<Screen> ScreenHelperGTK::GetScreenForGdkWindow(GdkWindow* aGdkWindow) {
   static auto s_gdk_display_get_monitor_at_window =
       (GdkMonitor * (*)(GdkDisplay*, GdkWindow*))
           dlsym(RTLD_DEFAULT, "gdk_display_get_monitor_at_window");
@@ -599,14 +631,9 @@ RefPtr<Screen> ScreenHelperGTK::GetScreenForWindow(nsWindow* aWindow) {
     return nullptr;
   }
 
-  GdkWindow* gdkWindow = aWindow->GetToplevelGdkWindow();
-  if (!gdkWindow) {
-    LOG_SCREEN("  failed, can't get GdkWindow");
-    return nullptr;
-  }
-
   GdkDisplay* display = gdk_display_get_default();
-  GdkMonitor* monitor = s_gdk_display_get_monitor_at_window(display, gdkWindow);
+  GdkMonitor* monitor =
+      s_gdk_display_get_monitor_at_window(display, aGdkWindow);
   if (!monitor) {
     LOG_SCREEN("  failed, can't get monitor for GdkWindow");
     return nullptr;
@@ -620,12 +647,12 @@ RefPtr<Screen> ScreenHelperGTK::GetScreenForWindow(nsWindow* aWindow) {
               index);
       if (!screen) {
         LOG_SCREEN(
-            "GetScreenForWindow() [%p] [%d] found monitor %p but no screen",
-            aWindow, index, monitor);
+            "GetScreenForGdkWindow() [%p] [%d] found monitor %p but no screen",
+            aGdkWindow, index, monitor);
         return nullptr;
       }
-      LOG_SCREEN("GetScreenForWindow() [%p] [%d] screen %s", aWindow, index,
-                 ToString(screen->GetRect()).c_str());
+      LOG_SCREEN("GetScreenForGdkWindow() [%p] [%d] screen %s", aGdkWindow,
+                 index, ToString(screen->GetRect()).c_str());
       return screen.forget();
     }
   }
@@ -702,7 +729,7 @@ ScreenGetterGtk::ScreenGetterGtk(int aSerial, bool aHDRInfoOnly)
       }
     }
 #endif
-    AddScreen(MakeScreenGtk(i, /* aIsHDR */ false));
+    AddScreen(MakeScreenGtk(i, /* aIsHDR */ false, 80.0f, 80.0f));
   }
 }
 
@@ -827,7 +854,8 @@ ScreenHelperGTK::ScreenHelperGTK() {
   AutoTArray<RefPtr<Screen>, 4> screenList;
   gint numScreens = gdk_screen_get_n_monitors(defaultScreen);
   for (gint i = 0; i < numScreens; i++) {
-    screenList.AppendElement(MakeScreenGtk(i, /* aIsHDR */ false));
+    screenList.AppendElement(
+        MakeScreenGtk(i, /* aIsHDR */ false, 80.0f, 80.0f));
   }
   ScreenManager::Refresh(std::move(screenList));
 

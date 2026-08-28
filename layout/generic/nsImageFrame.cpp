@@ -31,6 +31,7 @@
 #include "mozilla/dom/HTMLImageElement.h"
 #include "mozilla/dom/LargestContentfulPaint.h"
 #include "mozilla/dom/NameSpaceConstants.h"
+#include "mozilla/dom/PerformanceContainerTiming.h"
 #include "mozilla/dom/ReferrerInfo.h"
 #include "mozilla/dom/ResponsiveImageSelector.h"
 #include "mozilla/dom/ViewTransition.h"
@@ -2330,8 +2331,8 @@ void nsDisplayImage::Paint(nsDisplayListBuilder* aBuilder, gfxContext* aCtx) {
       OldImageHasDifferentRatio(*frame, *image, prevImage);
 
   uint32_t flags = aBuilder->GetImageDecodeFlags();
-  if (aBuilder->ShouldSyncDecodeImages() || oldImageIsDifferent ||
-      frame->mForceSyncDecoding) {
+  if (oldImageIsDifferent || frame->mForceSyncDecoding ||
+      frame->UsedImageDecoding() == StyleImageDecoding::Sync) {
     flags |= imgIContainer::FLAG_SYNC_DECODE;
   }
 
@@ -2477,8 +2478,8 @@ bool nsDisplayImage::CreateWebRenderCommands(
       OldImageHasDifferentRatio(*frame, *image, prevImage);
 
   uint32_t flags = aDisplayListBuilder->GetImageDecodeFlags();
-  if (aDisplayListBuilder->ShouldSyncDecodeImages() || oldImageIsDifferent ||
-      frame->mForceSyncDecoding) {
+  if (oldImageIsDifferent || frame->mForceSyncDecoding ||
+      frame->UsedImageDecoding() == StyleImageDecoding::Sync) {
     flags |= imgIContainer::FLAG_SYNC_DECODE;
   }
   if (StaticPrefs::image_svg_blob_image() &&
@@ -2501,10 +2502,14 @@ bool nsDisplayImage::CreateWebRenderCommands(
                               region, flags, getter_AddRefs(provider));
 
   if (nsCOMPtr<imgIRequest> currentRequest = frame->GetCurrentRequest()) {
+    Element* element = frame->GetContent()->AsElement();
+    nsRect rectRelativeToSelf = destAppUnits - ToReferenceFrame();
+
+    ContainerTimingHelpers::MaybeProcessPaintForContainer(element, frame,
+                                                          rectRelativeToSelf);
     LCPHelpers::FinalizeLCPEntryForImage(
-        frame->GetContent()->AsElement(),
-        static_cast<imgRequestProxy*>(currentRequest.get()),
-        destAppUnits - ToReferenceFrame());
+        element, static_cast<imgRequestProxy*>(currentRequest.get()),
+        rectRelativeToSelf);
   }
 
   // While we got a container, it may not contain a fully decoded surface. If
@@ -2652,11 +2657,12 @@ void nsImageFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
   if (!clipAxes.isEmpty()) {
     nsRect clipRect;
     nsRectCornerRadii radii;
+    nsMargin inset;
     bool haveRadii =
-        ComputeOverflowClipRectRelativeToSelf(clipAxes, clipRect, radii);
+        ComputeOverflowClipRectRelativeToSelf(clipAxes, clipRect, radii, inset);
     clipState.ClipContainingBlockDescendants(
         clipRect + aBuilder->ToReferenceFrame(this),
-        haveRadii ? &radii : nullptr);
+        haveRadii ? &radii : nullptr, haveRadii ? &inset : nullptr);
   }
 
   if (!mComputedSize.IsEmpty()) {
@@ -2810,8 +2816,9 @@ bool nsImageFrame::IsLeafDynamic() const {
   return !shadow;
 }
 
-nsIContent* nsImageFrame::GetContentForEvent(const WidgetEvent* aEvent) const {
-  if (mImageMap) {
+nsIContent* nsImageFrame::GetExplicitEventTargetContent(
+    const WidgetEvent* aEvent /* = nullptr */) const {
+  if (mImageMap && aEvent) {
     // XXX We need to make this special check for area element's capturing the
     // mouse due to bug 135040. Remove it once that's fixed.
     nsIContent* capturingContent = aEvent->HasMouseEventMessage()
@@ -2826,7 +2833,7 @@ nsIContent* nsImageFrame::GetContentForEvent(const WidgetEvent* aEvent) const {
       return area;
     }
   }
-  return nsIFrame::GetContentForEvent(aEvent);
+  return nsIFrame::GetExplicitEventTargetContent(aEvent);
 }
 
 // XXX what should clicks on transparent pixels do?

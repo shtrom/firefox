@@ -172,6 +172,10 @@ class nsPIDOMWindowInner : public mozIDOMWindow {
 
   mozilla::dom::Performance* GetPerformance();
 
+  mozilla::dom::Performance* GetPerformanceIfExists() const {
+    return mPerformance;
+  }
+
   void QueuePerformanceNavigationTiming();
 
   /**
@@ -586,8 +590,10 @@ class nsPIDOMWindowInner : public mozIDOMWindow {
 
   virtual nsresult GetControllers(nsIControllers** aControllers) = 0;
 
-  MOZ_CAN_RUN_SCRIPT virtual nsresult GetInnerWidth(double* aWidth) = 0;
-  MOZ_CAN_RUN_SCRIPT virtual nsresult GetInnerHeight(double* aHeight) = 0;
+  MOZ_CAN_RUN_SCRIPT virtual nsresult GetInnerWidth(
+      mozilla::dom::CallerType aCallerType, double* aWidth) = 0;
+  MOZ_CAN_RUN_SCRIPT virtual nsresult GetInnerHeight(
+      mozilla::dom::CallerType aCallerType, double* aHeight) = 0;
 
   virtual already_AddRefed<nsDOMCSSDeclaration> GetComputedStyle(
       mozilla::dom::Element& aElt, const nsAString& aPseudoElt,
@@ -881,7 +887,8 @@ class nsPIDOMWindowOuter : public mozIDOMWindowProxy {
   // Set the window up with an about:blank document with the given principal.
   // Base URI, COEP and PolicyContainer of the current document will be
   // retained.
-  virtual void SetInitialPrincipal(nsIPrincipal* aNewWindowPrincipal) = 0;
+  MOZ_CAN_RUN_SCRIPT virtual void SetInitialPrincipal(
+      nsIPrincipal* aNewWindowPrincipal) = 0;
 
   // Fire any DOM notification events related to things that happened while
   // the window was frozen.
@@ -1087,9 +1094,6 @@ class nsPIDOMWindowOuter : public mozIDOMWindowProxy {
                               const nsAString& aOptions, nsIArray* aArguments,
                               mozilla::dom::BrowsingContext** _retval) = 0;
 
-  MOZ_CAN_RUN_SCRIPT virtual nsresult GetInnerWidth(double* aWidth) = 0;
-  MOZ_CAN_RUN_SCRIPT virtual nsresult GetInnerHeight(double* aHeight) = 0;
-
   virtual mozilla::dom::Element* GetFrameElement() = 0;
 
   virtual bool Closed() = 0;
@@ -1156,7 +1160,5 @@ class nsPIDOMWindowOuter : public mozIDOMWindowProxy {
 
   uint32_t mMarkedCCGeneration;
 };
-
-#include "nsPIDOMWindowInlines.h"
 
 #endif  // nsPIDOMWindow_h_

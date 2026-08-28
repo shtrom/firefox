@@ -17,8 +17,8 @@
 #include "mozilla/StaticPtr.h"
 #include "mozilla/glean/NetwerkProtocolHttpMetrics.h"
 #include "nsCharSeparatedTokenizer.h"
-#include "nsIMemoryReporter.h"
 #include "nsHttpHandler.h"
+#include "nsIMemoryReporter.h"
 
 namespace mozilla {
 namespace net {
@@ -805,7 +805,7 @@ nsresult Http2Decompressor::CopyHuffmanStringFromInput(uint32_t bytes,
     }
   }
 
-  val = buf;
+  val = std::move(buf);
   LOG(("CopyHuffmanStringFromInput decoded a full string!"));
   return NS_OK;
 }

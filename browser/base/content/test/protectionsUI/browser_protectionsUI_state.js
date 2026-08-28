@@ -18,13 +18,13 @@ const TP_PREF = "privacy.trackingprotection.enabled";
 const TP_PB_PREF = "privacy.trackingprotection.pbmode.enabled";
 const TPC_PREF = "network.cookie.cookieBehavior";
 const BENIGN_PAGE =
-  // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+  // eslint-disable-next-line sdl/no-insecure-url
   "http://tracking.example.org/browser/browser/base/content/test/protectionsUI/benignPage.html";
 const TRACKING_PAGE =
-  // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+  // eslint-disable-next-line sdl/no-insecure-url
   "http://tracking.example.org/browser/browser/base/content/test/protectionsUI/trackingPage.html";
 const COOKIE_PAGE =
-  // eslint-disable-next-line @microsoft/sdl/no-insecure-url
+  // eslint-disable-next-line sdl/no-insecure-url
   "http://not-tracking.example.com/browser/browser/base/content/test/protectionsUI/cookiePage.html";
 var gProtectionsHandler = null;
 var TrackingProtection = null;
@@ -132,7 +132,7 @@ function areTrackersBlocked(isPrivateBrowsing) {
   );
   let blockedByTPC = [
     Ci.nsICookieService.BEHAVIOR_REJECT_TRACKER,
-    Ci.nsICookieService.BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN,
+    Ci.nsICookieService.BEHAVIOR_PARTITION_FOREIGN,
   ].includes(Services.prefs.getIntPref(TPC_PREF));
   return blockedByTP || blockedByTPC;
 }
@@ -392,7 +392,7 @@ add_task(async function testThirdPartyCookies() {
     ThirdPartyCookies.enabled,
     [
       Ci.nsICookieService.BEHAVIOR_REJECT_TRACKER,
-      Ci.nsICookieService.BEHAVIOR_REJECT_TRACKER_AND_PARTITION_FOREIGN,
+      Ci.nsICookieService.BEHAVIOR_PARTITION_FOREIGN,
     ].includes(Services.prefs.getIntPref(TPC_PREF)),
     "TPC.enabled is based on the original pref value"
   );

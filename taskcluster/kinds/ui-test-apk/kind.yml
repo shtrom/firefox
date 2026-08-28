@@ -5,7 +5,7 @@
 loader: taskgraph.loader.transform:loader
 
 transforms:
-    - gecko_taskgraph.transforms.test_apk:transforms
+    - taskgraph.transforms.task_context
     - gecko_taskgraph.transforms.ui_test_apk:transforms
     # While not a build, the build optimization works well for these tasks.
     - gecko_taskgraph.transforms.build_schedules:transforms
@@ -22,6 +22,18 @@ task-defaults:
         build_platform: android
         build-type: debug
         retrigger: true
+    app-name: "{app-name}"
+    task-context:
+        from-parameters:
+            level: level
+        substitution-fields:
+            - routes
+            - scopes
+            - extra.notify
+            - worker.env.GOOGLE_PROJECT
+            - treeherder.platform
+            - run.secrets
+            - app-name
     worker-type: b-linux-medium
     worker:
         docker-image: {in-tree: android-ui-tests}
@@ -29,7 +41,7 @@ task-defaults:
         env:
             GOOGLE_APPLICATION_CREDENTIALS: '.firebase_token.json'
             GOOGLE_PROJECT:
-                by-shipping-product:
+                by-app-name:
                     fenix: moz-fenix
                     focus: moz-focus-android
                     default: ''
@@ -42,17 +54,18 @@ task-defaults:
         kind: test
         tier: 2
         platform:
-            by-shipping-product:
+            by-app-name:
                 fenix: fenix-android-all/opt
                 focus: focus-android-all/opt
                 default: ''
     run:
+        clone-with: hg
         using: run-commands
         dummy-secrets:
             - content: "faketoken"
               path: .adjust_token
         secrets:
-            by-shipping-product:
+            by-app-name:
                 fenix:
                     - name: project/gecko/level-any/firefox-android/fenix/firebase
                       key: firebaseToken
@@ -87,7 +100,9 @@ tasks:
     focus-arm-debug:
         attributes:
             build-type: focus-debug-firebase
-            shipping-product: focus
+        task-context:
+            from-object:
+                app-name: focus
         description: 'Focus UI tests with firebase'
         dependencies:
             signed-apk-debug-apk: signing-apk-focus-debug
@@ -108,7 +123,9 @@ tasks:
     focus-arm-nightly:
         attributes:
             build-type: focus-nightly-firebase
-            shipping-product: focus
+        task-context:
+            from-object:
+                app-name: focus
         description: 'UI tests on Nightly with firebase'
         dependencies:
             signed-apk-debug-apk: signing-apk-focus-nightly-firebase
@@ -122,7 +139,7 @@ tasks:
                   extract: false
         optimization:
             skip-unless-backstop: null
-        run-on-projects: [trunk]
+        run-on-projects: [autoland-only]
         flank-config: focus/arm-start-test.yml
         treeherder:
             symbol: focus-nightly(ui-test-arm-nightly)
@@ -130,7 +147,9 @@ tasks:
     focus-arm-beta:
         attributes:
             build-type: focus-beta-firebase
-            shipping-product: focus
+        task-context:
+            from-object:
+                app-name: focus
         description: 'UI tests on Beta with firebase'
         dependencies:
             signed-apk-debug-apk: signing-apk-focus-beta-firebase
@@ -152,7 +171,9 @@ tasks:
     fenix-arm-debug:
         attributes:
             build-type: fenix-debug-firebase
-            shipping-product: fenix
+        task-context:
+            from-object:
+                app-name: fenix
         description: Test Fenix
         dependencies:
             signed-apk-debug-apk: signing-apk-fenix-debug
@@ -173,7 +194,9 @@ tasks:
     fenix-detect-leaks-arm-debug:
         attributes:
             build-type: fenix-debug-firebase
-            shipping-product: fenix
+        task-context:
+            from-object:
+                app-name: fenix
         description: Run Fenix tests with memory leak detection enabled
         dependencies:
             signed-apk-debug-apk: signing-apk-fenix-debug
@@ -196,7 +219,9 @@ tasks:
     fenix-arm-beta:
         attributes:
             build-type: fenix-beta-firebase
-            shipping-product: fenix
+        task-context:
+            from-object:
+                app-name: fenix
         description: Test Fenix
         dependencies:
             signed-apk-debug-apk: signing-apk-fenix-beta-firebase
@@ -218,7 +243,9 @@ tasks:
     fenix-arm-nightly:
         attributes:
             build-type: fenix-nightly-firebase
-            shipping-product: fenix
+        task-context:
+            from-object:
+                app-name: fenix
         description: Test Fenix
         dependencies:
             signed-apk-debug-apk: signing-apk-fenix-nightly-firebase
@@ -232,7 +259,7 @@ tasks:
                   extract: false
         optimization:
             skip-unless-backstop: null
-        run-on-projects: [trunk]
+        run-on-projects: [autoland-only]
         flank-config: fenix/arm-start-test.yml
         treeherder:
             symbol: fenix-nightly(ui-test-arm-nightly)
@@ -241,7 +268,9 @@ tasks:
         attributes:
             build-type: fenix-legacy
             legacy: true
-            shipping-product: fenix
+        task-context:
+            from-object:
+                app-name: fenix
         description: Run select UI tests on legacy Android devices and API levels
         dependencies:
             signed-apk-debug-apk: signing-apk-fenix-debug
@@ -262,7 +291,9 @@ tasks:
     fenix-robo-arm-debug:
         attributes:
             build-type: fenix-robo
-            shipping-product: fenix
+        task-context:
+            from-object:
+                app-name: fenix
         description: Run Robo test on ARM devices
         dependencies:
             signed-apk-debug-apk: signing-apk-fenix-debug
@@ -277,11 +308,13 @@ tasks:
         treeherder:
             symbol: fenix-debug(robo-arm)
 
-    fenix-experimental-arm-debug:
+    fenix-tae-arm-debug:
         attributes:
             build-type: fenix-debug-firebase
-            shipping-product: fenix
-        description: Run Fenix tests using experimental POM design
+        task-context:
+            from-object:
+                app-name: fenix
+        description: Run TAE (test automation efficiency) user journey tests on ARM devices
         dependencies:
             signed-apk-debug-apk: signing-apk-fenix-debug
             signed-apk-android-test: signing-apk-fenix-android-test-debug
@@ -295,14 +328,88 @@ tasks:
         optimization:
             skip-unless-backstop: null
         run-on-projects: [trunk]
-        flank-config: fenix/arm-experimental-api-tests.yml
+        flank-config: fenix/arm-tae-tests.yml
         treeherder:
-            symbol: fenix-debug(experimental-arm)
+            symbol: fenix-debug(tae-arm)
+
+    fenix-tae-behavior-arm-debug:
+        attributes:
+            build-type: fenix-debug-firebase
+        task-context:
+            from-object:
+                app-name: fenix
+        description: Run TAE (test automation efficiency) behavior factory tests on ARM devices
+        dependencies:
+            signed-apk-debug-apk: signing-apk-fenix-debug
+            signed-apk-android-test: signing-apk-fenix-android-test-debug
+        fetches:
+            signed-apk-debug-apk:
+                - artifact: target.arm64-v8a.apk
+                  extract: false
+            signed-apk-android-test:
+                - artifact: target.noarch.apk
+                  extract: false
+        optimization:
+            skip-unless-backstop: null
+        run-on-projects: [trunk]
+        flank-config: fenix/arm-tae-behavior-tests.yml
+        treeherder:
+            symbol: fenix-debug(tae-behavior-arm)
+
+    fenix-tae-interaction-arm-debug:
+        attributes:
+            build-type: fenix-debug-firebase
+        task-context:
+            from-object:
+                app-name: fenix
+        description: Run TAE (test automation efficiency) interaction factory tests on ARM devices
+        dependencies:
+            signed-apk-debug-apk: signing-apk-fenix-debug
+            signed-apk-android-test: signing-apk-fenix-android-test-debug
+        fetches:
+            signed-apk-debug-apk:
+                - artifact: target.arm64-v8a.apk
+                  extract: false
+            signed-apk-android-test:
+                - artifact: target.noarch.apk
+                  extract: false
+        optimization:
+            skip-unless-backstop: null
+        run-on-projects: [trunk]
+        flank-config: fenix/arm-tae-interaction-tests.yml
+        treeherder:
+            symbol: fenix-debug(tae-interaction-arm)
+
+    fenix-tae-reachability-arm-debug:
+        attributes:
+            build-type: fenix-debug-firebase
+        task-context:
+            from-object:
+                app-name: fenix
+        description: Run TAE (test automation efficiency) reachability factory tests on ARM devices
+        dependencies:
+            signed-apk-debug-apk: signing-apk-fenix-debug
+            signed-apk-android-test: signing-apk-fenix-android-test-debug
+        fetches:
+            signed-apk-debug-apk:
+                - artifact: target.arm64-v8a.apk
+                  extract: false
+            signed-apk-android-test:
+                - artifact: target.noarch.apk
+                  extract: false
+        optimization:
+            skip-unless-backstop: null
+        run-on-projects: [trunk]
+        flank-config: fenix/arm-tae-reachability-tests.yml
+        treeherder:
+            symbol: fenix-debug(tae-reachability-arm)
 
     fenix-arm-debug-smoke:
         attributes:
             build-type: fenix-debug-firebase
-            shipping-product: fenix
+        task-context:
+            from-object:
+                app-name: fenix
         description: Run smoke tests on ARM devices
         dependencies:
             signed-apk-debug-apk: signing-apk-fenix-debug

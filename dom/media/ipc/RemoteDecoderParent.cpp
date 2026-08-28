@@ -36,20 +36,10 @@ RemoteDecoderParent::RemoteDecoderParent(
       mManagerThread(aManagerThread) {
   MOZ_COUNT_CTOR(RemoteDecoderParent);
   MOZ_ASSERT(OnManagerThread());
-  // We hold a reference to ourselves to keep us alive until IPDL
-  // explicitly destroys us. There may still be refs held by
-  // tasks, but no new ones should be added after we're
-  // destroyed.
-  mIPDLSelfRef = this;
 }
 
 RemoteDecoderParent::~RemoteDecoderParent() {
   MOZ_COUNT_DTOR(RemoteDecoderParent);
-}
-
-void RemoteDecoderParent::Destroy() {
-  MOZ_ASSERT(OnManagerThread());
-  mIPDLSelfRef = nullptr;
 }
 
 mozilla::ipc::IPCResult RemoteDecoderParent::RecvInit(
@@ -60,8 +50,12 @@ mozilla::ipc::IPCResult RemoteDecoderParent::RecvInit(
     return IPC_OK();
   }
 
-  MOZ_DIAGNOSTIC_ASSERT(!mPendingInitResolver,
-                        "overlapping Init in RemoteDecoderParent");
+  if (mInitAttempted) {
+    aResolver(MediaResult(NS_ERROR_ALREADY_INITIALIZED, __func__));
+    return IPC_OK();
+  }
+  mInitAttempted = true;
+
   mPendingInitResolver.emplace(std::move(aResolver));
   RefPtr<RemoteDecoderParent> self = this;
   mInitRequest.DisconnectIfExists();
@@ -320,7 +314,7 @@ void RemoteDecoderParent::AbortPendingRequests() {
 }
 
 bool RemoteDecoderParent::OnManagerThread() {
-  return mParent->OnManagerThread();
+  return RemoteMediaManagerParent::OnManagerThread();
 }
 
 }  // namespace mozilla

@@ -40,12 +40,6 @@ void BytecodeWriter::ExpandBuffer(size_t new_size) {
   buffer_.resize(new_size);
 }
 
-void BytecodeWriter::Reset() {
-  // We keep the buffer_ storage; the next pass will overwrite its contents.
-  jump_edges_.clear();
-  ResetPc(0);
-}
-
 void BytecodeWriter::EmitRawBytecodeStream(const uint8_t* data, int len) {
   EnsureCapacity(len);
   // Must start at a bytecode boundary.
@@ -243,6 +237,7 @@ void BytecodeGenerator::Emit(Args... args) {
 }
 
 void BytecodeGenerator::Bind(Label* l) {
+  advance_current_end_ = kInvalidPC;
   DCHECK(!l->is_bound());
   if (l->is_linked()) {
     int pos = l->pos();
@@ -313,7 +308,16 @@ void BytecodeGenerator::Backtrack() {
   Emit<Bytecode::kBacktrack>(error_code);
 }
 
-void BytecodeGenerator::GoTo(Label* label) { Emit<Bytecode::kGoTo>(label); }
+void BytecodeGenerator::GoTo(Label* label) {
+  if (advance_current_end_ == pc_) {
+    // Fuse the preceding AdvanceCurrentPosition into kAdvanceCpAndGoto.
+    ResetPc(advance_current_start_);
+    Emit<Bytecode::kAdvanceCpAndGoto>(advance_current_offset_, label);
+    advance_current_end_ = kInvalidPC;
+  } else {
+    Emit<Bytecode::kGoTo>(label);
+  }
+}
 
 void BytecodeGenerator::PushBacktrack(Label* label) {
   Emit<Bytecode::kPushBacktrack>(label);
@@ -327,7 +331,10 @@ bool BytecodeGenerator::Succeed() {
 void BytecodeGenerator::Fail() { Emit<Bytecode::kFail>(); }
 
 void BytecodeGenerator::AdvanceCurrentPosition(int by) {
+  advance_current_start_ = pc_;
+  advance_current_offset_ = by;
   Emit<Bytecode::kAdvanceCurrentPosition>(by);
+  advance_current_end_ = pc_;
 }
 
 void BytecodeGenerator::CheckFixedLengthLoop(
@@ -349,22 +356,20 @@ void BytecodeGenerator::LoadCurrentCharacterImpl(int cp_offset,
                                                  Label* on_failure,
                                                  bool check_bounds,
                                                  int characters,
-                                                 int eats_at_least) {
-  DCHECK_GE(eats_at_least, characters);
-  if (eats_at_least > characters && check_bounds) {
-    Emit<Bytecode::kCheckPosition>(cp_offset + eats_at_least - 1, on_failure);
-    check_bounds = false;  // Load below doesn't need to check.
-  }
-
+                                                 int bounds_check_offset) {
   CHECK(base::IsInRange(cp_offset, kMinCPOffset, kMaxCPOffset));
   if (check_bounds) {
+    DCHECK_LE(cp_offset, bounds_check_offset);
     if (characters == 4) {
-      Emit<Bytecode::kLoad4CurrentChars>(cp_offset, on_failure);
+      Emit<Bytecode::kLoad4CurrentChars>(cp_offset, bounds_check_offset,
+                                         on_failure);
     } else if (characters == 2) {
-      Emit<Bytecode::kLoad2CurrentChars>(cp_offset, on_failure);
+      Emit<Bytecode::kLoad2CurrentChars>(cp_offset, bounds_check_offset,
+                                         on_failure);
     } else {
       DCHECK_EQ(1, characters);
-      Emit<Bytecode::kLoadCurrentCharacter>(cp_offset, on_failure);
+      Emit<Bytecode::kLoadCurrentCharacter>(cp_offset, bounds_check_offset,
+                                            on_failure);
     }
   } else {
     if (characters == 4) {
@@ -456,50 +461,43 @@ void BytecodeGenerator::CheckBitInTable(Handle<ByteArray> table,
   Emit<Bytecode::kCheckBitInTable>(on_bit_set, table);
 }
 
-void BytecodeGenerator::SkipUntilBitInTable(int cp_offset,
-                                            Handle<ByteArray> table,
-                                            Handle<ByteArray> nibble_table,
-                                            int advance_by, Label* on_match,
-                                            Label* on_no_match) {
-  Emit<Bytecode::kSkipUntilBitInTable>(cp_offset, advance_by, table, on_match,
-                                       on_no_match);
+void BytecodeGenerator::SkipUntilBitInTable(
+    int cp_offset, Handle<ByteArray> table, Handle<ByteArray> nibble_table,
+    int advance_by, int bounds_check_offset, Label* on_match,
+    Label* on_no_match) {
+  Emit<Bytecode::kSkipUntilBitInTable>(
+      cp_offset, advance_by, table, bounds_check_offset, on_match, on_no_match);
 }
 
 void BytecodeGenerator::SkipUntilCharAnd(int cp_offset, int advance_by,
                                          unsigned character, unsigned mask,
-                                         int eats_at_least, Label* on_match,
-                                         Label* on_no_match) {
+                                         int bounds_check_offset,
+                                         Label* on_match, Label* on_no_match) {
   Emit<Bytecode::kSkipUntilCharAnd>(cp_offset, advance_by, character, mask,
-                                    eats_at_least, on_match, on_no_match);
+                                    bounds_check_offset, on_match, on_no_match);
 }
 
 void BytecodeGenerator::SkipUntilChar(int cp_offset, int advance_by,
-                                      unsigned character, Label* on_match,
+                                      unsigned character,
+                                      int bounds_check_offset, Label* on_match,
                                       Label* on_no_match) {
-  // Only generated by peephole optimization.
-  UNREACHABLE();
-}
-
-void BytecodeGenerator::SkipUntilCharPosChecked(int cp_offset, int advance_by,
-                                                unsigned character,
-                                                int eats_at_least,
-                                                Label* on_match,
-                                                Label* on_no_match) {
-  // Only generated by peephole optimization.
-  UNREACHABLE();
+  Emit<Bytecode::kSkipUntilChar>(cp_offset, advance_by, character,
+                                 bounds_check_offset, on_match, on_no_match);
 }
 
 void BytecodeGenerator::SkipUntilCharOrChar(int cp_offset, int advance_by,
                                             unsigned char1, unsigned char2,
+                                            int bounds_check_offset,
                                             Label* on_match,
                                             Label* on_no_match) {
-  // Only generated by peephole optimization.
-  UNREACHABLE();
+  Emit<Bytecode::kSkipUntilCharOrChar>(cp_offset, advance_by, char1, char2,
+                                       bounds_check_offset, on_match,
+                                       on_no_match);
 }
 
 void BytecodeGenerator::SkipUntilGtOrNotBitInTable(
     int cp_offset, int advance_by, unsigned character, Handle<ByteArray> table,
-    Label* on_match, Label* on_no_match) {
+    int bounds_check_offset, Label* on_match, Label* on_no_match) {
   // Only generated by peephole optimization.
   UNREACHABLE();
 }
@@ -508,14 +506,24 @@ void BytecodeGenerator::SkipUntilOneOfMasked(
     int cp_offset, int advance_by, unsigned both_chars, unsigned both_mask,
     int max_offset, unsigned chars1, unsigned mask1, unsigned chars2,
     unsigned mask2, Label* on_match1, Label* on_match2, Label* on_failure) {
-  // Only generated by peephole optimization.
-  UNREACHABLE();
+  Emit<Bytecode::kSkipUntilOneOfMasked>(
+      cp_offset, advance_by, both_chars, both_mask, max_offset, chars1, mask1,
+      chars2, mask2, on_match1, on_match2, on_failure);
 }
 
 void BytecodeGenerator::SkipUntilOneOfMasked3(
     const SkipUntilOneOfMasked3Args& args) {
-  // Only generated by peephole optimization.
-  UNREACHABLE();
+  // The nibble table is a native-only SIMD acceleration and has no bytecode
+  // operand; it is reconstructed from the boolean table when the interpreter
+  // tier compiles this bytecode.
+  Emit<Bytecode::kSkipUntilOneOfMasked3>(
+      args.bc0_cp_offset, args.bc0_advance_by, args.bc0_table,
+      args.bc1_bounds_check_offset, args.bc1_on_failure, args.bc1_cp_offset,
+      args.bc2_characters, args.bc2_mask, args.bc3_by,
+      args.bc4_bounds_check_offset, args.bc4_cp_offset, args.bc5_characters,
+      args.bc5_mask, args.bc5_on_equal, args.bc6_characters, args.bc6_mask,
+      args.bc6_on_equal, args.bc7_characters, args.bc7_mask,
+      args.fallthrough_jump_target);
 }
 
 void BytecodeGenerator::CheckNotBackReference(int start_reg, bool read_backward,
@@ -571,7 +579,8 @@ DirectHandle<HeapObject> BytecodeGenerator::GetCode(
     array = BytecodePeepholeOptimization::OptimizeBytecode(isolate_, zone(),
                                                            re_data, this);
   } else {
-    array = isolate_->factory()->NewTrustedByteArray(pc_);
+    array =
+        isolate_->factory()->NewTrustedByteArray(static_cast<uint32_t>(pc_));
     CopyBufferTo(array->begin());
   }
 

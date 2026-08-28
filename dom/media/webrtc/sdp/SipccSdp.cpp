@@ -27,7 +27,7 @@ SipccSdp::SipccSdp(const SipccSdp& aOrig)
   }
 }
 
-Sdp* SipccSdp::Clone() const { return new SipccSdp(*this); }
+UniquePtr<Sdp> SipccSdp::Clone() const { return MakeUnique<SipccSdp>(*this); }
 
 const SdpOrigin& SipccSdp::GetOrigin() const { return mOrigin; }
 
@@ -40,14 +40,14 @@ uint32_t SipccSdp::GetBandwidth(const std::string& type) const {
 }
 
 const SdpMediaSection& SipccSdp::GetMediaSection(const size_t level) const {
-  if (level > mMediaSections.size()) {
+  if (level >= mMediaSections.size()) {
     MOZ_CRASH();
   }
   return *mMediaSections[level];
 }
 
 SdpMediaSection& SipccSdp::GetMediaSection(const size_t level) {
-  if (level > mMediaSections.size()) {
+  if (level >= mMediaSections.size()) {
     MOZ_CRASH();
   }
   return *mMediaSections[level];
@@ -66,7 +66,8 @@ SdpMediaSection& SipccSdp::AddMediaSection(
   media->mPortCount = 0;
   media->mProtocol = protocol;
   media->mConnection = MakeUnique<SdpConnection>(addrType, addr);
-  media->GetAttributeList().SetAttribute(new SdpDirectionAttribute(dir));
+  media->GetAttributeList().SetAttribute(
+      MakeUnique<SdpDirectionAttribute>(dir));
   mMediaSections.emplace_back(media);
   return *media;
 }

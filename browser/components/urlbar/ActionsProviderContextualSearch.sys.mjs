@@ -2,16 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { UrlbarUtils } from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
+import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 import {
   ActionsProvider,
   ActionsResult,
 } from "moz-src:///browser/components/urlbar/ActionsProvider.sys.mjs";
 
-const lazy = {};
-
-ChromeUtils.defineESModuleGetters(lazy, {
+const lazy = XPCOMUtils.declareLazy({
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   OpenSearchEngine:
     "moz-src:///toolkit/components/search/OpenSearchEngine.sys.mjs",
@@ -22,9 +20,11 @@ ChromeUtils.defineESModuleGetters(lazy, {
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   PrivateBrowsingUtils: "resource://gre/modules/PrivateBrowsingUtils.sys.mjs",
   SearchService: "moz-src:///toolkit/components/search/SearchService.sys.mjs",
+  SearchUIUtils: "moz-src:///browser/components/search/SearchUIUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
   UrlbarSearchUtils:
     "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
 });
 
 const ENABLED_PREF = "contextualSearch.enabled";
@@ -34,6 +34,11 @@ const OPEN_SEARCH_ENGINE = "opensearch-engine";
 const CONTEXTUAL_SEARCH_ENGINE = "contextual-search-engine";
 
 const DEFAULT_ICON = "chrome://browser/skin/search-engine-placeholder@2x.png";
+
+/**
+ * @import {SearchEngine} from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
+ * @import {BrowserSearchTelemetry} from "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs"
+ */
 
 /**
  * A provider that returns an option for using the search engine provided
@@ -72,7 +77,7 @@ class ProviderContextualSearch extends ActionsProvider {
     return (
       queryContext.trimmedSearchString &&
       lazy.UrlbarPrefs.getScotchBonnetPref(ENABLED_PREF) &&
-      !queryContext.searchMode &&
+      !queryContext.restrictInSearchMode() &&
       lazy.UrlbarPrefs.get("suggest.engines")
     );
   }
@@ -95,6 +100,7 @@ class ProviderContextualSearch extends ActionsProvider {
   async #createActionResult({ type, engine, key = "contextual-search" }) {
     let icon = engine?.icon || (await engine?.getIconURL?.()) || DEFAULT_ICON;
     let result = {
+      providerName: this.name,
       key,
       l10nId: "urlbar-result-search-with",
       l10nArgs: { engine: engine.name || engine.title },
@@ -104,6 +110,9 @@ class ProviderContextualSearch extends ActionsProvider {
     if (type == INSTALLED_ENGINE) {
       result.engine = engine.name;
       result.dataset = { providesSearchMode: true };
+      if (key != "matched-contextual-search") {
+        result.dataset.immediateSearch = true;
+      }
     }
 
     return new ActionsResult(result);
@@ -134,7 +143,7 @@ class ProviderContextualSearch extends ActionsProvider {
 
     let host;
     try {
-      host = UrlbarUtils.stripPrefixAndTrim(browser.currentURI.host, {
+      host = lazy.UrlbarShared.stripPrefixAndTrim(browser.currentURI.host, {
         stripWww: true,
       })[0];
     } catch (e) {
@@ -201,6 +210,9 @@ class ProviderContextualSearch extends ActionsProvider {
    *   Load flags. See nsIWebProgressListener.idl for possible values.
    */
   async onLocationChange(window, uri, _webProgress, _flags) {
+    if (!uri.scheme.startsWith("http")) {
+      return;
+    }
     try {
       if (this.#visitedEngineDomains.has(uri.host)) {
         this.#visitedEngineDomains.set(uri.host, true);
@@ -307,11 +319,26 @@ class ProviderContextualSearch extends ActionsProvider {
     );
   }
 
-  onPick(queryContext, controller) {
-    this.pickAction(queryContext, controller);
+  /**
+   * @param {UrlbarQueryContext} queryContext
+   * @param {UrlbarParentController} controller
+   * @param {ActionsResult} action
+   * @param {object} details
+   */
+  onPick(queryContext, controller, action, details) {
+    this.pickAction(queryContext, controller, details.searchSource).catch(
+      console.error
+    );
   }
 
-  async pickAction(queryContext, controller, _element) {
+  /**
+   * Picks an action
+   *
+   * @param {UrlbarQueryContext} queryContext
+   * @param {UrlbarParentController} controller
+   * @param {keyof typeof BrowserSearchTelemetry.KNOWN_SEARCH_SOURCES} searchSource
+   */
+  async pickAction(queryContext, controller, searchSource) {
     let { type, engine } = this.#resultEngine;
 
     if (type == OPEN_SEARCH_ENGINE) {
@@ -337,12 +364,14 @@ class ProviderContextualSearch extends ActionsProvider {
       engine,
       queryContext.searchString,
       controller,
-      type == INSTALLED_ENGINE
+      this.#resultEngine.key == "matched-contextual-search",
+      searchSource
     );
 
     if (
       !queryContext.isPrivate &&
       type != INSTALLED_ENGINE &&
+      Services.policies.isAllowed("installSearchEngine") &&
       (await lazy.SearchService.shouldShowInstallPrompt(engine))
     ) {
       this.#showInstallPrompt(controller, engine);
@@ -353,15 +382,41 @@ class ProviderContextualSearch extends ActionsProvider {
     this.#visitedEngineDomains.clear();
   }
 
-  async #performSearch(engine, search, controller, enterSearchMode) {
-    const [url] = UrlbarUtils.getSearchQueryUrl(engine, search);
+  /**
+   * Loads a search in the current tab.
+   *
+   * @param {SearchEngine} engine
+   * @param {string} search
+   * @param {UrlbarParentController} controller
+   * @param {boolean} enterSearchMode
+   * @param {keyof typeof BrowserSearchTelemetry.KNOWN_SEARCH_SOURCES} searchSource
+   */
+  async #performSearch(
+    engine,
+    search,
+    controller,
+    enterSearchMode,
+    searchSource
+  ) {
     if (enterSearchMode) {
-      controller.input.search(search, { searchEngine: engine });
+      // Pass only the fields `search()` reads, as a plain object, so it stays
+      // structured-cloneable when this runs parent-side on the actor message
+      // path (the engine itself can't cross the boundary).
+      controller.input.search(search, {
+        // TODO, Bug 2043607: Pass an id rather than the details & remove the
+        // comment above.
+        // @ts-expect-error
+        searchEngine: { name: engine.name, aliases: engine.aliases },
+      });
     }
-    controller.browserWindow.gBrowser.fixupAndLoadURIString(url, {
+
+    lazy.SearchUIUtils.loadSearch({
+      window: controller.browserWindow,
+      searchText: search,
+      engine,
       triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
+      sapSource: searchSource,
     });
-    controller.browserWindow.gBrowser.selectedBrowser.focus();
   }
 
   #showInstallPrompt(controller, engineData) {

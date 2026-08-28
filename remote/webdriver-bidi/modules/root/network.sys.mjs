@@ -33,6 +33,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   parseURLPattern:
     "chrome://remote/content/shared/webdriver/URLPattern.sys.mjs",
   pprint: "chrome://remote/content/shared/Format.sys.mjs",
+  SessionDataCategory:
+    "chrome://remote/content/shared/messagehandler/sessiondata/SessionData.sys.mjs",
   SessionDataMethod:
     "chrome://remote/content/shared/messagehandler/sessiondata/SessionData.sys.mjs",
   truncate: "chrome://remote/content/shared/Format.sys.mjs",
@@ -2888,6 +2890,7 @@ class NetworkModule extends RootBiDiModule {
     const navigation = request.navigationId;
     let contextId = null;
     let topContextId = null;
+    let userContextId = null;
     if (request.contextId) {
       // Retrieve the top browsing context id for this network event.
       contextId = request.contextId;
@@ -2896,6 +2899,8 @@ class NetworkModule extends RootBiDiModule {
       topContextId = lazy.NavigableManager.getIdForBrowsingContext(
         browsingContext.top
       );
+      userContextId =
+        lazy.UserContextManager.getIdByBrowsingContext(browsingContext);
     }
 
     const intercepts = this.#getNetworkIntercepts(event, request, topContextId);
@@ -2909,6 +2914,7 @@ class NetworkModule extends RootBiDiModule {
       redirectCount,
       request: requestData,
       timestamp,
+      userContext: userContextId,
     };
 
     if (isBlocked) {
@@ -3063,7 +3069,7 @@ class NetworkModule extends RootBiDiModule {
     }
 
     const sessionDataItem = {
-      category: "response-collector",
+      category: lazy.SessionDataCategory.ResponseCollector,
       method,
       moduleName: "network",
       values: [collectorId],

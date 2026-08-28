@@ -1,4 +1,5 @@
 [DEFAULT]
+tags = "urlbar"
 support-files = [
   "../browser/head-common.js",
   "head.js",
@@ -7,6 +8,10 @@ support-files = [
 ["browser_adaptive_origin_fallback.js"]
 
 ["browser_backspace_dismissal.js"]
+
+["browser_backspace_dismissal_guards.js"]
+
+["browser_backspace_dismissal_reintegration.js"]
 
 ["browser_backspaced.js"]
 
@@ -18,6 +23,23 @@ https_first_disabled = true
 ["browser_clear_properly_on_accent_char.js"]
 
 ["browser_firstResult.js"]
+
+["browser_inputField_contextmenu_dismissal.js"]
+
+["browser_inputField_contextmenu_dismissal_telemetry.js"]
+
+["browser_inputField_contextmenu_reintegration.js"]
+
+["browser_inputHistory.js"]
+https_first_disabled = true
+support-files = [
+  "../browser/searchSuggestionEngine.xml",
+  "../browser/searchSuggestionEngine.sjs",
+]
+
+["browser_inputHistory_autofill.js"]
+
+["browser_inputHistory_emptystring.js"]
 
 ["browser_originToAdaptive.js"]
 

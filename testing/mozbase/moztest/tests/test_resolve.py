@@ -163,18 +163,18 @@ def all_tests(create_tests):
             },
         ),
         (
-            "fig/grape/src/TestInstrumentationA.java",
+            "fig/grape/test_MochitestA.html",
             {
-                "flavor": "instrumentation",
-                "manifest": "fig/grape/instrumentation.toml",
+                "flavor": "mochitest",
+                "manifest": "fig/grape/mochitest.toml",
                 "subsuite": "background",
             },
         ),
         (
-            "fig/huckleberry/src/TestInstrumentationB.java",
+            "fig/huckleberry/test_MochitestB.html",
             {
-                "flavor": "instrumentation",
-                "manifest": "fig/huckleberry/instrumentation.toml",
+                "flavor": "mochitest",
+                "manifest": "fig/huckleberry/mochitest.toml",
                 "subsuite": "browser",
             },
         ),
@@ -409,6 +409,65 @@ def test_resolve_multiple_paths(resolver):
     assert len(result) == 4
 
 
+def test_get_test_paths_by_manifest_directory(resolver):
+    """A directory maps every manifest holding tests under it to itself."""
+    mapping = resolver.get_test_paths_by_manifest("xpcshell", frozenset(["banana"]))
+
+    assert mapping
+    for manifest, test_paths in mapping.items():
+        assert manifest.startswith("banana/")
+        assert test_paths == [manifest]
+
+
+def test_get_test_paths_by_manifest_included_manifest(resolver):
+    """Manifests included by another one are attributed to the manifest that
+    includes them, so that a chunk running one runs the tests it pulls in."""
+    assert sorted(
+        resolver.get_test_paths_by_manifest("xpcshell", frozenset(["carrot"]))
+    ) == ["carrot/xpcshell-one.toml", "carrot/xpcshell-two.toml"]
+
+
+def test_get_test_paths_by_manifest_manifest(resolver):
+    """A path naming a manifest maps only that manifest."""
+    manifest = next(
+        iter(resolver.get_test_paths_by_manifest("xpcshell", frozenset(["banana"])))
+    )
+
+    assert resolver.get_test_paths_by_manifest("xpcshell", frozenset([manifest])) == {
+        manifest: [manifest]
+    }
+
+
+def test_get_test_paths_by_manifest_narrower_than_manifest(resolver):
+    """A path narrower than the manifest holding its tests is kept as it is, so
+    that the task runs what was asked for rather than the whole manifest."""
+    path = "dragonfruit/elderberry"
+    mapping = resolver.get_test_paths_by_manifest("xpcshell", frozenset([path]))
+
+    assert mapping
+    for manifest, test_paths in mapping.items():
+        if manifest.startswith(path + "/"):
+            assert test_paths == [manifest]
+        else:
+            # The manifest lives above the requested path and holds tests that
+            # were not asked for.
+            assert test_paths == [path]
+
+
+def test_get_test_paths_by_manifest_single_test_file(resolver):
+    """A path naming a single test file maps its manifest to that file only."""
+    test_file = "banana/currant/test_xpcshell_A.js"
+    mapping = resolver.get_test_paths_by_manifest("xpcshell", frozenset([test_file]))
+
+    assert mapping
+    assert all(test_paths == [test_file] for test_paths in mapping.values())
+
+
+def test_get_test_paths_by_manifest_no_match(resolver):
+    """A path holding no test of that suite maps nothing."""
+    assert resolver.get_test_paths_by_manifest("xpcshell", frozenset(["fig"])) == {}
+
+
 def test_resolve_support_files(resolver):
     expected_support_files = "data/**\nxpcshell_updater.toml"
     tests = list(resolver.resolve_tests(paths=["dragonfruit"]))
@@ -477,11 +536,11 @@ def test_subsuites(resolver):
 
     tests = list(resolver.resolve_tests(paths=["fig"], subsuite="browser"))
     assert len(tests) == 1
-    assert tests[0]["name"] == "src/TestInstrumentationB.java"
+    assert tests[0]["name"] == "test_MochitestB.html"
 
     tests = list(resolver.resolve_tests(paths=["fig"], subsuite="background"))
     assert len(tests) == 1
-    assert tests[0]["name"] == "src/TestInstrumentationA.java"
+    assert tests[0]["name"] == "test_MochitestA.html"
 
     # Resolve tests *without* a subsuite.
     tests = list(resolver.resolve_tests(flavor="browser-chrome", subsuite="undefined"))
@@ -590,14 +649,10 @@ def test_task_regexes():
         "test-linux64/opt-geckoview-reftest",
         "test-linux64/debug-reftest-e10s-1",
         "test-linux64/debug-reftest-e10s-11",
-        "test-linux64/opt-robocop",
-        "test-linux64/opt-robocop-1",
-        "test-linux64/opt-robocop-e10s",
-        "test-linux64/opt-robocop-e10s-1",
-        "test-linux64/opt-robocop-e10s-11",
         "test-linux64/opt-web-platform-tests-e10s-1",
         "test-linux64/opt-web-platform-tests-reftest-e10s-1",
         "test-linux64/opt-web-platform-tests-wdspec-e10s-1",
+        "test-linux64/opt-web-platform-tests-aam-e10s-1",
         "test-linux64/opt-web-platform-tests-1",
         "test-linux64/opt-web-platform-test-e10s-1",
         "test-linux64/opt-xpcshell",
@@ -636,12 +691,6 @@ def test_task_regexes():
             "test-linux64/opt-geckoview-reftest",
             "test-linux64/debug-reftest-e10s-1",
         ],
-        "robocop": [
-            "test-linux64/opt-robocop",
-            "test-linux64/opt-robocop-1",
-            "test-linux64/opt-robocop-e10s",
-            "test-linux64/opt-robocop-e10s-1",
-        ],
         "web-platform-tests": [
             "test-linux64/opt-web-platform-tests-e10s-1",
             "test-linux64/opt-web-platform-tests-1",
@@ -651,6 +700,9 @@ def test_task_regexes():
         ],
         "web-platform-tests-wdspec": [
             "test-linux64/opt-web-platform-tests-wdspec-e10s-1",
+        ],
+        "web-platform-tests-aam": [
+            "test-linux64/opt-web-platform-tests-aam-e10s-1",
         ],
         "xpcshell": [
             "test-linux64/opt-xpcshell",

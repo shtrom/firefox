@@ -6,10 +6,7 @@
  * This module exports a provider returning the user's recent searches.
  */
 
-import {
-  UrlbarProvider,
-  UrlbarUtils,
-} from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
+import { UrlbarProvider } from "moz-src:///browser/components/urlbar/UrlbarUtils.sys.mjs";
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
@@ -18,7 +15,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   FormHistory: "resource://gre/modules/FormHistory.sys.mjs",
   SearchUtils: "moz-src:///toolkit/components/search/SearchUtils.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarResult: "moz-src:///browser/components/urlbar/UrlbarResult.sys.mjs",
+  UrlbarResult: "chrome://browser/content/urlbar/UrlbarResult.mjs",
+  UrlbarShared: "chrome://browser/content/urlbar/UrlbarShared.mjs",
   UrlbarSearchUtils:
     "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
 });
@@ -39,10 +37,10 @@ export class UrlbarProviderRecentSearches extends UrlbarProvider {
   }
 
   /**
-   * @returns {Values<typeof UrlbarUtils.PROVIDER_TYPE>}
+   * @returns {Values<typeof lazy.UrlbarShared.PROVIDER_TYPE>}
    */
   get type() {
-    return UrlbarUtils.PROVIDER_TYPE.PROFILE;
+    return lazy.UrlbarShared.PROVIDER_TYPE.PROFILE;
   }
 
   async isActive(queryContext) {
@@ -56,7 +54,7 @@ export class UrlbarProviderRecentSearches extends UrlbarProvider {
       lazy.UrlbarPrefs.get(ENABLED_PREF) &&
       lazy.UrlbarPrefs.get(SUGGEST_PREF) &&
       !queryContext.searchString &&
-      !queryContext.searchMode &&
+      !queryContext.restrictInSearchMode() &&
       !queryContext.restrictSource
     );
   }
@@ -147,14 +145,14 @@ export class UrlbarProviderRecentSearches extends UrlbarProvider {
 
     for (let result of results) {
       let res = new lazy.UrlbarResult({
-        type: UrlbarUtils.RESULT_TYPE.SEARCH,
-        source: UrlbarUtils.RESULT_SOURCE.HISTORY,
+        type: lazy.UrlbarShared.RESULT_TYPE.SEARCH,
+        source: lazy.UrlbarShared.RESULT_SOURCE.HISTORY,
         payload: {
           engine: engine.name,
           suggestion: result.value,
           title: result.value,
           isBlockable: true,
-          blockL10n: { id: "urlbar-result-menu-remove-from-history" },
+          blockL10n: { id: "urlbar-result-menu-remove-from-history2" },
           helpUrl:
             Services.urlFormatter.formatURLPref("app.support.baseURL") +
             "awesome-bar-result-menu",

@@ -232,7 +232,7 @@ void pages_unmap(void* aAddr, size_t aSize) {
   if (munmap(aAddr, aSize) == -1) {
     char buf[64];
 
-    if (strerror_r(errno, buf, sizeof(buf)) == 0) {
+    if (!strerror_r(errno, buf, sizeof(buf))) {
       _malloc_message(_getprogname(), ": (malloc) Error in munmap(): ", buf,
                       "\n");
     }
@@ -545,7 +545,7 @@ static void chunk_record(void* aChunk, size_t aSize, ChunkType aType) {
   }
 
   // Allocate a node before acquiring chunks_mtx even though it might not
-  // be needed, because TypedBaseAlloc::alloc() may cause a new base chunk to
+  // be needed, otherwise the base allocator may cause a new base chunk to
   // be allocated, which could cause deadlock if chunks_mtx were already
   // held.
   UniqueBaseNode xnode(new (fallible) extent_node_t());
@@ -572,10 +572,9 @@ static void chunk_record(void* aChunk, size_t aSize, ChunkType aType) {
   } else {
     // Coalescing forward failed, so insert a new node.
     if (!xnode) {
-      // TypedBaseAlloc::alloc() failed, which is an exceedingly
-      // unlikely failure.  Leak chunk; its pages have
-      // already been purged, so this is only a virtual
-      // memory leak.
+      // BaseAlloc::alloc failed, which is an exceedingly unlikely failure.
+      // Leak the chunk; its pages have already been purged, so this is only
+      // a virtual memory leak.
       return;
     }
     node = xnode.release();

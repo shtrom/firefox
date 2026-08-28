@@ -17,6 +17,7 @@
 #include "gc/GC.h"
 #include "gc/PublicIterators.h"
 #include "jit/IonCompileTask.h"
+#include "jit/JitOptions.h"  // js::fuzzingSafe
 #include "jit/JitRuntime.h"
 #include "jit/Simulator.h"
 #include "js/AllocationLogging.h"  // JS_COUNT_CTOR, JS_COUNT_DTOR
@@ -372,7 +373,7 @@ void JSRuntime::addSizeOfIncludingThis(mozilla::MallocSizeOf mallocSizeOf,
   }
 
   rtSizes->wasmRuntime +=
-      wasmInstances.lock()->sizeOfExcludingThis(mallocSizeOf);
+      wasmInstances.lock()->shallowSizeOfExcludingThis(mallocSizeOf);
 
 #ifdef ENABLE_WASM_JSPI
   rtSizes->wasmContStacks +=
@@ -424,9 +425,12 @@ static bool HandleInterrupt(JSContext* cx, bool invokeCallback,
 
   if (!InvokeInterruptCallbacks(cx)) {
     // Debugger treats invoking the interrupt callback as a "step", so
-    // invoke the onStep handler.
-    if (cx->realm()->isDebuggee()) {
+    // invoke the onStep handler. Skip this in --fuzzing-safe mode because
+    // fuzzer-generated onStep handlers can mutate state that native/builtin
+    // code (e.g. TypedArrayJoinKernel) assumes is stable.
+    if (cx->realm()->isDebuggee() && !fuzzingSafe) {
       ScriptFrameIter iter(cx);
+      MOZ_ASSERT_IF(!iter.done(), !iter.isResumingGenerator());
       if (!iter.done() && cx->compartment() == iter.compartment() &&
           DebugAPI::stepModeEnabled(iter.script())) {
         if (!DebugAPI::onSingleStep(cx)) {
@@ -736,6 +740,8 @@ void JSRuntime::commitPendingWrapperPreservations() {
 
 void JSRuntime::commitPendingWrapperPreservations(JS::Zone* zone) {
   for (JSObject* wrapper : zone->slurpPendingWrapperPreservations()) {
+    MOZ_RELEASE_ASSERT(!IsWrapper(wrapper));
+
     JS::Value objectWrapperSlot =
         JS::GetReservedSlot(wrapper, JS_OBJECT_WRAPPER_SLOT);
     // This mirrors logic in MaybePreserveDOMWrapper, and should be kept in
@@ -744,13 +750,8 @@ void JSRuntime::commitPendingWrapperPreservations(JS::Zone* zone) {
       continue;
     }
 
-    if (IsWrapper(wrapper)) {
-      wrapper = UncheckedUnwrap(wrapper);
-    }
-
     Rooted<JSObject*> rooted(mainContextFromOwnThread(), wrapper);
-    bool success = preserveWrapperCallback(mainContextFromOwnThread(), rooted);
-    MOZ_RELEASE_ASSERT(success);
+    preserveWrapperCallback(mainContextFromOwnThread(), rooted);
   }
 
   // The callback must not cause more wrappers to be preserved or they will

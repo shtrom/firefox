@@ -10,6 +10,7 @@
 #include "mozilla/NullPrincipal.h"
 #include "mozilla/OriginAttributes.h"
 #include "mozilla/StaticPrefs_dom.h"
+#include "mozilla/StoragePrincipalHelper.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/extensions/WebExtensionPolicy.h"
 #include "mozilla/glean/DomSecurityMetrics.h"
@@ -1152,8 +1153,16 @@ TestHTTPAnswerRunnable::Run() {
         new nsDNSPrefetch(mURI, originAttributes, origChannel->GetTRRMode());
     nsCOMPtr<nsIHttpChannelInternal> internalChannel =
         do_QueryInterface(origChannel);
+    // If the channel will be proxied and the proxy is responsible for DNS
+    // resolution, skip the HTTPS RR lookup to avoid leaking the host name
+    nsIHttpChannelInternal::ProxyDNSStrategy dnsStrategy =
+        nsIHttpChannelInternal::PROXY_DNS_STRATEGY_ORIGIN;
+    if (internalChannel) {
+      (void)internalChannel->GetProxyDNSStrategy(&dnsStrategy);
+    }
     uint32_t caps;
-    if (NS_SUCCEEDED(internalChannel->GetCaps(&caps))) {
+    if (dnsStrategy != nsIHttpChannelInternal::PROXY_DNS_STRATEGY_PROXY &&
+        internalChannel && NS_SUCCEEDED(internalChannel->GetCaps(&caps))) {
       (void)resolver->FetchHTTPSSVC(
           caps & NS_HTTP_REFRESH_DNS, false,
           [self = RefPtr{this}](nsIDNSHTTPSSVCRecord* aRecord) {

@@ -377,14 +377,6 @@ bool WebGLContext::ValidateBuffersForTf(
 
 ////////////////////////////////////////
 
-template <typename T>
-static bool DoSetsIntersect(const std::set<T>& a, const std::set<T>& b) {
-  std::vector<T> intersection;
-  std::set_intersection(a.begin(), a.end(), b.begin(), b.end(),
-                        std::back_inserter(intersection));
-  return !intersection.empty();
-}
-
 template <size_t N>
 static size_t FindFirstOne(const std::bitset<N>& bs) {
   MOZ_ASSERT(bs.any());
@@ -641,8 +633,12 @@ class ScopedDrawWithTransformFeedback final {
     const auto usedVerts =
         CheckedInt<uint32_t>(usedVertsPerInstance) * instanceCount;
 
-    const auto remainingCapacity =
-        mTFO->mActive_VertCapacity - mTFO->mActive_VertPosition;
+    // The position can exceed the capacity if a bound buffer was shrunk while
+    // the TF was paused.
+    const size_t remainingCapacity =
+        mTFO->mActive_VertCapacity > mTFO->mActive_VertPosition
+            ? mTFO->mActive_VertCapacity - mTFO->mActive_VertPosition
+            : 0;
     if (!usedVerts.isValid() || usedVerts.value() > remainingCapacity) {
       mWebGL->ErrorInvalidOperation(
           "Insufficient buffer capacity remaining for"
@@ -1300,15 +1296,15 @@ bool WebGLContext::DoFakeVertexAttrib0(
   switch (mGenericVertexAttribTypes[0]) {
     case webgl::AttribBaseType::Boolean:
     case webgl::AttribBaseType::Float:
-      gl->fVertexAttribPointer(0, 4, LOCAL_GL_FLOAT, false, 0, 0);
+      gl->fVertexAttribPointer(0, 4, LOCAL_GL_FLOAT, false, 0, nullptr);
       break;
 
     case webgl::AttribBaseType::Int:
-      gl->fVertexAttribIPointer(0, 4, LOCAL_GL_INT, 0, 0);
+      gl->fVertexAttribIPointer(0, 4, LOCAL_GL_INT, 0, nullptr);
       break;
 
     case webgl::AttribBaseType::Uint:
-      gl->fVertexAttribIPointer(0, 4, LOCAL_GL_UNSIGNED_INT, 0, 0);
+      gl->fVertexAttribIPointer(0, 4, LOCAL_GL_UNSIGNED_INT, 0, nullptr);
       break;
   }
 

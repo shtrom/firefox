@@ -16,6 +16,7 @@
 #include "base/basictypes.h"
 #include "buildid_section.h"
 #include "jsapi.h"
+#include "mozilla/AppShutdown.h"
 #include "mozilla/AsyncEventDispatcher.h"
 #include "mozilla/BasePrincipal.h"
 #include "mozilla/ContentPrincipal.h"
@@ -424,7 +425,7 @@ already_AddRefed<nsFrameLoader> nsFrameLoader::Create(
   // If this is a toplevel initial remote frame, we're looking at a browser
   // loaded in the parent process. Pull the remote type attribute off of the
   // <browser> element to determine which remote type it should be loaded in, or
-  // use `DEFAULT_REMOTE_TYPE` if we can't tell.
+  // use a shared web remote type if we can't tell.
   if (isRemoteFrame) {
     MOZ_ASSERT(XRE_IsParentProcess());
     nsAutoString remoteType;
@@ -432,7 +433,7 @@ already_AddRefed<nsFrameLoader> nsFrameLoader::Create(
         !remoteType.IsEmpty()) {
       CopyUTF16toUTF8(remoteType, fl->mRemoteType);
     } else {
-      fl->mRemoteType = DEFAULT_REMOTE_TYPE;
+      fl->mRemoteType = SharedWebRemoteType(context->OriginAttributesRef());
     }
   }
   return fl.forget();
@@ -706,6 +707,12 @@ nsresult nsFrameLoader::ReallyStartLoadingInternal() {
   }
 
   if (IsRemoteFrame()) {
+    if (!XRE_IsParentProcess() && mURIToLoad &&
+        mURIToLoad->SchemeIs("javascript")) {
+      // Web content should only be able to load javascript URIs same origin.
+      return NS_ERROR_DOM_BAD_CROSS_ORIGIN_URI;
+    }
+
     if (!EnsureRemoteBrowser()) {
       NS_WARNING("Couldn't create child process for iframe.");
       return NS_ERROR_FAILURE;
@@ -1060,7 +1067,10 @@ bool nsFrameLoader::ShowRemoteFrame(nsSubDocumentFrame* aFrame) {
                "ShowRemote only makes sense on remote frames.");
 
   if (!EnsureRemoteBrowser()) {
-    NS_ERROR("Couldn't create child process.");
+    // We know that creation of a browser will fail past shutdown, so we only
+    // assert before shutdown, to avoid failures on debug builds (bug 2055827).
+    NS_ASSERTION(AppShutdown::IsInOrBeyond(ShutdownPhase::AppShutdownConfirmed),
+                 "Couldn't create child process.");
     return false;
   }
 

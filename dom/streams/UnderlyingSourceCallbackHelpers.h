@@ -62,6 +62,12 @@ class UnderlyingSourceAlgorithmsBase : public nsISupports {
   // Currently used by Fetch helper functions e.g. new Response(stream).text()
   virtual nsIInputStream* MaybeGetInputStreamIfUnread() { return nullptr; }
 
+  // Replaces the underlying input stream of an unread native stream. Used by
+  // Fetch's clone() to repoint a body's ReadableStream at a freshly cloned
+  // input stream without disturbing the stream or changing its identity. No-op
+  // for non-native streams. Must only be called on a non-disturbed stream.
+  virtual void SetInputStreamIfUnread(nsIInputStream* aInput) {}
+
   // https://streams.spec.whatwg.org/#other-specs-rs-create
   // By "native" we mean "instances initialized via the above set up or set up
   // with byte reading support algorithms (not, e.g., on web-developer-created
@@ -265,6 +271,13 @@ class InputToReadableStreamAlgorithms
   void ErrorPropagation(JSContext* aCx, ReadableStream* aStream,
                         nsresult aError);
 
+  // Builds the JS error value used to error the stream when the input stream
+  // closes with a failure status other than NS_BASE_STREAM_CLOSED. The default
+  // is a generic TypeError; subclasses may override to map specific nsresults
+  // to more meaningful errors (e.g. a named DOMException).
+  virtual void BuildErrorValue(JSContext* aCx, nsresult aError,
+                               JS::MutableHandle<JS::Value> aErrorValue);
+
   // Common methods
 
   bool IsClosed() { return !mInput; }
@@ -310,6 +323,13 @@ class NonAsyncInputToReadableStreamAlgorithms
   nsIInputStream* MaybeGetInputStreamIfUnread() override {
     MOZ_ASSERT(mInput, "Should be only called on non-disturbed streams");
     return mInput;
+  }
+
+  void SetInputStreamIfUnread(nsIInputStream* aInput) override {
+    MOZ_ASSERT(mInput, "Should be only called on non-disturbed streams");
+    MOZ_ASSERT(!mAsyncAlgorithms,
+               "Should be only called before the stream is read");
+    mInput = aInput;
   }
 
  private:

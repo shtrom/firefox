@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "VideoBridgeParent.h"
+
 #include "CompositorThread.h"
 #include "mozilla/DataMutex.h"
 #include "mozilla/ipc/Endpoint.h"
@@ -39,7 +40,7 @@ VideoBridgeParent::VideoBridgeParent(VideoBridgeSource aSource)
   }
 }
 
-VideoBridgeParent::~VideoBridgeParent() {
+void VideoBridgeParent::UnregisterSingleton() {
   auto videoBridgeFromProcess = sVideoBridgeFromProcess.Lock();
   for (auto& bridgeParent : *videoBridgeFromProcess) {
     if (bridgeParent == this) {
@@ -47,6 +48,8 @@ VideoBridgeParent::~VideoBridgeParent() {
     }
   }
 }
+
+VideoBridgeParent::~VideoBridgeParent() { UnregisterSingleton(); }
 
 /* static */
 void VideoBridgeParent::Open(Endpoint<PVideoBridgeParent>&& aEndpoint,
@@ -75,7 +78,6 @@ RefPtr<VideoBridgeParent> VideoBridgeParent::GetSingleton(
     case VideoBridgeSource::RddProcess:
     case VideoBridgeSource::GpuProcess:
     case VideoBridgeSource::MFMediaEngineCDMProcess:
-      MOZ_ASSERT((*videoBridgeFromProcess)[aSource.value()]);
       return RefPtr{(*videoBridgeFromProcess)[aSource.value()]};
     default:
       MOZ_CRASH("Unhandled case");
@@ -189,6 +191,8 @@ void VideoBridgeParent::ActorDestroy(ActorDestroyReason aWhy) {
     mClosed = true;
     mCompositorThreadHolder = nullptr;
   }
+
+  UnregisterSingleton();
 }
 
 /* static */

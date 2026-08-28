@@ -23,8 +23,7 @@ using namespace js;
 using namespace js::jit;
 
 static bool TryFoldingGuardShapes(JSContext* cx, ICFallbackStub* fallback,
-                                  JSScript* script, ICScript* icScript,
-                                  gc::AutoMarkingLock& lock) {
+                                  JSScript* script, ICScript* icScript) {
   // Try folding similar stubs with GuardShapes
   // into GuardMultipleShapes or GuardMultipleShapesToOffset
 
@@ -108,14 +107,15 @@ static bool TryFoldingGuardShapes(JSContext* cx, ICFallbackStub* fallback,
           script->column().oneOriginValue());
 
   if (JitSpewEnabled(JitSpew_StubFoldingDetails)) {
-    Fprinter& printer(JitSpewPrinter());
     uint32_t i = 0;
     for (ICCacheIRStub* stub = firstStub; stub; stub = stub->nextCacheIR()) {
-      printer.printf("- stub %d (enteredCount: %d)\n", i, stub->enteredCount());
+      JitSpew(JitSpew_StubFoldingDetails, "- stub %d (enteredCount: %d)", i,
+              stub->enteredCount());
 
 #  ifdef JS_CACHEIR_SPEW
+      AutoJitSpewMessage msg(JitSpew_StubFoldingDetails);
       ICCacheIRStub* cache_stub = stub->toCacheIRStub();
-      SpewCacheIROps(printer, "  ", cache_stub->stubInfo());
+      SpewCacheIROps(msg.printer(), "  ", cache_stub->stubInfo());
 #  endif
       i++;
     }
@@ -280,12 +280,12 @@ static bool TryFoldingGuardShapes(JSContext* cx, ICFallbackStub* fallback,
     MOZ_ASSERT_IF(hasSlotOffsets, shapeList.length() == offsetList.length());
 
     for (uint32_t i = 0; i < shapeList.length(); i++) {
-      if (!shapeObj->append(cx, shapeList[i])) {
-        return false;
-      }
-
       if (hasSlotOffsets) {
-        if (!shapeObj->append(cx, offsetList[i])) {
+        if (!shapeObj->append(cx, shapeList[i], offsetList[i])) {
+          return false;
+        }
+      } else {
+        if (!shapeObj->append(cx, shapeList[i])) {
           return false;
         }
       }
@@ -421,16 +421,27 @@ static bool TryFoldingGuardShapes(JSContext* cx, ICFallbackStub* fallback,
     return true;
   }
 
-  // Replace the existing stubs with the new folded stub.
-  fallback->discardStubs(cx->zone(), icEntry);
+  if (writer.tooLarge()) {
+    JitSpew(JitSpew_StubFolding,
+            "Folded stub at offset %u too large (icScript: %p) with %zu shapes "
+            "(%s:%u:%u)",
+            fallback->pcOffset(), icScript, shapeList.length(),
+            script->filename(), script->lineno(),
+            script->column().oneOriginValue());
+    cx->runtime()->setUseCounter(cx->global(), JSUseCounter::IC_STUB_TOO_LARGE);
+    return true;
+  }
 
+  // Replace the existing stubs with the new folded stub.
+  MaybeMarkingLock lock;
   ICAttachResult result = AttachBaselineCacheIRStubLocked(
-      cx, writer, cacheKind, script, icScript, fallback, "StubFold", lock);
+      cx, writer, cacheKind, script, icScript, fallback,
+      DiscardExistingStubs::Yes, "StubFold", lock);
   if (result == ICAttachResult::OOM) {
     ReportOutOfMemory(cx);
     return false;
   }
-  MOZ_ASSERT(result == ICAttachResult::Attached);
+  MOZ_RELEASE_ASSERT(result == ICAttachResult::Attached);
 
   // We preserve the total entry count while folding stubs to help guide
   // inlining heuristics.
@@ -446,12 +457,12 @@ static bool TryFoldingGuardShapes(JSContext* cx, ICFallbackStub* fallback,
   if (JitSpewEnabled(JitSpew_StubFoldingDetails)) {
     ICStub* newEntryStub = icEntry->firstStub();
 
-    Fprinter& printer(JitSpewPrinter());
-    printer.printf("- stub 0 (enteredCount: %d)\n",
-                   newEntryStub->enteredCount());
+    JitSpew(JitSpew_StubFoldingDetails, "- stub 0 (enteredCount: %d)",
+            newEntryStub->enteredCount());
 #  ifdef JS_CACHEIR_SPEW
+    AutoJitSpewMessage msg(JitSpew_StubFoldingDetails);
     ICCacheIRStub* newStub = newEntryStub->toCacheIRStub();
-    SpewCacheIROps(printer, "  ", newStub->stubInfo());
+    SpewCacheIROps(msg.printer(), "  ", newStub->stubInfo());
 #  endif
   }
 #endif
@@ -463,13 +474,6 @@ static bool TryFoldingGuardShapes(JSContext* cx, ICFallbackStub* fallback,
 
 bool js::jit::TryFoldingStubs(JSContext* cx, ICFallbackStub* fallback,
                               JSScript* script, ICScript* icScript) {
-  gc::AutoMarkingLock lock(cx->zone(), icScript->markingLock());
-  return TryFoldingStubsLocked(cx, fallback, script, icScript, lock);
-}
-
-bool js::jit::TryFoldingStubsLocked(JSContext* cx, ICFallbackStub* fallback,
-                                    JSScript* script, ICScript* icScript,
-                                    gc::AutoMarkingLock& lock) {
   ICEntry* icEntry = icScript->icEntryForStub(fallback);
   ICStub* entryStub = icEntry->firstStub();
 
@@ -487,11 +491,7 @@ bool js::jit::TryFoldingStubsLocked(JSContext* cx, ICFallbackStub* fallback,
     return true;
   }
 
-  if (!TryFoldingGuardShapes(cx, fallback, script, icScript, lock)) {
-    return false;
-  }
-
-  return true;
+  return TryFoldingGuardShapes(cx, fallback, script, icScript);
 }
 
 bool js::jit::AddToFoldedStub(JSContext* cx, const CacheIRWriter& writer,
@@ -694,8 +694,8 @@ bool js::jit::AddToFoldedStub(JSContext* cx, const CacheIRWriter& writer,
           return false;
         }
 
-        MOZ_ASSERT(stubReader.peekOp() == CacheOp::ReturnFromIC);
-        MOZ_ASSERT(newReader.peekOp() == CacheOp::ReturnFromIC);
+        MOZ_ASSERT(!stubReader.more());
+        MOZ_ASSERT(!newReader.more());
         break;
       }
       default: {
@@ -713,6 +713,9 @@ bool js::jit::AddToFoldedStub(JSContext* cx, const CacheIRWriter& writer,
         }
       }
     }
+  }
+  if (newReader.more() || stubReader.more()) {
+    return false;
   }
 
   if (shapeFieldOffset.isNothing()) {
@@ -736,21 +739,20 @@ bool js::jit::AddToFoldedStub(JSContext* cx, const CacheIRWriter& writer,
                          ? ShapeListWithOffsetsObject::MaxLength
                          : ShapeListObject::MaxLength;
   if (numShapes == maxLength) {
+    gc::AutoMarkingLock lock(cx->zone(), icScript->markingLock());
     MOZ_ASSERT(fallback->state().mode() != ICState::Mode::Generic);
     fallback->state().forceTransition();
-    fallback->discardStubs(cx->zone(), icEntry);
-    return false;
-  }
-
-  if (!shapeList->append(cx, newShape)) {
-    cx->recoverFromOutOfMemory();
+    fallback->discardStubs(cx->zone(), icEntry, lock);
     return false;
   }
 
   if (offsetFieldOffset.isSome()) {
-    if (!shapeList->append(cx, newOffset)) {
-      // Drop corresponding shape if we failed adding offset.
-      shapeList->shrinkElements(cx, shapeList->length() - 1);
+    if (!shapeList->append(cx, newShape, newOffset)) {
+      cx->recoverFromOutOfMemory();
+      return false;
+    }
+  } else {
+    if (!shapeList->append(cx, newShape)) {
       cx->recoverFromOutOfMemory();
       return false;
     }

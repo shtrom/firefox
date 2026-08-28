@@ -659,19 +659,6 @@ export const LoginHelper = {
   },
 
   /**
-   * Helper to avoid the property bags when calling
-   * Services.logins.searchLogins from JS.
-   *
-   * @deprecated Use Services.logins.searchLoginsAsync instead.
-   *
-   * @param {object} aSearchOptions - A regular JS object to copy to a property bag before searching
-   * @return {nsILoginInfo[]} - The result of calling searchLogins.
-   */
-  searchLoginsWithObject(aSearchOptions) {
-    return Services.logins.searchLogins(this.newPropertyBag(aSearchOptions));
-  },
-
-  /**
    * @param {string} aURL
    * @returns {string} which is the hostPort of aURL if supported by the scheme
    *                   otherwise, returns the original aURL.
@@ -1690,7 +1677,7 @@ export const LoginHelper = {
     }
     // Use the OS auth dialog if there is no primary password
     // or if primary password is already unlocked and os auth is enabled.
-    if (isOSAuthEnabled && (!token.hasPassword || token.isLoggedIn())) {
+    if (isOSAuthEnabled && (!token.hasPassword || token.isLoggedIn)) {
       let result;
       try {
         isAuthorized = await this.verifyUserOSAuth(
@@ -1723,8 +1710,8 @@ export const LoginHelper = {
         telemetryEvent,
       };
     }
-    // We'll attempt to re-auth via Primary Password, force a log-out
-    token.checkPassword("");
+    // We'll attempt to re-auth via Primary Password, so log out.
+    await token.logout();
 
     // If a primary password prompt is already open, just exit early and return false.
     // The user can re-trigger it after responding to the already open dialog.
@@ -1736,16 +1723,15 @@ export const LoginHelper = {
       };
     }
 
-    // So there's a primary password. But since checkPassword didn't succeed, we're logged out (per nsIPK11Token.idl).
     try {
-      // Relogin and ask for the primary password.
-      token.login(true); // 'true' means always prompt for token password. User will be prompted until
-      // clicking 'Cancel' or entering the correct password.
+      // Log in again, which prompts for the primary password.
+      await token.login();
     } catch (e) {
-      // An exception will be thrown if the user cancels the login prompt dialog.
-      // User is also logged out of Software Security Device.
+      // An exception will be thrown if the user cancels the login prompt
+      // dialog. The user will still be logged out of Software Security Device
+      // in this case.
     }
-    isAuthorized = token.isLoggedIn();
+    isAuthorized = token.isLoggedIn;
     telemetryEvent = {
       name: "reauthenticateMasterPassword",
       value: isAuthorized ? "success" : "fail",
@@ -1829,6 +1815,12 @@ export const LoginHelper = {
    *                    which could be in a different window.
    */
   getBrowserForPrompt(browser) {
+    // The browser may have been torn down (e.g. its tab was closed) while an
+    // async operation was in progress before we got here, in which case its
+    // browsingContext is null and there is no prompt target left.
+    if (!browser.browsingContext) {
+      return browser;
+    }
     let chromeWindow = browser.documentGlobal;
     let openerBrowsingContext = browser.browsingContext.opener;
     let openerBrowser = openerBrowsingContext
@@ -1841,7 +1833,7 @@ export const LoginHelper = {
       // disabled, and if so use the opener window. But if the window
       // has been used to visit other pages (ie, has a history),
       // assume it'll stick around and *don't* use the opener.
-      if (chromeDoc.getAttribute("chromehidden") && !browser.canGoBack) {
+      if (chromeDoc.hasAttribute("popup-window") && !browser.canGoBack) {
         lazy.log.debug("Using opener window for prompt.");
         return openerBrowser;
       }

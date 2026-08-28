@@ -15,9 +15,13 @@ ChromeUtils.defineESModuleGetters(lazy, {
   BackupService: "resource:///modules/backup/BackupService.sys.mjs",
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
   BuiltInThemes: "resource:///modules/BuiltInThemes.sys.mjs",
+  EnrollmentType: "resource://nimbus/ExperimentAPI.sys.mjs",
   ExperimentAPI: "resource://nimbus/ExperimentAPI.sys.mjs",
   FxAccounts: "resource://gre/modules/FxAccounts.sys.mjs",
-  LangPackMatcher: "resource://gre/modules/LangPackMatcher.sys.mjs",
+  LangPackMatcher: "moz-src:///intl/locale/LangPackMatcher.sys.mjs",
+  MessagingSystemAllowlists:
+    "resource://messaging-system/lib/MessagingSystemAllowlists.sys.mjs",
+  NimbusFeatures: "resource://nimbus/ExperimentAPI.sys.mjs",
   ShellService: "moz-src:///browser/components/shell/ShellService.sys.mjs",
   SpecialMessageActions:
     "resource://messaging-system/lib/SpecialMessageActions.sys.mjs",
@@ -41,6 +45,8 @@ ChromeUtils.defineLazyGetter(
 const DID_SEE_ABOUT_WELCOME_PREF = "trailhead.firstrun.didSeeAboutWelcome";
 const DID_HANDLE_CAMAPAIGN_ACTION_PREF =
   "trailhead.firstrun.didHandleCampaignAction";
+const CHECK_DEFAULT_BROWSER_PREF = "browser.shell.checkDefaultBrowser";
+const SET_DEFAULT_CAMPAIGN_ACTIONS = ["SET_DEFAULT_BROWSER", "PIN_AND_DEFAULT"];
 const EXPERIMENTS_GATE_PREF = "browser.aboutwelcome.experimentsGate.enabled";
 const EXPERIMENTS_GATE_MAX_MS_PREF =
   "browser.aboutwelcome.experimentsGate.maxDisplayMs";
@@ -194,6 +200,12 @@ export class AboutWelcomeParent extends JSWindowActorParent {
   constructor() {
     super();
     this.startAboutWelcomeObserver();
+    // Warm the Remote Settings-backed SET_PREF allowlist cache as early as
+    // possible, since about:welcome can dispatch SET_PREF actions (via
+    // SpecialMessageActions) without ever going through ASRouter's own init
+    // sequence. This isn't awaited, so it only shrinks the window for a
+    // possible race condition.
+    lazy.MessagingSystemAllowlists.ensureInit();
   }
 
   startAboutWelcomeObserver() {
@@ -347,6 +359,8 @@ export class AboutWelcomeParent extends JSWindowActorParent {
         return lazy.ASRouterScreenUtils.evaluateTargetingAndRemoveScreens(data);
       case "AWPage:ADD_SCREEN_IMPRESSION":
         return lazy.ASRouterScreenUtils.addScreenImpression(data);
+      case "AWPage:IMPRESSION_ACTION":
+        return lazy.ASRouterScreenUtils.handleImpressionAction(data, browser);
       case "AWPage:EVALUATE_ATTRIBUTE_TARGETING":
         return lazy.ASRouterScreenUtils.evaluateScreenTargeting(data);
       case "AWPage:NEGOTIATE_LANGPACK":
@@ -370,6 +384,12 @@ export class AboutWelcomeParent extends JSWindowActorParent {
         if (
           !Services.prefs.getBoolPref(DID_HANDLE_CAMAPAIGN_ACTION_PREF, false)
         ) {
+          if (
+            SET_DEFAULT_CAMPAIGN_ACTIONS.includes(data) &&
+            !Services.prefs.getBoolPref(CHECK_DEFAULT_BROWSER_PREF, true)
+          ) {
+            break;
+          }
           lazy.SpecialMessageActions.handleAction({ type: data }, browser);
           try {
             Services.prefs.setBoolPref(DID_HANDLE_CAMAPAIGN_ACTION_PREF, true);
@@ -392,6 +412,15 @@ export class AboutWelcomeParent extends JSWindowActorParent {
       }
       case "AWPage:WAIT_FOR_NIMBUS": {
         return waitForNimbusForAboutWelcome();
+      }
+      case "AWPage:GET_ABOUTWELCOME_FEATURE_CONFIG": {
+        return {
+          experimentMetadata:
+            lazy.NimbusFeatures.aboutwelcome.getEnrollmentMetadata(
+              lazy.EnrollmentType.EXPERIMENT
+            ) ?? {},
+          featureConfig: lazy.NimbusFeatures.aboutwelcome.getAllVariables(),
+        };
       }
       default:
         lazy.log.debug(`Unexpected event ${type} was not handled.`);

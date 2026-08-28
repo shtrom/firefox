@@ -5,6 +5,7 @@
 //! Generic values for properties related to animations and transitions.
 
 use crate::derives::*;
+use crate::typed_om::{KeywordValue, ToTyped, TypedValue};
 use crate::values::generics::length::GenericLengthPercentageOrAuto;
 use crate::values::specified::animation::{
     ScrollAxis, ScrollFunction, TimelineName, TimelineRangeName,
@@ -12,7 +13,7 @@ use crate::values::specified::animation::{
 use crate::values::specified::length::EqualsPercentage;
 use crate::Zero;
 use std::fmt::{self, Write};
-use style_traits::{CssString, CssWriter, KeywordValue, ToCss, ToTyped, TypedValue};
+use style_traits::{CssString, CssWriter, ToCss};
 use thin_vec::ThinVec;
 
 /// The `animation-duration` property.
@@ -192,7 +193,7 @@ pub use self::GenericViewTimelineInset as ViewTimelineInset;
 impl<LengthPercent> ViewTimelineInset<LengthPercent> {
     /// Returns true if it is auto.
     #[inline]
-    fn is_auto(&self) -> bool {
+    pub fn is_auto(&self) -> bool {
         self.start.is_auto() && self.end.is_auto()
     }
 }

@@ -11,7 +11,6 @@
 
 #include "TSFTextInputProcessorList.h"
 #include "WinUtils.h"
-
 #include "mozilla/RefPtr.h"
 #include "mozilla/StaticPtr.h"
 
@@ -106,6 +105,7 @@ class TSFStaticSink final : public ITfInputProcessorProfileActivationSink {
   [[nodiscard]] static bool IsGoogleJapaneseInputActive();
   [[nodiscard]] static bool IsATOKActive();
   [[nodiscard]] static bool IsSogouActive();
+  [[nodiscard]] static bool IsWeChatIMEActive();
 
   // Note that ATOK 2011 - 2016 refers native caret position for deciding its
   // popup window position.

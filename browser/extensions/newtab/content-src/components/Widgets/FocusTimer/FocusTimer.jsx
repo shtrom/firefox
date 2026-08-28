@@ -9,6 +9,8 @@ import { useIntersectionObserver } from "../../../lib/utils";
 import { WIDGET_REGISTRY, resolveWidgetSize } from "common/WidgetsRegistry.mjs";
 import { WidgetCelebration } from "../WidgetCelebration";
 import { useWidgetCelebration } from "../useWidgetCelebration";
+import { SizeSubmenu } from "../SizeSubmenu";
+import { WidgetMenuFooter } from "../WidgetMenuFooter";
 
 const FOCUS_TIMER_CELEBRATION_GRADIENT_STOPS = [
   { offset: "0%", color: "var(--timer-celebration-leading)" },
@@ -78,7 +80,7 @@ export const isAtMaxLength = currentValue => {
   return currentValue.length >= 2;
 };
 
-// @nova-cleanup(remove): Drop after Nova ships
+// Drop this if the spinbutton is ever replaced with a native control.
 /**
  * Validates whether the next state of the Nova spinbutton is acceptable.
  * Allows up to 2 digits, an optional single colon, and up to 2 more digits.
@@ -141,6 +143,7 @@ export const FocusTimer = ({
   handleUserInteraction,
   isMaximized,
   widgetsMayBeMaximized,
+  widgetEnabledMap,
 }) => {
   const [timeLeft, setTimeLeft] = useState(0);
   // calculated value for the progress circle; 1 = 100%
@@ -223,6 +226,10 @@ export const FocusTimer = ({
   } = useWidgetCelebration(widgetCelebrationRef);
   // Guards against a double-fire that would re-toggle SET_TYPE.
   const celebrationCompletedRef = useRef(false);
+  // The timer is shared across open newtab/home pages, but each page fires its
+  // own end-of-session switch. Set the next type directly rather than toggling
+  // the shared value, so two pages don't toggle it and cancel out.
+  const completingTypeRef = useRef(timerType);
 
   useEffect(() => {
     if (isCelebrating) {
@@ -246,18 +253,20 @@ export const FocusTimer = ({
     celebrationCompletedRef.current = true;
     resetProgressCircle();
 
+    const completedType = completingTypeRef.current;
+    const nextType = completedType === "focus" ? "break" : "focus";
+    const userAction =
+      completedType === "focus"
+        ? USER_ACTION_TYPES.TIMER_TOGGLE_BREAK
+        : USER_ACTION_TYPES.TIMER_TOGGLE_FOCUS;
+
     batch(() => {
       dispatch(
         ac.AlsoToMain({
           type: at.WIDGETS_TIMER_SET_TYPE,
-          data: { timerType: timerType === "focus" ? "break" : "focus" },
+          data: { timerType: nextType },
         })
       );
-
-      const userAction =
-        timerType === "focus"
-          ? USER_ACTION_TYPES.TIMER_TOGGLE_BREAK
-          : USER_ACTION_TYPES.TIMER_TOGGLE_FOCUS;
 
       dispatch(
         ac.OnlyToMain({
@@ -280,13 +289,7 @@ export const FocusTimer = ({
     });
 
     completeCelebration();
-  }, [
-    completeCelebration,
-    dispatch,
-    resetProgressCircle,
-    timerType,
-    widgetSize,
-  ]);
+  }, [completeCelebration, dispatch, resetProgressCircle, widgetSize]);
 
   const showSystemNotifications =
     prefs["widgets.focusTimer.showSystemNotifications"];
@@ -328,6 +331,7 @@ export const FocusTimer = ({
       );
     });
 
+    completingTypeRef.current = timerType;
     celebrationCompletedRef.current = false;
 
     // animate the progress circle to turn solid green
@@ -748,18 +752,6 @@ export const FocusTimer = ({
     }
   };
 
-  function handleLearnMore() {
-    dispatch(
-      ac.OnlyToMain({
-        type: at.OPEN_LINK,
-        data: {
-          url: "https://support.mozilla.org/kb/firefox-new-tab-widgets",
-        },
-      })
-    );
-    handleTimerInteraction();
-  }
-
   function handlePrefUpdate(prefName, prefValue) {
     dispatch(
       ac.OnlyToMain({
@@ -799,7 +791,8 @@ export const FocusTimer = ({
     [dispatch]
   );
 
-  // @nova-cleanup(remove-conditional): Drop the legacy callers and inline this for Nova
+  // @nova-cleanup(remove-conditional): Keep this function. Its only classic
+  // caller is the legacy body removed below; no change needed here.
   const setTimerMinutes = useCallback(
     nextMinutes => {
       const clamped = Math.max(1, Math.min(99, nextMinutes));
@@ -839,7 +832,8 @@ export const FocusTimer = ({
     [dispatch, duration, timerType, widgetSize, handleTimerInteraction]
   );
 
-  // @nova-cleanup(remove-conditional): Inline this once the Nova spinbutton is the only path
+  // @nova-cleanup(remove-conditional): Keep this function; it drives the Nova
+  // spinbutton. No change needed here.
   const commitSpinbuttonDuration = useCallback(() => {
     const el = activeMinutesRef.current;
     if (!el) {
@@ -899,7 +893,7 @@ export const FocusTimer = ({
     timeLeft,
   ]);
 
-  // @nova-cleanup(remove-conditional): Remove if the Nova spinbutton is replaced
+  // Drop this if the spinbutton is ever replaced with a native control.
   const handleSpinBeforeInput = e => {
     const input = e.data;
     if (input === null || input === undefined) {
@@ -918,7 +912,7 @@ export const FocusTimer = ({
     }
   };
 
-  // @nova-cleanup(remove-conditional): Remove if the Nova spinbutton is replaced
+  // Drop this if the spinbutton is ever replaced with a native control.
   const handleSpinKeyDown = e => {
     let next = minutesValue;
     switch (e.key) {
@@ -952,7 +946,7 @@ export const FocusTimer = ({
     setTimerMinutes(next);
   };
 
-  // @nova-cleanup(remove-conditional): Remove with the Nova radiogroup
+  // Drop this if the Focus/Break radiogroup is ever replaced.
   const handleRadiogroupKeyDown = e => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
       return;
@@ -961,29 +955,23 @@ export const FocusTimer = ({
     toggleType(timerType === "focus" ? "break" : "focus");
   };
 
-  const sizeSubmenuRef = useRef(null);
-  useEffect(() => {
-    const el = sizeSubmenuRef.current;
-    if (!el) {
-      return undefined;
-    }
-    // The size submenu panel-list is moved into the panel-item's shadow DOM by
-    // the panel-list custom element, so React's synthetic onClick doesn't reach
-    // inner items. We use composedPath() to find the clicked item across the
-    // shadow boundary via its data-size attribute.
-    const listener = e => {
-      const item = e.composedPath().find(node => node.dataset?.size);
-      if (item) {
-        handleChangeSize(item.dataset.size);
-      }
-    };
-    el.addEventListener("click", listener);
-    return () => el.removeEventListener("click", listener);
-  }, [handleChangeSize]);
-
   // Keep the running-state body layout through the celebration so the ring
   // doesn't shift to a third position during the animation.
   const bodyShowsRunningLayout = hasProgressed || isCelebrating || isComplete;
+
+  // Small has no manual Focus/Break toggle; medium and large show it when idle.
+  const showModeGroup =
+    !bodyShowsRunningLayout &&
+    (widgetSize === "medium" || widgetSize === "large");
+
+  // Small shows the celebration headline only; other sizes add a subhead.
+  let celebrationSubheadL10nId;
+  if (widgetSize !== "small") {
+    celebrationSubheadL10nId =
+      timerType === "focus"
+        ? "newtab-widget-timer-celebration-message-focus"
+        : "newtab-widget-timer-celebration-message-break";
+  }
 
   return timerData ? (
     <article
@@ -1009,11 +997,7 @@ export const FocusTimer = ({
             }
             illustrationSrc={null}
             onComplete={handleCelebrationComplete}
-            subheadL10nId={
-              timerType === "focus"
-                ? "newtab-widget-timer-celebration-message-focus"
-                : "newtab-widget-timer-celebration-message-break"
-            }
+            subheadL10nId={celebrationSubheadL10nId}
           />
         ) : null
       }
@@ -1025,6 +1009,7 @@ export const FocusTimer = ({
             iconSrc="chrome://global/skin/icons/more.svg"
             menuId="focus-timer-context-menu"
             type="ghost"
+            data-l10n-id="newtab-widget-timer-menu-button"
           />
           <panel-list id="focus-timer-context-menu">
             <panel-item
@@ -1040,65 +1025,27 @@ export const FocusTimer = ({
                 );
               }}
             />
-            <panel-item
-              // @nova-cleanup(remove-conditional): Drop the ternary and keep
-              // newtab-widget-timer-menu-hide once Nova ships.
-              data-l10n-id={
-                novaEnabled
-                  ? "newtab-widget-timer-menu-hide"
-                  : "newtab-widget-menu-hide"
+            <WidgetMenuFooter
+              dispatch={dispatch}
+              widgetId="focusTimer"
+              widgetEnabledMap={widgetEnabledMap}
+              widgetName="focus_timer"
+              enabledPref="widgets.focusTimer.enabled"
+              widgetSize={widgetSize}
+              learnMoreL10nId="newtab-widget-timer-menu-learn-more"
+              onLearnMore={handleTimerInteraction}
+              sizeSubmenu={
+                // @nova-cleanup(remove-conditional): Remove the `novaEnabled &&` check; keep widgetsMayBeMaximized
+                novaEnabled &&
+                widgetsMayBeMaximized && (
+                  <SizeSubmenu
+                    submenuId="focus-timer-size-submenu"
+                    sizes={["small", "medium", "large"]}
+                    checkedSize={widgetSize}
+                    onChangeSize={handleChangeSize}
+                  />
+                )
               }
-              onClick={() => {
-                batch(() => {
-                  handlePrefUpdate("widgets.focusTimer.enabled", false);
-
-                  const telemetryData = {
-                    widget_name: "focus_timer",
-                    widget_source: "context_menu",
-                    enabled: false,
-                    widget_size: widgetSize,
-                  };
-
-                  dispatch(
-                    ac.OnlyToMain({
-                      type: at.WIDGETS_ENABLED,
-                      data: telemetryData,
-                    })
-                  );
-                });
-              }}
-            />
-            {
-              // @nova-cleanup(remove-conditional): Remove the `novaEnabled &&` check; keep widgetsMayBeMaximized
-              novaEnabled && widgetsMayBeMaximized && (
-                <panel-item submenu="focus-timer-size-submenu">
-                  <span data-l10n-id="newtab-widget-menu-change-size"></span>
-                  <panel-list
-                    ref={sizeSubmenuRef}
-                    slot="submenu"
-                    id="focus-timer-size-submenu"
-                  >
-                    {["small", "medium", "large"].map(size => (
-                      <panel-item
-                        key={size}
-                        type="checkbox"
-                        checked={widgetSize === size || undefined}
-                        data-size={size}
-                        data-l10n-id={`newtab-widget-size-${size}`}
-                        {...(size === "small" ? { disabled: true } : {})}
-                      />
-                    ))}
-                  </panel-list>
-                </panel-item>
-              )
-            }
-            {
-              // @nova-cleanup(remove-conditional): Remove the `novaEnabled &&` check; always render the divider.
-              novaEnabled && <hr />
-            }
-            <panel-item
-              data-l10n-id="newtab-widget-timer-menu-learn-more"
-              onClick={handleLearnMore}
             />
           </panel-list>
         </div>
@@ -1231,7 +1178,7 @@ export const FocusTimer = ({
                     onClick={resetTimer}
                   />
                 )}
-                {!bodyShowsRunningLayout && (
+                {showModeGroup && (
                   <div
                     className="focus-timer-mode-group"
                     role="radiogroup"

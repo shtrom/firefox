@@ -5,8 +5,7 @@
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
-const kTaskbarTabsWindowFeatures =
-  "titlebar,close,toolbar,location,personalbar=no,status,menubar=no,resizable,minimizable,scrollbars";
+const kTaskbarTabsWindowFeatures = "titlebar,toolbar,resizable";
 
 let lazy = {};
 
@@ -58,6 +57,12 @@ export class TaskbarTabsWindowManager {
       Ci.nsIWritablePropertyBag2
     );
     extraOptions.setPropertyAsAString("taskbartab", aTaskbarTab.id);
+    if (AppConstants.platform === "linux") {
+      extraOptions.setPropertyAsAString(
+        "taskbartabclass",
+        getLinuxWindowClass(aTaskbarTab)
+      );
+    }
 
     let args = Cc["@mozilla.org/array;1"].createInstance(Ci.nsIMutableArray);
     args.appendElement(aTab);
@@ -84,6 +89,12 @@ export class TaskbarTabsWindowManager {
       Ci.nsIWritablePropertyBag2
     );
     extraOptions.setPropertyAsAString("taskbartab", aTaskbarTab.id);
+    if (AppConstants.platform === "linux") {
+      extraOptions.setPropertyAsAString(
+        "taskbartabclass",
+        getLinuxWindowClass(aTaskbarTab)
+      );
+    }
 
     let userContextId = Cc["@mozilla.org/supports-PRUint32;1"].createInstance(
       Ci.nsISupportsPRUint32
@@ -350,4 +361,15 @@ function getTabId(aTab) {
  */
 function getWindowId(aWindow) {
   return aWindow.docShell.outerWindowID;
+}
+
+function getLinuxWindowClass(aTaskbarTab) {
+  if (aTaskbarTab.shortcutRelativePath) {
+    // Use the existing desktop entry, removing the .desktop extension and any earlier subdirectories.
+    let subdir = aTaskbarTab.shortcutRelativePath.split("/");
+    return subdir[subdir.length - 1].replace(/\.desktop$/, "");
+  }
+
+  // It hasn't been saved yet, use the name that will be used.
+  return lazy.TaskbarTabsUtils._determineNewDesktopEntryName(aTaskbarTab.id);
 }

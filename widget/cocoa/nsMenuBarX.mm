@@ -15,22 +15,22 @@
 #include "nsMenuX.h"
 
 #include "nsCOMPtr.h"
-#include "nsString.h"
 #include "nsGkAtoms.h"
 #include "nsObjCExceptions.h"
+#include "nsString.h"
 #include "nsThreadUtils.h"
 
-#include "nsIContent.h"
-#include "nsIShellService.h"
 #include "mozilla/dom/Document.h"
 #include "nsIAppStartup.h"
+#include "nsIContent.h"
+#include "nsIShellService.h"
 #include "nsIStringBundle.h"
 #include "nsToolkitCompsCID.h"
 
 #include "mozilla/Components.h"
+#include "mozilla/Preferences.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/glean/WidgetCocoaMetrics.h"
-#include "mozilla/browser/NimbusFeatures.h"
 
 using namespace mozilla;
 using mozilla::dom::Element;
@@ -57,6 +57,7 @@ extern BOOL sTouchBarIsInitialized;
 static nsIContent* sAboutItemContent = nullptr;
 static nsIContent* sPrefItemContent = nullptr;
 static nsIContent* sSetAsDefaultItemContent = nullptr;
+static nsIContent* sReferralsPageItemContent = nullptr;
 static nsIContent* sAccountItemContent = nullptr;
 static nsIContent* sQuitItemContent = nullptr;
 
@@ -79,6 +80,14 @@ static nsIContent* sQuitItemContent = nullptr;
 
 - (NSMenuItem*)setAsDefaultMenuItem {
   return mSetAsDefaultMenuItem;
+}
+
+- (void)setReferralsPageMenuItem:(NSMenuItem*)menuItem {
+  mReferralsPageMenuItem = menuItem;
+}
+
+- (NSMenuItem*)referralsPageMenuItem {
+  return mReferralsPageMenuItem;
 }
 
 - (void)menuWillOpen:(NSMenu*)menu {
@@ -587,7 +596,7 @@ void nsMenuBarX::ApplicationMenuOpened() {
 
 #ifdef MOZ_BUILD_APP_IS_BROWSER
   // Only show if Set as Default Browser item if Nimbus allows.
-  if (NimbusFeatures::GetBool("macAppMenuSetAsDefault"_ns, "shown"_ns, false)) {
+  if (Preferences::GetBool("browser.macAppMenu.setAsDefaultShown")) {
     bool isDefaultBrowser = false;
 
     nsCOMPtr<nsIShellService> shell(do_GetService(NS_SHELLSERVICE_CONTRACTID));
@@ -603,6 +612,16 @@ void nsMenuBarX::ApplicationMenuOpened() {
   } else {
     // Nimbus wants it hidden
     [[mApplicationMenuDelegate setAsDefaultMenuItem] setHidden:true];
+  }
+
+#endif
+
+#ifdef MOZ_BUILD_APP_IS_BROWSER
+  // Only show the Share item if referrals are enabled
+  if (!Preferences::GetBool("browser.referrals.enabled")) {
+    [[mApplicationMenuDelegate referralsPageMenuItem] setHidden:true];
+  } else {
+    [[mApplicationMenuDelegate referralsPageMenuItem] setHidden:false];
   }
 #endif
 }
@@ -694,6 +713,12 @@ void nsMenuBarX::AquifyMenuBar() {
     mSetAsDefaultItemContent = HideItem(domDoc, u"menu_setAsDefault"_ns);
     if (!sSetAsDefaultItemContent) {
       sSetAsDefaultItemContent = mSetAsDefaultItemContent;
+    }
+
+    // remove Referrals item.
+    mReferralsPageItemContent = HideItem(domDoc, u"menu_referralsPage"_ns);
+    if (!sReferralsPageItemContent) {
+      sReferralsPageItemContent = mReferralsPageItemContent;
     }
 
     // remove Account Settings item.
@@ -809,6 +834,7 @@ void nsMenuBarX::CreateApplicationMenu(nsMenuX* aMenu) {
 
     ========================
     = About This App       = <- aboutName
+    = Share This App       = <- menu_referralsPage   Only if enabled
     ========================
     = Preferences...       = <- menu_preferences
     = Set As Default       = <- menu_setAsDefault    Only if browser is not
@@ -866,6 +892,20 @@ void nsMenuBarX::CreateApplicationMenu(nsMenuX* aMenu) {
 
       addAboutSeparator = TRUE;
     }
+
+#ifdef MOZ_BUILD_APP_IS_BROWSER
+    // Add the Referrals menu item
+    itemBeingAdded = CreateNativeAppMenuItem(
+        aMenu, u"menu_referralsPage"_ns, @selector(menuItemHit:),
+        eCommand_ID_ReferralsPage, nsMenuBarX::sNativeEventTarget);
+    if (itemBeingAdded) {
+      [sApplicationMenu addItem:itemBeingAdded];
+      [mApplicationMenuDelegate setReferralsPageMenuItem:itemBeingAdded];
+
+      [itemBeingAdded release];
+      itemBeingAdded = nil;
+    }
+#endif
 
     // Add separator if either the About item or software update item exists
     if (addAboutSeparator) {
@@ -1206,6 +1246,18 @@ void nsMenuBarX::CreateApplicationMenu(nsMenuX* aMenu) {
     if (menuBar && menuBar->mAboutItemContent) {
       mostSpecificContent = menuBar->mAboutItemContent;
     }
+    if (mostSpecificContent) {
+      nsMenuUtilsX::DispatchCommandTo(mostSpecificContent, modifierFlags,
+                                      button);
+    }
+    return;
+  }
+  if (tag == eCommand_ID_ReferralsPage) {
+    nsIContent* mostSpecificContent = sReferralsPageItemContent;
+    if (menuBar && menuBar->mReferralsPageItemContent) {
+      mostSpecificContent = menuBar->mReferralsPageItemContent;
+    }
+
     if (mostSpecificContent) {
       nsMenuUtilsX::DispatchCommandTo(mostSpecificContent, modifierFlags,
                                       button);

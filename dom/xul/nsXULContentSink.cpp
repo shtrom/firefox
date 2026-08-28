@@ -271,7 +271,7 @@ nsresult XULContentSinkImpl::FlushText(bool aCreateTextNode) {
     if (NS_FAILED(rv)) return rv;
 
     children->AppendElement(text.forget());
-  } while (0);
+  } while (false);
 
   // Reset our text buffer
   mText.ClearAndRetainStorage();
@@ -537,7 +537,7 @@ XULContentSinkImpl::ReportError(const char16_t* aErrorText,
     return NS_OK;
   };
 
-  const char16_t* noAtts[] = {0, 0};
+  const char16_t* noAtts[] = {nullptr, nullptr};
 
   constexpr auto errorNs =
       u"http://www.mozilla.org/newlayout/xml/parsererror.xml"_ns;

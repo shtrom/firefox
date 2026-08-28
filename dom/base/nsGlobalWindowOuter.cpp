@@ -120,7 +120,6 @@
 #include "mozilla/net/CookieJarSettings.h"
 #include "nsAboutProtocolUtils.h"
 #include "nsCCUncollectableMarker.h"
-#include "nsCharTraits.h"  // NS_IS_HIGH/LOW_SURROGATE
 #include "nsJSPrincipals.h"
 #include "nsLayoutStatics.h"
 
@@ -916,7 +915,7 @@ bool nsOuterWindowProxy::get(JSContext* cx, JS::Handle<JSObject*> proxy,
                              JS::MutableHandle<JS::Value> vp) const {
   if (id == GetJSIDByIndex(cx, XPCJSContext::IDX_WRAPPED_JSOBJECT) &&
       xpc::AccessCheck::isChrome(js::GetContextCompartment(cx))) {
-    vp.set(JS::ObjectValue(*proxy));
+    vp.setObject(*proxy);
     return MaybeWrapValue(cx, vp);
   }
 
@@ -1812,11 +1811,12 @@ void nsGlobalWindowOuter::SetInitialPrincipal(
 
   // Use the subject (or system) principal as the storage principal too until
   // the new window finishes navigating and gets a real storage principal.
-  nsDocShell::Cast(GetDocShell())
-      ->CreateAboutBlankDocumentViewer(
-          aNewWindowPrincipal, aNewWindowPrincipal, mDoc->GetPolicyContainer(),
-          mDoc->GetDocBaseURI(),
-          /* aIsInitialDocument */ true, mDoc->GetEmbedderPolicy());
+  nsCOMPtr<nsIPolicyContainer> policyContainer = mDoc->GetPolicyContainer();
+  nsCOMPtr<nsIURI> base = mDoc->GetDocBaseURI();
+  RefPtr<nsDocShell> docShell = nsDocShell::Cast(GetDocShell());
+  docShell->CreateAboutBlankDocumentViewer(
+      aNewWindowPrincipal, aNewWindowPrincipal, policyContainer, base,
+      /* aIsInitialDocument */ true, mDoc->GetEmbedderPolicy());
 
   if (mDoc) {
     MOZ_ASSERT(mDoc->IsInitialDocument(),
@@ -2068,6 +2068,10 @@ static nsresult CreateNativeGlobalForInner(
       aDocument->GetBrowsingContext()->Top()->GetLanguageOverride(),
       aDocument->GetBrowsingContext()->Top()->GetTimezoneOverride());
 
+  if (principal->IsSystemPrincipal()) {
+    creationOptions.setFreezeBuiltins(true);
+  }
+
   // Determine if we need the Components object.
   bool needComponents = principal->IsSystemPrincipal();
   uint32_t flags = needComponents ? 0 : xpc::OMIT_COMPONENTS_OBJECT;
@@ -2250,14 +2254,10 @@ nsresult nsGlobalWindowOuter::SetNewDocument(Document* aDocument,
       newInnerGlobal = newInnerWindow->GetWrapper();
     } else {
       newInnerWindow = nsGlobalWindowInner::Create(this, thisChrome, aActor);
-      if (StaticPrefs::dom_timeout_defer_during_load() &&
-          !aDocument->NodePrincipal()->IsURIInPrefList(
-              "dom.timeout.defer_during_load.force-disable")) {
-        // ensure the initial loading state is known
-        newInnerWindow->SetActiveLoadingState(
-            aDocument->GetReadyStateEnum() ==
-            Document::ReadyState::READYSTATE_LOADING);
-      }
+      // ensure the initial loading state is known
+      newInnerWindow->SetActiveLoadingState(
+          aDocument->GetReadyStateEnum() ==
+          Document::ReadyState::READYSTATE_LOADING);
 
       // The outer window is automatically treated as frozen when we
       // null out the inner window. As a result, initializing classes
@@ -3434,7 +3434,8 @@ CSSToLayoutDeviceScale nsGlobalWindowOuter::CSSToDevScaleForBaseWindow(
   return scale;
 }
 
-nsresult nsGlobalWindowOuter::GetInnerSize(CSSSize& aSize) {
+nsresult nsGlobalWindowOuter::GetInnerSize(CSSSize& aSize,
+                                           CallerType aCallerType) {
   if (mDoc && mDoc->IsTopLevelContentDocument() &&
       nsLayoutUtils::ShouldHandleMetaViewport(mDoc)) {
     // Window.inner{Width,Height} depend on minimum-scale size and to get the
@@ -3469,6 +3470,10 @@ nsresult nsGlobalWindowOuter::GetInnerSize(CSSSize& aSize) {
 
   aSize = CSSPixel::FromAppUnits(innerSize);
 
+  if (aCallerType == dom::CallerType::System) {
+    return NS_OK;
+  }
+
   switch (StaticPrefs::dom_innerSize_rounding()) {
     case 1:
       aSize.width = std::roundf(aSize.width);
@@ -3485,26 +3490,18 @@ nsresult nsGlobalWindowOuter::GetInnerSize(CSSSize& aSize) {
   return NS_OK;
 }
 
-double nsGlobalWindowOuter::GetInnerWidthOuter(ErrorResult& aError) {
+double nsGlobalWindowOuter::GetInnerWidthOuter(CallerType aCallerType,
+                                               ErrorResult& aError) {
   CSSSize size;
-  aError = GetInnerSize(size);
+  aError = GetInnerSize(size, aCallerType);
   return size.width;
 }
 
-nsresult nsGlobalWindowOuter::GetInnerWidth(double* aInnerWidth) {
-  FORWARD_TO_INNER_WITH_STRONG_REF(GetInnerWidth, (aInnerWidth),
-                                   NS_ERROR_UNEXPECTED);
-}
-
-double nsGlobalWindowOuter::GetInnerHeightOuter(ErrorResult& aError) {
+double nsGlobalWindowOuter::GetInnerHeightOuter(CallerType aCallerType,
+                                                ErrorResult& aError) {
   CSSSize size;
-  aError = GetInnerSize(size);
+  aError = GetInnerSize(size, aCallerType);
   return size.height;
-}
-
-nsresult nsGlobalWindowOuter::GetInnerHeight(double* aInnerHeight) {
-  FORWARD_TO_INNER_WITH_STRONG_REF(GetInnerHeight, (aInnerHeight),
-                                   NS_ERROR_UNEXPECTED);
 }
 
 CSSIntSize nsGlobalWindowOuter::GetOuterSize(CallerType aCallerType,
@@ -3861,10 +3858,8 @@ bool nsGlobalWindowOuter::WindowExists(const nsAString& aName,
                                        bool aLookForCallerOnJSStack) {
   MOZ_ASSERT(mDocShell, "Must have docshell");
 
-  if (aForceNoOpener) {
-    return aName.LowerCaseEqualsLiteral("_self") ||
-           aName.LowerCaseEqualsLiteral("_top") ||
-           aName.LowerCaseEqualsLiteral("_parent");
+  if (aForceNoOpener && !nsContentUtils::IsSpecialName(aName)) {
+    return false;
   }
 
   if (WindowGlobalChild* wgc = mInnerWindow->GetWindowGlobalChild()) {
@@ -5413,8 +5408,12 @@ void nsGlobalWindowOuter::ResizeByOuter(int32_t aWidthDif, int32_t aHeightDif,
   auto scale = CSSToDevScaleForBaseWindow(treeOwnerAsWin);
   CSSIntSize cssSize = RoundedToInt(size / scale);
 
-  cssSize.width += aWidthDif;
-  cssSize.height += aHeightDif;
+  // The deltas come from content and can be large enough to overflow a 32-bit
+  // add, so do the arithmetic in 64 bits and keep the result in range.
+  cssSize.width = int32_t(
+      std::clamp<int64_t>(int64_t(cssSize.width) + aWidthDif, 0, INT32_MAX));
+  cssSize.height = int32_t(
+      std::clamp<int64_t>(int64_t(cssSize.height) + aHeightDif, 0, INT32_MAX));
 
   if (mBrowsingContext->GetIsDocumentPiP()) {
     if (Maybe<CSSIntRect> screen =
@@ -7266,7 +7265,7 @@ void nsGlobalWindowOuter::CheckForDPIChange() {
 }
 
 nsresult nsGlobalWindowOuter::Dispatch(
-    already_AddRefed<nsIRunnable>&& aRunnable) const {
+    already_AddRefed<nsIRunnable> aRunnable) const {
   MOZ_RELEASE_ASSERT(NS_IsMainThread());
   return NS_DispatchToCurrentThread(std::move(aRunnable));
 }

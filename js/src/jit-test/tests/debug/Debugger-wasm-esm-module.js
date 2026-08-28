@@ -1,4 +1,4 @@
-// |jit-test| skip-if: !wasmDebuggingEnabled() || !getBuildConfiguration("source-phase-imports") || !wasmIsSupported(); --enable-source-phase-imports; --enable-wasm-esm-integration
+// |jit-test| skip-if: !wasmDebuggingEnabled() || !getBuildConfiguration("source-phase-imports") || !wasmIsSupported() || getBuildConfiguration("release_or_beta"); --enable-source-phase-imports; --enable-wasm-esm-integration
 
 load(libdir + "asserts.js");
 
@@ -16,7 +16,7 @@ var m = g.parseModule(`
   import source emptyMod from "empty.wasm";
   globalThis.emptyMod = emptyMod;
 `);
-moduleLink(m);
+moduleLoadAndLink(m);
 moduleEvaluate(m);
 drainJobQueue();
 

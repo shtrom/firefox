@@ -58,6 +58,17 @@ bitflags! {
 
         /// Match self or descendants if dependent on a named style query.
         const RESTYLE_IF_AFFECTED_BY_NAMED_STYLE_CONTAINER = 1 << 12;
+
+        /// Do a selector match of the element if it depends on an ancestor's font
+        /// or this element's writing mode. Used to handle the invalidation cases
+        /// for style container queries in which relative font metrics change or
+        /// when a writing-mode-dependant unit needs to be updated for a style
+        /// container query.
+        const RESTYLE_IF_AFFECTED_BY_WM_OR_ANCESTOR_FONT = 1 << 13;
+
+        /// We don't need to match this element but do a selector match of it's
+        /// children if they are affected by style container queries.
+        const RESTYLE_CHILD_IF_AFFECTED_BY_STYLE_QUERIES = 1 <<14;
     }
 }
 
@@ -121,13 +132,19 @@ impl RestyleHint {
             return Self::restyle_subtree();
         }
         let mut result = Self::empty();
-        if self.contains(RestyleHint::RESTYLE_PSEUDOS) {
+        if self.contains(Self::RESTYLE_PSEUDOS) {
             result |= Self::RESTYLE_SELF_IF_PSEUDO;
         }
-        if self.contains(RestyleHint::RECASCADE_DESCENDANTS) {
+        if self.contains(Self::RECASCADE_DESCENDANTS) {
             result |= Self::recascade_subtree();
         }
-        if self.contains(RestyleHint::RESTYLE_IF_AFFECTED_BY_NAMED_STYLE_CONTAINER) {
+        if self.contains(Self::RESTYLE_IF_AFFECTED_BY_WM_OR_ANCESTOR_FONT) {
+            result |= Self::RESTYLE_IF_AFFECTED_BY_WM_OR_ANCESTOR_FONT;
+        }
+        if self.contains(Self::RESTYLE_CHILD_IF_AFFECTED_BY_STYLE_QUERIES) {
+            result |= Self::RESTYLE_IF_AFFECTED_BY_STYLE_QUERIES;
+        }
+        if self.contains(Self::RESTYLE_IF_AFFECTED_BY_NAMED_STYLE_CONTAINER) {
             // We may need to restyle further down the tree if rules are
             // declared for a named container.
             // e.g @container my-name {#b {...}}
@@ -135,9 +152,8 @@ impl RestyleHint {
             // If a toggles `container-name: my-name` the rules for #b
             // also invalidate. This is why we need one hint for unnamed
             // container and one for named containers.
-            result |= RestyleHint::RESTYLE_IF_AFFECTED_BY_NAMED_STYLE_CONTAINER;
+            result |= Self::RESTYLE_IF_AFFECTED_BY_NAMED_STYLE_CONTAINER;
         }
-
         result
     }
 

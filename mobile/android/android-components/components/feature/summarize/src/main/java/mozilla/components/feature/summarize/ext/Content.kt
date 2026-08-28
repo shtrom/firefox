@@ -8,19 +8,28 @@ import mozilla.components.concept.llm.Prompt
 import mozilla.components.feature.summarize.content.Content
 import mozilla.components.feature.summarize.content.PageMetadata
 
-val Content.prompt get() = Prompt(userPrompt = body, systemPrompt = metadata.systemPrompt)
+val Content.prompt
+    get() = Prompt(userPrompt = body, systemPrompt = metadata.systemPrompt)
 
-private val PageMetadata.isRecipe get() = structuredDataTypes.any { it.lowercase() == "recipe" }
-internal val PageMetadata.shouldUseReaderModeContent get() = isReaderable && !isRecipe
-private val PageMetadata.systemPrompt get() = if (isRecipe) {
-    recipeInstructions(language)
-} else {
-    defaultInstructions()
-}
+private val PageMetadata.isRecipe
+    get() = structuredDataTypes.any { it.lowercase() == "recipe" }
+internal val PageMetadata.shouldUseReaderModeContent
+    get() = isReaderable && !isRecipe
+private val PageMetadata.systemPrompt
+    get() =
+        if (isRecipe) {
+            recipeInstructions(language)
+        } else {
+            defaultInstructions(language)
+        }
 
-internal fun defaultInstructions() = """
+internal fun defaultInstructions(language: String) =
+    """
         You are a Content Summarizer. You create mobile-optimized summaries by
         first understanding what users actually need from each type of content.
+
+        You MUST respond entirely in $language. Do not mix languages.
+        Translate all visible section headers and labels into $language.
 
         Process:
         Step 1: Identify and Adapt. Use tree of thought to determine:
@@ -52,13 +61,15 @@ internal fun defaultInstructions() = """
 
         Adapt the format to serve the user's actual need from that content type.
         Never include the title or header of the summary.
-    """.trimIndent()
+    """
+        .trimIndent()
 
-internal fun recipeInstructions(language: String) = """
+internal fun recipeInstructions(language: String) =
+    """
         You are an expert at creating mobile-optimized recipe summaries.
 
         You MUST respond entirely in $language. Do not mix languages.
-        Translate all visible section headers and labels into **{lang}**.
+        Translate all visible section headers and labels into $language.
         Output ONLY the formatted result. Do not add any closing phrases.
         If a field is null, empty, or missing, omit that section entirely.
         Always replace placeholders with actual values.
@@ -92,4 +103,5 @@ internal fun recipeInstructions(language: String) = """
         - Protein: {protein} g
         - Carbs: {carbs} g
         - Fat: {fat} g
-    """.trimIndent()
+    """
+        .trimIndent()

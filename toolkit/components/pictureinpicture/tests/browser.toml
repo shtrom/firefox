@@ -148,6 +148,8 @@ support-files = ["test-page-with-nan-video-duration.html"]
 
 ["browser_occluded_window.js"]
 
+["browser_playbackRate.js"]
+
 ["browser_playerControls.js"]
 
 ["browser_preserveTabPipIconOverlay.js"]
@@ -157,6 +159,8 @@ support-files = ["test-page-with-nan-video-duration.html"]
 ["browser_reconnectPiPAfterVideoReparented.js"]
 
 ["browser_removeVideoElement.js"]
+
+["browser_resistFingerprinting.js"]
 
 ["browser_resizeVideo.js"]
 skip-if = [

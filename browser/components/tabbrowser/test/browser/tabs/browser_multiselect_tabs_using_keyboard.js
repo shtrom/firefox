@@ -119,18 +119,9 @@ add_task(async function changeSelectionUsingKeyboard() {
   EventUtils.synthesizeKey("VK_SPACE", { accelKey: true });
   ok(tab5.multiselected, "Tab5 should be multiselected");
 
-  ok(
-    tab1.multiselected && gBrowser._multiSelectedTabsSet.has(tab1),
-    "Tab1 is (multi) selected"
-  );
-  ok(
-    tab3.multiselected && gBrowser._multiSelectedTabsSet.has(tab3),
-    "Tab3 is (multi) selected"
-  );
-  ok(
-    tab5.multiselected && gBrowser._multiSelectedTabsSet.has(tab5),
-    "Tab5 is (multi) selected"
-  );
+  ok(tab1.multiselected, "Tab1 is (multi) selected");
+  ok(tab3.multiselected, "Tab3 is (multi) selected");
+  ok(tab5.multiselected, "Tab5 is (multi) selected");
   is(gBrowser.multiSelectedTabsCount, 3, "Three tabs (multi) selected");
   is(tab3, gBrowser.selectedTab, "Tab3 is still the selected tab");
 
@@ -144,7 +135,7 @@ add_task(async function changeSelectionUsingKeyboard() {
   is(tab4.previousElementSibling, tab3, "tab4 should be after tab3");
   is(tab4.nextElementSibling, tab5, "tab4 should be before tab5");
 
-  let tabsReordered = BrowserTestUtils.waitForCondition(() => {
+  let tabsReordered = TestUtils.waitForCondition(() => {
     return (
       tab4.previousElementSibling == tab2 && tab4.nextElementSibling == tab3
     );

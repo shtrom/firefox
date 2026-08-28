@@ -15,14 +15,15 @@ use super::CSSFloat;
 use crate::context::QuirksMode;
 use crate::derives::*;
 use crate::parser::{Parse, ParserContext};
+use crate::typed_om::NumericBaseType;
+use crate::values::computed;
+use crate::values::specified::calc::PercentageContext;
 use crate::values::specified::number::parse_number_with_clamping_mode;
-use crate::values::{computed, serialize_atom_identifier, AtomString};
-use crate::{Atom, Namespace, Prefix};
+use crate::{Namespace, Prefix};
 use cssparser::{Parser, Token};
 use rustc_hash::FxHashMap;
-use std::fmt::{self, Write};
 use style_traits::values::specified::AllowedNumericType;
-use style_traits::{CssWriter, ParseError, StyleParseErrorKind, ToCss};
+use style_traits::{ParseError, StyleParseErrorKind};
 
 pub use self::align::{ContentDistribution, ItemPlacement, JustifyItems, SelfAlignment};
 pub use self::angle::{AllowUnitlessZeroAngle, Angle, NoCalcAngle};
@@ -32,7 +33,7 @@ pub use self::animation::{
     AnimationRangeStart, AnimationTimeline, ScrollAxis, TimelineName, TransitionBehavior,
     TransitionProperty, ViewTimelineInset, ViewTransitionClass, ViewTransitionName,
 };
-pub use self::background::{BackgroundRepeat, BackgroundSize};
+pub use self::background::{BackgroundClip, BackgroundRepeat, BackgroundSize};
 pub use self::basic_shape::FillRule;
 pub use self::border::{
     BorderCornerRadius, BorderImageRepeat, BorderImageSideWidth, BorderImageSlice,
@@ -42,7 +43,7 @@ pub use self::border::{
 pub use self::box_::{
     AlignmentBaseline, Appearance, BaselineShift, BaselineSource, BreakBetween, BreakWithin, Clear,
     Contain, ContainIntrinsicSize, ContainerName, ContainerType, ContentVisibility, Display,
-    DominantBaseline, Float, LineClamp, Overflow, OverflowAnchor, OverflowClipMargin,
+    DominantBaseline, Float, LineClamp, MarginTrim, Overflow, OverflowAnchor, OverflowClipMargin,
     OverscrollBehavior, Perspective, PositionProperty, Resize, ScrollSnapAlign, ScrollSnapAxis,
     ScrollSnapStop, ScrollSnapStrictness, ScrollSnapType, ScrollbarGutter, TouchAction, WillChange,
     WillChangeBits, WritingModeProperty, Zoom,
@@ -52,6 +53,7 @@ pub use self::color::{
     Color, ColorOrAuto, ColorPropertyValue, ColorScheme, ForcedColorAdjust, PrintColorAdjust,
 };
 pub use self::column::ColumnCount;
+pub use self::corner_shape::{CornerShape, CornerShapeRect, SuperellipseArg};
 pub use self::counters::{Content, ContentItem, CounterIncrement, CounterReset, CounterSet};
 pub use self::easing::TimingFunction;
 pub use self::effects::{BoxShadow, Filter, SimpleShadow};
@@ -59,13 +61,15 @@ pub use self::flex::FlexBasis;
 pub use self::font::{FontFamily, FontLanguageOverride, FontPalette, FontStyle};
 pub use self::font::{FontFeatureSettings, FontVariantLigatures, FontVariantNumeric};
 pub use self::font::{
-    FontSize, FontSizeAdjust, FontSizeAdjustFactor, FontSizeKeyword, FontStretch, FontSynthesis,
-    FontSynthesisStyle,
+    FontSize, FontSizeAdjust, FontSizeAdjustFactor, FontSizeKeyword, FontSynthesis,
+    FontSynthesisStyle, FontWidth,
 };
 pub use self::font::{FontVariantAlternates, FontWeight};
 pub use self::font::{FontVariantEastAsian, FontVariationSettings, LineHeight};
 pub use self::font::{MathDepth, MozScriptMinSize, MozScriptSizeMultiplier, XLang, XTextScale};
-pub use self::image::{EndingShape as GradientEndingShape, Gradient, Image, ImageRendering};
+pub use self::image::{
+    EndingShape as GradientEndingShape, Gradient, Image, ImageDecoding, ImageRendering,
+};
 pub use self::length::{Length, LengthOrNumber, LengthUnit, NonNegativeLengthOrNumber};
 pub use self::length::{LengthOrAuto, LengthPercentage, LengthPercentageOrAuto};
 pub use self::length::{Margin, MaxSize, Size};
@@ -82,12 +86,13 @@ pub use self::number::{
 };
 pub use self::outline::OutlineStyle;
 pub use self::page::{PageName, PageOrientation, PageSize, PageSizeOrientation, PaperSize};
+pub use self::param::LinkParameters;
 pub use self::percentage::{NoCalcPercentage, NonNegativePercentage, Percentage};
 pub use self::position::{
-    AnchorFunction, AnchorName, AnchorNameIdent, AspectRatio, GridAutoFlow, GridTemplateAreas,
-    Inset, MasonryAutoFlow, MasonryItemOrder, MasonryPlacement, Position, PositionAnchor,
-    PositionAnchorKeyword, PositionArea, PositionAreaKeyword, PositionComponent, PositionOrAuto,
-    PositionTryFallbacks, PositionTryOrder, PositionVisibility, ScopedName, ZIndex,
+    AnchorFunction, AnchorName, AnchorNameIdent, AspectRatio, FlexWrap, GridAutoFlow,
+    GridTemplateAreas, Inset, MasonryAutoFlow, MasonryItemOrder, MasonryPlacement, Position,
+    PositionAnchor, PositionAnchorKeyword, PositionArea, PositionAreaKeyword, PositionComponent,
+    PositionOrAuto, PositionTryFallbacks, PositionTryOrder, PositionVisibility, ScopedName, ZIndex,
 };
 pub use self::ratio::Ratio;
 pub use self::rect::NonNegativeLengthOrNumberRect;
@@ -109,6 +114,7 @@ pub use self::text::{
 pub use self::time::{NoCalcTime, Time};
 pub use self::transform::{Rotate, Scale, Transform};
 pub use self::transform::{TransformBox, TransformOrigin, TransformStyle, Translate};
+pub use self::tree_counting::TreeCountingFunction;
 #[cfg(feature = "gecko")]
 pub use self::ui::CursorImage;
 pub use self::ui::{
@@ -127,11 +133,13 @@ pub mod box_;
 pub mod calc;
 pub mod color;
 pub mod column;
+pub mod corner_shape;
 pub mod counters;
 pub mod easing;
 pub mod effects;
 pub mod flex;
 pub mod font;
+pub mod frequency;
 pub mod grid;
 pub mod image;
 pub mod intersection_observer;
@@ -141,6 +149,7 @@ pub mod motion;
 pub mod number;
 pub mod outline;
 pub mod page;
+pub mod param;
 pub mod percentage;
 pub mod position;
 pub mod ratio;
@@ -153,6 +162,7 @@ pub mod table;
 pub mod text;
 pub mod time;
 pub mod transform;
+pub mod tree_counting;
 pub mod ui;
 pub mod url;
 
@@ -200,8 +210,11 @@ impl Parse for AngleOrPercentage {
 /// <number> | <percentage>
 ///
 /// Accepts only non-negative numbers.
+///
+/// TODO(Bug 2040559) - Convert this into a NumericUnion, instead of an enum over
+/// Number and Percentage. Both types are also NumericUnions of unitless floats.
 #[allow(missing_docs)]
-#[derive(Clone, Debug, MallocSizeOf, PartialEq, SpecifiedValueInfo, ToCss, ToShmem)]
+#[derive(Clone, Debug, MallocSizeOf, PartialEq, SpecifiedValueInfo, ToCss, ToShmem, ToTyped)]
 pub enum NumberOrPercentage {
     Percentage(Percentage),
     Number(Number),
@@ -219,7 +232,13 @@ impl NumberOrPercentage {
             return Ok(NumberOrPercentage::Percentage(per));
         }
 
-        parse_number_with_clamping_mode(context, input, type_).map(NumberOrPercentage::Number)
+        parse_number_with_clamping_mode(
+            context,
+            input,
+            type_,
+            PercentageContext::allowed_with_hint(NumericBaseType::Percent),
+        )
+        .map(NumberOrPercentage::Number)
     }
 
     /// Parse a non-negative number or percentage.
@@ -243,6 +262,23 @@ impl NumberOrPercentage {
         match self {
             Self::Percentage(p) => p.to_number(),
             Self::Number(n) => Some(n.clone()),
+        }
+    }
+
+    /// Gets a reference to the underlying percentage, or None if this is a number
+    pub fn as_percentage(&self) -> Option<&Percentage> {
+        match self {
+            NumberOrPercentage::Percentage(percentage) => Some(percentage),
+            _ => None,
+        }
+    }
+
+    /// If this is a non-calc percentage, replaces it with the equivalent
+    /// number; otherwise, returns the original value.
+    pub fn into_simplified_number(self) -> NumberOrPercentage {
+        match self.as_percentage().and_then(|p| p.get()) {
+            Some(p) => NumberOrPercentage::Number(Number::new(p)),
+            None => self,
         }
     }
 
@@ -296,28 +332,21 @@ impl Parse for NonNegativeNumberOrPercentage {
     }
 }
 
-/// The value of Opacity is <alpha-value>, which is "<number> | <percentage>".
-/// However, we serialize the specified value as number, so it's ok to store
-/// the Opacity as Number.
-#[derive(
-    Clone, Debug, MallocSizeOf, PartialEq, PartialOrd, SpecifiedValueInfo, ToCss, ToShmem, ToTyped,
-)]
-pub struct Opacity(Number);
+/// A specified CSS `opacity`
+#[derive(Clone, Debug, MallocSizeOf, PartialEq, SpecifiedValueInfo, ToCss, ToShmem, ToTyped)]
+pub struct Opacity(NumberOrPercentage);
 
 impl Parse for Opacity {
     /// Opacity accepts <number> | <percentage>, so we parse it as NumberOrPercentage,
-    /// and then convert into an Number if it's a Percentage.
-    /// https://drafts.csswg.org/cssom/#serializing-css-values
+    /// and then convert into an Number if it's a non-calc Percentage.
+    /// https://drafts.csswg.org/css-color-4/#serializing-opacity-values
     fn parse<'i, 't>(
         context: &ParserContext,
         input: &mut Parser<'i, 't>,
     ) -> Result<Self, ParseError<'i>> {
-        // TODO(Bug 1980555) - Properly handle serialization of percentages in calcs by not eagerly
-        // converting into a number here at parse time.
-        let Some(number) = NumberOrPercentage::parse(context, input)?.to_number() else {
-            return Err(input.new_custom_error(StyleParseErrorKind::UnspecifiedError));
-        };
-        Ok(Opacity(number))
+        Ok(Opacity(
+            NumberOrPercentage::parse(context, input)?.into_simplified_number(),
+        ))
     }
 }
 
@@ -326,7 +355,7 @@ impl ToComputedValue for Opacity {
 
     #[inline]
     fn to_computed_value(&self, context: &Context) -> CSSFloat {
-        let value = self.0.to_computed_value(context);
+        let value = self.0.to_computed_value(context).value();
         if context.for_animation {
             // Type <number> and <percentage> should be able to interpolate
             // out-of-range opacity values which benefits additive animation
@@ -338,7 +367,9 @@ impl ToComputedValue for Opacity {
 
     #[inline]
     fn from_computed_value(computed: &CSSFloat) -> Self {
-        Opacity(Number::from_computed_value(computed))
+        Opacity(NumberOrPercentage::Number(Number::from_computed_value(
+            computed,
+        )))
     }
 }
 
@@ -478,8 +509,7 @@ impl ParsedNamespace {
         // prefixes can resolve to the same id. Additionally,
         // we also don't need it for serialization as substitution
         // functions serialize from the direct css declaration.
-        parse_namespace(namespaces, input, /*allow_non_registered*/ true)
-            .map(|(_prefix, namespace)| namespace)
+        parse_namespace(namespaces, input).map(|(_prefix, namespace)| namespace)
     }
 }
 
@@ -489,49 +519,10 @@ impl Default for ParsedNamespace {
     }
 }
 
-/// An attr(...) rule
-///
-/// `[namespace? `|`]? ident`
-#[derive(
-    Clone,
-    Debug,
-    Eq,
-    MallocSizeOf,
-    PartialEq,
-    SpecifiedValueInfo,
-    ToComputedValue,
-    ToResolvedValue,
-    ToShmem,
-)]
-#[css(function)]
-#[repr(C)]
-pub struct Attr {
-    /// Optional namespace prefix.
-    pub namespace_prefix: Prefix,
-    /// Optional namespace URL.
-    pub namespace_url: Namespace,
-    /// Attribute name
-    pub attribute: Atom,
-    /// Fallback value
-    pub fallback: AtomString,
-}
-
-impl Parse for Attr {
-    fn parse<'i, 't>(
-        context: &ParserContext,
-        input: &mut Parser<'i, 't>,
-    ) -> Result<Attr, ParseError<'i>> {
-        input.expect_function_matching("attr")?;
-        input.parse_nested_block(|i| Attr::parse_function(context, i))
-    }
-}
-
 /// Try to parse a namespace and return it if parsed, or none if there was not one present
 pub fn parse_namespace<'i, 't>(
     namespaces: &FxHashMap<Prefix, Namespace>,
     input: &mut Parser<'i, 't>,
-    // TODO: Once general attr is enabled, we should remove this flag
-    allow_non_registered: bool,
 ) -> Result<(Prefix, ParsedNamespace), ParseError<'i>> {
     let ns_prefix = match input.next()? {
         Token::Ident(ref prefix) => Some(Prefix::from(prefix.as_ref())),
@@ -546,89 +537,10 @@ pub fn parse_namespace<'i, 't>(
     if let Some(prefix) = ns_prefix {
         let ns = match namespaces.get(&prefix).cloned() {
             Some(ns) => ParsedNamespace::Known(ns),
-            None => {
-                if allow_non_registered {
-                    ParsedNamespace::Unknown
-                } else {
-                    return Err(input.new_custom_error(StyleParseErrorKind::UnspecifiedError));
-                }
-            },
+            None => ParsedNamespace::Unknown,
         };
         Ok((prefix, ns))
     } else {
         Ok((Prefix::default(), ParsedNamespace::default()))
-    }
-}
-
-impl Attr {
-    /// Parse contents of attr() assuming we have already parsed `attr` and are
-    /// within a parse_nested_block()
-    pub fn parse_function<'i, 't>(
-        context: &ParserContext,
-        input: &mut Parser<'i, 't>,
-    ) -> Result<Attr, ParseError<'i>> {
-        // Syntax is `[namespace? '|']? ident [',' fallback]?`
-        let namespace = input
-            .try_parse(|input| {
-                parse_namespace(
-                    &context.namespaces.prefixes,
-                    input,
-                    /*allow_non_registered*/ false,
-                )
-            })
-            .ok();
-        let namespace_is_some = namespace.is_some();
-        let (namespace_prefix, namespace_url) = namespace.unwrap_or_default();
-        let ParsedNamespace::Known(namespace_url) = namespace_url else {
-            unreachable!("Non-registered url not allowed (see parse namespace flag).")
-        };
-
-        // If there is a namespace, ensure no whitespace following '|'
-        let attribute = Atom::from(if namespace_is_some {
-            let location = input.current_source_location();
-            match *input.next_including_whitespace()? {
-                Token::Ident(ref ident) => ident.as_ref(),
-                ref t => return Err(location.new_unexpected_token_error(t.clone())),
-            }
-        } else {
-            input.expect_ident()?.as_ref()
-        });
-
-        // Fallback will always be a string value for now as we do not support
-        // attr() types yet.
-        let fallback = input
-            .try_parse(|input| -> Result<AtomString, ParseError<'i>> {
-                input.expect_comma()?;
-                Ok(input.expect_string()?.as_ref().into())
-            })
-            .unwrap_or_default();
-
-        Ok(Attr {
-            namespace_prefix,
-            namespace_url,
-            attribute,
-            fallback,
-        })
-    }
-}
-
-impl ToCss for Attr {
-    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
-    where
-        W: Write,
-    {
-        dest.write_str("attr(")?;
-        if !self.namespace_prefix.is_empty() {
-            serialize_atom_identifier(&self.namespace_prefix, dest)?;
-            dest.write_char('|')?;
-        }
-        serialize_atom_identifier(&self.attribute, dest)?;
-
-        if !self.fallback.is_empty() {
-            dest.write_str(", ")?;
-            self.fallback.to_css(dest)?;
-        }
-
-        dest.write_char(')')
     }
 }

@@ -46,6 +46,7 @@ class SizeClass {
   enum ClassType {
     Quantum,
     QuantumWide,
+    SubPage,
     Large,
   };
 
@@ -61,6 +62,9 @@ class SizeClass {
     } else if (aSize <= kMaxQuantumWideClass) {
       mType = QuantumWide;
       mSize = QUANTUM_WIDE_CEILING(aSize);
+    } else if (aSize <= mozilla::gMaxSubPageClass) {
+      mType = SubPage;
+      mSize = SUBPAGE_CEILING(aSize);
     } else if (aSize <= mozilla::gMaxLargeClass) {
       mType = Large;
       mSize = PAGE_CEILING(aSize);
@@ -94,11 +98,11 @@ namespace mozilla {
 #ifdef MALLOC_DOUBLE_PURGE
 struct MadvisedChunkListTrait {
   static DoublyLinkedListElement<arena_chunk_t>& Get(arena_chunk_t* aThis) {
-    return aThis->mChunksMavisedElim;
+    return aThis->mChunksMadvisedElement;
   }
   static const DoublyLinkedListElement<arena_chunk_t>& Get(
       const arena_chunk_t* aThis) {
-    return aThis->mChunksMavisedElim;
+    return aThis->mChunksMadvisedElement;
   }
 };
 #endif
@@ -243,7 +247,7 @@ struct arena_t : public BaseAllocClass {
   RedBlackTreeNode<arena_t> mLink;
 
   // Arena id, that we keep away from the beginning of the struct so that
-  // free list pointers in TypedBaseAlloc<arena_t> don't overflow in it,
+  // free list pointers in the base allocator don't overflow in it,
   // and it keeps the value it had after the destructor.
   arena_id_t mId = 0;
 
@@ -366,7 +370,7 @@ struct arena_t : public BaseAllocClass {
 
   // A mirror of ArenaCollection::mIsDeferredPurgeEnabled, here only to
   // optimize memory reads in ShouldStartPurge().
-  bool mIsDeferredPurgeEnabled MOZ_GUARDED_BY(mLock);
+  bool mIsDeferredPurgeEnabled MOZ_GUARDED_BY(mLock) = false;
 
   // True if the arena is in the process of being destroyed, and needs to be
   // released after a concurrent purge completes.

@@ -11,15 +11,14 @@
 
 #include "fmt/format.h"
 #include "fmt/xchar.h"
-
 #include "mozilla/Char16.h"
 #include "mozilla/CheckedInt.h"
-#include "mozilla/fallible.h"
 #include "mozilla/StringBuffer.h"
+#include "mozilla/fallible.h"
+#include "nsCharTraits.h"
 #include "nsStringFlags.h"
 #include "nsStringFwd.h"
 #include "nsStringIterator.h"
-#include "nsCharTraits.h"
 
 template <typename T>
 class nsTSubstringTuple;
@@ -50,12 +49,10 @@ namespace mozilla {
 // will get a semi-decent compiler error if you use `T` directly.
 
 template <typename CharType>
-using CharOnlyT =
-    typename std::enable_if<std::is_same<char, CharType>::value>::type;
+using CharOnlyT = std::enable_if_t<std::is_same_v<char, CharType>>;
 
 template <typename CharType>
-using Char16OnlyT =
-    typename std::enable_if<std::is_same<char16_t, CharType>::value>::type;
+using Char16OnlyT = std::enable_if_t<std::is_same_v<char16_t, CharType>>;
 
 namespace detail {
 
@@ -225,7 +222,7 @@ class nsTStringRepr {
   }
 
   constexpr char_type CharAt(index_type aIndex) const {
-    NS_ASSERTION(aIndex < Length(), "index exceeds allowable range");
+    MOZ_ASSERT(aIndex < Length(), "index exceeds allowable range");
     return mData[aIndex];
   }
 
@@ -353,6 +350,10 @@ class nsTStringRepr {
                 reinterpret_cast<uintptr_t>(mData + mLength) &&
             reinterpret_cast<uintptr_t>(aEnd) >
                 reinterpret_cast<uintptr_t>(mData));
+  }
+
+  bool Contains(const string_view& aString) const {
+    return Find(aString) != kNotFound;
   }
 
   /**

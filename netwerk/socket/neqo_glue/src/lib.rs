@@ -10,6 +10,7 @@ use std::{
     borrow::Cow,
     cell::RefCell,
     cmp::min,
+    collections::HashMap,
     ffi::c_void,
     io,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -33,13 +34,14 @@ use neqo_common::{
     Header, Role, Tos,
 };
 use neqo_http3::{
-    features::extended_connect::session, ConnectUdpEvent, Error as Http3Error, Http3Client,
+    connect_udp::ClientSession as _, features::extended_connect::session,
+    webtransport::ClientSession as _, ConnectUdpEvent, Error as Http3Error, Http3Client,
     Http3ClientEvent, Http3Parameters, Http3State, Priority, WebTransportEvent,
 };
 use neqo_transport::{
-    stream_id::StreamType, CongestionControl, Connection, ConnectionParameters,
-    Error as TransportError, HyStartCssBaseline, Output, OutputBatch, RandomConnectionIdGenerator,
-    SlowStart, StreamId, Version,
+    stream_id::StreamType, streams::SendGroupId, CongestionControl, Connection,
+    ConnectionParameters, Error as TransportError, HyStartCssBaseline, Output, OutputBatch,
+    RandomConnectionIdGenerator, SlowStart, StreamId, Version,
 };
 use nserror::{
     nsresult, NS_BASE_STREAM_WOULD_BLOCK, NS_ERROR_CONNECTION_REFUSED,
@@ -63,6 +65,13 @@ use zlib_rs::{decompress_slice, InflateConfig, ReturnCode};
 std::thread_local! {
     static RECV_BUF: RefCell<neqo_udp::RecvBuf> = RefCell::new(neqo_udp::RecvBuf::default());
 }
+
+/// Upper bound on the bytes read from the socket in a single `neqo_http3conn_process_input` pass.
+/// No legitimate connection reads this much at once, so the cap only bounds a misbehaving or
+/// malicious peer that would otherwise make us buffer datagrams unboundedly. Nothing is lost when
+/// the cap is hit: buffered events are delivered to the upper layer right after, and the
+/// level-triggered poll re-fires `RecvData` to read the rest.
+const MAX_BYTES_READ_PER_PASS: usize = 50 * 1024 * 1024;
 
 #[cfg(target_vendor = "apple")]
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -130,6 +139,15 @@ pub struct NeqoHttp3Conn {
     datagram_segments_sent: LocalCustomDistribution<'static>,
     datagram_segments_received: LocalCustomDistribution<'static>,
     would_block_counter: WouldBlockCounter,
+    /// Maps the child-minted WebTransport send-group id (assigned synchronously in the
+    /// content process) to the neqo-minted [`SendGroupId`].
+    webtransport_send_groups: HashMap<u64, SendGroupId>,
+    /// Whether the connection-close reason has already been recorded to Glean.
+    /// A connection may surface a `Closing` state change followed later by a
+    /// `Closed` one; this guards against counting the same close twice while
+    /// still catching closes that skip `Closing` entirely (idle timeout).
+    #[cfg(not(target_os = "android"))]
+    close_reason_recorded: bool,
 }
 
 impl Drop for NeqoHttp3Conn {
@@ -601,8 +619,31 @@ impl NeqoHttp3Conn {
                 .start_buffer(),
             buffered_outbound_datagram: None,
             would_block_counter: WouldBlockCounter::new(),
+            webtransport_send_groups: HashMap::new(),
+            #[cfg(not(target_os = "android"))]
+            close_reason_recorded: false,
         }));
         unsafe { RefPtr::from_raw(conn).ok_or(NS_ERROR_NOT_CONNECTED) }
+    }
+
+    /// Record the reason this HTTP/3 connection closed to Glean, at most once
+    /// per connection. Called from both the `Closing` and `Closed` state
+    /// changes: closes that go through a closing handshake surface `Closing`
+    /// first, while closes that skip it (idle timeout) surface only `Closed`.
+    #[cfg(not(target_os = "android"))]
+    fn record_close_reason(&mut self, reason: &neqo_transport::CloseReason) {
+        if self.close_reason_recorded {
+            return;
+        }
+        self.close_reason_recorded = true;
+
+        let glean_label = match reason {
+            neqo_transport::CloseReason::Application(_) => "Application",
+            neqo_transport::CloseReason::Transport(r) => transport_error_to_glean_label(r),
+        };
+        networking::http_3_connection_close_reason
+            .get(glean_label)
+            .add(1);
     }
 
     fn record_stats_in_glean(&self) {
@@ -659,13 +700,43 @@ impl NeqoHttp3Conn {
             add("datagram", s.datagram);
         }
 
+        // Only record the metrics below for connections that established. Not
+        // gating on `stats.packets_rx` as it counts garbage too, so it would
+        // still admit a network that replies to every UDP packet with junk
+        // without ever speaking QUIC.
+        if stats.frame_rx.handshake_done == 0 {
+            return;
+        }
+
+        let version_label = match stats.version {
+            Version::Version1 => "v1",
+            Version::Version2 => "v2",
+        };
+        glean::http_3_quic_version.get(version_label).add(1);
+
+        // neqo's `pto_counts` is a sliding histogram: the highest set bucket is
+        // the longest run of consecutive PTOs the connection saw, i.e. how deep
+        // it fell into a black hole. Record that run length once per connection.
+        let max_consecutive_ptos = i64::try_from(
+            stats
+                .pto_counts
+                .iter()
+                .rposition(|&count| count > 0)
+                .map_or(0, |i| i + 1),
+        )
+        .unwrap_or(i64::MAX);
+        glean::http_3_max_consecutive_ptos.accumulate_single_sample_signed(max_consecutive_ptos);
+
         if !static_prefs::pref!("network.http.http3.use_nspr_for_io")
             && static_prefs::pref!("network.http.http3.ecn_report")
-            && stats.frame_rx.handshake_done != 0
         {
             let rx_ect0_sum: u64 = stats.ecn_rx.into_values().map(|v| v[Ecn::Ect0]).sum();
+            let rx_ect1_sum: u64 = stats.ecn_rx.into_values().map(|v| v[Ecn::Ect1]).sum();
             let rx_ce_sum: u64 = stats.ecn_rx.into_values().map(|v| v[Ecn::Ce]).sum();
-            if rx_ect0_sum > 0 {
+
+            // A CE mark can't be attributed to a specific ECT type on connections that saw
+            // both, so the per-type ratio and count metrics below are gated on exclusivity.
+            if rx_ect0_sum > 0 && rx_ect1_sum == 0 {
                 if let Ok(ratio) = i64::try_from((rx_ce_sum * PRECISION_FACTOR) / rx_ect0_sum) {
                     glean::http_3_ecn_ce_ect0_ratio_received.accumulate_single_sample_signed(ratio);
                 } else {
@@ -674,11 +745,22 @@ impl NeqoHttp3Conn {
                     debug_assert!(false, "{msg}");
                 }
             }
+
+            // Per-connection classification of the server's ECN marking (answers "% of servers").
+            let label = match (rx_ect0_sum > 0, rx_ect1_sum > 0, rx_ce_sum > 0) {
+                (true, true, _) => "ect0-and-ect1",
+                (true, false, false) => "ect0",
+                (false, true, false) => "ect1",
+                (true, false, true) => "ect0-and-ce",
+                (false, true, true) => "ect1-and-ce",
+                (false, false, true) => "ce-only",
+                (false, false, false) => "none",
+            };
+            glean::http_3_ecn_ect_received.get(label).add(1);
         }
 
         if !static_prefs::pref!("network.http.http3.use_nspr_for_io")
             && static_prefs::pref!("network.http.http3.ecn_mark")
-            && stats.frame_rx.handshake_done != 0
         {
             let tx_ect0_sum: u64 = stats.ecn_tx_acked.into_values().map(|v| v[Ecn::Ect0]).sum();
             let tx_ce_sum: u64 = stats.ecn_tx_acked.into_values().map(|v| v[Ecn::Ce]).sum();
@@ -723,197 +805,193 @@ impl NeqoHttp3Conn {
             }
         }
 
-        // Ignore connections into the void for metrics where it makes sense.
-        if stats.packets_rx != 0 {
-            // Calculate and collect packet loss ratio. The value is used later to also record the filtered loss ratio for connections that used the congestion controller.
-            let loss_ratio =
-                match i64::try_from((stats.lost * PRECISION_FACTOR_USIZE) / stats.packets_tx) {
-                    Ok(v) => {
-                        glean::http_3_loss_ratio.accumulate_single_sample_signed(v);
-                        Some(v)
+        // Calculate and collect packet loss ratio. The value is used later to also record the filtered loss ratio for connections that used the congestion controller.
+        let loss_ratio =
+            match i64::try_from((stats.lost * PRECISION_FACTOR_USIZE) / stats.packets_tx) {
+                Ok(v) => {
+                    glean::http_3_loss_ratio.accumulate_single_sample_signed(v);
+                    Some(v)
+                }
+                Err(e) => {
+                    qwarn!("Failed to convert ratio to i64 for use with glean: {e}");
+                    debug_assert!(
+                        false,
+                        "Failed to convert ratio to i64 for use with glean: {e}"
+                    );
+                    None
+                }
+            };
+        // Records the unfiltered (old) slow start exit ratio
+        if stats.cc.slow_start_exit.is_some() {
+            glean::http_3_slow_start_exited.get("exited").add(1);
+        } else {
+            glean::http_3_slow_start_exited.get("not_exited").add(1);
+        }
+
+        let cwnd_that_grew = stats.cc.cwnd.filter(|&c| c > MAX_INITIAL_CWND);
+        let growth_label = match (
+            cwnd_that_grew,
+            stats.cc.slow_start_exit.as_ref().map(|e| e.exit_cwnd),
+        ) {
+            (Some(_), Some(exit_cwnd)) if exit_cwnd < MAX_INITIAL_CWND => {
+                "no_growth_then_exit_then_growth"
+            }
+            (Some(_), _) => "had_growth",
+            (None, Some(_)) => "no_growth_but_exit",
+            (None, None) => "no_growth",
+        };
+        glean::http_3_congestion_window_growth
+            .get(growth_label)
+            .add(1);
+        // Filtered: only record CC metrics for connections that grew past the initial window.
+        if let Some(final_cwnd) = cwnd_that_grew {
+            glean::http_3_final_cwnd.accumulate(final_cwnd as u64);
+            if let Some(loss) = loss_ratio {
+                glean::http_3_loss_ratio_filtered.accumulate_single_sample_signed(loss);
+            }
+            // Record metrics concerning the slow start exit point below this filter.
+            let mut hystart_label = "not_exited";
+            let mut search_label = "not_exited";
+            if let Some(slow_start_exit) = stats.cc.slow_start_exit.as_ref() {
+                let exit_cwnd = slow_start_exit.exit_cwnd;
+                let reason = &slow_start_exit.reason;
+                glean::http_3_slow_start_exit_cwnd.accumulate(exit_cwnd as u64);
+                glean::http_3_slow_start_exited_filtered
+                    .get("exited")
+                    .add(1);
+                let accuracy_cwnd =
+                    ((exit_cwnd.abs_diff(final_cwnd) as f64) / final_cwnd as f64) * 100.0;
+                let accuracy_w_max = if let Some(final_w_max) = stats.cc.w_max {
+                    assert!(final_w_max > 0.0, "w_max can never be non-positive");
+                    glean::http_3_final_w_max.accumulate(final_w_max as u64);
+                    Some(((exit_cwnd as f64 - final_w_max).abs() / final_w_max) * 100.0)
+                } else {
+                    None
+                };
+                let direction_label = match exit_cwnd.cmp(&final_cwnd) {
+                    Ordering::Greater => "overshoot",
+                    Ordering::Less => "undershoot",
+                    Ordering::Equal => "exact",
+                };
+                let (reason_label, accuracy_label) = match reason {
+                    SlowStartExitReason::CongestionEvent(_) => {
+                        glean::http_3_slow_start_exit_direction_loss
+                            .get(direction_label)
+                            .add(1);
+                        hystart_label = "exited_ce";
+                        search_label = "exited_ce";
+                        ("ce", "ce_exit")
                     }
-                    Err(e) => {
-                        qwarn!("Failed to convert ratio to i64 for use with glean: {e}");
-                        debug_assert!(
-                            false,
-                            "Failed to convert ratio to i64 for use with glean: {e}"
-                        );
-                        None
+                    SlowStartExitReason::Heuristic => {
+                        glean::http_3_slow_start_exit_direction_heuristic
+                            .get(direction_label)
+                            .add(1);
+                        hystart_label = "exited_hystart";
+                        search_label = "exited_search";
+                        ("heuristic", "heuristic_exit")
                     }
                 };
-            // Records the unfiltered (old) slow start exit ratio
-            if stats.cc.slow_start_exit_cwnd.is_some() {
-                glean::http_3_slow_start_exited.get("exited").add(1);
-            } else {
-                glean::http_3_slow_start_exited.get("not_exited").add(1);
-            }
-
-            let cwnd_that_grew = stats.cc.cwnd.filter(|&c| c > MAX_INITIAL_CWND);
-            let growth_label = match (cwnd_that_grew, stats.cc.slow_start_exit_cwnd) {
-                (Some(_), Some(exit_cwnd)) if exit_cwnd < MAX_INITIAL_CWND => {
-                    "no_growth_then_exit_then_growth"
-                }
-                (Some(_), _) => "had_growth",
-                (None, Some(_)) => "no_growth_but_exit",
-                (None, None) => "no_growth",
-            };
-            glean::http_3_congestion_window_growth
-                .get(growth_label)
-                .add(1);
-            // Filtered: only record CC metrics for connections that grew past the initial window.
-            if let Some(final_cwnd) = cwnd_that_grew {
-                glean::http_3_final_cwnd.accumulate(final_cwnd as u64);
-                if let Some(loss) = loss_ratio {
-                    glean::http_3_loss_ratio_filtered.accumulate_single_sample_signed(loss);
-                }
-                // Record metrics concerning the slow start exit point below this filter.
-                debug_assert_eq!(
-                    stats.cc.slow_start_exit_cwnd.is_some(),
-                    stats.cc.slow_start_exit_reason.is_some(),
-                    "slow_start_exit_cwnd and slow_start_exit_reason must always be set together"
-                );
-                let mut hystart_label = "not_exited";
-                let mut search_label = "not_exited";
-                if let (Some(exit_cwnd), Some(reason)) = (
-                    stats.cc.slow_start_exit_cwnd,
-                    stats.cc.slow_start_exit_reason,
-                ) {
-                    glean::http_3_slow_start_exit_cwnd.accumulate(exit_cwnd as u64);
-                    glean::http_3_slow_start_exited_filtered
-                        .get("exited")
-                        .add(1);
-                    let accuracy_cwnd =
-                        ((exit_cwnd.abs_diff(final_cwnd) as f64) / final_cwnd as f64) * 100.0;
-                    let accuracy_w_max = if let Some(final_w_max) = stats.cc.w_max {
-                        assert!(final_w_max > 0.0, "w_max can never be non-positive");
-                        glean::http_3_final_w_max.accumulate(final_w_max as u64);
-                        Some(((exit_cwnd as f64 - final_w_max).abs() / final_w_max) * 100.0)
-                    } else {
-                        None
-                    };
-                    let direction_label = match exit_cwnd.cmp(&final_cwnd) {
-                        Ordering::Greater => "overshoot",
-                        Ordering::Less => "undershoot",
-                        Ordering::Equal => "exact",
-                    };
-                    let (reason_label, accuracy_label) = match reason {
-                        SlowStartExitReason::CongestionEvent => {
-                            glean::http_3_slow_start_exit_direction_loss
-                                .get(direction_label)
-                                .add(1);
-                            hystart_label = "exited_ce";
-                            search_label = "exited_ce";
-                            ("ce", "ce_exit")
-                        }
-                        SlowStartExitReason::Heuristic => {
-                            glean::http_3_slow_start_exit_direction_heuristic
-                                .get(direction_label)
-                                .add(1);
-                            hystart_label = "exited_hystart";
-                            search_label = "exited_search";
-                            ("heuristic", "heuristic_exit")
-                        }
-                    };
-                    glean::http_3_slow_start_exit_reason
-                        .get(reason_label)
-                        .add(1);
-                    glean::http_3_slow_start_exit_accuracy
+                glean::http_3_slow_start_exit_reason
+                    .get(reason_label)
+                    .add(1);
+                glean::http_3_slow_start_exit_accuracy
+                    .get(accuracy_label)
+                    .accumulate_single_sample_signed(accuracy_cwnd as i64);
+                if let Some(accuracy_w_max) = accuracy_w_max {
+                    glean::http_3_slow_start_exit_accuracy_w_max
                         .get(accuracy_label)
-                        .accumulate_single_sample_signed(accuracy_cwnd as i64);
-                    if let Some(accuracy_w_max) = accuracy_w_max {
-                        glean::http_3_slow_start_exit_accuracy_w_max
-                            .get(accuracy_label)
-                            .accumulate_single_sample_signed(accuracy_w_max as i64);
-                    }
-                } else {
-                    glean::http_3_slow_start_exited_filtered
-                        .get("not_exited")
-                        .add(1);
+                        .accumulate_single_sample_signed(accuracy_w_max as i64);
                 }
-                // Only record HyStart metrics when HyStart is enabled (1 == HyStart, see constructor).
-                if static_prefs::pref!("network.http.http3.slow_start_algorithm") == 1 {
-                    glean::http_3_hystart_css_rounds_finished
-                        .get(hystart_label)
-                        .accumulate_single_sample_signed(
-                            stats.cc.hystart_css_rounds_finished as i64,
-                        );
-                    glean::http_3_hystart_css_entries
-                        .get(hystart_label)
-                        .accumulate_single_sample_signed(stats.cc.hystart_css_entries as i64);
-                }
-
-                // Only record SEARCH metrics when SEARCH is enabled (2 == SEARCH, see constructor).
-                if static_prefs::pref!("network.http.http3.slow_start_algorithm") == 2 {
-                    // Metrics for drain phase evaluation
-                    if let Some(empty_buffer_bdp) = stats.cc.search_empty_buffer_target {
-                        glean::http_3_search_empty_buffer_bdp_estimate.accumulate(empty_buffer_bdp);
-                    }
-                    if let Some(full_buffer_bdp) = stats.cc.search_full_buffer_target {
-                        glean::http_3_search_full_buffer_bdp_estimate.accumulate(full_buffer_bdp);
-                    }
-                    // Metrics to tune EXTRA_BINS
-                    if let Some(lookback_bins) = stats.cc.search_lookback_bins_needed {
-                        glean::http_3_search_lookback_bins
-                            .accumulate_single_sample_signed(lookback_bins as i64);
-                        glean::http_3_search_rtt_inflated.get("inflated").add(1);
-                    } else {
-                        glean::http_3_search_rtt_inflated
-                            .get("never_inflated")
-                            .add(1);
-                    }
-                    // Metrics to tune THRESH
-                    if let Some(max_norm_diff) = stats.cc.search_max_norm_diff {
-                        glean::http_3_search_max_norm_diff
-                            .get(search_label)
-                            .accumulate_single_sample_signed(max_norm_diff as i64);
-                    }
-                    // Metrics to calibrate reset mechanism
-                    glean::http_3_search_reset_count
-                        .get(search_label)
-                        .accumulate_single_sample_signed(stats.cc.search_reset.count as i64);
-                    if let Some(max_passed_bins) = stats.cc.search_reset.max_passed_bins {
-                        glean::http_3_search_max_passed_bins
-                            .accumulate_single_sample_signed(max_passed_bins as i64);
-                    }
-                    // Metrics to gain insights into app-limited behavior during SEARCH slow start
-                    glean::http_3_search_zero_bytes_sent
-                        .get(search_label)
-                        .accumulate_single_sample_signed(stats.cc.search_zero_sent_bytes as i64);
-
-                    // Metrics to evaluate whether the first RTT used to initialize SEARCH is inflated
-                    if let Some(first_rtt) = stats.cc.search_first_rtt {
-                        let first_us = u64::try_from(first_rtt.as_micros()).unwrap_or(u64::MAX);
-                        let min_us = u64::try_from(stats.min_rtt.as_micros()).unwrap_or(u64::MAX);
-                        if min_us > 0 {
-                            glean::http_3_search_first_rtt_vs_min_rtt
-                                .accumulate_single_sample_signed((first_us * 100 / min_us) as i64);
-                        }
-                        // And whether using `min(first, second)` would be a viable fix
-                        if let Some(second_rtt) = stats.cc.search_second_rtt {
-                            let second_us =
-                                u64::try_from(second_rtt.as_micros()).unwrap_or(u64::MAX);
-                            if second_us > 0 {
-                                glean::http_3_search_first_rtt_vs_second_rtt
-                                    .accumulate_single_sample_signed(
-                                        (first_us * 100 / second_us) as i64,
-                                    );
-                            }
-                        }
-                    }
-                }
+            } else {
+                glean::http_3_slow_start_exited_filtered
+                    .get("not_exited")
+                    .add(1);
+            }
+            // Only record HyStart metrics when HyStart is enabled (1 == HyStart, see constructor).
+            if static_prefs::pref!("network.http.http3.slow_start_algorithm") == 1 {
+                glean::http_3_hystart_css_rounds_finished
+                    .get(hystart_label)
+                    .accumulate_single_sample_signed(stats.cc.hystart_css_rounds_finished as i64);
+                glean::http_3_hystart_css_entries
+                    .get(hystart_label)
+                    .accumulate_single_sample_signed(stats.cc.hystart_css_entries as i64);
             }
 
-            glean::http_3_congestion_event_count.accumulate_single_sample_signed(
-                (stats.cc.congestion_events.ecn + stats.cc.congestion_events.loss)
-                    .saturating_sub(stats.cc.congestion_events.spurious) as i64,
-            );
+            // Only record SEARCH metrics when SEARCH is enabled (2 == SEARCH, see constructor).
+            if static_prefs::pref!("network.http.http3.slow_start_algorithm") == 2 {
+                // Metrics for drain phase evaluation
+                if let Some(empty_buffer_bdp) = stats.cc.search_empty_buffer_target {
+                    glean::http_3_search_empty_buffer_bdp_estimate.accumulate(empty_buffer_bdp);
+                }
+                if let Some(full_buffer_bdp) = stats.cc.search_full_buffer_target {
+                    glean::http_3_search_full_buffer_bdp_estimate.accumulate(full_buffer_bdp);
+                }
+                // Metrics to tune EXTRA_BINS
+                if let Some(lookback_bins) = stats.cc.search_lookback_bins_needed {
+                    glean::http_3_search_lookback_bins
+                        .accumulate_single_sample_signed(lookback_bins as i64);
+                    glean::http_3_search_rtt_inflated.get("inflated").add(1);
+                } else {
+                    glean::http_3_search_rtt_inflated
+                        .get("never_inflated")
+                        .add(1);
+                }
+                // Metrics to tune THRESH
+                if let Some(max_norm_diff) = stats.cc.search_max_norm_diff {
+                    glean::http_3_search_max_norm_diff
+                        .get(search_label)
+                        .accumulate_single_sample_signed(max_norm_diff as i64);
+                }
+                // Metrics to calibrate reset mechanism
+                glean::http_3_search_reset_count
+                    .get(search_label)
+                    .accumulate_single_sample_signed(stats.cc.search_reset.count as i64);
+                if let Some(max_passed_bins) = stats.cc.search_reset.max_passed_bins {
+                    glean::http_3_search_max_passed_bins
+                        .accumulate_single_sample_signed(max_passed_bins as i64);
+                }
+                // Metrics to gain insights into app-limited behavior during SEARCH slow start
+                glean::http_3_search_zero_bytes_sent
+                    .get(search_label)
+                    .accumulate_single_sample_signed(stats.cc.search_zero_sent_bytes as i64);
 
-            if let Some(peer_max) = stats.pmtud_peer_max_udp_payload {
-                if let Ok(v) = i64::try_from(peer_max) {
-                    glean::http_3_peer_max_udp_payload.accumulate_single_sample_signed(v);
+                // Metrics to evaluate whether the first RTT used to initialize SEARCH is inflated
+                if let Some(first_rtt) = stats.cc.search_first_rtt {
+                    let first_us = u64::try_from(first_rtt.as_micros()).unwrap_or(u64::MAX);
+                    let min_us = u64::try_from(stats.min_rtt.as_micros()).unwrap_or(u64::MAX);
+                    if min_us > 0 {
+                        glean::http_3_search_first_rtt_vs_min_rtt
+                            .accumulate_single_sample_signed((first_us * 100 / min_us) as i64);
+                    }
+                    // And whether using `min(first, second)` would be a viable fix
+                    if let Some(second_rtt) = stats.cc.search_second_rtt {
+                        let second_us = u64::try_from(second_rtt.as_micros()).unwrap_or(u64::MAX);
+                        if second_us > 0 {
+                            glean::http_3_search_first_rtt_vs_second_rtt
+                                .accumulate_single_sample_signed(
+                                    (first_us * 100 / second_us) as i64,
+                                );
+                        }
+                    }
                 }
             }
         }
+
+        glean::http_3_congestion_event_count.accumulate_single_sample_signed(
+            (stats.cc.congestion_events.ecn + stats.cc.congestion_events.loss)
+                .saturating_sub(stats.cc.congestion_events.spurious) as i64,
+        );
+
+        if let Some(peer_max) = stats.pmtud_peer_max_udp_payload {
+            if let Ok(v) = i64::try_from(peer_max) {
+                glean::http_3_peer_max_udp_payload.accumulate_single_sample_signed(v);
+            }
+        }
+
+        let rtt_ms = |d: Duration| i64::try_from(d.as_millis()).unwrap_or(i64::MAX);
+        glean::http_3_rtt.accumulate_single_sample_signed(rtt_ms(stats.rtt));
+        glean::http_3_rtt_var.accumulate_single_sample_signed(rtt_ms(stats.rttvar));
+        glean::http_3_min_rtt.accumulate_single_sample_signed(rtt_ms(stats.min_rtt));
 
         // Ignore connections that never had loss induced congestion events (and prevent dividing by zero).
         if stats.cc.congestion_events.loss != 0 {
@@ -1183,6 +1261,14 @@ pub unsafe extern "C" fn neqo_http3conn_process_input(
             conn.datagram_size_received.accumulate(sum as u64);
             conn.datagram_segments_received.accumulate(segment_count);
             bytes_read += sum;
+
+            if bytes_read >= MAX_BYTES_READ_PER_PASS {
+                qwarn!(
+                    "reached the {MAX_BYTES_READ_PER_PASS} byte receive cap in a single pass; \
+                     yielding to deliver buffered events, will continue on the next RecvData"
+                );
+                break;
+            }
         }
 
         ProcessInputResult {
@@ -1327,12 +1413,28 @@ pub extern "C" fn neqo_http3conn_process_output_and_send(
                         }
                     }
                     Err(e) if e.raw_os_error() == Some(libc::EIO) && dg.num_datagrams() > 1 => {
-                        // See following resources for details:
-                        // - <https://github.com/quinn-rs/quinn/blob/93b6d01605147b9763ee1b1b381a6feb9fcd454e/quinn-udp/src/unix.rs#L345-L349>
-                        // - <https://bugzilla.mozilla.org/show_bug.cgi?id=1989895>
+                        // GSO is unsupported on this send path. quinn-udp has now
+                        // disabled GSO for subsequent sends, but the kernel
+                        // dropped the current batch. Resend it as individual
+                        // datagrams right away, rather than waiting for the QUIC
+                        // PTO (~300ms) to retransmit.
                         //
-                        // Ideally one would retry at the quinn-udp layer, see <https://github.com/quinn-rs/quinn/issues/2399>.
-                        qdebug!("Failed to send datagram batch size {} with error {e}. Missing GSO support? Socket will set max_gso_segments to 1. QUIC layer will retry.", dg.num_datagrams());
+                        // See following resources for details:
+                        // - <https://bugzilla.mozilla.org/show_bug.cgi?id=2049334>
+                        // - <https://bugzilla.mozilla.org/show_bug.cgi?id=1989895>
+                        // - <https://github.com/quinn-rs/quinn/blob/93b6d01605147b9763ee1b1b381a6feb9fcd454e/quinn-udp/src/unix.rs#L345-L349>
+                        //
+                        // Long term this fallback belongs in quinn-udp, see
+                        // <https://github.com/quinn-rs/quinn/issues/2399>.
+                        qdebug!("Failed to send datagram batch size {} with error {e}. Missing GSO support? Resending as individual datagrams.", dg.num_datagrams());
+                        let socket = conn.socket.as_mut().expect("non NSPR IO");
+                        for single in dg.iter() {
+                            let single = datagram::Batch::from(single.to_owned());
+                            if let Err(e) = socket.send(&single) {
+                                qwarn!("failed to resend datagram without GSO: {e}");
+                                break;
+                            }
+                        }
                     }
                     Err(e) => {
                         qwarn!("failed to send datagram: {}", e);
@@ -1889,6 +1991,9 @@ pub enum WebTransportEventExternal {
     Datagram {
         session_id: u64,
     },
+    Draining {
+        session_id: u64,
+    },
 }
 #[repr(C)]
 pub enum ConnectUdpEventExternal {
@@ -1946,6 +2051,9 @@ impl WebTransportEventExternal {
                     session_id: session_id.as_u64(),
                 }
             }
+            WebTransportEvent::Draining { stream_id } => Self::Draining {
+                session_id: stream_id.as_u64(),
+            },
         }
     }
 }
@@ -2207,17 +2315,7 @@ pub extern "C" fn neqo_http3conn_event(
                     }
 
                     #[cfg(not(target_os = "android"))]
-                    {
-                        let glean_label = match &reason {
-                            neqo_transport::CloseReason::Application(_) => "Application",
-                            neqo_transport::CloseReason::Transport(r) => {
-                                transport_error_to_glean_label(r)
-                            }
-                        };
-                        networking::http_3_connection_close_reason
-                            .get(glean_label)
-                            .add(1);
-                    }
+                    conn.record_close_reason(&reason);
 
                     Http3Event::ConnectionClosing {
                         error: reason.into(),
@@ -2231,6 +2329,10 @@ pub extern "C" fn neqo_http3conn_event(
                     {
                         data.extend_from_slice(c.as_ref());
                     }
+
+                    #[cfg(not(target_os = "android"))]
+                    conn.record_close_reason(&error_code);
+
                     Http3Event::ConnectionClosed {
                         error: error_code.into(),
                     }
@@ -2539,7 +2641,7 @@ pub extern "C" fn neqo_http3conn_webtransport_close_session(
         message_tmp,
         Instant::now(),
     ) {
-        Ok(()) => NS_OK,
+        Ok(_) => NS_OK,
         Err(_) => NS_ERROR_INVALID_ARG,
     }
 }
@@ -2560,7 +2662,7 @@ pub extern "C" fn neqo_http3conn_connect_udp_close_session(
         message_tmp,
         Instant::now(),
     ) {
-        Ok(()) => NS_OK,
+        Ok(_) => NS_OK,
         Err(_) => NS_ERROR_INVALID_ARG,
     }
 }
@@ -2591,17 +2693,25 @@ pub extern "C" fn neqo_http3conn_webtransport_send_datagram(
     session_id: u64,
     data: &mut ThinVec<u8>,
     tracking_id: u64,
+    send_group_id: u64,
+    send_order: i64,
 ) -> nsresult {
     let id = if tracking_id == 0 {
         None
     } else {
         Some(tracking_id)
     };
-    match conn
-        .conn
-        .webtransport_send_datagram(StreamId::from(session_id), data, id, Instant::now())
-    {
-        Ok(()) => NS_OK,
+    // The local neqo2 vendor doesn't yet support per-datagram send group/order
+    // prioritization; accept the params from the C++ side but don't forward
+    // them until neqo grows the corresponding API.
+    let _ = (send_group_id, send_order);
+    match conn.conn.webtransport_send_datagram(
+        StreamId::from(session_id),
+        data,
+        id,
+        Instant::now(),
+    ) {
+        Ok(_) => NS_OK,
         Err(Http3Error::Transport(TransportError::TooMuchData)) => NS_ERROR_NOT_AVAILABLE,
         Err(_) => NS_ERROR_UNEXPECTED,
     }
@@ -2612,17 +2722,25 @@ pub extern "C" fn neqo_http3conn_connect_udp_send_datagram(
     session_id: u64,
     data: &mut ThinVec<u8>,
     tracking_id: u64,
+    send_group_id: u64,
+    send_order: i64,
 ) -> nsresult {
     let id = if tracking_id == 0 {
         None
     } else {
         Some(tracking_id)
     };
-    match conn
-        .conn
-        .connect_udp_send_datagram(StreamId::from(session_id), data, id, Instant::now())
-    {
-        Ok(()) => NS_OK,
+    // The local neqo2 vendor doesn't yet support per-datagram send group/order
+    // prioritization; accept the params from the C++ side but don't forward
+    // them until neqo grows the corresponding API.
+    let _ = (send_group_id, send_order);
+    match conn.conn.connect_udp_send_datagram(
+        StreamId::from(session_id),
+        data,
+        id,
+        Instant::now(),
+    ) {
+        Ok(_) => NS_OK,
         Err(Http3Error::Transport(TransportError::TooMuchData)) => NS_ERROR_NOT_AVAILABLE,
         Err(_) => NS_ERROR_UNEXPECTED,
     }
@@ -2657,6 +2775,129 @@ pub unsafe extern "C" fn neqo_http3conn_webtransport_set_sendorder(
     {
         Ok(()) => NS_OK,
         Err(_) => NS_ERROR_UNEXPECTED,
+    }
+}
+
+/// # Safety
+///
+/// Use of raw (i.e. unsafe) pointers as arguments.
+#[no_mangle]
+pub unsafe extern "C" fn neqo_http3conn_webtransport_set_sendgroup(
+    conn: &mut NeqoHttp3Conn,
+    stream_id: u64,
+    sendgroup_id: u64,
+) -> nsresult {
+    // sendgroup_id 0 means "no group" (null sendGroup); clear the group assignment.
+    if sendgroup_id == 0 {
+        return match conn
+            .conn
+            .webtransport_clear_sendgroup(StreamId::from(stream_id))
+        {
+            Ok(()) => NS_OK,
+            Err(_) => NS_ERROR_UNEXPECTED,
+        };
+    }
+    let Some(&sg_id) = conn.webtransport_send_groups.get(&sendgroup_id) else {
+        return NS_ERROR_UNEXPECTED;
+    };
+    match conn
+        .conn
+        .webtransport_set_sendgroup(StreamId::from(stream_id), sg_id)
+    {
+        Ok(()) => NS_OK,
+        Err(_) => NS_ERROR_UNEXPECTED,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn neqo_http3conn_webtransport_register_send_group(
+    conn: &mut NeqoHttp3Conn,
+    session_id: u64,
+    group_id: u64,
+) -> nsresult {
+    // neqo allocates the send-group id; map the child's provisional id to it.
+    match conn
+        .conn
+        .webtransport_create_send_group(StreamId::from(session_id))
+    {
+        Ok(neqo_id) => {
+            conn.webtransport_send_groups.insert(group_id, neqo_id);
+            NS_OK
+        }
+        Err(_) => NS_ERROR_UNEXPECTED,
+    }
+}
+
+
+/// Get the negotiated protocol for a WebTransport session.
+#[no_mangle]
+pub extern "C" fn neqo_http3conn_webtransport_session_protocol(
+    conn: &mut NeqoHttp3Conn,
+    session_id: u64,
+    protocol: &mut nsACString,
+) -> nsresult {
+    match conn
+        .conn
+        .webtransport_session_protocol(StreamId::from(session_id))
+    {
+        Ok(Some(p)) => {
+            protocol.assign(&p);
+            NS_OK
+        }
+        Ok(None) => {
+            // SAFETY: shrinking the string to length 0 never exposes
+            // uninitialized memory.
+            unsafe {
+                protocol.set_length(0);
+            }
+            NS_OK
+        }
+        Err(_) => NS_ERROR_UNEXPECTED,
+    }
+}
+
+/// Export keying material per RFC 5705/8446.
+///
+/// # Safety
+///
+/// Use of raw (i.e. unsafe) pointers as arguments.
+/// The `out` buffer must be at least `out_len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn neqo_http3conn_export_keying_material(
+    conn: &mut NeqoHttp3Conn,
+    session_id: u64,
+    label: *const u8,
+    label_len: u32,
+    context: *const u8,
+    context_len: u32,
+    out: *mut u8,
+    out_len: u32,
+) -> nsresult {
+    let label_slice = if label.is_null() {
+        return NS_ERROR_INVALID_ARG;
+    } else {
+        slice::from_raw_parts(label, label_len as usize)
+    };
+
+    let context_slice = if context.is_null() || context_len == 0 {
+        &[]
+    } else {
+        slice::from_raw_parts(context, context_len as usize)
+    };
+
+    if out.is_null() || out_len == 0 {
+        return NS_ERROR_INVALID_ARG;
+    }
+
+    let out_slice = slice::from_raw_parts_mut(out, out_len as usize);
+    match conn.conn.webtransport_export_keying_material(
+        StreamId::from(session_id),
+        label_slice,
+        context_slice,
+        out_slice,
+    ) {
+        Ok(()) => NS_OK,
+        Err(_) => NS_ERROR_NOT_CONNECTED,
     }
 }
 
@@ -2981,31 +3222,24 @@ fn probe_apple_fast_path_inner(send_fd: c_int, recv_fd: c_int) -> io::Result<()>
     use neqo_common::Ecn;
     use rustix::{
         fs::{fcntl_getfl, fcntl_setfl, OFlags},
-        net::{
-            getsockname,
-            sockopt::{set_socket_timeout, Timeout},
-            SocketAddrAny,
-        },
+        net::{getsockname, sockopt::{set_socket_timeout, Timeout}},
     };
 
     // Wrap a raw fd in neqo_udp::Socket, enable the fast path, restore blocking
     // mode (UdpSocketState::new sets non-blocking), and return the socket's
     // local address.
-    let make_socket =
-        |fd: c_int| -> io::Result<(neqo_udp::Socket<BorrowedFd<'static>>, SocketAddr)> {
-            let bfd = unsafe { BorrowedFd::borrow_raw(fd) };
-            let socket = neqo_udp::Socket::new(bfd)?;
-            // SAFETY: The C++ caller has verified via dlsym that the APIs are present.
-            unsafe { socket.enable_apple_fast_path() };
-            fcntl_setfl(bfd, fcntl_getfl(bfd)? & !OFlags::NONBLOCK)?;
-            set_socket_timeout(bfd, Timeout::Recv, Some(Duration::from_secs(1)))?;
-            let addr: SocketAddr = match getsockname(bfd)? {
-                SocketAddrAny::V4(a) => a.into(),
-                SocketAddrAny::V6(a) => a.into(),
-                _ => return Err(io::Error::other("unexpected address family")),
-            };
-            Ok((socket, addr))
-        };
+    let make_socket = |fd: c_int| -> io::Result<(neqo_udp::Socket<BorrowedFd<'static>>, SocketAddr)> {
+        let bfd = unsafe { BorrowedFd::borrow_raw(fd) };
+        let socket = neqo_udp::Socket::new(bfd)?;
+        // SAFETY: The C++ caller has verified via dlsym that the APIs are present.
+        unsafe { socket.enable_apple_fast_path() };
+        fcntl_setfl(bfd, fcntl_getfl(bfd)? & !OFlags::NONBLOCK)?;
+        set_socket_timeout(bfd, Timeout::Recv, Some(Duration::from_secs(1)))?;
+        let addr: SocketAddr = getsockname(bfd)?
+            .try_into()
+            .map_err(|e: rustix::io::Errno| io::Error::from_raw_os_error(e.raw_os_error()))?;
+        Ok((socket, addr))
+    };
     let (sender, send_addr) = make_socket(send_fd)?;
     let (receiver, recv_addr) = make_socket(recv_fd)?;
 

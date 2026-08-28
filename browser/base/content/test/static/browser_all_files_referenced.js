@@ -29,8 +29,6 @@ var gExceptionPaths = [
   "chrome://activity-stream/content/data/content/tippytop/images/",
   "chrome://activity-stream/content/data/content/tippytop/favicons/",
   // These resources are referenced by messages delivered through Remote Settings
-  "chrome://activity-stream/content/data/content/assets/mobile-download-qr-new-user-cn.svg",
-  "chrome://activity-stream/content/data/content/assets/mobile-download-qr-existing-user-cn.svg",
   "chrome://activity-stream/content/data/content/assets/mr-amo-collection.svg",
   "chrome://activity-stream/content/data/content/assets/person-typing.svg",
   "chrome://activity-stream/content/data/content/assets/tabs-side-zap-transparent.svg",
@@ -40,8 +38,6 @@ var gExceptionPaths = [
   "chrome://activity-stream/content/data/content/assets/euo-chatbot.svg",
   "chrome://browser/content/assets/moz-vpn.svg",
   "chrome://browser/content/assets/vpn-logo.svg",
-  "chrome://browser/content/assets/focus-promo.png",
-  "chrome://browser/content/assets/klar-qr-code.svg",
   "chrome://browser/content/asrouter/assets/fox-with-box-on-cloud.svg",
   "chrome://browser/content/asrouter/assets/fox-with-devices.svg",
   "chrome://browser/content/asrouter/assets/fox-with-locked-box.svg",
@@ -49,6 +45,14 @@ var gExceptionPaths = [
   "chrome://browser/content/asrouter/assets/desktop-to-mobile-banner.svg",
   "chrome://browser/content/asrouter/assets/desktop-to-mobile-non-eu-QR.svg",
   "chrome://browser/content/asrouter/assets/desktop-to-mobile-eu-QR.svg",
+  "chrome://activity-stream/content/data/content/assets/fox-doodle-backup-restore.svg",
+  "chrome://browser/content/asrouter/assets/kit-peek-bottom.svg",
+  "chrome://browser/content/asrouter/assets/kit-peek.svg",
+  "chrome://browser/content/asrouter/assets/tabgroups/vert-animated-dark.svg",
+  "chrome://browser/content/asrouter/assets/tabgroups/vert-animated-light.svg",
+  "chrome://browser/content/asrouter/assets/tabgroups/vert-static-dark.svg",
+  "chrome://browser/content/asrouter/assets/tabgroups/vert-static-light.svg",
+  "chrome://activity-stream/content/data/content/assets/backdrop-adaptive.svg",
 
   // toolkit/components/pdfjs/content/build/pdf.js
   "resource://pdf.js/web/images/",
@@ -72,7 +76,8 @@ var gExceptionPaths = [
 
   // Points to theme preview images, which are defined in browser/ but only used
   // in toolkit/mozapps/extensions/content/aboutaddons.js.
-  "resource://usercontext-content/builtin-themes/",
+  "resource://builtin-themes/",
+  "resource://extra-themes-previews/",
 
   // Page data schemas are referenced programmatically.
   "chrome://browser/content/pagedata/schemas/",
@@ -107,6 +112,9 @@ var gExceptionPaths = [
   // The profile avatars are directly referenced.
   "chrome://browser/content/profiles/assets/",
 
+  // The custom model choice icon is referenced programatically in input-model-select.mjs.
+  "chrome://browser/content/aiwindow/assets/model-choice-0.svg",
+
   // The picture-in-picture add-on.
   "resource://builtin-addons/pictureinpicture/",
 
@@ -132,6 +140,11 @@ var gExceptionPaths = [
   // Remote Settings.
   "chrome://browser/skin/illustrations/yelpRealtime-opt-in.svg",
 ];
+
+if (AppConstants.platform == "win") {
+  // Referenced via resource://gfxsanity/
+  gExceptionPaths.push("resource://gre-resources/gfxsanity/");
+}
 
 // These are not part of the omni.ja file, so we find them only when running
 // the test on a non-packaged build.
@@ -179,12 +192,17 @@ var allowlist = [
 
   // devtools/client/inspector/bin/dev-server.js
   {
-    file: "chrome://devtools/content/inspector/markup/markup.xhtml",
+    file: "chrome://devtools/content/inspector/markup/markup.html",
     isFromDevTools: true,
   },
 
   // SpiderMonkey parser API, currently unused in browser/ and toolkit/
-  { file: "resource://gre/modules/reflect.sys.mjs" },
+  { file: "moz-src:///toolkit/components/reflect/reflect.sys.mjs" },
+
+  // TODO Bug 2065560: Connect AITabStore to Tool calls
+  {
+    file: "moz-src:///browser/components/aiwindow/ui/modules/AITabStore.sys.mjs",
+  },
 
   // extensions/pref/autoconfig/src/nsReadConfig.cpp
   { file: "resource://gre/defaults/autoconfig/prefcalls.js" },
@@ -193,9 +211,6 @@ var allowlist = [
   // These files URLs are constructed programatically at run time.
   {
     file: "chrome://browser/content/preferences/more-from-mozilla-qr-code-simple.svg",
-  },
-  {
-    file: "chrome://browser/content/preferences/more-from-mozilla-qr-code-simple-cn.svg",
   },
 
   { file: "resource://gre/greprefs.js" },
@@ -239,12 +254,6 @@ var allowlist = [
   // File from the ipp-activator add-on
   { file: "resource://builtin-addons/ipp-activator/breakages/tab.json" },
 
-  // Referenced by devtools/client/themes/toolbox.css and
-  // devtools/client/debugger/src/components/PrimaryPanes/Tracer.css. The test
-  // splits devtools and non-devtools passes, so the non-devtools pass can't
-  // see those cross-domain references.
-  { file: "chrome://global/skin/icons/experiments.svg" },
-
   // Starting from here, files in the allowlist are bugs that need fixing.
   // Bug 1339424 (wontfix?)
   {
@@ -254,7 +263,7 @@ var allowlist = [
   // Bug 1348559
   { file: "chrome://pippki/content/resetpassword.xhtml" },
   // Bug 1337345
-  { file: "resource://gre/modules/Manifest.sys.mjs" },
+  { file: "moz-src:///dom/manifest/Manifest.sys.mjs" },
   // Bug 1494170
   // (The references to these files are dynamically generated, so the test can't
   // find the references)
@@ -312,6 +321,12 @@ var allowlist = [
   // toolkit/xre/MacRunFromDmgUtils.mm
   { file: "resource://gre/localization/en-US/toolkit/global/run-from-dmg.ftl" },
 
+  // toolkit/modules/RosettaUtils.sys.mjs
+  {
+    file: "resource://gre/localization/en-US/toolkit/global/rosettaNotification.ftl",
+    platforms: ["linux", "win"],
+  },
+
   // Referenced programmatically
   { file: "chrome://browser/content/backup/BackupManifest.1.schema.json" },
   { file: "chrome://browser/content/backup/BackupManifest.2.schema.json" },
@@ -333,17 +348,6 @@ var allowlist = [
   // and this file will be needed for that.
   {
     file: "resource://app/modules/backup/CookiesBackupResource.sys.mjs",
-  },
-
-  // Bug 2035340: TabManagementService will be used by AI Window for tab management
-  {
-    file: "moz-src:///browser/components/aiwindow/ui/modules/TabManagementService.sys.mjs",
-  },
-
-  // Bug 2023223: Replace loginOrigin, addresses, payments, and form history
-  // richlist items with autocomplete-row-item
-  {
-    file: "chrome://global/content/autocomplete-row-item/autocomplete-row-item.mjs",
   },
 
   // Referenced dynamically in newtab components via template literals:
@@ -1004,8 +1008,9 @@ add_task(async function checkAllTheFiles() {
     "chrome://devtools",
     "moz-src:///devtools/",
     "resource://devtools/",
-    "resource://devtools-shared-images/",
     "resource://devtools-highlighter-styles/",
+    "resource://devtools-shared-images/",
+    "resource://devtools-webextension-fallback/",
     "resource://app/modules/devtools",
     "resource://gre/modules/devtools",
     "resource://app/localization/en-US/startup/aboutDevTools.ftl",

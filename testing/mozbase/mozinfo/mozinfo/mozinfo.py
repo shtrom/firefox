@@ -11,6 +11,7 @@
 import os
 import platform
 import re
+import subprocess
 import sys
 from ctypes.util import find_library
 
@@ -109,18 +110,26 @@ elif sys.platform in ("solaris", "sunos5"):
 else:
     os_version = version = unknown
 
-info["apple_silicon"] = False
-if (
-    info["os"] == "mac"
-    and float(os_version) > 10.15
-    and processor == "arm"
-    and bits == "64bit"
-):
-    info["apple_silicon"] = True
-
 info["apple_catalina"] = False
 if info["os"] == "mac" and float(os_version) == 10.15:
     info["apple_catalina"] = True
+
+info["macos_vm"] = False
+if info["os"] == "mac":
+    try:
+        _hw_model = subprocess.run(
+            ["sysctl", "-n", "hw.model"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if _hw_model.returncode == 0 and _hw_model.stdout.strip().startswith(
+            "VirtualMac"
+        ):
+            info["macos_vm"] = True
+    except Exception:
+        pass
 
 info["win10_2009"] = False
 if info["os"] == "win" and version == "10.0.19045":
@@ -133,6 +142,15 @@ if info["os"] == "win" and version == "10.0.22621":
 info["version"] = version
 info["os_version"] = StringVersion(os_version)
 info["is_ubuntu"] = "Ubuntu" in version
+
+
+def _apple_silicon(info):
+    # Apple silicon iff the target is arm64 macOS.  Derive from the (possibly
+    # merged) target processor rather than the harness interpreter's
+    # architecture, which is x86_64 when tests run under a fetched x86_64 python
+    # on Apple silicon and would otherwise make this wrongly False.
+    return info.get("os") == "mac" and info.get("processor") == "aarch64"
+
 
 # processor type and bits
 if processor in ["i386", "i686"]:
@@ -157,6 +175,8 @@ info.update({
 
 if info.get("arch", "") != "aarch64":
     info["arch"] = info["processor"]
+
+info["apple_silicon"] = _apple_silicon(info)
 
 
 if info["os"] == "linux":
@@ -194,6 +214,8 @@ def sanitize(info):
 
     if info.get("arch", "") != "aarch64":
         info["arch"] = info["processor"]
+
+    info["apple_silicon"] = _apple_silicon(info)
 
 
 # method for updating information

@@ -148,7 +148,6 @@
 #endif
 
 #include "base/process_util.h"
-
 #include "mozilla/AutoRestore.h"
 #include "mozilla/CycleCollectedJSContext.h"
 #include "mozilla/CycleCollectedJSRuntime.h"
@@ -163,8 +162,8 @@
 
 #include <utility>
 
-#include "js/friend/CycleCollector.h"
 #include "js/SliceBudget.h"
+#include "js/friend/CycleCollector.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/Likely.h"
 #include "mozilla/LinkedList.h"
@@ -174,9 +173,9 @@
 #include "mozilla/ProfilerLabels.h"
 #include "mozilla/ProfilerMarkers.h"
 #include "mozilla/SegmentedVector.h"
-#include "mozilla/glean/XpcomMetrics.h"
 #include "mozilla/ThreadLocal.h"
 #include "mozilla/UniquePtr.h"
+#include "mozilla/glean/XpcomMetrics.h"
 #include "nsContentUtils.h"
 #include "nsCycleCollectionNoteRootCallback.h"
 #include "nsCycleCollectionParticipant.h"
@@ -1734,7 +1733,7 @@ class nsCycleCollectorLogSinkToFile final : public nsICycleCollectorLogSink {
     // We don't want any JS to run between ScanRoots and CollectWhite calls,
     // and since ScanRoots calls this method, better to log the message
     // asynchronously.
-    RefPtr<LogStringMessageAsync> log = new LogStringMessageAsync(msg);
+    RefPtr log = MakeRefPtr<LogStringMessageAsync>(msg);
     NS_DispatchToCurrentThread(log);
     return NS_OK;
   }
@@ -2048,7 +2047,7 @@ class CCGraphBuilder final : public nsCycleCollectionTraversalCallback,
   UniquePtr<NodePool::Enumerator> mCurrNode;
   uint32_t mNoteChildCount;
 
-  struct PtrInfoCache : public MruCache<void*, PtrInfo*, PtrInfoCache, 491> {
+  struct PtrInfoCache : public MruCache<void*, PtrInfo*, PtrInfoCache, 256> {
     static HashNumber Hash(const void* aKey) { return HashGeneric(aKey); }
     static bool Match(const void* aKey, const PtrInfo* aVal) {
       return aVal->mPointer == aKey;

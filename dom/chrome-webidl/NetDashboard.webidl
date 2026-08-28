@@ -11,6 +11,7 @@ dictionary SocketElement {
   DOMString type = "";
   double sent = 0;
   double received = 0;
+  DOMString originAttributesSuffix = "";
 };
 
 [GenerateConversionToJS]
@@ -38,6 +39,7 @@ dictionary HttpConnectionElement {
   sequence<HttpConnInfo> active;
   sequence<HttpConnInfo> idle;
   sequence<DnsAndSockInfoDict> dnsAndSocks;
+  DOMString originAttributesSuffix = "";
 };
 
 [GenerateConversionToJS]
@@ -178,4 +180,27 @@ dictionary Http3ConnectionStatsElement {
 [GenerateConversionToJS]
 dictionary Http3ConnStatsDict {
   sequence<Http3ConnectionStatsElement> connections;
+};
+
+dictionary SSLTokensCacheElement {
+  DOMString key = "";
+  boolean restored = false;
+  double expirationTime = 0;
+  unsigned long long tokenId = 0;
+  unsigned long tokenLength = 0;
+  unsigned long compressedLength = 0;
+  unsigned long decompressedLength = 0;
+  boolean evStatus = false;
+  unsigned short certificateTransparencyStatus = 0;
+  octet overridableErrorCategory = 0;
+  // -1: unknown, 0: not a built-in root, 1: built-in root.
+  long builtInRoot = -1;
+  Uint8Array serverCertDER;
+  sequence<Uint8Array> succeededCertChainDER;
+  sequence<Uint8Array> handshakeCertDER;
+};
+
+[GenerateConversionToJS]
+dictionary SSLTokensCacheDict {
+  sequence<SSLTokensCacheElement> entries;
 };

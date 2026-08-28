@@ -40,13 +40,13 @@ import mozilla.components.lib.state.helpers.StoreProvider.Companion.fragmentStor
 import mozilla.components.support.ktx.android.view.hideKeyboard
 import org.mozilla.fenix.HomeActivity
 import org.mozilla.fenix.R
+import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.Components
 import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchEnded
 import org.mozilla.fenix.components.metrics.MetricsUtils
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.getRootView
-import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.home.toolbar.edgeToEdgeClipboardBarBackground
 import org.mozilla.fenix.search.BrowserStoreToFenixSearchMapperMiddleware
 import org.mozilla.fenix.search.BrowserToolbarToFenixSearchMapperMiddleware
@@ -94,40 +94,45 @@ class AwesomeBarComposable(
     private val searchStore by initializeSearchStore()
 
     /**
-     * [Composable] fully integrated with [BrowserStore] and [BrowserToolbarStore]
-     * that will show search suggestions whenever the users edits the current query in the toolbar.
+     * [Composable] fully integrated with [BrowserStore] and [BrowserToolbarStore] that will show search suggestions
+     * whenever the users edits the current query in the toolbar.
      */
     @OptIn(ExperimentalLayoutApi::class) // for WindowInsets.isImeVisible
     @Suppress("LongMethod", "CyclomaticComplexMethod", "CognitiveComplexMethod")
     @Composable
     fun SearchSuggestions() {
-        val deleteHistoryDelegate = remember(activity.getRootView(), searchStore) {
-            activity.getRootView()?.let {
-                DeleteHistoryEntryDelegate(it, it.context.components, searchStore)
-            }
-        }
-        val isSearchActive = appStore.observeAsComposableState { it.searchState.isSearchActive }.value
-        val state = searchStore.observeAsComposableState { it }.value
-        val orientation by remember(state.searchSuggestionsOrientedAtBottom) {
-            derivedStateOf {
-                when (searchStore.state.searchSuggestionsOrientedAtBottom) {
-                    true -> AwesomeBarOrientation.BOTTOM
-                    false -> AwesomeBarOrientation.TOP
+        val deleteHistoryDelegate =
+            remember(activity.getRootView(), searchStore) {
+                activity.getRootView()?.let {
+                    DeleteHistoryEntryDelegate(it, it.context.components, searchStore)
                 }
             }
-        }
-        val shouldShowClipboardBar by remember(
-            state.showClipboardSuggestions,
-            state.query,
-            state.clipboardHasUrl,
-        ) {
-            derivedStateOf {
-                state.showClipboardSuggestions &&
-                        state.query.isEmpty() &&
-                        state.clipboardHasUrl
+        val isSearchActive = appStore.observeAsComposableState { it.searchState.isSearchActive }.value
+        val state = searchStore.observeAsComposableState { it }.value
+        val orientation by
+            remember(state.searchSuggestionsOrientedAtBottom) {
+                derivedStateOf {
+                    when (searchStore.state.searchSuggestionsOrientedAtBottom) {
+                        true -> AwesomeBarOrientation.BOTTOM
+                        false -> AwesomeBarOrientation.TOP
+                    }
+                }
             }
-        }
-        val clipboardBarBackground = edgeToEdgeClipboardBarBackground(isEdgeToEdgeBackgroundEnabled)
+        val shouldShowClipboardBar by
+            remember(
+                state.showClipboardSuggestions,
+                state.query,
+                state.clipboardHasUrl,
+            ) {
+                derivedStateOf {
+                    state.showClipboardSuggestions && state.query.isEmpty() && state.clipboardHasUrl
+                }
+            }
+        val clipboardBarBackground =
+            edgeToEdgeClipboardBarBackground(
+                shouldUseEdgeToEdgeColors = isEdgeToEdgeBackgroundEnabled,
+                isPrivateMode = activity.browsingModeManager.mode == BrowsingMode.Private,
+            )
         val view = LocalView.current
         val focusManager = LocalFocusManager.current
         val keyboardController = LocalSoftwareKeyboardController.current
@@ -151,7 +156,7 @@ class AwesomeBarComposable(
                 onClick = {
                     url?.let {
                         toolbarStore.dispatch(
-                            SearchQueryUpdated(query = BrowserToolbarQuery(url), isQueryPrefilled = true),
+                            SearchQueryUpdated(query = BrowserToolbarQuery(url), isQueryPrefilled = true)
                         )
                     }
                 },
@@ -162,24 +167,21 @@ class AwesomeBarComposable(
             if (state.showSearchSuggestionsHint) {
                 PrivateSuggestionsCard(
                     onSearchSuggestionsInPrivateModeAllowed = {
-                        activity.settings().shouldShowSearchSuggestionsInPrivate = true
-                        activity.settings().showSearchSuggestionsInPrivateOnboardingFinished = true
+                        components.settings.shouldShowSearchSuggestionsInPrivate = true
+                        components.settings.showSearchSuggestionsInPrivateOnboardingFinished = true
                         searchStore.dispatch(SearchFragmentAction.SetShowSearchSuggestions(true))
                         searchStore.dispatch(SearchFragmentAction.AllowSearchSuggestionsInPrivateModePrompt(false))
                         searchStore.dispatch(SearchFragmentAction.PrivateSuggestionsCardAccepted)
                     },
                     onSearchSuggestionsInPrivateModeBlocked = {
-                        activity.settings().shouldShowSearchSuggestionsInPrivate = false
-                        activity.settings().showSearchSuggestionsInPrivateOnboardingFinished = true
-                        searchStore.dispatch(
-                            SearchFragmentAction.AllowSearchSuggestionsInPrivateModePrompt(false),
-                        )
+                        components.settings.shouldShowSearchSuggestionsInPrivate = false
+                        components.settings.showSearchSuggestionsInPrivateOnboardingFinished = true
+                        searchStore.dispatch(SearchFragmentAction.AllowSearchSuggestionsInPrivateModePrompt(false))
                     },
                     onLearnMoreClick = {
                         components.useCases.fenixBrowserUseCases.loadUrlOrSearch(
-                            searchTermOrURL = SupportUtils.getGenericSumoURLForTopic(
-                                SupportUtils.SumoTopic.SEARCH_SUGGESTION,
-                            ),
+                            searchTermOrURL =
+                                SupportUtils.getGenericSumoURLForTopic(SupportUtils.SumoTopic.SEARCH_SUGGESTION),
                             newTab = appStore.state.searchState.sourceTabId == null,
                             private = true,
                         )
@@ -189,19 +191,19 @@ class AwesomeBarComposable(
             }
             if (state.shouldShowSearchSuggestions) {
                 Box(
-                    modifier = modifier
-                        .background(MaterialTheme.colorScheme.surface)
-                        .fillMaxSize()
-                        .pointerInput(WindowInsets.isImeVisible) {
+                    modifier =
+                        modifier.background(MaterialTheme.colorScheme.surface).fillMaxSize().pointerInput(
+                            WindowInsets.isImeVisible
+                        ) {
                             detectTapGestures(
                                 // Hide the keyboard for any touches in the empty area of the awesomebar
                                 onPress = {
                                     focusManager.clearFocus()
                                     view.hideKeyboard()
                                     appStore.dispatch(SearchEnded)
-                                },
+                                }
                             )
-                        },
+                        }
                 ) {
                     AwesomeBar(
                         text = state.query,
@@ -226,18 +228,18 @@ class AwesomeBarComposable(
                 }
             } else if (showScrimWhenNoSuggestions) {
                 Spacer(
-                    modifier = modifier
-                        .background(Color(MATERIAL_DESIGN_SCRIM.toColorInt()))
-                        .fillMaxSize()
-                        .pointerInput(WindowInsets.isImeVisible) {
+                    modifier =
+                        modifier.background(Color(MATERIAL_DESIGN_SCRIM.toColorInt())).fillMaxSize().pointerInput(
+                            WindowInsets.isImeVisible
+                        ) {
                             detectTapGestures(
                                 onPress = {
                                     focusManager.clearFocus()
                                     keyboardController?.hide()
                                     appStore.dispatch(SearchEnded)
-                                },
+                                }
                             )
-                        },
+                        }
                 )
             }
         }
@@ -251,7 +253,7 @@ class AwesomeBarComposable(
                 onClick = {
                     url?.let {
                         toolbarStore.dispatch(
-                            SearchQueryUpdated(query = BrowserToolbarQuery(url), isQueryPrefilled = true),
+                            SearchQueryUpdated(query = BrowserToolbarQuery(url), isQueryPrefilled = true)
                         )
                     }
                 },
@@ -259,44 +261,46 @@ class AwesomeBarComposable(
         }
     }
 
-    private fun initializeSearchStore() = fragment.fragmentStore(
-        createInitialSearchFragmentState(
-            context = activity,
-            components = components,
-            tabId = tabId,
-            pastedText = null,
-            searchAccessPoint = searchAccessPoint,
-        ),
-    ) {
-        val lifecycleScope = fragment.viewLifecycleOwner.lifecycle.coroutineScope
+    private fun initializeSearchStore() =
+        fragment.fragmentStore(
+            createInitialSearchFragmentState(
+                context = activity,
+                components = components,
+                tabId = tabId,
+                pastedText = null,
+                searchAccessPoint = searchAccessPoint,
+            )
+        ) {
+            val lifecycleScope = fragment.viewLifecycleOwner.lifecycle.coroutineScope
 
-        SearchFragmentStore(
-            initialState = it,
-            middleware = listOf(
-                BrowserToolbarToFenixSearchMapperMiddleware(
-                    toolbarStore = toolbarStore,
-                    browsingModeManager = activity.browsingModeManager,
-                    scope = lifecycleScope,
-                    browserStore = browserStore,
-                ),
-                BrowserStoreToFenixSearchMapperMiddleware(
-                    browserStore = browserStore,
-                    scope = lifecycleScope,
-                    appStore = components.appStore,
-                ),
-                FenixSearchMiddleware(
-                    fragment = fragment,
-                    engine = components.core.engine,
-                    useCases = components.useCases,
-                    nimbusComponents = components.nimbus,
-                    settings = components.settings,
-                    appStore = appStore,
-                    browserStore = browserStore,
-                    toolbarStore = toolbarStore,
-                    navController = navController,
-                    browsingModeManager = activity.browsingModeManager,
-                ),
-            ),
-        )
-    }
+            SearchFragmentStore(
+                initialState = it,
+                middleware =
+                    listOf(
+                        BrowserToolbarToFenixSearchMapperMiddleware(
+                            toolbarStore = toolbarStore,
+                            browsingModeManager = activity.browsingModeManager,
+                            scope = lifecycleScope,
+                            browserStore = browserStore,
+                        ),
+                        BrowserStoreToFenixSearchMapperMiddleware(
+                            browserStore = browserStore,
+                            scope = lifecycleScope,
+                            appStore = components.appStore,
+                        ),
+                        FenixSearchMiddleware(
+                            fragment = fragment,
+                            engine = components.core.engine,
+                            useCases = components.useCases,
+                            nimbusComponents = components.nimbus,
+                            settings = components.settings,
+                            appStore = appStore,
+                            browserStore = browserStore,
+                            toolbarStore = toolbarStore,
+                            navController = navController,
+                            browsingModeManager = activity.browsingModeManager,
+                        ),
+                    ),
+            )
+        }
 }

@@ -14,11 +14,16 @@ import { actionCreators as ac, actionTypes as at } from "common/Actions.mjs";
 import {
   PREF_CLOCKS_SIZE,
   PREF_WIDGETS_CLOCKS_ENABLED,
+  WIDGET_REGISTRY,
+  resolveWidgetSize,
 } from "common/WidgetsRegistry.mjs";
-import { useIntersectionObserver } from "../../../lib/utils";
+import { useWidgetTelemetry } from "../useWidgetTelemetry";
 import { AddClockForm } from "./AddClockForm";
 import { ClocksRow } from "./ClocksRow";
 import { EditClocksPanel } from "./EditClocksPanel";
+import { SizeSubmenu } from "../SizeSubmenu";
+import { WidgetMenuFooter } from "../WidgetMenuFooter";
+import { useCuratedCityNames } from "./useCuratedCityNames";
 import {
   backfillClockLabelColors,
   buildNextClockZones,
@@ -55,6 +60,8 @@ const CLOCK_WIDGET_SOURCE = {
   TOOLBAR: "toolbar",
 };
 
+const CLOCKS_WIDGET = WIDGET_REGISTRY.find(widget => widget.id === "clocks");
+
 function getClockWidgetDisplayState({ activePanel, hourFormatPref, size }) {
   const currentSize = size || "medium";
   const locale =
@@ -76,9 +83,12 @@ function getClockWidgetDisplayState({ activePanel, hourFormatPref, size }) {
  *
  * @param {object} props
  * @param {Function} props.dispatch
- * @param {"small"|"medium"|"large"} [props.size] Defaults to "medium".
+ * @param {Function} props.handleUserInteraction
  */
-function Clocks({ dispatch, size }) {
+function Clocks({ dispatch, handleUserInteraction, widgetEnabledMap }) {
+  const size = useSelector(state =>
+    resolveWidgetSize(CLOCKS_WIDGET, state.Prefs.values)
+  );
   const clocksZonesPref = useSelector(
     state => state.Prefs.values[PREF_CLOCKS_ZONES]
   );
@@ -87,8 +97,6 @@ function Clocks({ dispatch, size }) {
   );
 
   const [now, setNow] = useState(null);
-  const impressionFired = useRef(false);
-  const sizeSubmenuRef = useRef(null);
   const contextMenuRef = useRef(null);
   const contextMenuButtonRef = useRef(null);
   // Suppress hover-reveal after a menu action; cleared on mouseleave.
@@ -118,11 +126,12 @@ function Clocks({ dispatch, size }) {
       hourFormatPref,
       size,
     });
-  const currentSizeRef = useRef(currentSize);
 
-  useEffect(() => {
-    currentSizeRef.current = currentSize;
-  }, [currentSize]);
+  const { impressionRef, recordUserAction } = useWidgetTelemetry({
+    dispatch,
+    widget: CLOCKS_WIDGET,
+    widgetSize: currentSize,
+  });
 
   // Each tick realigns to the next minute, so paused tabs or device sleep
   // can't compound drift. `now` starts null so the first render stays
@@ -137,23 +146,10 @@ function Clocks({ dispatch, size }) {
     return () => clearTimeout(timeoutId);
   }, []);
 
-  const handleIntersection = useCallback(() => {
-    if (impressionFired.current) {
-      return;
-    }
-    impressionFired.current = true;
-    dispatch(
-      ac.AlsoToMain({
-        type: at.WIDGETS_IMPRESSION,
-        data: {
-          widget_name: "clocks",
-          widget_size: currentSizeRef.current,
-        },
-      })
-    );
-  }, [dispatch]);
-
-  const clocksRef = useIntersectionObserver(handleIntersection);
+  const handleClocksInteraction = useCallback(
+    () => handleUserInteraction("clocks"),
+    [handleUserInteraction]
+  );
 
   const handleChangeSize = useCallback(
     newSize => {
@@ -164,40 +160,17 @@ function Clocks({ dispatch, size }) {
             data: { name: PREF_CLOCKS_SIZE, value: newSize },
           })
         );
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_USER_EVENT,
-            data: {
-              widget_name: "clocks",
-              widget_source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU,
-              user_action: USER_ACTION_TYPES.CHANGE_SIZE,
-              action_value: newSize,
-              widget_size: newSize,
-            },
-          })
-        );
+        recordUserAction(USER_ACTION_TYPES.CHANGE_SIZE, {
+          source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU,
+          value: newSize,
+          size: newSize,
+        });
       });
+      handleClocksInteraction();
       closeContextMenu();
     },
-    [dispatch, closeContextMenu]
+    [dispatch, recordUserAction, handleClocksInteraction, closeContextMenu]
   );
-
-  // moz-panel-list moves the submenu into shadow DOM, so React synthetic
-  // events don't reach inner items. Listen directly and use composedPath.
-  useEffect(() => {
-    const el = sizeSubmenuRef.current;
-    if (!el) {
-      return undefined;
-    }
-    const listener = e => {
-      const item = e.composedPath().find(node => node.dataset?.size);
-      if (item) {
-        handleChangeSize(item.dataset.size);
-      }
-    };
-    el.addEventListener("click", listener);
-    return () => el.removeEventListener("click", listener);
-  }, [handleChangeSize]);
 
   const handleToggleHourFormat = useCallback(() => {
     const nextFormat = use12HourFormat ? "24" : "12";
@@ -208,69 +181,28 @@ function Clocks({ dispatch, size }) {
           data: { name: PREF_CLOCKS_HOUR_FORMAT, value: nextFormat },
         })
       );
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_USER_EVENT,
-          data: {
-            widget_name: "clocks",
-            widget_source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU,
-            user_action: USER_ACTION_TYPES.CHANGE_HOUR_FORMAT,
-            action_value: nextFormat,
-            widget_size: currentSize,
-          },
-        })
-      );
+      recordUserAction(USER_ACTION_TYPES.CHANGE_HOUR_FORMAT, {
+        source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU,
+        value: nextFormat,
+      });
     });
+    handleClocksInteraction();
     closeContextMenu();
-  }, [use12HourFormat, dispatch, currentSize, closeContextMenu]);
-
-  const handleHide = useCallback(() => {
-    batch(() => {
-      dispatch(
-        ac.OnlyToMain({
-          type: at.SET_PREF,
-          data: { name: PREF_WIDGETS_CLOCKS_ENABLED, value: false },
-        })
-      );
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_ENABLED,
-          data: {
-            widget_name: "clocks",
-            widget_source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU,
-            enabled: false,
-            widget_size: currentSize,
-          },
-        })
-      );
-    });
-    closeContextMenu();
-  }, [dispatch, currentSize, closeContextMenu]);
+  }, [
+    use12HourFormat,
+    dispatch,
+    recordUserAction,
+    closeContextMenu,
+    handleClocksInteraction,
+  ]);
 
   const handleLearnMore = useCallback(() => {
-    batch(() => {
-      dispatch(
-        ac.OnlyToMain({
-          type: at.OPEN_LINK,
-          data: {
-            url: "https://support.mozilla.org/kb/firefox-new-tab-widgets",
-          },
-        })
-      );
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_USER_EVENT,
-          data: {
-            widget_name: "clocks",
-            widget_source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU,
-            user_action: USER_ACTION_TYPES.LEARN_MORE,
-            widget_size: currentSize,
-          },
-        })
-      );
+    recordUserAction(USER_ACTION_TYPES.LEARN_MORE, {
+      source: CLOCK_WIDGET_SOURCE.CONTEXT_MENU,
     });
+    handleClocksInteraction();
     closeContextMenu();
-  }, [dispatch, currentSize, closeContextMenu]);
+  }, [recordUserAction, closeContextMenu, handleClocksInteraction]);
 
   const clockZones = useMemo(
     () => parseClockZonesPref(clocksZonesPref) || buildDefaultZones(),
@@ -294,6 +226,12 @@ function Clocks({ dispatch, size }) {
 
   const canAddClock = clockZones.length < MAX_CLOCK_COUNT;
   const supportedTimeZones = useMemo(() => getSupportedTimeZones(), []);
+
+  // Localized names for the shown clocks only (<= MAX_CLOCK_COUNT); the add
+  // form resolves the full curated list on demand when it opens.
+  const curatedNames = useCuratedCityNames(
+    clockZones.map(clock => clock.cityId).filter(Boolean)
+  );
   const resetAddClockForm = useCallback(() => {
     setEditingClockIndex(null);
   }, []);
@@ -304,8 +242,9 @@ function Clocks({ dispatch, size }) {
       setFormSource(source);
       setEditingClockIndex(null);
       setIsDismissed(false);
+      handleClocksInteraction();
     },
-    []
+    [handleClocksInteraction]
   );
 
   const handleShowEditClocks = useCallback(
@@ -313,41 +252,24 @@ function Clocks({ dispatch, size }) {
       setActivePanel(CLOCKS_PANEL.EDIT);
       setPanelOpenSource(source);
       setIsDismissed(false);
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_USER_EVENT,
-          data: {
-            widget_name: "clocks",
-            widget_source: source,
-            user_action: USER_ACTION_TYPES.EXPAND,
-            widget_size: currentSize,
-          },
-        })
-      );
+      recordUserAction(USER_ACTION_TYPES.EXPAND, { source });
+      handleClocksInteraction();
     },
-    [currentSize, dispatch]
+    [recordUserAction, handleClocksInteraction]
   );
 
   const handleCloseDisplayPanel = useCallback(() => {
     if (activePanel === CLOCKS_PANEL.EDIT) {
-      dispatch(
-        ac.OnlyToMain({
-          type: at.WIDGETS_USER_EVENT,
-          data: {
-            widget_name: "clocks",
-            widget_source: panelOpenSource,
-            user_action: USER_ACTION_TYPES.COLLAPSE,
-            widget_size: currentSize,
-          },
-        })
-      );
+      recordUserAction(USER_ACTION_TYPES.COLLAPSE, {
+        source: panelOpenSource,
+      });
     }
     setActivePanel(null);
     resetAddClockForm();
     requestAnimationFrame(() => {
       (addButtonRef.current ?? contextMenuButtonRef.current)?.focus();
     });
-  }, [activePanel, panelOpenSource, currentSize, dispatch, resetAddClockForm]);
+  }, [activePanel, panelOpenSource, recordUserAction, resetAddClockForm]);
 
   const handleCloseClockForm = useCallback(() => {
     if (formSource === CLOCK_WIDGET_SOURCE.MANAGE) {
@@ -384,32 +306,16 @@ function Clocks({ dispatch, size }) {
             },
           })
         );
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_USER_EVENT,
-            data: {
-              widget_name: "clocks",
-              widget_source: formSource,
-              user_action:
-                editingClockIndex !== null
-                  ? USER_ACTION_TYPES.EDIT_CLOCK
-                  : USER_ACTION_TYPES.ADD_CLOCK,
-              widget_size: currentSize,
-            },
-          })
+        recordUserAction(
+          editingClockIndex !== null
+            ? USER_ACTION_TYPES.EDIT_CLOCK
+            : USER_ACTION_TYPES.ADD_CLOCK,
+          { source: formSource }
         );
         if (zone.label && !existingClock?.label) {
-          dispatch(
-            ac.OnlyToMain({
-              type: at.WIDGETS_USER_EVENT,
-              data: {
-                widget_name: "clocks",
-                widget_source: formSource,
-                user_action: USER_ACTION_TYPES.ADD_NICKNAME,
-                widget_size: currentSize,
-              },
-            })
-          );
+          recordUserAction(USER_ACTION_TYPES.ADD_NICKNAME, {
+            source: formSource,
+          });
         }
       });
       if (formSource === CLOCK_WIDGET_SOURCE.MANAGE) {
@@ -417,16 +323,18 @@ function Clocks({ dispatch, size }) {
         resetAddClockForm();
         return;
       }
+      handleClocksInteraction();
       handleCloseDisplayPanel();
     },
     [
       clockZones,
       formSource,
-      currentSize,
       editingClockIndex,
       handleCloseDisplayPanel,
       resetAddClockForm,
       dispatch,
+      recordUserAction,
+      handleClocksInteraction,
     ]
   );
 
@@ -445,24 +353,16 @@ function Clocks({ dispatch, size }) {
             },
           })
         );
-        dispatch(
-          ac.OnlyToMain({
-            type: at.WIDGETS_USER_EVENT,
-            data: {
-              widget_name: "clocks",
-              widget_source: source,
-              user_action: USER_ACTION_TYPES.REMOVE_CLOCK,
-              widget_size: currentSize,
-            },
-          })
-        );
+        recordUserAction(USER_ACTION_TYPES.REMOVE_CLOCK, { source });
       });
+      handleClocksInteraction();
     },
-    [clockZones, currentSize, dispatch]
+    [clockZones, dispatch, recordUserAction, handleClocksInteraction]
   );
 
   const isClockFormOpen = activePanel === CLOCKS_PANEL.FORM;
   const isEditingClocks = activePanel === CLOCKS_PANEL.EDIT;
+  const hasAnyLabel = clockZones.some(c => !!c.label);
 
   return (
     <article
@@ -472,13 +372,10 @@ function Clocks({ dispatch, size }) {
         isClockFormOpen ? " is-clock-form-open" : ""
       }${isEditingClocks ? " is-editing-clocks" : ""}${
         activePanel ? " is-panel-open" : ""
-      }`}
+      }${hasAnyLabel ? "" : " has-no-labels"}`}
       data-clock-count={clockZones.length}
       onMouseLeave={() => setIsDismissed(false)}
-      ref={el => {
-        // useIntersectionObserver expects ref.current to be an array of targets.
-        clocksRef.current = [el];
-      }}
+      ref={impressionRef}
     >
       <div className="widget-toolbar" inert={!!activePanel}>
         {canAddClock && (
@@ -502,24 +399,6 @@ function Clocks({ dispatch, size }) {
           ref={contextMenuButtonRef}
         />
         <panel-list ref={contextMenuRef} id="clocks-widget-context-menu">
-          <panel-item submenu="clocks-size-submenu">
-            <span data-l10n-id="newtab-widget-menu-change-size"></span>
-            <panel-list
-              ref={sizeSubmenuRef}
-              slot="submenu"
-              id="clocks-size-submenu"
-            >
-              {["small", "medium", "large"].map(s => (
-                <panel-item
-                  key={s}
-                  type="checkbox"
-                  checked={currentSize === s}
-                  data-size={s}
-                  data-l10n-id={`newtab-widget-size-${s}`}
-                />
-              ))}
-            </panel-list>
-          </panel-item>
           <panel-item
             data-l10n-id="newtab-clock-widget-menu-edit"
             onClick={() => {
@@ -535,13 +414,24 @@ function Clocks({ dispatch, size }) {
             }
             onClick={handleToggleHourFormat}
           />
-          <panel-item
-            data-l10n-id="newtab-clock-widget-menu-hide"
-            onClick={handleHide}
-          />
-          <panel-item
-            data-l10n-id="newtab-clock-widget-menu-learn-more"
-            onClick={handleLearnMore}
+          <WidgetMenuFooter
+            dispatch={dispatch}
+            widgetId="clocks"
+            widgetEnabledMap={widgetEnabledMap}
+            widgetName="clocks"
+            enabledPref={PREF_WIDGETS_CLOCKS_ENABLED}
+            widgetSize={currentSize}
+            learnMoreL10nId="newtab-clock-widget-menu-learn-more"
+            onAfterHide={closeContextMenu}
+            onLearnMore={handleLearnMore}
+            sizeSubmenu={
+              <SizeSubmenu
+                submenuId="clocks-size-submenu"
+                sizes={["small", "medium", "large"]}
+                checkedSize={currentSize}
+                onChangeSize={handleChangeSize}
+              />
+            }
           />
         </panel-list>
       </div>
@@ -554,6 +444,7 @@ function Clocks({ dispatch, size }) {
           }
           canAddClock={canAddClock}
           supportedTimeZones={supportedTimeZones}
+          locale={locale}
           onSave={handleSaveClock}
           onCancel={handleCloseClockForm}
         />
@@ -561,6 +452,7 @@ function Clocks({ dispatch, size }) {
       {isEditingClocks && (
         <EditClocksPanel
           clockZones={clockZones}
+          curatedNames={curatedNames}
           canAddClock={canAddClock}
           onShowAddClock={() => handleShowAddClock(CLOCK_WIDGET_SOURCE.MANAGE)}
           onEditClock={index =>
@@ -586,6 +478,7 @@ function Clocks({ dispatch, size }) {
             <ClocksRow
               key={`${c.timeZone}-${i}`}
               clock={c}
+              curatedNames={curatedNames}
               locale={locale}
               now={now}
               onEdit={

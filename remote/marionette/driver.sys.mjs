@@ -12,6 +12,10 @@ ChromeUtils.defineESModuleGetters(lazy, {
   assert: "chrome://remote/content/shared/webdriver/Assert.sys.mjs",
   browser: "chrome://remote/content/marionette/browser.sys.mjs",
   capture: "chrome://remote/content/shared/Capture.sys.mjs",
+  ConnectionPrompt:
+    "chrome://remote/content/shared/webdriver/ConnectionPrompt.sys.mjs",
+  ConnectionPromptResult:
+    "chrome://remote/content/shared/webdriver/ConnectionPrompt.sys.mjs",
   Context: "chrome://remote/content/marionette/browser.sys.mjs",
   cookie: "chrome://remote/content/marionette/cookie.sys.mjs",
   disableEventsActor:
@@ -22,7 +26,9 @@ ChromeUtils.defineESModuleGetters(lazy, {
   error: "chrome://remote/content/shared/webdriver/Errors.sys.mjs",
   getMarionetteCommandsActorProxy:
     "chrome://remote/content/marionette/actors/MarionetteCommandsParent.sys.mjs",
-  isParentProcess:
+  isPrivilegedContext:
+    "chrome://remote/content/shared/BrowsingContextUtils.sys.mjs",
+  isWebdriverSafeNavigationURL:
     "chrome://remote/content/shared/BrowsingContextUtils.sys.mjs",
   l10n: "chrome://remote/content/marionette/l10n.sys.mjs",
   Log: "chrome://remote/content/shared/Log.sys.mjs",
@@ -162,7 +168,9 @@ class ActionsHelper {
       (eventName === "synthesizeWheelAtPoint" &&
         lazy.actions.useAsyncWheelEvents) ||
       (eventName == "synthesizeMouseAtPoint" &&
-        lazy.actions.useAsyncMouseEvents)
+        lazy.actions.useAsyncMouseEvents) ||
+      (eventName == "synthesizeTouchAtPoint" &&
+        lazy.actions.useAsyncTouchEvents)
     ) {
       browsingContext = browsingContext.topChromeWindow?.browsingContext;
       details.eventData.asyncEnabled = true;
@@ -327,6 +335,7 @@ export class GeckoDriver {
   #reftest;
   #server;
   #sessionConfigFlags;
+  #sessionCreationPending;
 
   constructor(server) {
     this.#server = server;
@@ -382,6 +391,10 @@ export class GeckoDriver {
     this.#sessionConfigFlags = new Set([
       lazy.WebDriverSession.SESSION_FLAG_HTTP,
     ]);
+
+    // Set when creating sessions for dynamic non-automation servers, while we
+    // wait for the user to accept or deny the connection.
+    this.#sessionCreationPending = false;
   }
 
   /**
@@ -799,6 +812,8 @@ export class GeckoDriver {
       this.#promptListener.stopListening();
       this.#promptListener = null;
     }
+
+    lazy.Addon.cleanupTemporaryAddonFiles();
 
     try {
       Services.obs.removeObserver(this.#observer, TOPIC_BROWSER_READY);
@@ -1643,7 +1658,7 @@ export class GeckoDriver {
    *     Reference ID to the element that will be inspected.
    *
    * @returns {string}
-   *     Local tag name of element.
+   *     Qualified name of the element.
    *
    * @throws {InvalidArgumentError}
    *     If <var>id</var> is not a string.
@@ -2025,6 +2040,23 @@ export class GeckoDriver {
       return;
     }
 
+    if (!lazy.RemoteAgent.allowSystemAccess) {
+      const { sessionHistory } = browsingContext;
+      const targetEntry = sessionHistory.getEntryAtIndex(
+        sessionHistory.index - 1
+      );
+
+      // Disallow navigating back to privileged URLs
+      // unless system access is enabled.
+      if (
+        !lazy.isWebdriverSafeNavigationURL(targetEntry.URI, browsingContext)
+      ) {
+        throw new lazy.error.UnsupportedOperationError(
+          lazy.truncate`Navigation to "${targetEntry.URI.spec}" is not allowed in this context`
+        );
+      }
+    }
+
     await lazy.navigate.waitForNavigationCompleted(this, () => {
       browsingContext.goBack();
     });
@@ -2053,6 +2085,23 @@ export class GeckoDriver {
     // If there is no history, just return
     if (!browsingContext.embedderElement?.canGoForward) {
       return;
+    }
+
+    if (!lazy.RemoteAgent.allowSystemAccess) {
+      const { sessionHistory } = browsingContext;
+      const targetEntry = sessionHistory.getEntryAtIndex(
+        sessionHistory.index + 1
+      );
+
+      // Disallow navigating forward to privileged URLs
+      // unless system access is enabled.
+      if (
+        !lazy.isWebdriverSafeNavigationURL(targetEntry.URI, browsingContext)
+      ) {
+        throw new lazy.error.UnsupportedOperationError(
+          lazy.truncate`Navigation to "${targetEntry.URI.spec}" is not allowed in this context`
+        );
+      }
     }
 
     await lazy.navigate.waitForNavigationCompleted(this, () => {
@@ -2362,10 +2411,21 @@ export class GeckoDriver {
 
     let { url } = cmd.parameters;
 
-    let validURL = URL.parse(url);
-    if (!validURL) {
+    const targetURL = URL.parse(url);
+    if (!targetURL) {
       throw new lazy.error.InvalidArgumentError(
         lazy.truncate`Expected "url" to be a valid URL, got ${url}`
+      );
+    }
+
+    // Disallow navigations to unsafe URLs unless
+    // system access is explicitly allowed.
+    if (
+      !lazy.RemoteAgent.allowSystemAccess &&
+      !lazy.isWebdriverSafeNavigationURL(targetURL.URI, browsingContext)
+    ) {
+      throw new lazy.error.UnsupportedOperationError(
+        lazy.truncate`Navigation to "${targetURL.href}" is not allowed in this context`
       );
     }
 
@@ -2375,13 +2435,13 @@ export class GeckoDriver {
     const loadEventExpected = lazy.navigate.isLoadEventExpected(
       this._getCurrentURL(),
       {
-        future: validURL,
+        future: targetURL,
       }
     );
 
     await lazy.navigate.waitForNavigationCompleted(
       this,
-      () => lazy.navigate.navigateTo(browsingContext, validURL),
+      () => lazy.navigate.navigateTo(browsingContext, targetURL),
       { loadEventExpected }
     );
 
@@ -2411,6 +2471,12 @@ export class GeckoDriver {
       );
     }
 
+    if (this.#sessionCreationPending) {
+      throw new lazy.error.SessionNotCreatedError(
+        "Maximum number of active sessions (session creation in progress)"
+      );
+    }
+
     const { parameters: capabilities } = cmd;
 
     try {
@@ -2424,6 +2490,25 @@ export class GeckoDriver {
       } else {
         // If it's not the case then Marionette itself needs to handle it, and
         // has to nullify the "webSocketUrl" capability.
+
+        // Sessions unrelated to browser automation need an explicit user
+        // confirmation. When WebDriverBiDi is enabled this is handled by
+        // WebDriverBiDi.createSession, which checks the Remote Agent flag:
+        // both servers are always started with the same isBrowserAutomation.
+        if (!lazy.Marionette.isBrowserAutomationRunning) {
+          this.#sessionCreationPending = true;
+          try {
+            const promptResult = await lazy.ConnectionPrompt.show();
+            if (promptResult === lazy.ConnectionPromptResult.DENY) {
+              throw new lazy.error.SessionNotCreatedError(
+                "The connection was denied by the user"
+              );
+            }
+          } finally {
+            this.#sessionCreationPending = false;
+          }
+        }
+
         this.#currentSession = new lazy.WebDriverSession(
           capabilities,
           this.#sessionConfigFlags
@@ -2879,6 +2964,20 @@ export class GeckoDriver {
       this.getBrowsingContext({ top: true })
     );
     await this.#handleUserPrompts();
+
+    // Disallow refreshing privileged URLs
+    // unless system access is enabled.
+    if (
+      !lazy.RemoteAgent.allowSystemAccess &&
+      !lazy.isWebdriverSafeNavigationURL(
+        browsingContext.currentURI,
+        browsingContext
+      )
+    ) {
+      throw new lazy.error.UnsupportedOperationError(
+        lazy.truncate`Refreshing "${browsingContext.currentURI.spec}" is not allowed in this context`
+      );
+    }
 
     // Switch to the top-level browsing context before navigating
     this.currentSession.contentBrowsingContext = browsingContext;
@@ -3781,12 +3880,7 @@ export class GeckoDriver {
       signCount,
     } = credentials;
 
-    lazy.assert.string(
-      authenticatorId,
-      lazy.pprint`Expected "authenticatorId" to be a string, got ${authenticatorId}`
-    );
-
-    // Bug 1976492: Check for valid authenticator id and raise invalid argument
+    this.#assertVirtualAuthenticator(authenticatorId);
 
     lazy.assert.string(
       credentialId,
@@ -3921,12 +4015,7 @@ export class GeckoDriver {
   webAuthn_getCredentials(cmd) {
     const { authenticatorId } = cmd.parameters;
 
-    lazy.assert.string(
-      authenticatorId,
-      lazy.pprint`Expected "authenticatorId" to be a string, got ${authenticatorId}`
-    );
-
-    // Bug 1976492: Check for valid authenticator id and raise invalid argument
+    this.#assertVirtualAuthenticator(authenticatorId);
 
     return lazy.webauthn.getCredentials(authenticatorId);
   }
@@ -3946,16 +4035,8 @@ export class GeckoDriver {
   webAuthn_removeCredential(cmd) {
     const { authenticatorId, credentialId } = cmd.parameters;
 
-    lazy.assert.string(
-      authenticatorId,
-      lazy.pprint`Expected "authenticatorId" to be a string, got ${authenticatorId}`
-    );
-    // Bug 1976492: Check for valid authenticator id and raise invalid argument
-
-    lazy.assert.string(
-      credentialId,
-      lazy.pprint`Expected "credentialId" to be a string, got ${credentialId}`
-    );
+    this.#assertVirtualAuthenticator(authenticatorId);
+    this.#assertCredential(authenticatorId, credentialId);
 
     lazy.webauthn.removeCredential(authenticatorId, credentialId);
   }
@@ -3973,12 +4054,7 @@ export class GeckoDriver {
   webAuthn_removeAllCredentials(cmd) {
     const { authenticatorId } = cmd.parameters;
 
-    lazy.assert.string(
-      authenticatorId,
-      lazy.pprint`Expected "authenticatorId" to be a string, got ${authenticatorId}`
-    );
-
-    // Bug 1976492: Check for valid authenticator id and raise invalid argument
+    this.#assertVirtualAuthenticator(authenticatorId);
 
     lazy.webauthn.removeAllCredentials(authenticatorId);
   }
@@ -3996,12 +4072,7 @@ export class GeckoDriver {
   webAuthn_removeVirtualAuthenticator(cmd) {
     const { authenticatorId } = cmd.parameters;
 
-    lazy.assert.string(
-      authenticatorId,
-      lazy.pprint`Expected "authenticatorId" to be a string, got ${authenticatorId}`
-    );
-
-    // Bug 1976492: Check for valid authenticator id and raise invalid argument
+    this.#assertVirtualAuthenticator(authenticatorId);
 
     lazy.webauthn.removeVirtualAuthenticator(authenticatorId);
   }
@@ -4021,17 +4092,12 @@ export class GeckoDriver {
   webAuthn_setUserVerified(cmd) {
     const { authenticatorId, isUserVerified } = cmd.parameters;
 
-    lazy.assert.string(
-      authenticatorId,
-      lazy.pprint`Expected "authenticatorId" to be a string, got ${authenticatorId}`
-    );
+    this.#assertVirtualAuthenticator(authenticatorId);
 
     lazy.assert.boolean(
       isUserVerified,
       lazy.pprint`Expected "isUserVerified" to be a boolean, got ${isUserVerified}`
     );
-
-    // Bug 1976492: Check for valid authenticator id and raise invalid argument
 
     lazy.webauthn.setUserVerified(authenticatorId, isUserVerified);
   }
@@ -4053,6 +4119,60 @@ export class GeckoDriver {
 
     this.#browsers[winId] = context;
     this.#curBrowser = this.#browsers[winId];
+  }
+
+  /**
+   * Assert that a credential with the given id is stored in the virtual
+   * authenticator identified by authenticatorId.
+   *
+   * @param {string} authenticatorId
+   *     The ID of the virtual authenticator to look up. It must refer to an
+   *     existing authenticator.
+   * @param {string} credentialId
+   *     The ID of the credential to look up.
+   *
+   * @throws {InvalidArgumentError}
+   *     If credentialId is not a string, or no credential with the given id is
+   *     stored in the authenticator.
+   */
+  #assertCredential(authenticatorId, credentialId) {
+    lazy.assert.string(
+      credentialId,
+      lazy.pprint`Expected "credentialId" to be a string, got ${credentialId}`
+    );
+
+    const credentials = lazy.webauthn.getCredentials(authenticatorId);
+    if (
+      !credentials.some(credential => credential.credentialId === credentialId)
+    ) {
+      throw new lazy.error.InvalidArgumentError(
+        lazy.pprint`No credential found with id ${credentialId}`
+      );
+    }
+  }
+
+  /**
+   * Assert that the given id refers to a virtual authenticator stored in the
+   * Virtual Authenticator Database.
+   *
+   * @param {string} authenticatorId
+   *     The ID of the virtual authenticator to look up.
+   *
+   * @throws {InvalidArgumentError}
+   *     If authenticatorId is not a string, or no virtual authenticator with
+   *     the given id is stored in the Virtual Authenticator Database.
+   */
+  #assertVirtualAuthenticator(authenticatorId) {
+    lazy.assert.string(
+      authenticatorId,
+      lazy.pprint`Expected "authenticatorId" to be a string, got ${authenticatorId}`
+    );
+
+    if (!lazy.webauthn.hasVirtualAuthenticator(authenticatorId)) {
+      throw new lazy.error.InvalidArgumentError(
+        lazy.pprint`No virtual authenticator found with id ${authenticatorId}`
+      );
+    }
   }
 
   #checkIfAlertIsPresent() {
@@ -4111,12 +4231,15 @@ export class GeckoDriver {
       async,
     };
 
-    // Script evaluation against parent process contexts should only be allowed
+    // Script evaluation against privileged contexts should only be allowed
     // if allowSystemAccess is true.
     const context = this.getBrowsingContext();
-    if (!lazy.RemoteAgent.allowSystemAccess && lazy.isParentProcess(context)) {
+    if (
+      !lazy.RemoteAgent.allowSystemAccess &&
+      lazy.isPrivilegedContext(context)
+    ) {
       throw new lazy.error.UnsupportedOperationError(
-        `ExecuteScript and ExecuteAsyncScript are not supported for parent process browsing contexts: ${context.id}`
+        `ExecuteScript and ExecuteAsyncScript are not supported for privileged browsing contexts: ${context.id}`
       );
     }
 

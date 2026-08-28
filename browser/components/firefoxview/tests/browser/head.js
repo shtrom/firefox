@@ -10,6 +10,7 @@ const {
   openFirefoxViewTab,
   closeFirefoxViewTab,
   isFirefoxViewTabSelectedInWindow,
+  enableFirefoxViewButton,
   init: FirefoxViewTestUtilsInit,
 } = ChromeUtils.importESModule(
   "resource://testing-common/FirefoxViewTestUtils.sys.mjs"
@@ -46,7 +47,8 @@ ChromeUtils.defineESModuleGetters(this, {
   AboutWelcomeParent: "resource:///actors/AboutWelcomeParent.sys.mjs",
   BrowserWindowTracker: "resource:///modules/BrowserWindowTracker.sys.mjs",
   SyncedTabs: "resource://services-sync/SyncedTabs.sys.mjs",
-  TabStateFlusher: "resource:///modules/sessionstore/TabStateFlusher.sys.mjs",
+  TabStateFlusher:
+    "moz-src:///browser/components/sessionstore/TabStateFlusher.sys.mjs",
 });
 
 /**
@@ -389,14 +391,14 @@ async function navigateToViewAndWait(document, view) {
   });
   const namedDeck = document.querySelector("named-deck");
 
-  await BrowserTestUtils.waitForCondition(
+  await TestUtils.waitForCondition(
     () => navButton.getBoundingClientRect().height,
     `Waiting for ${view} button to be clickable`
   );
 
   EventUtils.synthesizeMouseAtCenter(navButton, {}, win);
 
-  await BrowserTestUtils.waitForCondition(() => {
+  await TestUtils.waitForCondition(() => {
     let selectedView = Array.from(namedDeck.children).find(
       child => child.slot == "selected"
     );

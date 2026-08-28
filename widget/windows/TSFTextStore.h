@@ -5,23 +5,21 @@
 #ifndef TSFTextStore_h
 #define TSFTextStore_h
 
-#include "nsIWidget.h"
-#include "nsWindow.h"
+#include <msctf.h>
+#include <textstor.h>
 
 #include "TSFTextStoreBase.h"
 #include "TSFUtils.h"
 #include "WinUtils.h"
 #include "WritingModes.h"
-
 #include "mozilla/Attributes.h"
 #include "mozilla/Maybe.h"
 #include "mozilla/RefPtr.h"
 #include "mozilla/TextEvents.h"
 #include "mozilla/TextRange.h"
 #include "mozilla/widget/IMEData.h"
-
-#include <msctf.h>
-#include <textstor.h>
+#include "nsIWidget.h"
+#include "nsWindow.h"
 
 struct ITfThreadMgr;
 struct ITfDocumentMgr;
@@ -795,7 +793,7 @@ class TSFTextStore final : public TSFTextStoreBase,
     }
 
    private:
-    AutoPendingActionAndContentFlusher() {}
+    AutoPendingActionAndContentFlusher() = default;
 
     RefPtr<TSFTextStore> mTextStore;
   };
@@ -804,6 +802,9 @@ class TSFTextStore final : public TSFTextStoreBase,
    public:
     Content(TSFTextStore& aTSFTextStore, const nsAString& aText)
         : mText(aText),
+          // If mText is not modified, mTextInContent should just refer the same
+          // buffer. So, this shouldn't cause duplicating the data.
+          mTextInContent(mText),
           mLastComposition(aTSFTextStore.mComposition),
           mComposition(aTSFTextStore.mComposition),
           mSelection(aTSFTextStore.mSelectionForTSF) {}
@@ -815,9 +816,8 @@ class TSFTextStore final : public TSFTextStoreBase,
     // process.
     void OnCompositionEventsHandled() { mLastComposition = mComposition; }
 
-    const nsDependentSubstring GetSelectedText() const;
-    const nsDependentSubstring GetSubstring(uint32_t aStart,
-                                            uint32_t aLength) const;
+    nsDependentSubstring GetSelectedText() const;
+    nsDependentSubstring GetSubstring(uint32_t aStart, uint32_t aLength) const;
     void ReplaceSelectedTextWith(const nsAString& aString);
     void ReplaceTextWith(LONG aStart, LONG aLength,
                          const nsAString& aReplaceString);
@@ -843,6 +843,7 @@ class TSFTextStore final : public TSFTextStoreBase,
     void EndComposition(const PendingAction& aCompEnd);
 
     const nsString& TextRef() const { return mText; }
+    const nsString& TextInContentRef() const { return mTextInContent; }
     const Maybe<OffsetAndData<LONG>>& LastComposition() const {
       return mLastComposition;
     }
@@ -883,6 +884,8 @@ class TSFTextStore final : public TSFTextStoreBase,
 
    private:
     nsString mText;
+    // The text which is in the focused editor or ContentCache.
+    const nsString mTextInContent;
 
     // mLastComposition may store the composition string and its start offset
     // when the document is locked. This is necessary to compute
@@ -946,7 +949,7 @@ class TSFTextStore final : public TSFTextStoreBase,
    public:
     static const DWORD kInvalidCookie = static_cast<DWORD>(-1);
 
-    MouseTracker();
+    MouseTracker() = default;
 
     HRESULT Init(TSFTextStore* aTextStore);
     HRESULT AdviseSink(TSFTextStore* aTextStore, ITfRangeACP* aTextRange,
@@ -961,7 +964,7 @@ class TSFTextStore final : public TSFTextStoreBase,
    private:
     RefPtr<ITfMouseSink> mSink;
     Maybe<StartAndEndOffsets<LONG>> mRange;
-    DWORD mCookie;
+    DWORD mCookie{kInvalidCookie};
   };
   // mMouseTrackers is an array to store each information of installed
   // ITfMouseSink instance.

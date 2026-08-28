@@ -141,6 +141,7 @@ EXPORTS.mozilla.dom += [
     "AncestorIterator.h",
     "AnimationFrameProvider.h",
     "AnonymousContent.h",
+    "AtomAttributes.h",
     "Attr.h",
     "AutoPrintEventDispatcher.h",
     "AutoSuppressEventHandlingAndSuspend.h",
@@ -252,6 +253,7 @@ EXPORTS.mozilla.dom += [
     "PopupBlocker.h",
     "Pose.h",
     "PostMessageEvent.h",
+    "PrefetchCandidates.h",
     "ProcessMessageManager.h",
     "RadioGroupContainer.h",
     "RequestCallbackManager.h",
@@ -264,6 +266,9 @@ EXPORTS.mozilla.dom += [
     "SerializedStackHolder.h",
     "ShadowIncludingTreeIterator.h",
     "ShadowRoot.h",
+    "SpeculationRules.h",
+    "SpeculationRuleSet.h",
+    "SpeculationRulesManager.h",
     "StaticAtomSet.h",
     "StaticRange.h",
     "StructuredCloneBlob.h",
@@ -313,12 +318,18 @@ if CONFIG["COMPILE_ENVIRONMENT"]:
     EXPORTS.mozilla.dom += [
         "!fragmentdirectives_ffi_generated.h",
         "!GeneratedElementDocumentState.h",
+        "!speculationrules_ffi_generated.h",
         "RustTypes.h",
     ]
 
     CbindgenHeader(
         "GeneratedElementDocumentState.h",
         inputs=["rust"],
+    )
+
+    CbindgenHeader(
+        "speculationrules_ffi_generated.h",
+        inputs=["speculationrules"],
     )
 
     CbindgenHeader(
@@ -455,6 +466,7 @@ UNIFIED_SOURCES += [
     "PopupBlocker.cpp",
     "Pose.cpp",
     "PostMessageEvent.cpp",
+    "PrefetchCandidates.cpp",
     "ProcessMessageManager.cpp",
     "RadioGroupContainer.cpp",
     "RangeUtils.cpp",
@@ -471,6 +483,9 @@ UNIFIED_SOURCES += [
     "SerializedStackHolder.cpp",
     "ShadowRoot.cpp",
     "SourceLocation.cpp",
+    "SpeculationRules.cpp",
+    "SpeculationRuleSet.cpp",
+    "SpeculationRulesManager.cpp",
     "StaticRange.cpp",
     "StorageAccessPermissionRequest.cpp",
     "StructuredCloneBlob.cpp",

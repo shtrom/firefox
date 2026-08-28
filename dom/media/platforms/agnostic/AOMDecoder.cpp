@@ -27,20 +27,21 @@
 #include "prsystem.h"
 
 #undef LOG
-#define LOG(arg, ...)                                                  \
-  DDMOZ_LOG(sPDMLog, mozilla::LogLevel::Debug, "::%s: " arg, __func__, \
-            ##__VA_ARGS__)
-#define LOG_RESULT(code, message, ...)                                        \
-  DDMOZ_LOG(sPDMLog, mozilla::LogLevel::Debug, "::%s: %s (code %d) " message, \
-            __func__, aom_codec_err_to_string(code), (int)code, ##__VA_ARGS__)
-#define LOGEX_RESULT(_this, code, message, ...)         \
-  DDMOZ_LOGEX(_this, sPDMLog, mozilla::LogLevel::Debug, \
-              "::%s: %s (code %d) " message, __func__,  \
+#define LOG(arg, ...)                                                      \
+  DDMOZ_LOG_FMT(sPDMLog, mozilla::LogLevel::Debug, "::{}: " arg, __func__, \
+                ##__VA_ARGS__)
+#define LOG_RESULT(code, message, ...)                   \
+  DDMOZ_LOG_FMT(sPDMLog, mozilla::LogLevel::Debug,       \
+                "::{}: {} (code {}) " message, __func__, \
+                aom_codec_err_to_string(code), (int)code, ##__VA_ARGS__)
+#define LOGEX_RESULT(_this, code, message, ...)             \
+  DDMOZ_LOGEX_FMT(_this, sPDMLog, mozilla::LogLevel::Debug, \
+                  "::{}: {} (code {}) " message, __func__,  \
+                  aom_codec_err_to_string(code), (int)code, ##__VA_ARGS__)
+#define LOG_STATIC_RESULT(code, message, ...)                    \
+  MOZ_LOG_FMT(sPDMLog, mozilla::LogLevel::Debug,                 \
+              "AOMDecoder::{}: {} (code {}) " message, __func__, \
               aom_codec_err_to_string(code), (int)code, ##__VA_ARGS__)
-#define LOG_STATIC_RESULT(code, message, ...)                 \
-  MOZ_LOG(sPDMLog, mozilla::LogLevel::Debug,                  \
-          ("AOMDecoder::%s: %s (code %d) " message, __func__, \
-           aom_codec_err_to_string(code), (int)code, ##__VA_ARGS__))
 
 #define ASSERT_BYTE_ALIGNED(bitIO) MOZ_ASSERT((bitIO).BitCount() % 8 == 0)
 
@@ -78,7 +79,7 @@ static MediaResult InitContext(AOMDecoder& aAOMDecoder, aom_codec_ctx_t* aCtx,
 
   auto res = aom_codec_dec_init(aCtx, dx, &config, flags);
   if (res != AOM_CODEC_OK) {
-    LOGEX_RESULT(&aAOMDecoder, res, "Codec initialization failed, res=%d",
+    LOGEX_RESULT(&aAOMDecoder, res, "Codec initialization failed, res={}",
                  int(res));
     return MediaResult(NS_ERROR_DOM_MEDIA_FATAL_ERR,
                        RESULT_DETAIL("AOM error initializing AV1 decoder: %s",
@@ -258,8 +259,8 @@ RefPtr<MediaDataDecoder::DecodePromise> AOMDecoder::ProcessDecode(
 
     if (r.isErr()) {
       MediaResult rs = r.unwrapErr();
-      LOG("VideoData::CreateAndCopyData error (source %ux%u display %ux%u "
-          "picture %ux%u)  - %s: %s",
+      LOG("VideoData::CreateAndCopyData error (source {}x{} display {}x{} "
+          "picture {}x{})  - {}: {}",
           img->d_w, img->d_h, mInfo.mDisplay.width, mInfo.mDisplay.height,
           mInfo.mImage.width, mInfo.mImage.height, rs.ErrorName().get(),
           rs.Message().get());
@@ -817,8 +818,9 @@ mozilla::Maybe<mozilla::gfx::HDRMetadata> AOMDecoder::ReadMetadataOBUHDR(
       if (r0x.isErr() || r0y.isErr() || g1x.isErr() || g1y.isErr() ||
           b2x.isErr() || b2y.isErr() || wpx.isErr() || wpy.isErr() ||
           maxL.isErr() || minL.isErr()) {
-        MOZ_LOG(sPDMLog, mozilla::LogLevel::Debug,
-                ("AOMDecoder::ReadMetadataOBUHDR: failed to read MDCV fields"));
+        MOZ_LOG_FMT(
+            sPDMLog, mozilla::LogLevel::Debug,
+            "AOMDecoder::ReadMetadataOBUHDR: failed to read MDCV fields");
         continue;
       }
       gfx::Chromaticity red{r0x.unwrap() / kPrimariesDivisor,
@@ -844,8 +846,9 @@ mozilla::Maybe<mozilla::gfx::HDRMetadata> AOMDecoder::ReadMetadataOBUHDR(
       auto maxCLL = br.ReadU16();
       auto maxFALL = br.ReadU16();
       if (maxCLL.isErr() || maxFALL.isErr()) {
-        MOZ_LOG(sPDMLog, mozilla::LogLevel::Debug,
-                ("AOMDecoder::ReadMetadataOBUHDR: failed to read CLL fields"));
+        MOZ_LOG_FMT(
+            sPDMLog, mozilla::LogLevel::Debug,
+            "AOMDecoder::ReadMetadataOBUHDR: failed to read CLL fields");
         continue;
       }
       hdr.mContentLightLevel =

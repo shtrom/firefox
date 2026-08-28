@@ -2,13 +2,34 @@
   "border": {
     "color": {
       "value": {
-        "light": "rgba(255, 255, 255, 0.1)",
-        "dark": "rgba(255, 255, 255, 0.06)",
+        "light": "rgba(0, 0, 0, 0.06)",
+        "dark": "rgba(255, 255, 255, 0.04)",
         "forcedColors": "CanvasText"
       }
+    }
+  },
+  "gap": {
+    "@base": {
+      "value": "{space.medium}"
+    }
+  },
+  "header": {
+    "background": {
+      "color": {
+        "@base": {
+          "value": "{button.background.color.@base}"
+        }
+      }
     },
-    "radius": {
-      "value": "{border.radius.xlarge}"
+    "border": {
+      "color": {
+        "@base": {
+          "value": {
+            "default": "transparent",
+            "forcedColors": "{button.border.color.@base}"
+          }
+        }
+      }
     }
   }
 }

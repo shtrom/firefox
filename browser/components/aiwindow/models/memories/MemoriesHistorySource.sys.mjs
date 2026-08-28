@@ -11,6 +11,14 @@ import { BlockListManager } from "chrome://global/content/ml/Utils.sys.mjs";
 import { SensitiveInfoDetector } from "moz-src:///browser/components/aiwindow/models/memories/SensitiveInfoDetector.sys.mjs";
 import { sanitizeUntrustedContent } from "moz-src:///browser/components/aiwindow/models/ChatUtils.sys.mjs";
 
+const lazy = {};
+ChromeUtils.defineESModuleGetters(lazy, {
+  extractVectorFromTensor:
+    "moz-src:///browser/components/aiwindow/models/SearchBrowsingHistory.sys.mjs",
+  getPlacesSemanticHistoryManager:
+    "resource://gre/modules/PlacesSemanticHistoryManager.sys.mjs",
+});
+
 const MS_PER_DAY = 86_400_000;
 const MICROS_PER_MS = 1_000;
 const MS_PER_SEC = 1_000;
@@ -25,6 +33,23 @@ const DEFAULT_PAGE_VIEWTIME = 5000;
 // Sessionization defaults
 const DEFAULT_GAP_SEC = 900;
 const DEFAULT_MAX_SESSION_SEC = 7200;
+
+// Max cosine distance (0 = identical, 1 = unrelated, 2 = opposite) between a memory's
+// embedding text (summary plus reasoning) and a URL's embedding for that URL to stay attached to it.
+export const DEFAULT_DISTANCE_THRESHOLD = 0.6;
+const DISTANCE_THRESHOLD_PREF =
+  "browser.smartwindow.memories.resumeActivityUrlDistanceThreshold";
+
+/**
+ * @returns {number} The configured max cosine distance, or
+ *          DEFAULT_DISTANCE_THRESHOLD when the pref is unset.
+ */
+export function getDistanceThreshold() {
+  const parsed = Number.parseFloat(
+    Services.prefs.getStringPref(DISTANCE_THRESHOLD_PREF, "")
+  );
+  return Number.isFinite(parsed) ? parsed : DEFAULT_DISTANCE_THRESHOLD;
+}
 
 // Recency defaults
 const DEFAULT_HALFLIFE_DAYS = 14;
@@ -82,13 +107,19 @@ let _sensitiveInfoDetector = new SensitiveInfoDetector();
  *
  * @returns {Promise<Array<{
  *   url: string,
+ *   urlHash: number,
  *   title: string,
+ *   searchQuery: string,
  *   domain: string,
  *   visitDateMicros: number,
+ *   totalViewTimeMs: number,
  *   frequencyPct: number,
  *   domainFrequencyPct: number,
  *   source: 'history'|'search'
  * }>>}
+ *   For `source === 'search'` rows, `searchQuery` is the parsed query text
+ *   from `moz_inputhistory.input` or the URL's `q`/`search_query` param.
+ *   For `source === 'history'` rows, `searchQuery` is an empty string.
  */
 export async function getRecentHistory(opts = {}) {
   // If provided, this is a Places visit_date-style cutoff in microseconds
@@ -116,6 +147,7 @@ export async function getRecentHistory(opts = {}) {
     SELECT
       p.id                                                 AS place_id,
       p.url                                                AS url,
+      p.url_hash                                           AS url_hash,
       o.host                                               AS host,
       p.title                                              AS title,
       mpm.created_at * 1000                                AS visit_date,
@@ -137,6 +169,7 @@ export async function getRecentHistory(opts = {}) {
       SELECT
         p.id                                                 AS place_id,
         p.url                                                AS url,
+        p.url_hash                                           AS url_hash,
         o.host                                               AS host,
         p.title                                              AS title,
         v.visit_date                                         AS visit_date,
@@ -163,6 +196,7 @@ export async function getRecentHistory(opts = {}) {
       SELECT
         r.place_id,
         r.url,
+        r.url_hash,
         r.host,
         r.title,
         r.visit_date,
@@ -222,9 +256,11 @@ export async function getRecentHistory(opts = {}) {
 
     SELECT
       a.url,
+      a.url_hash,
       a.host,
       a.source,
       a.title,
+      a.search_query,
       a.visit_date,
       a.total_view_time,
       p.frecency_pct,
@@ -248,8 +284,12 @@ export async function getRecentHistory(opts = {}) {
         const out = [];
         for (const row of stmt) {
           const url = row.getResultByName("url");
+          const urlHash = row.getResultByName("url_hash");
           const host = row.getResultByName("host");
           const source = row.getResultByName("source");
+          const searchQuery = safeDecodeURIComponent(
+            row.getResultByName("search_query") || ""
+          );
           const onlyTitle = row.getResultByName("title") || "";
           let title;
           if (onlyTitle) {
@@ -268,15 +308,19 @@ export async function getRecentHistory(opts = {}) {
             continue;
           }
           const visitDateMicros = row.getResultByName("visit_date") || 0;
+          const totalViewTimeMs = row.getResultByName("total_view_time") || 0;
           const frequencyPct = row.getResultByName("frecency_pct") || 0;
           const domainFrequencyPct =
             row.getResultByName("domain_frecency_pct") || 0;
 
           out.push({
             url,
+            urlHash,
             domain: host,
             title: sanitizeUntrustedContent(title, true),
+            searchQuery: sanitizeUntrustedContent(searchQuery, true),
             visitDateMicros,
+            totalViewTimeMs,
             frequencyPct,
             domainFrequencyPct,
             source,
@@ -809,6 +853,17 @@ function round2(x) {
   return Math.round(Number(x) * 100) / 100;
 }
 
+function safeDecodeURIComponent(s) {
+  if (!s) {
+    return s;
+  }
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 /**
  * Sanitize title text to prevent JSON parsing issues in LLM outputs.
  * Removes/replaces characters that commonly cause problems:
@@ -879,5 +934,230 @@ export async function countRecentVisits({ days = DEFAULT_DAYS } = {}) {
   } catch (e) {
     console.error("countRecentVisits failed", e);
     return 0;
+  }
+}
+
+/**
+ * Convenience function to extract the `source_ids.history_source_ids` array from a memory object.
+ *
+ * @param {*} memory
+ * @returns {Array<number>} Array of history source IDs
+ */
+export function getHistorySourceIdsFromMemory(memory) {
+  return memory?.source_ids?.history_source_ids ?? [];
+}
+
+/**
+ * Resolves the Places URL hashes referenced by memories.
+ * Omits any URLs that are not found in the Places database by hash or
+ * have null title/URL/last_visit_date. Also omits hash collisions.
+ *
+ * @param {Array<object>} memories - Memories whose history sources to resolve
+ * @param {object} [opts]
+ * @param {boolean} [opts.filterBySummary=false]
+ *        Keep only the URLs semantically close to their memory's summary.
+ * @param {number} [opts.distanceThreshold]
+ *        Maximum cosine distance to keep. Defaults to the
+ *        {@link DISTANCE_THRESHOLD_PREF} pref value.
+ *        Ignored without `filterBySummary`.
+ * @returns {Promise<Map<number, object>>} Places data keyed by URL hash
+ */
+export async function resolveUrlsForMemories(memories, opts = {}) {
+  const {
+    filterBySummary = false,
+    distanceThreshold = getDistanceThreshold(),
+  } = opts;
+  const historyEnabled = Services.prefs.getBoolPref("places.history.enabled");
+  const privateBrowsing = Services.prefs.getBoolPref(
+    "browser.privatebrowsing.autostart"
+  );
+  if (!historyEnabled || privateBrowsing) {
+    return new Map();
+  }
+
+  const urlHashes = [
+    ...new Set(
+      memories.flatMap(memory => getHistorySourceIdsFromMemory(memory))
+    ),
+  ];
+  if (!urlHashes.length) {
+    return new Map();
+  }
+  if (filterBySummary) {
+    const filtered = await resolveUrlsBySummarySimilarity(
+      memories,
+      distanceThreshold
+    );
+    // A null result means scoring could not run: the profile fails the semantic
+    // hardware gate, has too few indexed pages, or the query failed. Fall
+    // through to the unfiltered URLs rather than resolving nothing at all.
+    if (filtered) {
+      return filtered;
+    }
+  }
+
+  const { bindings, placeholders } = bindUrlHashes(urlHashes);
+
+  const sql = `
+    WITH unique_hashes AS (
+      SELECT url_hash
+      FROM moz_places
+      WHERE url_hash IN (${placeholders.join(", ")})
+      GROUP BY url_hash
+      HAVING COUNT(*) = 1
+    )
+    SELECT url_hash, url, title, last_visit_date
+    FROM moz_places
+    JOIN unique_hashes USING (url_hash)
+    WHERE last_visit_date IS NOT NULL
+      AND url IS NOT NULL
+      AND title IS NOT NULL
+  `;
+
+  try {
+    return await PlacesUtils.withConnectionWrapper(
+      "smartwindow-resolve-urls-for-memories",
+      async db => {
+        const rows = await db.execute(sql, bindings);
+        return new Map(
+          rows.map(row => {
+            const urlHash = row.getResultByName("url_hash");
+            return [
+              urlHash,
+              {
+                url: row.getResultByName("url"),
+                title: row.getResultByName("title"),
+                lastVisitDate: row.getResultByName("last_visit_date"),
+              },
+            ];
+          })
+        );
+      }
+    );
+  } catch (error) {
+    console.error("Failed to resolve Places URLs for memories:", error);
+    return new Map();
+  }
+}
+
+/**
+ * Build named SQL parameters for a list of URL hashes.
+ *
+ * @param {Array<number>} urlHashes
+ * @returns {{bindings: object, placeholders: Array<string>}}
+ */
+function bindUrlHashes(urlHashes) {
+  const bindings = {};
+  const placeholders = urlHashes.map((urlHash, index) => {
+    const name = `urlHash${index}`;
+    bindings[name] = urlHash;
+    return `:${name}`;
+  });
+  return { bindings, placeholders };
+}
+
+/**
+ * Builds the text embedded for a memory.
+ *
+ * @param {object} memory
+ * @returns {string}
+ */
+function getMemoryEmbeddingText(memory) {
+  const summary = memory?.memory_summary?.toLowerCase() || "";
+  const reasoning = memory?.reasoning?.toLowerCase() || "";
+  return [summary, reasoning].filter(part => part?.trim()).join(". ");
+}
+
+/**
+ * Semantic variant of resolveUrlsForMemories: each memory's URLs are scored
+ * against that memory's own embedding text, so one query runs per memory.
+ *
+ * @param {Array<object>} memories
+ * @param {number} distanceThreshold
+ * @returns {Promise<Map<number, object>|null>} Places data keyed by URL hash,
+ *          or null when semantic scoring is unavailable on this profile
+ */
+async function resolveUrlsBySummarySimilarity(memories, distanceThreshold) {
+  const resolved = new Map();
+  try {
+    const semanticManager = lazy.getPlacesSemanticHistoryManager();
+    const canUseSemantic =
+      semanticManager.isEnabledForSmartWindow &&
+      (await semanticManager.hasSufficientEntriesForSearching());
+    if (!canUseSemantic) {
+      return null;
+    }
+
+    const conn = await semanticManager.getConnection();
+    if (!conn) {
+      return null;
+    }
+
+    await semanticManager.embedder.ensureEngine();
+
+    for (const memory of memories) {
+      const queryText = getMemoryEmbeddingText(memory);
+      const urlHashes = [...new Set(getHistorySourceIdsFromMemory(memory))];
+      if (!queryText || !urlHashes.length) {
+        continue;
+      }
+
+      const tensor = await semanticManager.embedder.embed(queryText);
+      const vector = PlacesUtils.tensorToSQLBindable(
+        lazy.extractVectorFromTensor(tensor)
+      );
+      const { bindings, placeholders } = bindUrlHashes(urlHashes);
+
+      const rows = await conn.execute(
+        `
+        WITH unique_hashes AS (
+          SELECT url_hash
+          FROM moz_places
+          WHERE url_hash IN (${placeholders.join(", ")})
+          GROUP BY url_hash
+          HAVING COUNT(*) = 1
+        ),
+        scored AS (
+          SELECT
+            m.url_hash AS url_hash,
+            vec_distance_cosine(v.embedding, :vector) AS distance
+          FROM vec_history_mapping m
+          JOIN unique_hashes USING (url_hash)
+          JOIN vec_history v ON v.rowid = m.rowid
+        )
+        SELECT url_hash, url, title, last_visit_date, distance
+        FROM moz_places
+        JOIN scored USING (url_hash)
+        WHERE last_visit_date IS NOT NULL
+          AND url IS NOT NULL
+          AND title IS NOT NULL
+          AND distance IS NOT NULL
+          AND distance <= :distanceThreshold
+        `,
+        { ...bindings, vector, distanceThreshold }
+      );
+
+      for (const row of rows) {
+        const urlHash = row.getResultByName("url_hash");
+        const distance = row.getResultByName("distance");
+        const existing = resolved.get(urlHash);
+        if (existing) {
+          existing.distance = Math.min(existing.distance, distance);
+          continue;
+        }
+        resolved.set(urlHash, {
+          url: row.getResultByName("url"),
+          title: row.getResultByName("title"),
+          lastVisitDate: row.getResultByName("last_visit_date"),
+          distance,
+        });
+      }
+    }
+    return new Map(
+      [...resolved].sort(([, a], [, b]) => a.distance - b.distance)
+    );
+  } catch (error) {
+    console.error("Failed to semantically resolve URLs for memories:", error);
+    return null;
   }
 }
